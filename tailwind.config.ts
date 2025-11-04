@@ -1,0 +1,91 @@
+import type { Config } from "tailwindcss";
+
+export default {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        nunito: ["Nunito Sans", "sans-serif"],
+      },
+      colors: {
+        primaryGray: "#F5F6F7",
+        primaryWhite: "#FAFBFB",
+        elusionGrayTint: "#F2F2F2",
+        elusionDarkGrayTint: "#A0A0A0",
+        baseGray: "#6B6B6B",
+        basicGray: "#717171",
+        basicLightGray: "#B1B1B1",
+        primaryN10: "#FAFBFB",
+        primaryN20: "#F5F6F7",
+        primaryN30: "#EBEDF0",
+        primaryN50: "#C2C7D0",
+        primaryN70: "#98A1B0",
+        primaryN200: "#6B788E",
+        primaryN400: "#013249",
+        primaryN900: "#091E42",
+        neutralsN600: "#354764",
+        neutralsN50: "#C2C7D0",
+        neutralsN80: "#98A1B0",
+        neutralsN40: "#DFE2E6",
+        neutralsN30: "#EBEDF0",
+        kahuBlue: "#008ECE",
+        disarmBlue: "#006C9B;",
+        dragonOrange: "#FF931E",
+        accentRed: "#FE3C30",
+        accentBananas: "#F6CE4C",
+        accentGreen: "#2A845A",
+        accentIndigo: "#5856D7",
+        accentBrown: "#A3835F",
+        accentPurple: "#AF53DE",
+        warningW400: "#DEB945",
+        primaryBlueHover: "#03122C",
+        dragonOrangeHover: "#F17D00",
+        lushAqua: "#014768",
+        forumBlue: "#427CCE",
+        secondary400: "#2B6F7A",
+        loadingGray: "#D9D9D9",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+      },
+      fontSize: {
+        xxs: "10px",
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;

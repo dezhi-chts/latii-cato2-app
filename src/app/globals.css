@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+  letter-spacing: 0.03em;
+}
+
+.sidebar-container {
+  zoom: 0.8;
+  height: 100%;
+}
+
+.zoomed-container {
+  zoom: 0.8;
+  height: 100%;
+}
+
+.unzoomed-element {
+  zoom: 1;
+}
+
+@layer utilities {
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes barAnimation {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.bar-animation {
+  @apply absolute bottom-0 left-0 h-1 rounded-b-lg;
+  animation: barAnimation 7s linear forwards;
+}
+
+.ant-image-mask {
+  border-radius: 12px !important;
+}
+
+.ant-radio-checked .ant-radio-inner {
+  border-color: #354764 !important;
+  background-color: #354764 !important;
+}
+
+.ant-radio-inner::after {
+  background-color: white !important;
+}
+
+.transparent-modal .ant-modal-content {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.transparent-modal .ant-modal-close .ant-modal-close-icon {
+  color: #ffffff;
+}
+
+/* 鼠标悬停时的颜色（可选） */
+.transparent-modal .ant-modal-close:hover .ant-modal-close-icon {
+  color: #ffffff;
+}
+
+.input-focus:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  width: fit-content !important;
+}

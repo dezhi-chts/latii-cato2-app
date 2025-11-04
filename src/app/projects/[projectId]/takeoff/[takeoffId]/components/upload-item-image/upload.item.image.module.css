@@ -1,0 +1,28 @@
+.upload_item_image_box{
+    height: 620px;
+    display: flex;
+}
+
+.title{
+    color: #354764;
+}
+
+.left_box{
+    flex: 1;
+}
+
+.right_box{
+    flex: 1;
+    margin-left: 20px;
+}
+
+.unit_box{
+    height: calc(100% - 100px);
+    overflow-y: auto;
+}
+
+.unit_item_box{
+    box-sizing: border-box;
+    /* border: 1px solid #efefef;
+    padding: 12px; */
+}

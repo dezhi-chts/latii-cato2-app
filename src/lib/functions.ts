@@ -1,0 +1,209 @@
+import { checkChanges } from "@/services/projectService";
+import { ProjectSettings } from "@/types/project";
+
+export const extractBeforeAtSymbol = (input: string): string => {
+  const atIndex = input.indexOf("@");
+  return atIndex !== -1 ? input.slice(0, atIndex) : input;
+};
+
+export const getFullLocation = (settings: ProjectSettings) => {
+  return [settings.state, settings.city, settings.postal_code, settings.address]
+    .filter(Boolean)
+    .join(", ");
+};
+
+export const sanitizeName = (label: string) => {
+  if (!label) return "";
+  return label.toLowerCase().replace(/\s+/g, "-");
+};
+
+export const sanitizeNameForFile = (label: string) => {
+  if (!label) return "";
+  return label.toLowerCase().replace(/\s+/g, "_");
+};
+
+export function mmToInchesWithFraction(mmValue: number | string): string {
+  const mm = typeof mmValue === "string" ? parseFloat(mmValue) : mmValue;
+  if (isNaN(mm)) return "-";
+
+  const totalInches = mm / 25.4;
+  const whole = Math.floor(totalInches);
+  const decimal = totalInches - whole;
+
+  const fractions = [
+    { value: 0, label: "" },
+    { value: 1 / 8, label: "1/8" },
+    { value: 1 / 4, label: "1/4" },
+    { value: 3 / 8, label: "3/8" },
+    { value: 1 / 2, label: "1/2" },
+    { value: 5 / 8, label: "5/8" },
+    { value: 3 / 4, label: "3/4" },
+    { value: 7 / 8, label: "7/8" },
+  ];
+
+  const closest = fractions.reduce((prev, curr) => {
+    return Math.abs(curr.value - decimal) < Math.abs(prev.value - decimal)
+      ? curr
+      : prev;
+  });
+
+  const isAlmostNext = Math.abs(closest.value - 1) < 0.05;
+  const finalWhole = isAlmostNext ? whole + 1 : whole;
+  const fractionLabel = isAlmostNext ? "" : closest.label;
+
+  return `${finalWhole}${fractionLabel ? " " + fractionLabel : ""}"`;
+}
+
+export function sanitizeKey(text: string): string {
+  return text
+    ?.replace(/-/g, "")
+    .replace(/[ñÑ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+export function convertToCurrencyFormat(
+  value: number | string,
+  options?: {
+    withSymbol?: boolean;
+    noDecimals?: boolean;
+  }
+): string {
+  const { withSymbol = true, noDecimals = false } = options || {};
+
+  const number = typeof value === "string" ? parseFloat(value) : value;
+
+  if (isNaN(number)) return withSymbol ? "$0" : "0";
+
+  return number.toLocaleString("en-US", {
+    style: withSymbol ? "currency" : "decimal",
+    currency: "USD",
+    minimumFractionDigits: noDecimals ? 0 : 2,
+    maximumFractionDigits: noDecimals ? 0 : 2,
+  });
+}
+
+export function formatPriceRange(
+  range: string,
+  options?: {
+    withSymbol?: boolean;
+    noDecimals?: boolean;
+  }
+): string {
+  if (!range) return "";
+
+  const [min, max] = range?.split("-").map(Number);
+
+  if (isNaN(min) || isNaN(max)) return "";
+
+  return `${convertToCurrencyFormat(min, options)} - ${convertToCurrencyFormat(
+    max,
+    options
+  )}`;
+}
+
+export function formatDateEnglish(dateString: string): string {
+  const date = new Date(dateString);
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+}
+
+export const getTextByOptionsValue = (section: any) => {
+  const value = section?.selected_value;
+  return section?.options?.find((o: any) => o.value === value)?.text || "-";
+};
+
+export const hasChanges = async (
+  id: string
+): Promise<Record<string, boolean>> => {
+  const response = await checkChanges(id);
+  const rawData = response as any;
+
+  const result: Record<string, boolean> = {};
+
+  if (!rawData) return result;
+
+  for (const [itemId, itemData] of Object.entries(rawData)) {
+    const data = itemData as Record<string, boolean>;
+
+    const hasTrueOtherThanIsRead = Object.entries(data).some(
+      ([key, value]) => key !== "is_read" && value === true
+    );
+    result[itemId] = hasTrueOtherThanIsRead && data.is_read === false;
+  }
+  return result;
+};
+
+export function getDaysAgoLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return `${diffDays}d`;
+}
+
+export function formatFullDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function getFileName(
+  name: string,
+  nameToFileMap: Record<string, string>
+) {
+  const lowerName = name.toLowerCase();
+
+  const sortedKeys = Object.keys(nameToFileMap).sort(
+    (a, b) => b.length - a.length
+  );
+
+  for (const key of sortedKeys) {
+    if (lowerName.includes(key.toLowerCase())) {
+      return nameToFileMap[key];
+    }
+  }
+
+  return null;
+}
+
+export function getDividerText(item: any, title: string): string {
+  const key = title.toLowerCase();
+  const arrangement = item?.[`${key}_dividers_arrangement`];
+
+  const selectedValue = arrangement?.selected_value;
+  const selectedText = arrangement?.options?.find(
+    (opt: any) => opt.value === selectedValue
+  )?.text;
+
+  // console.log("selectedText", selectedText);
+  // console.log("arrangement", arrangement);
+  console.log("title", title);
+
+  if (!selectedText) return title === "SDL" ? "Flat - Flat 25mm" : "Thin";
+
+  return selectedText;
+}
+
+export function base64ToFile(base64: string, filename: string): File {
+  const [header, data] = base64.split(",");
+  const mimeMatch = header.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+  const binary = atob(data);
+  const len = binary.length;
+  const u8arr = new Uint8Array(len);
+
+  for (let i = 0; i < len; i++) {
+    u8arr[i] = binary.charCodeAt(i);
+  }
+
+  return new File([u8arr], filename, { type: mime });
+}

@@ -1,0 +1,16 @@
+export interface LabelItem{
+    sequence_number: number,
+    id: number,
+    take_off_id: number,
+    project_file_id: number,
+    evidence_id: number,
+    evidence_ids: string,
+    evidence_id_list: number[],
+    is_checked: boolean,
+    is_deleted: boolean,
+    create_user: string,
+    create_time: string,
+    update_user: string,
+    update_time: string,
+    result: string,
+}
