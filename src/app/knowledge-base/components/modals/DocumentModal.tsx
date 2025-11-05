@@ -1,8 +1,12 @@
 import { Input, Modal, Upload } from "antd";
 import Title from "./Title";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/Button";
 import Image from "next/image";
+import { ModalsFooter } from "./ModalsFooter";
+import ImagePdfPreview from "@/app/projects/[projectId]/components/Image-Pdf-Preview";
+import { Viewer, Worker } from "@react-pdf-viewer/core";
+import PdfPreviewModal from "@/app/projects/[projectId]/components/Pdf-Preview-Modal";
 
 const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
   const [settings, setSettings] = useState<any>({
@@ -25,7 +29,7 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       }));
       return;
     }
-    const latestFile = info.fileList[info.fileList.length - 1]?.originFileObj;
+    const latestFile = info.fileList[info.fileList.length - 1];
     setSettings((prev: any) => ({
       ...prev,
       file: latestFile,
@@ -37,7 +41,13 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       width={500}
       open={isModalOpen}
       onCancel={() => setIsModalOpen(false)}
-      footer={null}
+      footer={
+        <ModalsFooter
+          disabled={!settings.name || !settings.file}
+          onCancel={() => setIsModalOpen(false)}
+          hasData={data}
+        />
+      }
       title={
         <Title
           title="Upload New Document"
@@ -81,17 +91,13 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
             disabled={settings.file}
           >
             <div
-              className={`w-[450px] h-40 rounded-lg border border-dashed border-basicLightGray flex gap-1 items-center justify-center flex-col ${
-                !settings.file && "hover:border-blue-500 cursor-pointer"
+              className={`w-[450px] h-60 rounded-lg flex gap-1 items-center justify-center flex-col ${
+                !settings.file &&
+                "hover:border-blue-500 cursor-pointer border border-dashed border-basicLightGray h-40"
               }`}
             >
               {settings.file ? (
-                <div className="flex items-center gap-1">
-                  <p className="text-basicGray text-xs">{settings.file.name}</p>
-                  <div className="h-4 w-4">
-                    <DeleteIcon handleDeleteFile={() => handleFileChange()} />
-                  </div>
-                </div>
+                <FilePreview file={settings.file} />
               ) : (
                 <>
                   <p className="text-forumBlue underline text-xs">Upload</p>
@@ -101,16 +107,6 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
             </div>
           </Upload>
         )}
-
-        <div className="flex justify-end">
-          <Button
-            className="w-20"
-            backgroundColor="forumBlue"
-            disabled={!settings.name || !settings.file}
-          >
-            Add
-          </Button>
-        </div>
       </div>
     </Modal>
   );
@@ -161,6 +157,51 @@ const DeleteIcon = ({ handleDeleteFile }: any) => {
           strokeLinejoin="round"
         />
       </svg>
+    </div>
+  );
+};
+
+const FilePreview = ({ file, handleDeleteFile }: any) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  useEffect(() => {
+    if (file?.originFileObj) {
+      const url = URL.createObjectURL(file.originFileObj);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file]);
+  if (!previewUrl) return null;
+  return (
+    <div className="border border-primaryN30 rounded-lg flex flex-col w-52 overflow-hidden max-h-60 cursor-default ">
+      <div className="flex gap-2 border-b items-center border-b-primaryN30 px-2">
+        <p className="truncate text-basicLightGray text-xxs">
+          {file?.name || "File Name"}
+        </p>
+        <div className="flex gap-3 py-1 px-2.5">
+          <Image
+            src="/assets/icons/preview.svg"
+            alt="preview icon"
+            width={17}
+            height={17}
+            className="cursor-pointer hover:opacity-80"
+            onClick={() => setIsModalOpen(true)}
+          />
+          <DeleteIcon handleDeleteFile={handleDeleteFile} />
+        </div>
+      </div>
+      <div className="max-h-40 flex justify-center">
+        <Worker
+          workerUrl={`https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.worker.min.js`}
+        >
+          <Viewer fileUrl={previewUrl} />
+        </Worker>
+      </div>
+      <PdfPreviewModal
+        pdfUrl={previewUrl}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 };

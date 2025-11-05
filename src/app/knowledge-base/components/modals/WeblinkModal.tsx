@@ -2,6 +2,7 @@ import { Input, Modal } from "antd";
 import Title from "./Title";
 import { useState } from "react";
 import Button from "@/components/Button";
+import { ModalsFooter } from "./ModalsFooter";
 
 const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
   const [settings, setSettings] = useState<any>({
@@ -28,7 +29,13 @@ const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       width={500}
       open={isModalOpen}
       onCancel={() => setIsModalOpen(false)}
-      footer={null}
+      footer={
+        <ModalsFooter
+          disabled={!settings.name || !settings.link || data}
+          onCancel={() => setIsModalOpen(false)}
+          hasData={data}
+        />
+      }
       title={
         <Title
           title="Add New Website"
@@ -61,16 +68,6 @@ const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
             value={settings.link}
             disabled={data}
           />
-        </div>
-
-        <div className="flex justify-end">
-          <Button
-            className="w-20"
-            backgroundColor="forumBlue"
-            disabled={!settings.name || !settings.link || data}
-          >
-            Add
-          </Button>
         </div>
       </div>
     </Modal>

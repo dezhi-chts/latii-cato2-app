@@ -3,6 +3,7 @@ import Title from "./Title";
 import { useState } from "react";
 import Button from "@/components/Button";
 import Image from "next/image";
+import { ModalsFooter } from "./ModalsFooter";
 
 const VideoModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
   const [settings, setSettings] = useState<any>({
@@ -21,7 +22,13 @@ const VideoModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       width={500}
       open={isModalOpen}
       onCancel={() => setIsModalOpen(false)}
-      footer={null}
+      footer={
+        <ModalsFooter
+          disabled={!settings.link || data}
+          onCancel={() => setIsModalOpen(false)}
+          hasData={data}
+        />
+      }
       title={
         <Title
           title="Add New Video Links"
@@ -55,16 +62,6 @@ const VideoModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
             </p>
           </div>
         )}
-
-        <div className="flex justify-end">
-          <Button
-            className="w-20"
-            backgroundColor="forumBlue"
-            disabled={!settings.link || data}
-          >
-            Add
-          </Button>
-        </div>
       </div>
     </Modal>
   );
