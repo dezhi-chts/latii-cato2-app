@@ -70,9 +70,11 @@ const ChatContainer = ({ isOpen }: ChatProps) => {
 
   return (
     <div
-      className={`${containerWidthClassname} border-primaryN30 border rounded-xl h-full flex`}
+      className={`${containerWidthClassname} border-primaryN30 border rounded-xl h-full flex transition-all duration-700 ease-in-out`}
     >
-      <div className={`${chatWidthClassname} flex flex-col`}>
+      <div
+        className={`${chatWidthClassname} transition-all duration-700 ease-in-out flex flex-col`}
+      >
         <div
           className={`w-full rounded-t-xl p-4 h-[42px] cursor-pointer border-b border-b-primaryN30 flex items-center`}
         >
@@ -96,11 +98,11 @@ const ChatContainer = ({ isOpen }: ChatProps) => {
                   </div>
                   <div className="flex flex-col gap-2">
                     <p
-                      className={`${messageWidthClassname} font-light text-xs`}
+                      className={`${messageWidthClassname} font-light text-xs transition-all duration-700 ease-in-out`}
                     >
                       {message.content}
                     </p>
-                    <div className="flex gap-1">
+                    {/* <div className="flex gap-1">
                       <Image
                         src="/assets/icons/thumbs-down.svg"
                         alt="thumbs down icon"
@@ -115,7 +117,7 @@ const ChatContainer = ({ isOpen }: ChatProps) => {
                         height={16}
                         className="w-5 h-5 cursor-pointer"
                       />
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               );

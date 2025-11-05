@@ -6,25 +6,29 @@ const options: Option[] = [
     label: "Documents",
     value: "documents",
     selected_classname: "bg-accentPurple text-white",
-    unselected_classname: "text-accentPurple bg-accentPurple/10 ",
+    unselected_classname:
+      "text-accentPurple bg-accentPurple/10 hover:bg-accentPurple/20 ",
   },
   {
     label: "Weblinks",
     value: "weblinks",
     selected_classname: "bg-dragonOrange text-white",
-    unselected_classname: "text-dragonOrange bg-dragonOrange/10 ",
+    unselected_classname:
+      "text-dragonOrange bg-dragonOrange/10 hover:bg-dragonOrange/20",
   },
   {
     label: "Videos",
     value: "videos",
     selected_classname: "bg-warningW400 text-white",
-    unselected_classname: "text-warningW400 bg-warningW400/10 ",
+    unselected_classname:
+      "text-warningW400 bg-warningW400/10 hover:bg-warningW400/20",
   },
   {
     label: "Text",
     value: "text",
     selected_classname: "bg-secondary400 text-white",
-    unselected_classname: "text-secondary400 bg-secondary400/10 ",
+    unselected_classname:
+      "text-secondary400 bg-secondary400/10 hover:bg-secondary400/20",
   },
 ];
 const CategoriesRender = ({
@@ -57,7 +61,7 @@ const CategoriesRender = ({
           height={17}
           className="h-4 w-auto"
         />
-        {isOpen && <p className="text-sm">{option.label}</p>}
+        {isOpen && <p className="text-xs">{option.label}</p>}
       </div>
     );
   });

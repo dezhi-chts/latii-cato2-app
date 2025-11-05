@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SourcesHeader from "./SourcesHeader";
 import { Category, ModalsRenderProps, SourcesProps } from "@/types/sources";
 import CategoriesRender from "./CategoriesRender";
@@ -78,6 +78,7 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
   const [selectedCategory, setSelectedCategory] =
     useState<Category>("documents");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isFullyOpen, setIsFullyOpen] = useState<boolean>(false);
   const [data, setData] = useState<any>(null);
 
   const handleToggle = () => {
@@ -96,28 +97,49 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
     }
   }, [isModalOpen]);
 
+  const divRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number>(0);
+  useEffect(() => {
+    const element = divRef.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(() => {
+      setWidth(element.offsetWidth);
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const closePercentage = 40; //To change style speed change this.
+    const closeValue = (390 * closePercentage) / 100;
+    setIsFullyOpen(width >= closeValue && isOpen);
+  }, [isOpen, width]);
+
   return (
     <div
+      ref={divRef}
       className={`${
         isOpen ? "w-[390px]" : "w-[60px]"
-      } border-primaryN30 border rounded-xl h-full flex flex-col justify-between pb-6`}
+      } border-primaryN30 border rounded-xl h-full flex flex-col justify-between pb-6 transition-all duration-700 ease-in-out`}
     >
       <div>
-        <SourcesHeader handleToggle={handleToggle} isOpen={isOpen} />
+        <SourcesHeader handleToggle={handleToggle} isOpen={isFullyOpen} />
 
         <div
           className={`pt-6 flex flex-wrap gap-4 ${
-            isOpen ? "px-4" : "justify-center"
+            isFullyOpen ? "px-4" : "items-center flex-col "
           }`}
         >
           <CategoriesRender
             selectedCategory={selectedCategory}
             handleCategoryChange={handleCategoryChange}
-            isOpen={isOpen}
+            isOpen={isFullyOpen}
           />
         </div>
-        {isOpen && <Divider className="mb-2" />}
-        {isOpen && (
+        {isFullyOpen && <Divider className="mb-2" />}
+        {isFullyOpen && (
           <div className="text-xs font-light px-4 py-4 overflow-auto max-h-[40vh] scrollbar-hidden">
             <SourcesRender
               sources={sources[selectedCategory]}
@@ -128,7 +150,7 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
           </div>
         )}
       </div>
-      {isOpen && (
+      {isFullyOpen && (
         <div className="px-8 flex flex-col gap-3">
           <Button
             variant="outline"
@@ -144,7 +166,7 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
             </p>
           )}
           {selectedCategory === "documents" && (
-            <p className="text-xs font-light text-basicGray text-center">
+            <p className="text-xs font-light text-basicGray text-center truncate">
               You can upload a maximum of 10 files for Lucius.
             </p>
           )}
