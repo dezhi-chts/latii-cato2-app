@@ -1,6 +1,6 @@
 import { Input, Modal } from "antd";
 import Title from "./Title";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/Button";
 import { ModalsFooter } from "./ModalsFooter";
 
@@ -9,6 +9,7 @@ const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
     name: data?.label || "",
     link: data?.link || "",
   });
+  const [isValidLink, setIsValidLink] = useState(false);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSettings((prev: any) => ({
@@ -24,6 +25,24 @@ const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
     }));
   };
 
+  useEffect(() => {
+    const link = settings?.link?.trim();
+    if (!link) {
+      setIsValidLink(false);
+      return;
+    }
+
+    const candidate = link.match(/^https?:\/\//i) ? link : `https://${link}`;
+
+    try {
+      const url = new URL(candidate);
+      const hasDomain = /\.[a-z]{2,}$/i.test(url.hostname);
+      setIsValidLink(hasDomain);
+    } catch {
+      setIsValidLink(false);
+    }
+  }, [settings?.link]);
+
   return (
     <Modal
       width={500}
@@ -31,7 +50,7 @@ const WeblinkModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       onCancel={() => setIsModalOpen(false)}
       footer={
         <ModalsFooter
-          disabled={!settings.name || !settings.link || data}
+          disabled={!settings.name || !isValidLink || data}
           onCancel={() => setIsModalOpen(false)}
           hasData={data}
         />
