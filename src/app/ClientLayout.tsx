@@ -14,7 +14,7 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
           <GlobalLoadingProvider>
             <ProjectsProvider>
               <Sidebar />
-              <div className="pl-16">{children}</div>
+              <div className="pl-12">{children}</div>
             </ProjectsProvider>
           </GlobalLoadingProvider>
         </AuthWrapper>

@@ -1,12 +1,11 @@
 import { checkChanges } from "@/services/projectService";
-import { ProjectSettings } from "@/types/project";
 
 export const extractBeforeAtSymbol = (input: string): string => {
   const atIndex = input.indexOf("@");
   return atIndex !== -1 ? input.slice(0, atIndex) : input;
 };
 
-export const getFullLocation = (settings: ProjectSettings) => {
+export const getFullLocation = (settings: any) => {
   return [settings.state, settings.city, settings.postal_code, settings.address]
     .filter(Boolean)
     .join(", ");
@@ -184,10 +183,6 @@ export function getDividerText(item: any, title: string): string {
     (opt: any) => opt.value === selectedValue
   )?.text;
 
-  // console.log("selectedText", selectedText);
-  // console.log("arrangement", arrangement);
-  console.log("title", title);
-
   if (!selectedText) return title === "SDL" ? "Flat - Flat 25mm" : "Thin";
 
   return selectedText;
@@ -207,3 +202,20 @@ export function base64ToFile(base64: string, filename: string): File {
 
   return new File([u8arr], filename, { type: mime });
 }
+
+export const getGreetingByTime = (date = new Date()): string => {
+  const hour = date.getHours();
+
+  if (hour >= 5 && hour < 12) return "Good Morning";
+  if (hour >= 12 && hour < 18) return "Good Afternoon";
+  if (hour >= 18 && hour < 21) return "Good Evening";
+  return "Good Night";
+};
+
+export const formatUserDate = (date = new Date(), locale = "en-US"): string => {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+};

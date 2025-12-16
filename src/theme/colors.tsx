@@ -3,7 +3,7 @@ export const colorList = {
   primaryWhite: "#FAFBFB",
   elusionGrayTint: "#F2F2F2",
   elusionDarkGrayTint: "#A0A0A0",
-  baseGray: "#6B6B6B",
+  baseGray: "#A3A3A3",
   basicGray: "#717171",
   basicLightGray: "#B1B1B1",
   primaryN10: "#FAFBFB",

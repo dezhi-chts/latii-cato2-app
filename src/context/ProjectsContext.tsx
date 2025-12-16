@@ -29,12 +29,13 @@ export const ProjectsProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const loadProjects = async () => {
+    return;
     try {
       setHasLoadedProjects(false);
       const fetchedProjects = await fetchProjects();
       // const projectsWithOrder = addOrderToProjects(fetchedProjects);
       setProjects(fetchedProjects);
-      if(fetchedProjects.length>0){
+      if (fetchedProjects.length > 0) {
         const lastProject = fetchedProjects[0];
         if (lastProject) {
           setLastProjectId(lastProject.project_id);

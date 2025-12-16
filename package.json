@@ -11,6 +11,7 @@
     "c": "cz",
     "commit": "cz",
     "commit-and-push": "git add . && npx cz && git push",
+    "cap": "npm run commit-and-push",
     "commit-changes": "git add . && npx cz"
   },
   "dependencies": {

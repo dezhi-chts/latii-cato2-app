@@ -1,0 +1,22 @@
+import { ComponentType } from "react";
+import Company from "./bodyComponents/Company";
+
+const bodyMap: Record<number, ComponentType> = {
+  1: () => <Company />,
+  2: () => <div />,
+  3: () => <div />,
+  4: () => <div />,
+  5: () => <div />,
+};
+
+const Body = ({ selectedOptionId }: { selectedOptionId: number }) => {
+  const Component = bodyMap[selectedOptionId];
+
+  return (
+    <div className="w-full h-full pl-24 pt-14">
+      {Component ? <Component /> : null}
+    </div>
+  );
+};
+
+export default Body;

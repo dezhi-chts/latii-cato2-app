@@ -1,6 +1,5 @@
 "use client";
 import Button from "@/components/Button";
-import LocationSelector from "@/components/LocationSelector";
 import { useProjects } from "@/context/ProjectsContext";
 import { createProject } from "@/services/projectService";
 import {
@@ -8,22 +7,21 @@ import {
   defaultProjectSettings,
   ProjectSettings,
 } from "@/types/project";
-import { DatePicker, Input, Modal, Spin } from "antd";
-import { Dayjs } from "dayjs";
+import { Input, Modal, Spin } from "antd";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const CreateProjectModal = ({
   isOpen,
-  setIsOpen,
+  closeModal,
   onSuccess,
 }: CreateProjectModalProps) => {
   const { TextArea } = Input;
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     ...defaultProjectSettings,
   });
-  const [showLocationSelector, setShowLocationSelector] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -40,22 +38,6 @@ const CreateProjectModal = ({
       }));
     };
 
-  const handleDropdownChange =
-    <K extends keyof ProjectSettings>(field: K) =>
-    (value: ProjectSettings[K]) => {
-      setProjectSettings((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    };
-
-  const handleDateChange = (value: Dayjs | null) => {
-    setProjectSettings((prev) => ({
-      ...prev,
-      expected_end_date: value ? value.format("YYYY-MM-DD") : "",
-    }));
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
 
@@ -69,7 +51,7 @@ const CreateProjectModal = ({
     try {
       const response = await createProject(newSettings);
       await refetchProjects();
-      onSuccess();
+      if (onSuccess) onSuccess();
 
       if (response?.status === "success" && lastProjectId) {
         setProjectSettings({ ...defaultProjectSettings });
@@ -78,17 +60,13 @@ const CreateProjectModal = ({
     } catch (error) {
       console.log(error);
     } finally {
+      closeModal();
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const isValid =
-      !!projectSettings.project_name
-      //   &&
-      // !!projectSettings.expected_end_date &&
-      // !!projectSettings.state &&
-      // !!projectSettings.city;
+    const isValid = !!projectSettings.project_name;
 
     setIsFormValid(isValid);
   }, [projectSettings]);
@@ -98,7 +76,7 @@ const CreateProjectModal = ({
   return (
     <Modal
       open={isOpen}
-      onCancel={() => setIsOpen(false)}
+      onCancel={closeModal}
       onOk={handleSubmit}
       title={
         <div className="zoomed-container flex items-start gap-1">
@@ -143,44 +121,7 @@ const CreateProjectModal = ({
             onChange={handleInputChange("project_name")}
           />
         </div>
-        {/*<div className="flex flex-col gap-2 w-3/4">*/}
-        {/*  <p>*/}
-        {/*    End Customer <span className="text-basicLightGray">(Optional)</span>*/}
-        {/*  </p>*/}
-        {/*  <Input*/}
-        {/*    placeholder="Input your end customer"*/}
-        {/*    className="rounded-full "*/}
-        {/*    value={projectSettings.customer || ""}*/}
-        {/*    onChange={handleInputChange("customer")}*/}
-        {/*  />*/}
-        {/*</div>*/}
-        {/*<div className="flex flex-col gap-2 w-3/4">*/}
-        {/*  <p>*/}
-        {/*    Primary Location <span className="text-accentRed">*</span>*/}
-        {/*  </p>*/}
 
-        {/*  <LocationSelector*/}
-        {/*    onClose={() => setShowLocationSelector(false)}*/}
-        {/*    handleInputChange={handleInputChange}*/}
-        {/*    handleDropdownChange={handleDropdownChange}*/}
-        {/*    projectSettings={projectSettings}*/}
-        {/*    isOpen={showLocationSelector}*/}
-        {/*    setIsOpen={setShowLocationSelector}*/}
-        {/*    height="medium"*/}
-        {/*  />*/}
-        {/*</div>*/}
-
-        {/*<div className="flex flex-col gap-2 w-3/4">*/}
-        {/*  <p>*/}
-        {/*    Client Expected Delivery Date{" "}*/}
-        {/*    <span className="text-accentRed">*</span>*/}
-        {/*  </p>*/}
-        {/*  <DatePicker*/}
-        {/*    placeholder="Select a date"*/}
-        {/*    className="rounded-full"*/}
-        {/*    onChange={handleDateChange}*/}
-        {/*  />*/}
-        {/*</div>*/}
         <div className="flex flex-col gap-2 w-3/4">
           <p>
             Project Description{" "}

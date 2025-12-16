@@ -49,8 +49,8 @@ export const defaultProjectSettings: ProjectSettings = {
 
 export type CreateProjectModalProps = {
   isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
-  onSuccess: () => void;
+  closeModal: () => void;
+  onSuccess?: () => void;
 };
 
 export type LocationSelectorProps = {

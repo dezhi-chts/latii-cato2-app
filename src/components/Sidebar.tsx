@@ -143,171 +143,190 @@ export default function Sidebar() {
   if (activePage.startsWith("/public")) return null;
 
   return (
-    <div
-      className={`sidebar-container border-r border-primaryN30 shadow-md ${
-        loadingExpansion ? "w-[486px]" : "w-16"
-      } top-0 z-[9999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-primaryN900 transition-all linear duration-700`}
-      ref={sidebarRef}
-    >
-      <div>
-        <div className={`mb-6 pr-2 flex justify-end `}>
-          <button onClick={() => toggleExpand("sidebar")} className="h-8">
-            <Image
-              src={sidebarIcon}
-              alt="Sidebar icon"
-              width={30}
-              height={30}
-              style={{ width: "auto", height: "auto" }}
-            />
-          </button>
-        </div>
-        <div className="mb-10 flex gap-4 h-12">
-          <div className={`h-10`}>
-            <Image
-              src={"/assets/logos/forum-logo.png"}
-              alt="Latii logo"
-              width={40}
-              height={40}
-              priority
-            />
+    <div>
+      <div
+        className={`sidebar-container border-r border-primaryN30 shadow-md ${
+          loadingExpansion ? "w-[486px] px-8" : "w-16"
+        } 
+      ${!expanded.sidebar && "cursor-pointer"}
+      top-0 z-[9999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-primaryN900 transition-all linear duration-700`}
+        ref={sidebarRef}
+        onClick={() => {
+          !expanded.sidebar && toggleExpand("sidebar");
+        }}
+      >
+        <div>
+          <div className={`mb-6 pr-2 flex justify-end `}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpand("sidebar");
+              }}
+              className="h-8"
+            >
+              <Image
+                src={sidebarIcon}
+                alt="Sidebar icon"
+                width={30}
+                height={30}
+                style={{ width: "auto", height: "auto" }}
+              />
+            </button>
           </div>
-
-          {expanded.sidebar && (
-            <div className="flex flex-col">
-              <span className="font-light capitalize">
-                {userData.first_name || "User"}
-              </span>
-              <span className="text-xs font-light">
-                {userData.email || "user@example.com"}
-              </span>
+          <div className="mb-10 flex gap-4 h-12">
+            <div className={`h-10`}>
+              <Image
+                src={"/assets/logos/forum-logo.png"}
+                alt="Latii logo"
+                width={40}
+                height={40}
+                priority
+              />
             </div>
-          )}
+
+            {expanded.sidebar && (
+              <div className="flex flex-col">
+                <span className="font-light capitalize">
+                  {userData.first_name || "User"}
+                </span>
+                <span className="text-xs font-light">
+                  {userData.email || "user@example.com"}
+                </span>
+              </div>
+            )}
+          </div>
+          <div
+            className="flex flex-col gap-1.5 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className={`${
+                expanded.sidebar ? "px-3.5 mr-8" : ""
+              } h-6 border-primaryN900 text-sm border rounded-xl  flex items-center justify-center gap-2.5 mb-2`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowModal((prev) => ({ ...prev, createProject: true }));
+              }}
+            >
+              <Image
+                src="/assets/icons/add.svg"
+                alt="add icon"
+                width={8}
+                height={8}
+                style={{ width: "auto", height: "auto" }}
+              />
+              {expanded.sidebar && "New Project"}
+            </button>
+            <Link href="/home">
+              <div
+                className={`flex gap-4 rounded-xl ${
+                  showInitialStyles ? "" : " justify-start"
+                } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
+              >
+                <div className="relative w-fit flex gap-4 h-5 items-center">
+                  <div className="w-[18px] h-[18px]">
+                    <HomeIcon showInitialStyles={showInitialStyles} />
+                  </div>
+
+                  {expanded.sidebar && "Home"}
+                </div>
+              </div>
+            </Link>
+            <Link href="/brand-editor">
+              <div
+                className={`flex gap-4 rounded-xl ${
+                  showInitialStyles ? "" : " justify-start"
+                } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
+              >
+                <div className="w-[18px] h-[18px]">
+                  <EditIcon showInitialStyles={showInitialStyles} />
+                </div>
+                <p className="whitespace-nowrap">
+                  {expanded.sidebar && "Brand & Price Editor"}
+                </p>
+              </div>
+            </Link>
+            <Link href="/knowledge-base">
+              <div
+                className={`flex gap-4 rounded-xl ${
+                  showInitialStyles ? "" : " justify-start"
+                } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
+              >
+                <div className="relative w-fit flex gap-4 h-5 items-center">
+                  <div className="w-[18px] h-[18px]">
+                    <KnowledgeBaseIcon showInitialStyles={showInitialStyles} />
+                  </div>
+
+                  <p className="whitespace-nowrap">
+                    {expanded.sidebar && "Knowledge Base"}
+                  </p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/ask-lucius">
+              <div
+                className={`flex gap-4 rounded-xl ${
+                  showInitialStyles ? "" : " justify-start"
+                } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
+              >
+                <Image
+                  src="/assets/logos/lucius-new-logo.png"
+                  alt="Lucius logo"
+                  width={18}
+                  height={18}
+                  className="w-[18px] h-[18px]"
+                />
+                <p className="whitespace-nowrap">
+                  {expanded.sidebar && "Ask Lucius"}
+                </p>
+              </div>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5 text-sm">
-          <button
-            className={`${
-              expanded.sidebar ? "px-3.5 mr-8" : ""
-            } h-6 border-primaryN900 text-sm border rounded-xl  flex items-center justify-center gap-2.5 mb-2`}
+        <div
+          className="flex flex-col pl-3 h-14 justify-around text-sm w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className={`flex items-center cursor-pointer hover:underline w-fit relative ${
+              expanded.sidebar && "gap-2"
+            }`}
             onClick={() =>
-              setShowModal((prev) => ({ ...prev, createProject: true }))
+              setShowModal((prev) => ({ ...prev, settings: !prev.settings }))
             }
           >
             <Image
-              src="/assets/icons/add.svg"
-              alt="add icon"
-              width={8}
-              height={8}
-              style={{ width: "auto", height: "auto" }}
+              src="/assets/icons/settings.svg"
+              alt="Settings"
+              width={20}
+              height={20}
             />
-            {expanded.sidebar && "New Project"}
-          </button>
-          <Link href="/home">
-            <div
-              className={`flex gap-4 rounded-xl ${
-                showInitialStyles ? "" : " justify-start"
-              } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
-            >
-              <div className="relative w-fit flex gap-4 h-5 items-center">
-                <div className="w-[18px] h-[18px]">
-                  <HomeIcon showInitialStyles={showInitialStyles} />
-                </div>
-
-                {expanded.sidebar && "Home"}
-              </div>
-            </div>
-          </Link>
-          <Link href="/brand-editor">
-            <div
-              className={`flex gap-4 rounded-xl ${
-                showInitialStyles ? "" : " justify-start"
-              } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
-            >
-              <div className="w-[18px] h-[18px]">
-                <EditIcon showInitialStyles={showInitialStyles} />
-              </div>
-              <p className="whitespace-nowrap">
-                {expanded.sidebar && "Brand & Price Editor"}
-              </p>
-            </div>
-          </Link>
-          <Link href="/knowledge-base">
-            <div
-              className={`flex gap-4 rounded-xl ${
-                showInitialStyles ? "" : " justify-start"
-              } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
-            >
-              <div className="relative w-fit flex gap-4 h-5 items-center">
-                <div className="w-[18px] h-[18px]">
-                  <KnowledgeBaseIcon showInitialStyles={showInitialStyles} />
-                </div>
-
-                <p className="whitespace-nowrap">
-                  {expanded.sidebar && "Knowledge Base"}
-                </p>
-              </div>
-            </div>
-          </Link>
-          <Link href="/ask-lucius">
-            <div
-              className={`flex gap-4 rounded-xl ${
-                showInitialStyles ? "" : " justify-start"
-              } h-8 w-10 items-center pl-2.5 cursor-pointer gap-4`}
-            >
-              <Image
-                src="/assets/logos/lucius-new-logo.png"
-                alt="Lucius logo"
-                width={18}
-                height={18}
-                className="w-[18px] h-[18px]"
-              />
-              <p className="whitespace-nowrap">
-                {expanded.sidebar && "Ask Lucius"}
-              </p>
-            </div>
-          </Link>
+            <span className=""> {expanded.sidebar ? "Settings" : ""} </span>{" "}
+            <SidebarSettings
+              open={showModal.settings}
+              setOpen={() =>
+                setShowModal((prev) => ({ ...prev, settings: false }))
+              }
+              expanded={loadingExpansion}
+              toggleExpand={toggleExpand}
+            />
+          </div>
+          <div
+            className={`flex items-center cursor-pointer hover:underline w-fit ${
+              expanded.sidebar && "gap-2"
+            }`}
+            onClick={openModal}
+          >
+            <Image
+              src="/assets/icons/logout.svg"
+              alt="Logout"
+              width={20}
+              height={20}
+            />
+            <span className=""> {expanded.sidebar ? "Log Out" : ""} </span>{" "}
+          </div>
         </div>
       </div>
-      <div className="flex flex-col pl-6 h-14 justify-around text-sm absolute bottom-0 bg-white w-full left-0">
-        <div
-          className={`flex items-center cursor-pointer hover:underline w-fit relative ${
-            expanded.sidebar && "gap-2"
-          }`}
-          onClick={() =>
-            setShowModal((prev) => ({ ...prev, settings: !prev.settings }))
-          }
-        >
-          <Image
-            src="/assets/icons/settings.svg"
-            alt="Settings"
-            width={20}
-            height={20}
-          />
-          <span className=""> {expanded.sidebar ? "Settings" : ""} </span>{" "}
-          <SidebarSettings
-            open={showModal.settings}
-            setOpen={() =>
-              setShowModal((prev) => ({ ...prev, settings: false }))
-            }
-            expanded={loadingExpansion}
-            toggleExpand={toggleExpand}
-          />
-        </div>
-        <div
-          className={`flex items-center cursor-pointer hover:underline w-fit ${
-            expanded.sidebar && "gap-2"
-          }`}
-          onClick={openModal}
-        >
-          <Image
-            src="/assets/icons/logout.svg"
-            alt="Logout"
-            width={20}
-            height={20}
-          />
-          <span className=""> {expanded.sidebar ? "Log Out" : ""} </span>{" "}
-        </div>
-      </div>
-
       <CreateProjectModal
         isOpen={showModal.createProject}
         setIsOpen={() =>
