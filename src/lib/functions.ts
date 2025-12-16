@@ -206,9 +206,8 @@ export function base64ToFile(base64: string, filename: string): File {
 export const getGreetingByTime = (date = new Date()): string => {
   const hour = date.getHours();
 
-  if (hour >= 5 && hour < 12) return "Good Morning";
-  if (hour >= 12 && hour < 18) return "Good Afternoon";
-  if (hour >= 18 && hour < 21) return "Good Evening";
+  if (hour >= 0 && hour < 12) return "Good Morning";
+  if (hour >= 12 && hour < 19) return "Good Afternoon";
   return "Good Night";
 };
 

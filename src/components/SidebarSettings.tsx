@@ -1,22 +1,31 @@
 "use client";
-import Image from "next/image";
+import { useUser } from "@/context/UserContext";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 type SidebarSettingsProps = {
   open: boolean;
   expanded: boolean;
-  setOpen: (open: boolean) => void;
   toggleExpand: (field: "recent" | "favorite" | "sidebar") => void;
+  toggleModal: (field: "settings" | "logout" | "createProject") => void;
+  openLogoutModal: () => void;
 };
 
 export default function SidebarSettings({
   open,
   expanded,
-  setOpen,
   toggleExpand,
+  toggleModal,
+  openLogoutModal,
 }: SidebarSettingsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { first_name, last_name, email } = useUser();
+
+  const handleSignoutClick = () => {
+    if (expanded) toggleExpand("sidebar");
+    openLogoutModal();
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -24,57 +33,45 @@ export default function SidebarSettings({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setOpen(false);
+        if (open) toggleModal("settings");
       }
     };
     document.addEventListener("click", handleOutsideClick);
     return () => {
       document.removeEventListener("click", handleOutsideClick);
     };
-  }, [open, setOpen]);
-
-  const handleClose = () => {
-    setTimeout(() => {
-      setOpen(false);
-      if (expanded) {
-        toggleExpand("sidebar");
-      }
-    }, 10);
-  };
+  }, [open]);
 
   if (!open) return null;
   return (
     <div
       className={`absolute transition-all duration-700 ease-in-out ${
         expanded ? "left-24" : "left-6"
-      } bottom-0 w-48 bg-white shadow-lg rounded-lg overflow-hidden z-50`}
+      } bottom-0 w-48 bg-white border border-baseLightGray  rounded-lg overflow-hidden z-50`}
       ref={containerRef}
     >
-      <ul className="space-y-1">
-        <li>
-          <Link
-            href="/account-settings"
-            onClick={handleClose}
-            className="px-2 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-1"
-          >
-            <Image
-              src="/assets/icons/account.svg"
-              alt="profile icon"
-              width={20}
-              height={20}
-            />
-            <p className="text-sm">Account Settings</p>
-          </Link>
+      <div
+        className="h-fit w-full border-b cursor-default border-baseLightGray px-4 py-2 flex flex-col gap-1"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        <p className="text-sm truncate">
+          {first_name} {last_name}
+        </p>
+        <p className="text-xs text-basicGray truncate">{email}</p>
+      </div>
+      <ul className="text-sm">
+        <li className="px-4 py-2 hover:bg-primaryN30 cursor-pointer">
+          <Link href="/account-settings">Account Settings</Link>
         </li>
-        {/*<li className="px-2 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-1">*/}
-        {/*  <Image*/}
-        {/*    src="/assets/icons/logout-orange.svg"*/}
-        {/*    alt="profile icon"*/}
-        {/*    width={20}*/}
-        {/*    height={20}*/}
-        {/*  />*/}
-        {/*  <p className="text-dragonOrange text-sm">Logout</p>*/}
-        {/*</li>*/}
+        <li
+          className="px-4 py-2 hover:bg-primaryN30 cursor-pointer text-accentRed"
+          onClick={handleSignoutClick}
+        >
+          Sign Out
+        </li>
       </ul>
     </div>
   );

@@ -88,7 +88,7 @@ const Company = () => {
   return (
     <div className="flex flex-col gap-6">
       <div className="w-full flex gap-8 items-center">
-        <div className="w-[100px] h-[100px] rounded-full bg-[#E8E8E8]" />
+        <div className="w-[100px] h-[100px] rounded-full bg-baseLightGray" />
         <p className="text-basicGray">[Company Name]</p>
       </div>
       <div className="w-full flex gap-8">
