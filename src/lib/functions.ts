@@ -218,3 +218,13 @@ export const formatUserDate = (date = new Date(), locale = "en-US"): string => {
     day: "numeric",
   }).format(date);
 };
+
+export const getTitleFromPropertyName = (propertyName: string) => {
+  const title = propertyName.replace(/_/g, " ");
+  return title.charAt(0).toUpperCase() + title.slice(1);
+};
+
+export const getPropertyNameFromTitle = (title: string) => {
+  const propertyName = title.replace(/ /g, "_");
+  return propertyName.toLowerCase();
+};

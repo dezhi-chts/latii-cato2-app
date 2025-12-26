@@ -1,106 +1,172 @@
 import { ProjectRow, ProjectStatus } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
 import { StarFilled, StarOutlined } from "@ant-design/icons";
-import { ConfigProvider } from "antd";
-import { useState } from "react";
+import { ConfigProvider, Tooltip } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getTitleFromPropertyName } from "@/lib/functions";
 
-export const projectsColumns: ColumnsType<ProjectRow> = [
-  {
-    title: (
-      <span className="text-xs font-semibold text-basicGray">Project Name</span>
-    ),
-    dataIndex: "projectName",
-    key: "projectName",
-    align: "center",
-    sorter: (a, b) => a.projectName.localeCompare(b.projectName),
-    render: (value: string) => (
-      <span className="text-sm line-clamp-2">{value}</span>
-    ),
-  },
-  {
-    title: (
-      <span className="text-xs font-semibold text-basicGray">Last Edit</span>
-    ),
-    dataIndex: "lastEdit",
-    key: "lastEdit",
-    align: "center",
-    render: (value: string) => (
-      <span className="text-sm line-clamp-2">{value}</span>
-    ),
-  },
-  {
-    title: (
-      <span className="text-xs font-semibold text-basicGray">Budget Price</span>
-    ),
-    dataIndex: "budgetPrice",
-    key: "budgetPrice",
-    align: "center",
-    render: (value: number) => (
-      <span className="text-sm line-clamp-2">${value / 1000}K</span>
-    ),
-  },
-  {
-    title: (
-      <span className="text-xs font-semibold text-basicGray">End Customer</span>
-    ),
-    dataIndex: "endCustomer",
-    key: "endCustomer",
-    align: "center",
-    render: (value: string) => (
-      <span className="text-sm line-clamp-2">{value}</span>
-    ),
-  },
-  {
-    title: <span className="text-xs font-semibold text-basicGray">Status</span>,
-    dataIndex: "status",
-    key: "status",
-    align: "center",
-    render: (status: ProjectStatus) => {
-      const isTakeOff = status === "Take Off";
-      return (
-        <span
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
-            ${
-              isTakeOff
-                ? "bg-green-100 text-green-700"
-                : "bg-blue-100 text-blue-600"
-            }
-          `}
-        >
-          {status}
-        </span>
-      );
-    },
-  },
-  {
-    title: <span className="text-xs font-semibold text-basicGray">Notes</span>,
-    dataIndex: "notes",
-    key: "notes",
-    align: "center",
-    render: (value: string) => (
-      <span className="text-sm line-clamp-2">{value}</span>
-    ),
-  },
-  {
-    title: "",
-    dataIndex: "isFavorite",
-    key: "favorite",
-    align: "center",
-    width: 40,
-    render: (isFavorite: boolean) =>
-      isFavorite ? (
-        <StarFilled className="text-gray-900 text-sm" />
-      ) : (
-        <StarOutlined className="text-gray-300 text-sm" />
-      ),
-  },
-];
+const PAGE_SIZE = 10;
+
+const DEFAULT_KEYS = [
+  "key",
+  "project_name",
+  "last_edit",
+  "status",
+  "notes",
+  "is_favorite",
+] as const;
+
+type DefaultKey = (typeof DEFAULT_KEYS)[number];
+
+const TextCell = ({ value }: { value: unknown }) => {
+  const text = value != null ? String(value) : "-";
+  const ref = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    setIsTruncated(el.scrollHeight > el.clientHeight);
+  }, [text]);
+
+  const clampedContent = (
+    <div ref={ref} className="text-sm line-clamp-2 overflow-hidden">
+      {text}
+    </div>
+  );
+
+  return isTruncated ? (
+    <Tooltip title={text} placement="topLeft">
+      <div>{clampedContent}</div>
+    </Tooltip>
+  ) : (
+    clampedContent
+  );
+};
 
 const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
-  const pageSize = 10;
   const [page, setPage] = useState(1);
   const router = useRouter();
+
+  const dynamicProperties = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects.flatMap((project) =>
+            Object.keys(project).filter(
+              (key) => !DEFAULT_KEYS.includes(key as DefaultKey)
+            )
+          )
+        )
+      ),
+    [projects]
+  );
+
+  const defaultColumns: ColumnsType<ProjectRow> = useMemo(
+    () => [
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">
+            Project Name
+          </span>
+        ),
+        dataIndex: "project_name",
+        key: "project_name",
+        align: "center",
+        sorter: (a, b) => a.project_name.localeCompare(b.project_name),
+        render: (value) => <TextCell value={value} />,
+      },
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">
+            Last Edit
+          </span>
+        ),
+        dataIndex: "last_edit",
+        key: "last_edit",
+        align: "center",
+        render: (value) => <TextCell value={value} />,
+      },
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">Status</span>
+        ),
+        dataIndex: "status",
+        key: "status",
+        align: "center",
+        render: (status: ProjectStatus) => {
+          const isTakeOff = status === "Take Off";
+          return (
+            <span
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                isTakeOff
+                  ? "bg-green-100 text-green-700"
+                  : "bg-blue-100 text-blue-600"
+              }`}
+            >
+              {status}
+            </span>
+          );
+        },
+      },
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">Notes</span>
+        ),
+        dataIndex: "notes",
+        key: "notes",
+        align: "center",
+        fixed: "right",
+        render: (value) => <TextCell value={value} />,
+      },
+      {
+        title: "",
+        dataIndex: "is_favorite",
+        key: "favorite",
+        align: "center",
+        fixed: "right",
+        width: 40,
+        render: (isFavorite: boolean) =>
+          isFavorite ? (
+            <StarFilled className="text-gray-900 text-sm" />
+          ) : (
+            <StarOutlined className="text-gray-300 text-sm" />
+          ),
+      },
+    ],
+    []
+  );
+
+  const dynamicColumns: ColumnsType<ProjectRow> = useMemo(
+    () =>
+      dynamicProperties.map((property) => ({
+        title: (
+          <span className="text-xs font-semibold text-basicGray">
+            {getTitleFromPropertyName(property)}
+          </span>
+        ),
+        dataIndex: property,
+        key: property,
+        align: "center" as const,
+        render: (value) => <TextCell value={value} />,
+      })),
+    [dynamicProperties]
+  );
+
+  const columns = useMemo(
+    () => [...defaultColumns, ...dynamicColumns],
+    [defaultColumns, dynamicColumns]
+  );
+
+  const handleRowClick = useCallback(
+    (record: ProjectRow) => ({
+      onClick: () => router.push(`/projects/${record.key}`),
+      className: "cursor-pointer hover:bg-gray-50",
+    }),
+    [router]
+  );
 
   return (
     <ConfigProvider
@@ -112,24 +178,20 @@ const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
         },
       }}
     >
-      <Table
-        onRow={(record) => ({
-          onClick: () => {
-            router.push(`/projects/${record.key}`);
-          },
-          className: "cursor-pointer hover:bg-gray-50",
-        })}
-        columns={projectsColumns}
+      <Table<ProjectRow>
+        rowKey="key"
+        columns={columns}
         dataSource={projects}
+        onRow={handleRowClick}
         pagination={{
           current: page,
-          pageSize,
+          pageSize: PAGE_SIZE,
           showSizeChanger: false,
           showQuickJumper: false,
           itemRender: () => null,
           position: ["bottomRight"],
           showTotal: (total) => {
-            const totalPages = Math.ceil(total / pageSize);
+            const totalPages = Math.ceil(total / PAGE_SIZE);
             return (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Page</span>
@@ -150,10 +212,9 @@ const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
           },
         }}
         size="middle"
-        rowHoverable
+        sticky
         className="rounded-lg"
         rowClassName={() => "cursor-pointer transition-colors hover:bg-gray-50"}
-        sticky
       />
     </ConfigProvider>
   );

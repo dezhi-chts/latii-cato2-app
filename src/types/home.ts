@@ -2,11 +2,10 @@ export type ProjectStatus = "Take Off" | "Uploaded";
 
 export type ProjectRow = {
   key: string;
-  projectName: string;
-  lastEdit: string;
-  budgetPrice: number;
-  endCustomer: string;
+  project_name: string;
+  last_edit: string;
   status: ProjectStatus;
   notes: string;
-  isFavorite: boolean;
+  is_favorite: boolean;
+  [key: string]: unknown;
 };
