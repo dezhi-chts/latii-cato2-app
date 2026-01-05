@@ -30,6 +30,13 @@ const options: Option[] = [
     unselected_classname:
       "text-secondary400 bg-secondary400/10 hover:bg-secondary400/20",
   },
+  {
+    label: "All",
+    value: "all",
+    selected_classname: "bg-basicGray text-white",
+    unselected_classname:
+      "text-basicGray bg-basicGray/10 hover:bg-basicGray/20",
+  },
 ];
 const CategoriesRender = ({
   selectedCategory,

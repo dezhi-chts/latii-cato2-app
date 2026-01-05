@@ -1,4 +1,4 @@
-export type Category = "documents" | "weblinks" | "videos" | "text";
+export type Category = "documents" | "weblinks" | "videos" | "text" | "all";
 export type Option = {
   label: string;
   value: Category;

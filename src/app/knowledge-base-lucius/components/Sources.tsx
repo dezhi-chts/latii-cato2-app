@@ -9,6 +9,7 @@ import DocumentModal from "./modals/DocumentModal";
 import WeblinkModal from "./modals/WeblinkModal";
 import VideoModal from "./modals/VideoModal";
 import TextModal from "./modals/TextModal";
+import { ProjectRow } from "@/types/home";
 
 const sources: any = {
   documents: [
@@ -112,10 +113,17 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
   }, []);
 
   useEffect(() => {
-    const closePercentage = 40; //To change style speed change this.
+    const closePercentage = 40;
     const closeValue = (390 * closePercentage) / 100;
     setIsFullyOpen(width >= closeValue && isOpen);
   }, [isOpen, width]);
+
+  function getSources() {
+    if (selectedCategory === "all") {
+      return sources;
+    }
+    return sources[selectedCategory];
+  }
 
   return (
     <div
@@ -142,7 +150,7 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
         {isFullyOpen && (
           <div className="text-xs font-light px-4 py-4 overflow-auto max-h-[40vh] scrollbar-hidden">
             <SourcesRender
-              sources={sources[selectedCategory]}
+              sources={getSources()}
               selectedCategory={selectedCategory}
               setData={setData}
               setIsModalOpen={setIsModalOpen}
@@ -150,7 +158,7 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
           </div>
         )}
       </div>
-      {isFullyOpen && (
+      {isFullyOpen && selectedCategory !== "all" && (
         <div className="px-8 flex flex-col gap-3">
           <Button
             variant="outline"
@@ -195,8 +203,70 @@ const SourcesRender = ({
   const handleClick = (source: any) => {
     setData(source);
     setIsModalOpen(true);
-    console.log(source);
   };
+
+  if (selectedCategory === "all") {
+    const newSources = [
+      ...sources.documents.map((item: ProjectRow) => ({
+        ...item,
+        sourceType: "documents" as const,
+      })),
+      ...sources.weblinks.map((item: ProjectRow) => ({
+        ...item,
+        sourceType: "weblinks" as const,
+      })),
+      ...sources.videos.map((item: ProjectRow) => ({
+        ...item,
+        sourceType: "videos" as const,
+      })),
+      ...sources.text.map((item: ProjectRow) => ({
+        ...item,
+        sourceType: "text" as const,
+      })),
+    ];
+
+    function getIconSrc(source: ProjectRow): string {
+      const type = source.sourceType;
+      if (type === "documents") {
+        return `/assets/icons/extensions/${source.extension || "pdf"}.svg`;
+      }
+      if (type === "weblinks") {
+        return "/assets/icons/link.svg";
+      }
+      if (type === "videos") {
+        return "/assets/icons/sources-icons/videos.svg";
+      }
+      if (type === "text") {
+        return "/assets/icons/text.svg";
+      }
+      return "/assets/icons/sources-icons/all.svg";
+    }
+
+    return (
+      <div className="flex flex-col gap-2">
+        {newSources.map((source: any, index: number) => {
+          const iconSrc = getIconSrc(source);
+
+          return (
+            <div
+              key={index}
+              className="flex gap-3 items-center text-xs font-light hover:bg-primaryN20 cursor-pointer p-1 rounded"
+              onClick={() => handleClick(source)}
+            >
+              <Image
+                src={iconSrc}
+                alt={`${source.extension} icon`}
+                width={16}
+                height={16}
+                className="h-4 w-4"
+              />
+              <p className="truncate">{source.label}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (selectedCategory === "documents") {
     return (
@@ -305,11 +375,20 @@ const ModalsRender = ({
 }: ModalsRenderProps) => {
   if (!isModalOpen) return null;
 
+  const getAllModal = () => {
+    if (data.sourceType === "documents") return DocumentModal;
+    if (data.sourceType === "weblinks") return WeblinkModal;
+    if (data.sourceType === "videos") return VideoModal;
+    if (data.sourceType === "text") return TextModal;
+    else return DocumentModal;
+  };
+
   const modalsMap: Record<Category, React.FC<any>> = {
     documents: DocumentModal,
     weblinks: WeblinkModal,
     videos: VideoModal,
     text: TextModal,
+    all: getAllModal(),
   };
 
   const ModalComponent = modalsMap[selectedCategory];
