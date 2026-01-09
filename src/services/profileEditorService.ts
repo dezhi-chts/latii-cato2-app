@@ -55,3 +55,31 @@ export const fetchUnitAttributesWithOptionsByVersionId = async (versionId: strin
 		return { data: null, status: "error" };
 	}
 };
+
+export const baseCheckProfileScript = async (scriptMsg: string) => {
+	try {
+		const url = `/profile/script/base_check`;
+		const body = {
+			script_msg: scriptMsg,
+		};
+		const response = await http.post(url, body);
+		return { data: response.data as any, status: "success" };
+	} catch (error) {
+		console.error("Error baseCheckProfileScript:", error);
+		return { data: error, status: "error" };
+	}
+};
+
+export const saveProfileScript = async (profileId: number, scriptMsg: string) => {
+	try {
+		const url = `/profile/${profileId}/update`;
+		const body = {
+			script_msg: scriptMsg,
+		};
+		const response = await http.put(url, body);
+		return { data: response.data as any, status: "success" };
+	} catch (error) {
+		console.error("Error saveProfileScript:", error);
+		return { data: error, status: "error" };
+	}
+};
