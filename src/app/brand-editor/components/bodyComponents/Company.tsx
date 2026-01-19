@@ -300,7 +300,7 @@ const Company = () => {
 					</p>
 					<Input
 						className="w-10/12"
-						placeholder="Input a recognizable name for you."
+						placeholder="Website"
 						value={companyMsg.website}
 						size="large"
 						onChange={(e: any) => handleCompanyChange("website", e.target.value)}
@@ -312,7 +312,7 @@ const Company = () => {
 					</p>
 					<Input
 						className="w-10/12"
-						placeholder="Input a recognizable name for you."
+						placeholder="Social Media"
 						value={companyMsg.social_media}
 						size="large"
 						onChange={(e: any) => handleCompanyChange("social_media", e.target.value)}
