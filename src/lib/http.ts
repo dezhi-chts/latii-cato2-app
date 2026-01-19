@@ -63,7 +63,7 @@ export const http = {
     timeout?: number
   ) => request.post<T>(endpoint, data, { timeout }),
 
-  put: <T>(endpoint: string, data?: Record<string, unknown>) =>
+  put: <T>(endpoint: string, data?: Record<string, unknown> | FormData | any) =>
     request.put<T>(endpoint, data),
 
   delete: <T>(endpoint: string) => request.delete<T>(endpoint),

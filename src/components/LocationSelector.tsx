@@ -70,7 +70,7 @@ const LocationSelector = ({
     <div className="relative">
       <Input
         placeholder="State, City, Postal Code, Address"
-        className={`rounded-full cursor-pointer truncate ... ${
+        className={`cursor-pointer truncate ... ${
           height === "small" && "text-xs"
         }`}
         value={getFullLocation({
@@ -81,6 +81,7 @@ const LocationSelector = ({
         })}
         readOnly
         onClick={() => setIsOpen(true)}
+        size="large"
       />
       {isOpen && (
         <div
