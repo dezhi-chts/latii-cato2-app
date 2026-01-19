@@ -1,62 +1,59 @@
 "use client";
 
 type HeaderOption = {
-  id: number;
-  text: string;
+	id: number;
+	text: string;
 };
 
 const headerOptions: HeaderOption[] = [
-  { id: 1, text: "Your Company" },
-  { id: 2, text: "Base Product" },
-  { id: 3, text: "Adds On" },
-  { id: 4, text: "Brand Pricing" },
-  { id: 5, text: "Quoting Settings" },
+	{ id: 1, text: "Your Company" },
+	// { id: 2, text: "Your Company" }
 ];
 
 type HeaderProps = {
-  selectedOptionId: number;
-  setSelectedOptionId: React.Dispatch<React.SetStateAction<number>>;
+	selectedOptionId: number;
+	setSelectedOptionId: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const Header = ({ selectedOptionId, setSelectedOptionId }: HeaderProps) => {
-  const temporalDisable = true; // TODO: Enable when other options are ready
 
-  const handleOptionClick = (id: number) => {
-    if (temporalDisable) return;
+	const handleOptionClick = (id: number) => {
+		if (id === selectedOptionId) return;
+		setSelectedOptionId(id);
+	};
 
-    if (id === selectedOptionId) return;
-    setSelectedOptionId(id);
-  };
+	return (
+		<div className="w-full flex flex-col gap-2 border-b-primaryN30 border-b">
+			<div className="flex flex-col gap-1.5 pl-10">
+				<p className="text-forumBlue" style={{fontSize:"18px"}}>Brand Management</p>
+			</div>
 
-  return (
-    <div className="pl-14 pb-6 w-full flex flex-col gap-4 border-b-primaryN30 border-b">
-      <div className="flex flex-col gap-1.5">
-        <p className="text-forumBlue text-xl">Brand Management</p>
-        <p className="text-basicGray text-xs font-light">
-          Build your brand specifications
-        </p>
-      </div>
-      <div className="flex gap-8">
-        {headerOptions.map((option, index) => {
-          const isSelected = option.id === selectedOptionId;
-          const conditionalClassName = isSelected
-            ? "text-white bg-forumBlue cursor-default"
-            : "text-baseGray bg-white hover:bg-forumBlue/20 cursor-pointer";
-          return (
-            <div
-              className={`${conditionalClassName} ${
-                temporalDisable && "pointer-events-none"
-              } transition-all ease-in-out duration-150 px-8 py-1 rounded-lg`}
-              key={index}
-              onClick={() => handleOptionClick(index + 1)}
-            >
-              {option.text}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+			<div className="flex pl-10 relative" style={{bottom:"-1px"}}>
+				{headerOptions.map((option, index) => {
+					const isSelected = option.id === selectedOptionId;
+					const conditionalStyle = isSelected
+						? {
+							color: "#555555",
+							borderBottom: "2px solid #555555",
+							fontWeight:"border",
+						}
+						: {
+							color: "#A3A3A3"
+						}
+					return (
+						<div
+							className="p-4 cursor-pointer text-xs"
+							style={conditionalStyle}
+							key={option.id}
+							onClick={() => handleOptionClick(option.id)}
+						>
+							{option.text}
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
 };
 
 export default Header;
