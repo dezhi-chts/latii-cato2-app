@@ -1,5 +1,5 @@
 import { ComponentType } from "react";
-import Company from "@/app/brand-editor/components/bodyComponents/company";
+import Company from "@/app/brand-editor/components/body-components/company";
 
 const bodyMap: Record<number, ComponentType> = {
 	1: () => <Company />,
