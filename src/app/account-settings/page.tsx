@@ -138,7 +138,8 @@ const AccountSettings = () => {
         <Tabs
           className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center"
           defaultActiveKey="1"
-          items={isAdmin ? itemsAdmin : items}
+          // items={isAdmin ? itemsAdmin : items}
+          items={itemsAdmin}
           onChange={onChange}
         />
       </ConfigProvider>
