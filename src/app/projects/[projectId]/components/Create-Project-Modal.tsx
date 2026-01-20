@@ -41,40 +41,42 @@ const testFields: CustomField[] = [{
   Hint_text: "Client Expected Delivery Date",
   required: true,
 },
-{
-  field_name: 'project_award',
-  field_type: FieldType.DROPDOWN,
-  Hint_text: "Project Award Likelihood",
-  field_options: ['High', 'Medium', 'Low'],
-  required: false,
-}, {
-  field_name: 'project_desc',
-  field_type: FieldType.TEXTAREA,
-  Hint_text: "Project Description",
-  required: false,
-}, {
-  field_name: 'project_number_test',
-  field_type: FieldType.INPUT_NUMBER,
-  Hint_text: "Project Number Test",
-  required: false,
-}, {
-  field_name: 'project_radio_test',
-  field_type: FieldType.RADIO,
-  Hint_text: "Project Radio Test",
-  field_options: ['test1', 'test2', 'test3'],
-  required: false,
-}, {
-  field_name: 'project_checkbox_test',
-  field_type: FieldType.CHECKBOX,
-  Hint_text: "Project Checkbox Test",
-  field_options: ['test1', 'test2', 'test3'],
-  required: false,
-}, {
-  field_name: 'project_switch_test',
-  field_type: FieldType.SWITCH,
-  Hint_text: "Project Switch Test",
-  required: false,
-}]
+  // {
+  //   field_name: 'project_award',
+  //   field_type: FieldType.DROPDOWN,
+  //   Hint_text: "Project Award Likelihood",
+  //   field_options: ['High', 'Medium', 'Low'],
+  //   required: false,
+  // }, {
+  //   field_name: 'project_desc',
+  //   field_type: FieldType.TEXTAREA,
+  //   Hint_text: "Project Description",
+  //   required: false,
+  // }, 
+  // {
+  //   field_name: 'project_number_test',
+  //   field_type: FieldType.INPUT_NUMBER,
+  //   Hint_text: "Project Number Test",
+  //   required: false,
+  // }, {
+  //   field_name: 'project_radio_test',
+  //   field_type: FieldType.RADIO,
+  //   Hint_text: "Project Radio Test",
+  //   field_options: ['test1', 'test2', 'test3'],
+  //   required: false,
+  // }, {
+  //   field_name: 'project_checkbox_test',
+  //   field_type: FieldType.CHECKBOX,
+  //   Hint_text: "Project Checkbox Test",
+  //   field_options: ['test1', 'test2', 'test3'],
+  //   required: false,
+  // }, {
+  //   field_name: 'project_switch_test',
+  //   field_type: FieldType.SWITCH,
+  //   Hint_text: "Project Switch Test",
+  //   required: false,
+  // }
+]
 const CreateProjectModal = ({
   isOpen,
   closeModal,
@@ -365,17 +367,17 @@ const CreateProjectModal = ({
             }
 
           </div>
-          <div className="mt-8 mb-4 text-center">
+          <div className="flex-1 flex items-end justify-center">
             <Button
               onClick={handleProjectSubmit}
               type="primary"
-              className="w-[124px]"
+              className="w-[124px] mb-4"
             >
               Create
             </Button>
           </div>
         </div>
-        <div className="px-5 py-2 w-[720px] flex flex-col border border-basicLightGray rounded-md overflow-y-auto">
+        <div className="px-5 w-[720px] flex flex-col border border-basicLightGray rounded-md overflow-y-auto">
           <div className="my-4 text-lg text-baseGray">From Takeoff</div>
           <div className="flex-1">
             <TakeoffUpload onHandleUpload={handleUpload} />

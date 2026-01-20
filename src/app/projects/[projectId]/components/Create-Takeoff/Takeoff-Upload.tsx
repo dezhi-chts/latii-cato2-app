@@ -18,6 +18,7 @@ export type UploadBoxProps = {
 };
 
 type TakeoffUploadProps = {
+  showUploadTipLink?: boolean; // 是否显示上传提示链接
   onHandleUpload?: (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => void;
 };
 
@@ -135,7 +136,7 @@ export const QuoteUpload = ({ files, setFiles }: UploadBoxProps) => {
 };
 
 
-const TakeoffUpload = ({ onHandleUpload }: TakeoffUploadProps) => {
+const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUploadProps) => {
   const [archFiles, setArchFiles] = useState<UploadFile[]>([]);
   const [quoteFiles, setQuoteFiles] = useState<UploadFile[]>([]);
 
@@ -160,10 +161,11 @@ const TakeoffUpload = ({ onHandleUpload }: TakeoffUploadProps) => {
           <QuoteUpload files={quoteFiles} setFiles={setQuoteFiles} />
         </div>
       </div>
-      <div className="flex-1  mt-4 text-xs text-center text-basicGray underline cursor-pointer">Not sure what to upload?</div>
-
-      <div className="mb-4 text-center">
-        <Button type="primary" className="w-[124px] h-[28px] rounded-md" onClick={handleUpload}>Upload</Button>
+      {/* {showUploadTipLink && (
+        <div className="mt-4 text-xs text-center text-basicGray underline cursor-pointer">Not sure what to upload?</div>
+      )} */}
+      <div className="flex-1 flex items-end justify-center">
+        <Button type="primary" className="w-[124px] mt-4 mb-4" onClick={handleUpload}>Create</Button>
       </div>
     </div>
   );

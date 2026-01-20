@@ -1,16 +1,16 @@
-import {Divider, Input, message, Popconfirm, UploadFile} from "antd";
-import {FilePanel} from "./Create-Takeoff/Cato-Upload";
+import { Divider, Input, message, Popconfirm, UploadFile } from "antd";
+import { FilePanel } from "./Create-Takeoff/Cato-Upload";
 import Image from "next/image";
 import Link from "next/link";
-import {useParams} from "next/navigation";
-import {deleteTakeOffById} from "@/services/takeOffService";
-import {http} from "@/lib/http";
-import {useState} from "react";
+import { useParams } from "next/navigation";
+import { deleteTakeOffById } from "@/services/takeOffService";
+import { http } from "@/lib/http";
+import { useState } from "react";
 
-const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
+const TakeOffCard = ({ takeOff, fetchTakeOffs }: any) => {
     const order = Number(useParams().projectId);
 
-    const {TextArea} = Input;
+    const { TextArea } = Input;
 
     const takeOffData = takeOff.take_off_result;
     const [notes, setNotes] = useState(takeOffData?.notes || "");
@@ -46,11 +46,11 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
         updateTakeOffNotes(notes, takeOffData?.id);
     };
 
-  const handleClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const updateTakeOffNotes = async (notes: string, takeOffId: number) => {
+    const handleClick = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+    const updateTakeOffNotes = async (notes: string, takeOffId: number) => {
         if (!takeOffId)
             return;
         try {
@@ -60,10 +60,10 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
                 notes: notes,
             };
             const response = await http.put(url, body);
-            return {data: response as any, status: "success"};
+            return { data: response as any, status: "success" };
         } catch (error) {
             console.error("Error updating take off name:", error);
-            return {data: null, status: "error"};
+            return { data: null, status: "error" };
         }
     };
 
@@ -82,9 +82,9 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
                 <div className="flex flex-col gap-3 w-fit">
                     <p>{takeOffData?.name || "no_name"}</p>
                     <p className="text-xs text-basicGray">
-        <span className="text-sm text-black">
-          {getDaysSince(takeOffData?.update_time)}
-        </span>{" "}
+                        <span className="text-sm text-black">
+                            {getDaysSince(takeOffData?.update_time)}
+                        </span>{" "}
                         Last Edit | {formatDate(takeOffData?.update_time)}
                     </p>
                 </div>
@@ -95,7 +95,7 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
                     <p>{takeOffData?.items?.length || "-"}</p>
                     <p className="text-xxs text-basicGray"># Items</p>
                 </div>
-                <Divider type="vertical" className="m-0 h-auto bg-primaryN30"/>
+                <Divider type="vertical" className="m-0 h-auto bg-primaryN30" />
                 <div className="px-4 py-3 w-20">
                     <p>
                         {takeOffData?.status === 1
@@ -108,9 +108,8 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
 
             <div className="flex gap-4 pointer-events-none">
                 <div
-                    className={`flex w-72 ${
-                        takeOff?.project_files?.length > 1 ? "justify-evenly" : "justify-center"
-                    } pointer-events-auto`}
+                    className={`flex w-72 ${takeOff?.project_files?.length > 1 ? "justify-evenly" : "justify-center"
+                        } pointer-events-auto`}
                 >
                     {takeOff?.project_files?.length > 0 &&
                         takeOff?.project_files?.map((data: any, index: number) => {
@@ -119,7 +118,7 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
                             const file = createUploadFile(fileUrl, data?.file_name);
                             return (
                                 <div className="bg-white h-fit" key={index}>
-                                    <FilePanel file={file}/>
+                                    <FilePanel file={file} />
                                 </div>
                             );
                         })}
@@ -128,7 +127,7 @@ const TakeOffCard = ({takeOff, fetchTakeOffs}: any) => {
                 <TextArea
                     className="w-72 rounded-2xl px-4 pt-2 pointer-events-auto"
                     placeholder="Personal Notes"
-                    style={{resize: "none"}}
+                    style={{ resize: "none" }}
                     rows={4}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
