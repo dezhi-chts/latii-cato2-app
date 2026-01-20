@@ -22,6 +22,7 @@ export type ProjectSettings = {
   project_id?: number;
   // quotes_ready_for_process?: number;
   // order?: number;
+  [key: string]: any;
 };
 
 export const defaultProjectSettings: ProjectSettings = {
@@ -56,12 +57,12 @@ export type CreateProjectModalProps = {
 export type LocationSelectorProps = {
   onClose: () => void;
   handleInputChange: <K extends keyof ProjectSettings>(
-    field: K
+    field: K,
   ) => (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
   handleDropdownChange: <K extends keyof ProjectSettings>(
-    field: K
+    field: K,
   ) => (value: ProjectSettings[K]) => void;
   projectSettings: ProjectSettings;
   isOpen: boolean;
@@ -100,4 +101,27 @@ export type PreviewImage = {
   quote_id: string;
   image_url: string;
   is_open: boolean;
+};
+
+export enum FieldType {
+  INPUT_TEXT = "input_text",
+  TEXTAREA = "textarea",
+  INPUT_NUMBER = "input_number",
+  DROPDOWN = "dropdown",
+  CHECKBOX = "checkbox",
+  RADIO = "radio",
+  SWITCH = "switch",
+  DATE = "date",
+  LINK = "link",
+  LOCATION = "location",
+}
+
+export type CustomField = {
+  field_name: string;
+  field_type: string;
+  required: boolean;
+  field_options?: string[];
+  Hint_text: string;
+  Multiple_selection?: boolean;
+  range?: boolean;
 };

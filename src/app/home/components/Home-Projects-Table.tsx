@@ -8,17 +8,6 @@ import { getTitleFromPropertyName } from "@/lib/functions";
 
 const PAGE_SIZE = 10;
 
-const DEFAULT_KEYS = [
-  "key",
-  "project_name",
-  "last_edit",
-  "status",
-  "notes",
-  "is_favorite",
-] as const;
-
-type DefaultKey = (typeof DEFAULT_KEYS)[number];
-
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
   const ref = useRef<HTMLDivElement>(null);
@@ -46,23 +35,13 @@ const TextCell = ({ value }: { value: unknown }) => {
   );
 };
 
-const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
+const HomeProjectsTable = ({ projects, selectedColumns }: { projects: ProjectRow[]; selectedColumns?: string[] }) => {
   const [page, setPage] = useState(1);
   const router = useRouter();
 
-  const dynamicProperties = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          projects.flatMap((project) =>
-            Object.keys(project).filter(
-              (key) => !DEFAULT_KEYS.includes(key as DefaultKey)
-            )
-          )
-        )
-      ),
-    [projects]
-  );
+  const dynamicProperties = useMemo(() => {
+    return [];
+  }, [projects])
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -100,11 +79,10 @@ const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
           const isTakeOff = status === "Take Off";
           return (
             <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                isTakeOff
-                  ? "bg-green-100 text-green-700"
-                  : "bg-blue-100 text-blue-600"
-              }`}
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${isTakeOff
+                ? "bg-green-100 text-green-700"
+                : "bg-blue-100 text-blue-600"
+                }`}
             >
               {status}
             </span>
@@ -124,16 +102,19 @@ const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
       {
         title: "",
         dataIndex: "is_favorite",
-        key: "favorite",
+        key: "is_favorite",
         align: "center",
         fixed: "right",
-        width: 40,
-        render: (isFavorite: boolean) =>
-          isFavorite ? (
-            <StarFilled className="text-gray-900 text-sm" />
-          ) : (
-            <StarOutlined className="text-gray-300 text-sm" />
-          ),
+        width: 60,
+        render: (isFavorite: boolean) => {
+          return <div className="" onClick={() => { }}>
+            {isFavorite ? (
+              <StarFilled className="text-gray-900 text-sm" />
+            ) : (
+              <StarOutlined className="text-gray-300 text-sm" />
+            )
+            }</div>
+        }
       },
     ],
     []
@@ -155,10 +136,18 @@ const HomeProjectsTable = ({ projects }: { projects: ProjectRow[] }) => {
     [dynamicProperties]
   );
 
-  const columns = useMemo(
+  const allColumns = useMemo(
     () => [...defaultColumns, ...dynamicColumns],
     [defaultColumns, dynamicColumns]
   );
+
+  const columns = useMemo(() => {
+    if (!selectedColumns || selectedColumns.length === 0) {
+      return allColumns;
+    }
+    return allColumns.filter(column => selectedColumns.includes(column.key as string));
+  }, [allColumns, selectedColumns]);
+
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
