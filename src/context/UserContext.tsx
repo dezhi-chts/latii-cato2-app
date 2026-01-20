@@ -1,4 +1,4 @@
-import { fetchUser } from "@/services/userService";
+import { isUserAdmin } from "@/services/userService";
 import { UserDataForUpdate } from "@/types/user";
 import {
   createContext,
@@ -14,11 +14,13 @@ type UserContextType = {
   first_name?: string;
   last_name?: string;
   email?: string;
+  job_title: string;
   company?: any;
   company_contact?: any;
   force_logout: boolean;
   changeUser: (updatedData: UserDataForUpdate) => void;
   clearLocalStorage: () => void;
+  isAdmin: boolean;
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -30,18 +32,35 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     first_name: "Guest",
     last_name: "",
     email: "guest@example.com",
+    job_title: "",
     company: null,
     company_contact: null,
     force_logout: false,
     changeUser: () => {},
     clearLocalStorage: () => {},
+    isAdmin: false,
   });
 
   const changeUser = (updatedData: UserDataForUpdate) => {
+    saveChangesOnLocalStorage(updatedData);
     setUser((prev) => {
       const updatedUser = { ...prev, ...updatedData };
       return updatedUser;
     });
+  };
+
+  const saveChangesOnLocalStorage = (updatedUser: UserDataForUpdate) => {
+    try {
+      const user = localStorage.getItem("userData");
+      if (!user) return;
+      const parsedUser = JSON.parse(user);
+      const newUser = {
+        ...parsedUser,
+        email: updatedUser.email,
+        name: `${updatedUser.first_name} ${updatedUser.last_name}`,
+      };
+      localStorage.setItem("userData", JSON.stringify(newUser));
+    } catch (error) {}
   };
 
   const clearLocalStorage = () => {
@@ -61,9 +80,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (!savedUser?.username)
-      return;
+    if (!savedUser?.username) return;
 
+    const isAdmin = await isUserAdmin();
     // const response = await fetchUser(savedUser.username);
     // return;
 
@@ -82,14 +101,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     //   changeUser,
     //   clearLocalStorage,
     // });
-    let first_name = "Guest"
-    let last_name = ""
-    if(savedUser.name.split(' ').length==2){
-       first_name = savedUser.name.split(' ')[0]
-       last_name = savedUser.name.split(' ')[1]
+    let first_name = "Guest";
+    let last_name = "";
+    if (savedUser.name.split(" ").length == 2) {
+      first_name = savedUser.name.split(" ")[0];
+      last_name = savedUser.name.split(" ")[1];
     }
     setUser({
-       id: "",
+      id: "",
       username: savedUser.username,
       first_name: first_name,
       last_name: last_name,
@@ -99,7 +118,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       force_logout: false,
       changeUser: () => {},
       clearLocalStorage: () => {},
-    })
+      isAdmin: isAdmin,
+      job_title: savedUser.job_title,
+    });
     return;
   };
 
