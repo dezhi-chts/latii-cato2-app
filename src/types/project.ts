@@ -63,7 +63,7 @@ export type LocationSelectorProps = {
   handleDropdownChange: <K extends keyof ProjectSettings>(
     field: K
   ) => (value: ProjectSettings[K]) => void;
-  projectSettings: ProjectSettings;
+  projectSettings: any;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   selectorClassName?: string;
