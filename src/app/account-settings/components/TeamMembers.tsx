@@ -2,12 +2,18 @@
 
 import Button from "@/components/Button";
 import { Divider, Input } from "antd";
+import UserTable from "./UserTable";
 
 const TeamMembers = () => {
   return (
     <div className="mt-8 ml-4 flex flex-col gap-12 w-full">
       <div className="flex">
-        <div className="w-8/12">User Panel</div>
+        <div className="w-8/12">
+          <p>User Panel</p>
+          <div className="w-11/12">
+            <UserTable />
+          </div>
+        </div>
 
         <div className="w-4/12 flex flex-col gap-6 border-l-2 pl-12">
           <p className="py-2 text-kahuBlue text-base">New User</p>
