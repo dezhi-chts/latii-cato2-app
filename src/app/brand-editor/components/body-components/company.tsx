@@ -1,9 +1,8 @@
 "use client";
 
-import { Input, Upload, notification, Form, Button } from "antd";
+import { Input, Upload, notification, Form, Button, Space } from "antd";
 const { TextArea } = Input;
-import { CSSProperties, ElementType, ReactNode } from "react";
-import { GlobalOutlined } from "@ant-design/icons";
+import { GlobalOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { use, useEffect, useState } from "react";
 import {
@@ -12,76 +11,6 @@ import {
 	updateCompanyByCompanyId
 } from "@/services/companyService";
 import LocationSelector from "@/components/LocationSelector";
-
-// const companyFields: CompanyField[] = [
-// 	{
-// 		name: "Name",
-// 		Component: Input,
-// 		isObligatory: true,
-// 		placeholder: "Input a recognizable name for you.",
-// 		className: "w-[350px]",
-// 	},
-// 	{
-// 		name: "Description",
-// 		Component: Input.TextArea,
-// 		isObligatory: false,
-// 		placeholder: "Any additional notes, descriptions",
-// 		className: "w-[350px]",
-// 		style: { resize: "none" },
-// 		rows: 4,
-// 	},
-// 	{
-// 		name: "Location",
-// 		Component: Input,
-// 		isObligatory: false,
-// 		placeholder: "State, City, Postal Code, Address.",
-// 		className: "w-[350px]",
-// 		addonAfter: (
-// 			<div className="flex items-center justify-center w-4 h-6">
-// 				<Image
-// 					alt="location"
-// 					src="/assets/icons/location.svg"
-// 					width={16}
-// 					height={16}
-// 				/>
-// 			</div>
-// 		),
-// 	},
-// 	{
-// 		name: "Website",
-// 		Component: Input,
-// 		isObligatory: false,
-// 		placeholder: "Website",
-// 		className: "w-[350px]",
-// 		addonAfter: (
-// 			<div className="flex items-center justify-center w-4 h-6">
-// 				<Image
-// 					alt="website"
-// 					src="/assets/icons/website.svg"
-// 					width={16}
-// 					height={16}
-// 				/>
-// 			</div>
-// 		),
-// 	},
-// 	{
-// 		name: "Social Media",
-// 		Component: Input,
-// 		isObligatory: false,
-// 		placeholder: "LinkedIn",
-// 		className: "w-[350px]",
-// 		addonAfter: (
-// 			<div className="flex items-center justify-center w-4 h-6">
-// 				<Image
-// 					alt="Social Media"
-// 					src="/assets/icons/website.svg"
-// 					width={16}
-// 					height={16}
-// 				/>
-// 			</div>
-// 		),
-// 	},
-// ];
 
 type Location = {
 	state: string,
@@ -155,7 +84,7 @@ const Company = () => {
 				message: "Success",
 				description: "Upload successfully"
 			});
-		}else{
+		} else {
 			notification.error({
 				message: "Error",
 				description: "Failed to upload file"
@@ -196,7 +125,7 @@ const Company = () => {
 				message: "Success",
 				description: "Save successfully"
 			});
-		}else{
+		} else {
 			notification.error({
 				message: "Error",
 				description: "Failed to Save"
@@ -218,6 +147,7 @@ const Company = () => {
 							<div className="relative h-28 w-28 rounded-xl overflow-hidden group cursor-pointer flex items-center justify-center ">
 								<Image
 									src={companyMsg?.photo_url}
+									key={companyMsg?.photo_url}
 									alt="upload photo icon"
 									width={80}
 									height={80}
@@ -281,8 +211,9 @@ const Company = () => {
 					<p className="w-2/12">
 						Location
 					</p>
-					<div className="w-10/12">
+					<Space.Compact size="large" className="w-10/12">
 						<LocationSelector
+							style={{width:"100%"}}
 							onClose={() => setShowLocationSelector(false)}
 							handleInputChange={handleInputChange}
 							handleDropdownChange={handleDropdownChange}
@@ -291,32 +222,43 @@ const Company = () => {
 							setIsOpen={setShowLocationSelector}
 							height="medium"
 						/>
-					</div>
+						<Space.Addon className="bg-white">
+							<EnvironmentOutlined style={{ color: "#C6C6C6" }} />
+						</Space.Addon>
+					</Space.Compact>
 
 				</div>
 				<div className="zoomed-container mt-8 flex gap-6 w-[800px] items-center">
 					<p className="w-2/12">
 						Website
 					</p>
-					<Input
-						className="w-10/12"
-						placeholder="Website"
-						value={companyMsg.website}
-						size="large"
-						onChange={(e: any) => handleCompanyChange("website", e.target.value)}
-					/>
+					<Space.Compact size="large" className="w-10/12">
+						<Input
+							placeholder="Website"
+							value={companyMsg.website}
+							size="large"
+							onChange={(e: any) => handleCompanyChange("website", e.target.value)}
+						/>
+						<Space.Addon className="bg-white">
+							<GlobalOutlined style={{ color: "#C6C6C6" }} />
+						</Space.Addon>
+					</Space.Compact>
 				</div>
 				<div className="zoomed-container mt-8 flex gap-6 w-[800px] items-center">
 					<p className="w-2/12">
 						Social Media
 					</p>
-					<Input
-						className="w-10/12"
-						placeholder="Social Media"
-						value={companyMsg.social_media}
-						size="large"
-						onChange={(e: any) => handleCompanyChange("social_media", e.target.value)}
-					/>
+					<Space.Compact size="large" className="w-10/12">
+						<Input
+							placeholder="Social Media"
+							value={companyMsg.social_media}
+							size="large"
+							onChange={(e: any) => handleCompanyChange("social_media", e.target.value)}
+						/>
+						<Space.Addon className="bg-white">
+							<GlobalOutlined style={{ color: "#C6C6C6" }} />
+						</Space.Addon>
+					</Space.Compact>
 				</div>
 				<div className="zoomed-container mt-8 flex gap-6 w-[800px] items-center justify-start">
 					<Button onClick={handleSaveChange} type="primary">Save Change</Button>
