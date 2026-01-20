@@ -3,12 +3,40 @@
 type HeaderOption = {
 	id: number;
 	text: string;
-	children: []
+	isDirectory: boolean,
+	children: HeaderOption[]
 };
 
 const headerOptions: HeaderOption[] = [
-	{ id: 1, text: "Your Company", children:[]},
-	// { id: 2, text: "Your Company" }
+	{
+		id: 1,
+		text: "Your Company",
+		isDirectory: false,
+		children: []
+	},
+	{
+		id: 2,
+		text: "Libraries",
+		isDirectory: true,
+		children: [
+			{
+				id: 2.1,
+				text: "Parameters",
+				isDirectory: false,
+				children: []
+			}, {
+				id: 2.2,
+				text: "Base",
+				isDirectory: false,
+				children: []
+			}, {
+				id: 2.3,
+				text: "Options",
+				isDirectory: false,
+				children: []
+			}
+		]
+	}
 ];
 
 type HeaderProps = {
@@ -26,30 +54,43 @@ const Header = ({ selectedOptionId, setSelectedOptionId }: HeaderProps) => {
 	return (
 		<div className="w-full flex flex-col gap-2 border-b-primaryN30 border-b">
 			<div className="flex flex-col gap-1.5 pl-10">
-				<p className="text-forumBlue" style={{fontSize:"18px"}}>Brand Management</p>
+				<p className="text-forumBlue" style={{ fontSize: "18px" }}>Brand Management</p>
 			</div>
 
-			<div className="flex pl-10 relative" style={{bottom:"-1px"}}>
+			<div className="flex pl-10 relative" style={{ bottom: "-1px" }}>
 				{headerOptions.map((option, index) => {
 					const isSelected = option.id === selectedOptionId;
 					const conditionalStyle = isSelected
 						? {
 							color: "#555555",
 							borderBottom: "2px solid #555555",
-							fontWeight:"border",
+							fontWeight: "border",
 						}
 						: {
 							color: "#A3A3A3"
 						}
 					return (
-						<div
-							className="p-4 cursor-pointer text-xs"
-							style={conditionalStyle}
-							key={option.id}
-							onClick={() => handleOptionClick(option.id)}
-						>
-							{option.text}
-						</div>
+						option.isDirectory ?
+						<>
+							<div
+								className="p-4 cursor-pointer text-xs"
+								style={conditionalStyle}
+								key={option.id}
+							>
+								{option.text}
+							</div>
+						</> :
+						<>
+							<div
+								className="p-4 cursor-pointer text-xs"
+								style={conditionalStyle}
+								key={option.id}
+								onClick={() => handleOptionClick(option.id)}
+							>
+								{option.text}
+							</div>
+						</>
+						
 					);
 				})}
 			</div>
