@@ -83,3 +83,17 @@ export const saveProfileScript = async (profileId: number, scriptMsg: string) =>
 		return { data: error, status: "error" };
 	}
 };
+
+export const fetchProductAttributeVersionByAttributeNameCompanyId = async (
+	attributeName: string,
+	companyId: number
+) => {
+	try {
+		const url = `/product_attribute/version/all`;
+		const response = await http.get(url, { attribute_name: attributeName, company_id: companyId });
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error fetchProfileMsgByVersionId:", error);
+		return { data: null, status: "error" };
+	}
+};

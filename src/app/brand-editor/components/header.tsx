@@ -1,5 +1,8 @@
 "use client";
 
+import { Menu, Dropdown } from "antd";
+import React from "react";
+
 type HeaderOption = {
 	id: number;
 	text: string;
@@ -59,7 +62,16 @@ const Header = ({ selectedOptionId, setSelectedOptionId }: HeaderProps) => {
 
 			<div className="flex pl-10 relative" style={{ bottom: "-1px" }}>
 				{headerOptions.map((option, index) => {
-					const isSelected = option.id === selectedOptionId;
+					let isSelected = option.id === selectedOptionId;
+					if (!isSelected){
+						if (option.children && option.children.length != 0){
+							option.children.forEach((s)=>{
+								if(s.id == selectedOptionId){
+									isSelected = true
+								}
+							})
+						}
+					}
 					const conditionalStyle = isSelected
 						? {
 							color: "#555555",
@@ -69,28 +81,45 @@ const Header = ({ selectedOptionId, setSelectedOptionId }: HeaderProps) => {
 						: {
 							color: "#A3A3A3"
 						}
+					const items:any = []
+					if (option.children && option.children.length != 0){
+						option.children.forEach((s)=>{
+							items.push({
+								key: s.id,
+								label: <div className="text-xs">{s.text}</div>,
+							})
+						})
+					}
 					return (
 						option.isDirectory ?
-						<>
-							<div
-								className="p-4 cursor-pointer text-xs"
-								style={conditionalStyle}
-								key={option.id}
+						<React.Fragment key={option.id}>
+							<Dropdown 
+								menu={{ 
+									items: items,
+									onClick: (key:any) => {
+										handleOptionClick(Number(key.key));
+									},
+									selectedKeys: selectedOptionId ? [selectedOptionId.toString()] : [],
+								}} 
+								placement="bottomLeft"
 							>
-								{option.text}
-							</div>
-						</> :
-						<>
-							<div
-								className="p-4 cursor-pointer text-xs"
-								style={conditionalStyle}
-								key={option.id}
-								onClick={() => handleOptionClick(option.id)}
-							>
-								{option.text}
-							</div>
-						</>
-						
+								<div
+									className="p-4 cursor-pointer text-xs"
+									style={conditionalStyle}
+									key={option.id}
+								>
+									{option.text}
+								</div>
+							</Dropdown>
+						</React.Fragment> :
+						<div
+							className="p-4 cursor-pointer text-xs"
+							style={conditionalStyle}
+							key={option.id}
+							onClick={() => handleOptionClick(option.id)}
+						>
+							{option.text}
+						</div>
 					);
 				})}
 			</div>
