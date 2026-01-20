@@ -1,3 +1,5 @@
+"use client";
+
 import { ComponentType } from "react";
 import Company from "@/app/brand-editor/components/body-components/company";
 

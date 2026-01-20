@@ -3,10 +3,11 @@
 type HeaderOption = {
 	id: number;
 	text: string;
+	children: []
 };
 
 const headerOptions: HeaderOption[] = [
-	{ id: 1, text: "Your Company" },
+	{ id: 1, text: "Your Company", children:[]},
 	// { id: 2, text: "Your Company" }
 ];
 

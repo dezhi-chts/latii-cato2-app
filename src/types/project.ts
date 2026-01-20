@@ -69,6 +69,7 @@ export type LocationSelectorProps = {
   selectorClassName?: string;
   updateProject?: () => void;
   height?: "small" | "medium";
+  style: any
 };
 
 export type QuickActionsForm = {
