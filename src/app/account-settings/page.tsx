@@ -1,14 +1,25 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { Divider, Input, notification, Popover, Spin } from "antd";
+import {
+  ConfigProvider,
+  Divider,
+  Input,
+  notification,
+  Popover,
+  Spin,
+  Tabs,
+  TabsProps,
+} from "antd";
 import Button from "@/components/Button";
 import { useEffect, useState } from "react";
 import { changePassword } from "@/services/userService";
 import { passwordChangeData } from "@/types/user";
+import YourProfile from "./components/YourProfile";
+import TeamMembers from "./components/TeamMembers";
 
 const AccountSettings = () => {
-  const [currentPassword, setCurrentPassword] = useState("");
+  /*   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,8 +62,9 @@ const AccountSettings = () => {
         duration: 5,
       });
     } else {
-      let errorMessage= "Something went wrong while changing your password."
-      const detail = response?.data?.detail || response?.data?.response?.data?.detail;
+      let errorMessage = "Something went wrong while changing your password.";
+      const detail =
+        response?.data?.detail || response?.data?.response?.data?.detail;
       if (detail) {
         errorMessage = detail;
       }
@@ -76,64 +88,61 @@ const AccountSettings = () => {
 
   const areInputsValid =
     currentPassword && newPassword && confirmPassword && !errorMessage;
+ */
+  const { isAdmin } = useUser();
+  const onChange = (key: string) => {
+    console.log(key);
+  };
 
+  const itemsAdmin: TabsProps["items"] = [
+    {
+      key: "1",
+      label: "Your Profile",
+      children: <YourProfile />,
+    },
+    {
+      key: "2",
+      label: "Team Management",
+      children: <TeamMembers />,
+    },
+  ];
+
+  const items: TabsProps["items"] = [
+    {
+      key: "1",
+      label: "Your Profile",
+      children: <YourProfile />,
+    },
+  ];
   return (
-    <div className="pl-32 mt-20 flex flex-col gap-12 text-sm w-full zoomed-container">
-      <div className="w-1/2">
-        <p className="text-xl text-neutral-900">Account Preferences</p>
-        <p>Manage your data, privacy and security.</p>
-        <Divider className="bg-primaryN30" />
+    <div className="pl-32 mt-10 flex flex-col gap-4 w-full zoomed-container">
+      <div className="flex flex-col gap-1">
+        <p className="text-lg text-forumBlue">Account Preferences</p>
+        <p className="text-xxs text-basicGray">
+          Manage your data and your team members, privacy and security.
+        </p>
       </div>
 
-      <div className="flex flex-col gap-6 w-4/6">
-        <p className="text-primaryN900 text-base">Password Security</p>
-
-        <div className="flex gap-x-14 pl-10 w-full gap-y-10 flex-col">
-          <div className="w-80 flex flex-col gap-1">
-            <p>Current password</p>
-            <Input.Password
-              value={currentPassword}
-              placeholder="Enter your current password"
-              className="rounded-lg"
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-x-14 gap-y-10 flex-wrap">
-            <div className="w-80 flex flex-col gap-1">
-              <p>New password</p>
-              <Input.Password
-                value={newPassword}
-                placeholder="Enter a new password"
-                className="rounded-lg"
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-
-            <div className="w-80 flex flex-col gap-1">
-              <p>Confirm new password</p>
-              <Input.Password
-                value={confirmPassword}
-                placeholder="Re-enter your new password"
-                className="rounded-lg"
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <Popover content={errorMessage || ""} placement="right">
-          <div></div>
-          <Button
-            className="w-40"
-            onClick={handleChangePassword}
-            disabled={loading || !areInputsValid}
-          >
-            {loading ? <Spin /> : "Change Password"}
-          </Button>
-        </Popover>
-      </div>
+      <ConfigProvider
+        theme={{
+          components: {
+            Tabs: {
+              inkBarColor: "#555555",
+              itemSelectedColor: "#555555",
+              itemColor: "#A3A3A3",
+              itemHoverColor: "#555555",
+            },
+          },
+        }}
+      >
+        <Tabs
+          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center"
+          defaultActiveKey="1"
+          // items={isAdmin ? itemsAdmin : items}
+          items={itemsAdmin}
+          onChange={onChange}
+        />
+      </ConfigProvider>
     </div>
   );
 };
