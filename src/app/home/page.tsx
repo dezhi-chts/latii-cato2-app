@@ -10,6 +10,7 @@ import Button from "@/components/Button";
 import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
+import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
 
 export const projects: ProjectRow[] = [
   {
@@ -151,6 +152,7 @@ type Category = "Projects" | "Take Offs";
 const Home = () => {
   const { first_name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState<boolean>(false);
+  const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] = useState<boolean>(false);
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [filter, setFilter] = useState<Filter>({
     value: "",
@@ -264,6 +266,23 @@ const Home = () => {
           <CreateProjectModal
             isOpen={showCreateProjectModal}
             closeModal={closeModal}
+            onOpenTakeoffModal={(data) => {
+              // 关闭Create-Project-Modal弹窗
+              closeModal();
+              // 打开Create-Project-Takeoff-Modal弹窗
+              setShowCreateProjectTakeOffModal(true);
+            }}
+          />
+        )
+      }
+      {
+        showCreateProjectTakeOffModal && (
+          <CreateProjectTakeoffModal
+            isOpen={showCreateProjectTakeOffModal}
+            closeModal={() => {
+              // 关闭Create-Project-Takeoff-Modal弹窗
+              setShowCreateProjectTakeOffModal(false);
+            }}
           />
         )
       }

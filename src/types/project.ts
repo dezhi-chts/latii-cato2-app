@@ -52,6 +52,7 @@ export type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onSuccess?: () => void;
+  onOpenTakeoffModal?: (data: any) => void;
 };
 
 export type LocationSelectorProps = {
@@ -70,7 +71,7 @@ export type LocationSelectorProps = {
   selectorClassName?: string;
   updateProject?: () => void;
   height?: "small" | "medium";
-  style: any
+  style: any;
 };
 
 export type QuickActionsForm = {

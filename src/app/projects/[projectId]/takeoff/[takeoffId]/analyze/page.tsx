@@ -1,5 +1,5 @@
 "use client";
-import { useParams, useRouter,useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button, ConfigProvider, Divider, Popover, Select, notification } from "antd";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,12 +11,12 @@ import { fetchProject } from "@/services/projectService";
 
 import Header from "./components/Header";
 import ItemsTable from "./components/ItemsTable";
-import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/PdfWrapper";
+import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
 
 
 export type PageData = {
-  current: number;
-  total: number;
+    current: number;
+    total: number;
 };
 
 const Analyze = () => {
@@ -49,12 +49,12 @@ const Analyze = () => {
         if (takeOffId) getTakeOff();
     }, [takeOffId]);
 
-    useEffect(()=>{
+    useEffect(() => {
         getProjectInfo();
-    },[projectId]);
+    }, [projectId]);
 
-    const getFileEvidences = async (fileId?: number)=>{
-        const response = await getEvidenceByFileId(projectId,fileId as number);
+    const getFileEvidences = async (fileId?: number) => {
+        const response = await getEvidenceByFileId(projectId, fileId as number);
         if (response.status === "success") {
             setFileEvidence(response.data);
         } else {
@@ -65,7 +65,7 @@ const Analyze = () => {
         }
     };
 
-    const getProjectInfo  = async ()=>{
+    const getProjectInfo = async () => {
         let res = await fetchProject(projectId);
         if (res) {
             setProject(res);
@@ -82,9 +82,9 @@ const Analyze = () => {
         if (response.status === "success") {
             let res = response.data;
             const exist = res?.take_off_result?.status === 2;
-            if (exist){
+            if (exist) {
                 setTakeOff(res);
-                if(res?.project_files?.length > 0){
+                if (res?.project_files?.length > 0) {
                     //设置pdfurl
                     let firstFile = res?.project_files[0];
                     let newPdfUrl = firstFile?.parse_detail?.uploaded_file_url;
@@ -113,7 +113,7 @@ const Analyze = () => {
 
         //设置新的url
         let file = takeOff?.project_files.find((file: any) => file.id === selectedFileId);
-        if (file){
+        if (file) {
             let newPdfUrl = file?.parse_detail?.uploaded_file_url;
             setPdfUrl(newPdfUrl);
             //获取file evidence
@@ -123,14 +123,14 @@ const Analyze = () => {
 
     useEffect(() => {
         const checkPages = () => {
-        const total = pdfRef.current?.getPageAmount() ?? 0;
+            const total = pdfRef.current?.getPageAmount() ?? 0;
 
-        if (total === 0) {
-            setTimeout(checkPages, 1000);
-            return;
-        }
+            if (total === 0) {
+                setTimeout(checkPages, 1000);
+                return;
+            }
 
-        const newData = { current: 1, total };
+            const newData = { current: 1, total };
             setPageData(newData);
         };
 
@@ -173,11 +173,10 @@ const Analyze = () => {
 
             <div className={`flex-1 flex overflow-hidden flex-row pr-4`}>
                 <div
-                    className={`${
-                        isTableExpanded ? "w-4/5" : "w-3/5"
-                    } pl-10 flex gap-2 transition-all duration-300 ease-in-out`}
+                    className={`${isTableExpanded ? "w-4/5" : "w-3/5"
+                        } pl-10 flex gap-2 transition-all duration-300 ease-in-out`}
                 >
-                    <ItemsTable 
+                    <ItemsTable
                         takeOff={takeOff}
                         selectedFileId={selectedFileId}
                         onRefreshItems={getTakeOff}
@@ -212,7 +211,7 @@ const Analyze = () => {
                             handleRotate={handleRotate}
                         >
                         </PdfButtons>
-                    </div> 
+                    </div>
                     <PdfWrapper
                         ref={pdfRef}
                         operationMode={'view'}
@@ -281,9 +280,8 @@ const PdfButtons = ({
             </div>
             <div className="flex gap-3 items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
                 <div
-                    className={`h-full py-2 w-2 flex items-center justify-center ${
-                        page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-                    }`}
+                    className={`h-full py-2 w-2 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+                        }`}
                     onClick={() => handlePageChange(page - 1)}
                 >
                     <Image
@@ -295,11 +293,10 @@ const PdfButtons = ({
                 </div>
                 <p className="text-basicGray text-xxs">Page {page}</p>
                 <div
-                    className={`h-full py-2 w-2 flex items-center justify-center ${
-                        page === totalPages
+                    className={`h-full py-2 w-2 flex items-center justify-center ${page === totalPages
                         ? "cursor-default opacity-50"
                         : "cursor-pointer"
-                    }`}
+                        }`}
                     onClick={() => handlePageChange(page + 1)}
                 >
                     <Image
