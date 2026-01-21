@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
 import Image from "next/image";
 import { Button, Upload, message } from 'antd';
@@ -15,11 +15,21 @@ export type FilePanelProps = {
 export type UploadBoxProps = {
   files: UploadFile[];
   setFiles: (files: UploadFile[]) => void;
+  onChangeHinegeStatus?: (value: "1" | "2") => void;
 };
 
 type TakeoffUploadProps = {
   showUploadTipLink?: boolean; // 是否显示上传提示链接
-  onHandleUpload?: (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => void;
+  onHandleUpload?: (data: {
+    archFiles: UploadFile[],
+    quoteFiles: UploadFile[],
+    arcHingeMode?: "1" | "2",
+    quoteHingeMode?: "1" | "2"
+  }) => void;
+};
+
+type HingeModeProps = {
+  onChangeHinegeStatus: (value: "1" | "2") => void;
 };
 
 export const UploadFileList = ({
@@ -103,7 +113,148 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
   );
 };
 
-export const ArchitecturalUpload = ({ files, setFiles }: UploadBoxProps) => {
+export const HingeMode = ({
+  onChangeHinegeStatus,
+}: HingeModeProps) => {
+  const [hingeStatus, setHingeStatus] = useState<"1" | "2">("1");
+  const handleHingeStatusChange = (value: "1" | "2") => {
+    setHingeStatus(value);
+  };
+
+  useEffect(() => {
+    onChangeHinegeStatus?.(hingeStatus);
+  }, [hingeStatus]);
+
+  return (
+    <div className="w-full flex flex-col gap-1 ">
+      <p className="my-4 text-xs">Hinge Orientation</p>
+      <div className="flex gap-4">
+        <div
+          className="cursor-pointer"
+          onClick={() => handleHingeStatusChange("1")}
+        >
+          <svg
+            width="80"
+            height="106"
+            viewBox="0 0 62 87"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              x="0.5"
+              y="0.5"
+              width="61"
+              height="86"
+              rx="5.5"
+              fill={hingeStatus === "1" ? "#DCDDDE" : "white"}
+            />
+            <rect
+              x="0.5"
+              y="0.5"
+              width="61"
+              height="86"
+              rx="5.5"
+              stroke="#DCDDDE"
+            />
+            <rect
+              x="8.5"
+              y="8.5"
+              width="45"
+              height="70"
+              rx="1"
+              stroke="#717171"
+            />
+            <rect
+              x="11.5"
+              y="11.5"
+              width="39"
+              height="64"
+              rx="1"
+              stroke="#717171"
+            />
+            <path
+              d="M12 75L49.0713 44.2699C49.5537 43.87 49.5537 43.13 49.0713 42.7301L12 12"
+              stroke="#B1B1B1"
+              strokeWidth="0.8"
+              strokeDasharray="3 3"
+            />
+            <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
+            <rect
+              x="11.5"
+              y="43"
+              width="10"
+              height="2"
+              rx="1"
+              fill="#C6C6C6"
+            />
+          </svg>
+        </div>
+        <div
+          className="cursor-pointer"
+          onClick={() => handleHingeStatusChange("2")}
+        >
+          <svg
+            width="80"
+            height="106"
+            viewBox="0 0 62 87"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              x="0.5"
+              y="0.5"
+              width="61"
+              height="86"
+              rx="5.5"
+              fill={hingeStatus === "2" ? "#DCDDDE" : "white"}
+            />
+            <rect
+              x="0.5"
+              y="0.5"
+              width="61"
+              height="86"
+              rx="5.5"
+              stroke="#DCDDDE"
+            />
+            <rect
+              x="8.5"
+              y="8.5"
+              width="45"
+              height="70"
+              rx="1"
+              stroke="#717171"
+            />
+            <rect
+              x="11.5"
+              y="11.5"
+              width="39"
+              height="64"
+              rx="1"
+              stroke="#717171"
+            />
+            <path
+              d="M50 12L12.9287 42.7301C12.4463 43.13 12.4463 43.87 12.9287 44.2699L50 75"
+              stroke="#B1B1B1"
+              strokeWidth="0.8"
+              strokeDasharray="3 3"
+            />
+            <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
+            <rect
+              x="11.5"
+              y="43"
+              width="10"
+              height="2"
+              rx="1"
+              fill="#C6C6C6"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export const ArchitecturalUpload = ({ files, setFiles, onChangeHinegeStatus }: UploadBoxProps) => {
   return <div className="p-4 pb-16 border-2 border-baseLightGray rounded-lg">
     <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
       <Image
@@ -116,11 +267,17 @@ export const ArchitecturalUpload = ({ files, setFiles }: UploadBoxProps) => {
     <div className="text-forumBlue my-4 text-base">Architectural Drawings</div>
 
     <UploadBox files={files} setFiles={setFiles} />
+    {
+      files.length > 0 && <HingeMode onChangeHinegeStatus={(value: "1" | "2") => {
+        onChangeHinegeStatus?.(value);
+      }} />
+    }
+
   </div>;
 };
 
 
-export const QuoteUpload = ({ files, setFiles }: UploadBoxProps) => {
+export const QuoteUpload = ({ files, setFiles, onChangeHinegeStatus }: UploadBoxProps) => {
   return <div className="p-4 pb-16 border-2 border-baseLightGray rounded-lg">
     <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
       <Image
@@ -132,6 +289,11 @@ export const QuoteUpload = ({ files, setFiles }: UploadBoxProps) => {
     </div>
     <div className="text-forumBlue my-4 text-base">Quote Lists</div>
     <UploadBox files={files} setFiles={setFiles} />
+    {
+      files.length > 0 && <HingeMode onChangeHinegeStatus={(value: "1" | "2") => {
+        onChangeHinegeStatus?.(value);
+      }} />
+    }
   </div>;
 };
 
@@ -139,6 +301,8 @@ export const QuoteUpload = ({ files, setFiles }: UploadBoxProps) => {
 const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUploadProps) => {
   const [archFiles, setArchFiles] = useState<UploadFile[]>([]);
   const [quoteFiles, setQuoteFiles] = useState<UploadFile[]>([]);
+  const arcHingeMode = useRef<"1" | "2">("1");
+  const quoteHingeMode = useRef<"1" | "2">("1");
 
   const handleUpload = () => {
     if (archFiles.length === 0 && quoteFiles.length === 0) {
@@ -147,7 +311,7 @@ const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUplo
     }
     // 如果父组件有处理上传的函数，调用它
     if (onHandleUpload) {
-      onHandleUpload({ archFiles, quoteFiles });
+      onHandleUpload({ archFiles, quoteFiles, arcHingeMode: arcHingeMode.current, quoteHingeMode: quoteHingeMode.current });
     }
   }
 
@@ -155,10 +319,14 @@ const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUplo
     <div className="w-full h-full flex flex-col justify-between">
       <div className="grid grid-cols-2 gap-4">
         <div className="">
-          <ArchitecturalUpload files={archFiles} setFiles={setArchFiles} />
+          <ArchitecturalUpload files={archFiles} setFiles={setArchFiles} onChangeHinegeStatus={(value: "1" | "2") => {
+            arcHingeMode.current = value;
+          }} />
         </div>
         <div>
-          <QuoteUpload files={quoteFiles} setFiles={setQuoteFiles} />
+          <QuoteUpload files={quoteFiles} setFiles={setQuoteFiles} onChangeHinegeStatus={(value: "1" | "2") => {
+            quoteHingeMode.current = value;
+          }} />
         </div>
       </div>
       {/* {showUploadTipLink && (

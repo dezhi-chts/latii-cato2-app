@@ -9,7 +9,7 @@ import { getTakeOffById } from "@/services/takeOffService";
 import Image from "next/image";
 import PDFSelector from "./components/Markable-Pdf";
 import { getEvidencesByProjectId } from "@/services/evidenceService";
-import PdfWrapper from "./components/PdfWrapper";
+import PdfWrapper from "../[takeoffId]/components/pdf/PdfWrapper";
 import { Template } from "@/types/templates";
 import { getTemplates } from "@/services/templateService";
 import ItemsTableSection from "./components/Items-table-section";
@@ -182,15 +182,13 @@ const Quotii = () => {
       />
 
       <div
-        className={`flex-1 flex overflow-hidden ${
-          isNewTakeOff ? "flex-col" : "flex-row pr-4"
-        } `}
+        className={`flex-1 flex overflow-hidden ${isNewTakeOff ? "flex-col" : "flex-row pr-4"
+          } `}
       >
         {!isNewTakeOff && (
           <div
-            className={`${
-              isTableExpanded ? "w-4/5" : "w-3/5"
-            } pl-10 flex gap-2 transition-all duration-300 ease-in-out`}
+            className={`${isTableExpanded ? "w-4/5" : "w-3/5"
+              } pl-10 flex gap-2 transition-all duration-300 ease-in-out`}
           >
             <ItemsTableSection takeOff={takeOff} />
 
@@ -230,9 +228,8 @@ const Quotii = () => {
         )}
 
         <div
-          className={`flex-1 flex overflow-hidden pt-8 ${
-            isNewTakeOff ? "w-full" : isTableExpanded ? "w-2/5" : "w-1/5"
-          }`}
+          className={`flex-1 flex overflow-hidden pt-8 ${isNewTakeOff ? "w-full" : isTableExpanded ? "w-2/5" : "w-1/5"
+            }`}
         >
           <PdfWrapper
             ref={pdfRef}
@@ -345,9 +342,8 @@ const PdfTitle = ({
         </ConfigProvider>
         <div className="flex gap-3 items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
           <div
-            className={`h-full py-2 w-2 flex items-center justify-center ${
-              page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-            }`}
+            className={`h-full py-2 w-2 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+              }`}
             onClick={() => handlePageChange(page - 1)}
           >
             <Image
@@ -359,11 +355,10 @@ const PdfTitle = ({
           </div>
           <p className="text-basicGray text-xxs">Page {page}</p>
           <div
-            className={`h-full py-2 w-2 flex items-center justify-center ${
-              page === totalPages
-                ? "cursor-default opacity-50"
-                : "cursor-pointer"
-            }`}
+            className={`h-full py-2 w-2 flex items-center justify-center ${page === totalPages
+              ? "cursor-default opacity-50"
+              : "cursor-pointer"
+              }`}
             onClick={() => handlePageChange(page + 1)}
           >
             <Image
@@ -375,36 +370,32 @@ const PdfTitle = ({
           </div>
         </div>
         <div
-          className={`rounded pl-1 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 ${
-            adding.isAdding && adding.type === "Item"
-              ? "text-forumBlue bg-primaryN30"
-              : "text-basicGray bg-primaryN20"
-          }`}
+          className={`rounded pl-1 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 ${adding.isAdding && adding.type === "Item"
+            ? "text-forumBlue bg-primaryN30"
+            : "text-basicGray bg-primaryN20"
+            }`}
           onClick={() => handleAddingChange("Item")}
         >
           <p className="text-xs text-center w-20">Add Item</p>
           <Image
-            src={`/assets/icons/add-table${
-              adding.isAdding && adding.type === "Item" ? "-blue" : ""
-            }.svg`}
+            src={`/assets/icons/add-table${adding.isAdding && adding.type === "Item" ? "-blue" : ""
+              }.svg`}
             alt="add item icon"
             width={14}
             height={14}
           />
         </div>
         <div
-          className={`rounded pl-1 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 ${
-            adding.isAdding && adding.type === "Table"
-              ? "text-accentIndigo bg-primaryN30"
-              : "text-basicGray bg-primaryN20"
-          }`}
+          className={`rounded pl-1 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 ${adding.isAdding && adding.type === "Table"
+            ? "text-accentIndigo bg-primaryN30"
+            : "text-basicGray bg-primaryN20"
+            }`}
           onClick={() => handleAddingChange("Table")}
         >
           <p className="text-xs text-center w-20">Add Table</p>
           <Image
-            src={`/assets/icons/add-table${
-              adding.isAdding && adding.type === "Table" ? "-indigo" : ""
-            }.svg`}
+            src={`/assets/icons/add-table${adding.isAdding && adding.type === "Table" ? "-indigo" : ""
+              }.svg`}
             alt="add item icon"
             width={14}
             height={14}
