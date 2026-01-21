@@ -81,3 +81,25 @@ body {
   border: none !important;
   width: fit-content !important;
 }
+
+/* Button primary type global styles */
+.ant-btn-primary {
+  background-color: #427CCE !important;
+  border-color: #427CCE !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: #356BB3 !important;
+  border-color: #356BB3 !important;
+}
+
+/* Checkbox global styles */
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #427CCE !important;
+  border-color: #427CCE !important;
+}
+
+.ant-checkbox-inner {
+  border-color: #98A1B0 !important;
+}
