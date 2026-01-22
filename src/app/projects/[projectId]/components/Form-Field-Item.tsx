@@ -20,7 +20,7 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
     handleAddOCRBox?.(fieldName);
   };
 
-  console.log('######## OCRFieldName', OCRFieldName, 'field.field_name', field.field_name)
+  //console.log('######## OCRFieldName', OCRFieldName, 'field.field_name', field.field_name)
 
   switch (field.field_type) {
     case FieldType.INPUT_TEXT:

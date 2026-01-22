@@ -19,6 +19,7 @@ import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 const CreateProjectTakeoffModal = ({
   isOpen,
   closeModal,
+  uploadFilesData,
   onSuccess,
 }: CreateProjectModalProps) => {
   const projectId = 1;
@@ -28,7 +29,7 @@ const CreateProjectTakeoffModal = ({
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     ...defaultProjectSettings,
   });
-  const [selectedFileId, setSelectedFileId] = useState(1);
+  const [selectedFileId, setSelectedFileId] = useState(-1);
   const [takeOff, setTakeOff] = useState<any>();
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
@@ -38,24 +39,56 @@ const CreateProjectTakeoffModal = ({
 
   const [OCRFieldName, setOCRFieldName] = useState<string>('');
 
-  const [filesData, setFilesData] = useState<any[]>([
-    {
-      id: 1,
-      file_name: 'Architectural-example.pdf',
-      upload_status: 'done',
-      url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f'
-    },
-    {
-      id: 2,
-      file_name: 'Quote-example.pdf',
-      upload_status: 'done',
-      url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
-    },
-  ]);
+  const [filesData, setFilesData] = useState<any[]>(() => {
+    let data = [
+      {
+        id: 1,
+        file_name: 'Architectural-example.pdf',
+        upload_status: 'done',
+        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f'
+      },
+      {
+        id: 2,
+        file_name: 'Quote-example.pdf',
+        upload_status: 'done',
+        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
+      },
+    ];
+    let filesList: any[] = [];
+    if (uploadFilesData?.archFiles) {
+      uploadFilesData?.archFiles.forEach((file: UploadFile) => {
+        console.log('######## file', file);
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    if (uploadFilesData?.quoteFiles) {
+      uploadFilesData?.quoteFiles.forEach((file: UploadFile) => {
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    return filesList;
+  });
 
   useEffect(() => {
-    console.log("selectedFileId", selectedFileId);
-    if (selectedFileId) {
+    if (filesData.length > 0 && selectedFileId === -1) {
+      setSelectedFileId(filesData[0].id);
+    }
+  }, [filesData])
+
+  useEffect(() => {
+    if (selectedFileId !== -1) {
       if (pdfRef.current) {
         pdfRef.current.resetAllInfo();
       }
@@ -64,8 +97,10 @@ const CreateProjectTakeoffModal = ({
       setPage(1);
       setTotalPage(1);
 
+      // 切换文件的时候，重置OCRFieldName
+      setOCRFieldName('');
+
       const file = filesData.find((file: any) => file.id === selectedFileId);
-      console.log("file", file.url);
       setPdfUrl(file?.url);
     }
   }, [selectedFileId]);
@@ -106,6 +141,8 @@ const CreateProjectTakeoffModal = ({
     if (value === page) return;
     if (value > 3) return;
     setPage(value);
+    // 切换页码的时候，重置OCRFieldName
+    setOCRFieldName('');
   };
 
   const handleConfirm = () => {
@@ -113,6 +150,7 @@ const CreateProjectTakeoffModal = ({
       message.warning("Please fill out all required fields.");
       return;
     }
+    // 跳转到page index页面
   }
 
   const handleAddOCRBox = (fieldName: any) => {

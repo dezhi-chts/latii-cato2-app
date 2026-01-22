@@ -36,10 +36,10 @@ import {
   evidenceBatchSubmit,
   evidenceBatchDelete,
   evidenceBatchUpdate,
-  ocrDetectText
 } from "@/services/evidenceService";
 
 import { rotateChange } from "@/services/projectService";
+import { pdfOcrDetect } from "@/services/pdfService";
 
 import { colorList } from "@/theme/colors";
 
@@ -1225,24 +1225,21 @@ const PdfWrapper = forwardRef(
       //转换二进制文件
       const file = base64ToFile(imageUrl, `custom-image-${new Date()}.png`);
       setFullLoading(true);
-      try {
-        const res: any = await ocrDetectText(file);
-        if (res?.data?.full_text?.length > 0) {
-          // 识别成功，调用回调
-          onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
-          // 删除当前group
-          deleteCrop(groupId);
-        }
-
+      const res: any = await pdfOcrDetect(file);
+      const { data, status } = res;
+      if (status === 'success') {
+        // 识别成功，调用回调
+        onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
+        // 删除当前group
+        deleteCrop(groupId);
         notification.success({
           message: "Success",
           description: "OCR recognition successful.",
         });
-
-      } catch (error) {
+      } else {
         notification.error({
           message: "Error",
-          description: error?.response?.data?.detail || "OCR recognition failed.",
+          description: "OCR recognition failed.",
         });
       }
       setFullLoading(false);
