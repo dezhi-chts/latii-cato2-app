@@ -36,10 +36,10 @@ import {
   evidenceBatchSubmit,
   evidenceBatchDelete,
   evidenceBatchUpdate,
-  ocrDetectText
 } from "@/services/evidenceService";
 
 import { rotateChange } from "@/services/projectService";
+import { pdfOcrDetect } from "@/services/pdfService";
 
 import { colorList } from "@/theme/colors";
 
@@ -405,6 +405,37 @@ const PdfWrapper = forwardRef(
           });
       });
     };
+
+    const evidencSubmit = (groupId: string) => {
+      const section = cropSections.find((item) => item.id === groupId);
+      if (!section) {
+        return;
+      }
+      if (!currentViewportRef.current) {
+        return;
+      }
+
+      const viewport = currentViewportRef.current;
+      let rotateAngle: number = (viewport as any).rotation ?? 0;
+      let uploadData: any = {
+        project_id: project_id,
+        project_file_id: project_file_id,
+        project_file_page_number: page,
+        polygon: JSON.stringify(section.pdfPolygons),
+        device_pixel_ratio: window.devicePixelRatio || 1,
+        type: JSON.stringify({ name: section.type }),
+        scale: viewport.scale,
+        page_width_pdf: viewport.width,
+        page_height_pdf: viewport.height,
+        view_box: JSON.stringify(viewport.viewBox),
+        is_rotate: rotateAngle !== 0,
+        rotation_angle: rotateAngle,
+      };
+
+      // 保存成功后通知父组件更新页面
+      onAppendEvidence && onAppendEvidence([uploadData]);
+
+    }
 
     const batchDelete = async (deleteIds?: number[]) => {
       setFullLoading(true);
@@ -1225,24 +1256,21 @@ const PdfWrapper = forwardRef(
       //转换二进制文件
       const file = base64ToFile(imageUrl, `custom-image-${new Date()}.png`);
       setFullLoading(true);
-      try {
-        const res: any = await ocrDetectText(file);
-        if (res?.data?.full_text?.length > 0) {
-          // 识别成功，调用回调
-          onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
-          // 删除当前group
-          deleteCrop(groupId);
-        }
-
+      const res: any = await pdfOcrDetect(file);
+      const { data, status } = res;
+      if (status === 'success') {
+        // 识别成功，调用回调
+        onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
+        // 删除当前group
+        deleteCrop(groupId);
         notification.success({
           message: "Success",
           description: "OCR recognition successful.",
         });
-
-      } catch (error) {
+      } else {
         notification.error({
           message: "Error",
-          description: error?.response?.data?.detail || "OCR recognition failed.",
+          description: "OCR recognition failed.",
         });
       }
       setFullLoading(false);
@@ -2258,16 +2286,24 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center gap-1"
                         style={{
-                          left: width - 110,
+                          left: group.type === 'Text' ? width - 110 : width - 90,
                           top: "10px",
                         }}
                       >
-                        <div className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
-                          onClick={() => {
-                            // 转换成图片进行OCR识别
-                            OCRRecogize(group.id);
-                          }}
-                        >Read Content</div>
+                        {
+                          group.type === 'Text' ? <div className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                            onClick={() => {
+                              // 转换成图片进行OCR识别
+                              OCRRecogize(group.id);
+                            }}
+                          >Read Content</div> :
+                            <div className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                              onClick={() => {
+                                evidencSubmit(group.id);
+                              }}
+                            >Confirm</div>
+                        }
+
                         <div
                           className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md"
                           onClick={() => {

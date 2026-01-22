@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
 import { Input, Segmented } from "antd";
@@ -11,6 +11,8 @@ import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
+import type { UploadFile } from "antd/es/upload/interface";
+
 
 export const projects: ProjectRow[] = [
   {
@@ -165,6 +167,8 @@ const Home = () => {
     return defaultFields.map((field) => field.field_name)
   });
 
+  const uploadFiles = useRef<any>(null);
+
   function handleValueChange(value: string) {
     setFilter((prev) => ({ ...prev, value }));
   }
@@ -187,6 +191,34 @@ const Home = () => {
 
   function handleColumnsChange(columns: string[]) {
     setSelectedColumns(columns);
+  }
+
+  // 获取上传文件信息
+  const getFilesData = (uploadFilesData: any) => {
+    let filesList: any[] = [];
+    if (uploadFilesData?.archFiles) {
+      uploadFilesData?.archFiles.forEach((file: UploadFile) => {
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    if (uploadFilesData?.quoteFiles) {
+      uploadFilesData?.quoteFiles.forEach((file: UploadFile) => {
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    return filesList;
   }
 
   useEffect(() => {
@@ -269,6 +301,7 @@ const Home = () => {
             onOpenTakeoffModal={(data) => {
               // 关闭Create-Project-Modal弹窗
               closeModal();
+              uploadFiles.current = getFilesData(data);
               // 打开Create-Project-Takeoff-Modal弹窗
               setShowCreateProjectTakeOffModal(true);
             }}
@@ -283,6 +316,7 @@ const Home = () => {
               // 关闭Create-Project-Takeoff-Modal弹窗
               setShowCreateProjectTakeOffModal(false);
             }}
+            uploadFilesData={uploadFiles.current}
           />
         )
       }

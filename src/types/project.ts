@@ -1,3 +1,5 @@
+import { UploadFile } from "antd";
+
 export type ProjectSettings = {
   project_name: string;
   // expected_end_date: string | null;
@@ -52,6 +54,7 @@ export type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onSuccess?: () => void;
+  uploadFilesData?: any[];
   onOpenTakeoffModal?: (data: any) => void;
 };
 

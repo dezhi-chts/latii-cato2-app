@@ -44,7 +44,7 @@ const CreateProjectModal = ({
     <Modal
       open={isOpen}
       title={
-        <p className="ml-1 text-forumBlue text-lg font-semibold">Create New Project</p>
+        <p className="ml-1 text-forumBlue text-lg font-normal">Create New Project</p>
       }
       width={1250}
       footer={null}

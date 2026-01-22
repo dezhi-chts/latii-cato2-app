@@ -111,18 +111,3 @@ export const generateEvidenceByFileId = async (
     return { data: null, status: "error" };
   }
 };
-
-export const ocrDetectText = async (file: File) => {
-  try {
-    const url = `https://cato-service1.dev.latii.com/api/evidence/ocr_detect_text`;
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await http.post(url, formData, 5000, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return { data: response as any, status: "success" };
-  } catch (error) {
-    console.error("Error ocr detect text:", error);
-    return { data: null, status: "error" };
-  }
-};
