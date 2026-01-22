@@ -193,6 +193,34 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
+  // 获取上传文件信息
+  const getFilesData = (uploadFilesData: any) => {
+    let filesList: any[] = [];
+    if (uploadFilesData?.archFiles) {
+      uploadFilesData?.archFiles.forEach((file: UploadFile) => {
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    if (uploadFilesData?.quoteFiles) {
+      uploadFilesData?.quoteFiles.forEach((file: UploadFile) => {
+        let fileInfo = {
+          id: file.uid,
+          file_name: file.name,
+          upload_status: file.status,
+          url: URL.createObjectURL(file.originFileObj),
+        };
+        filesList.push(fileInfo);
+      });
+    }
+    return filesList;
+  }
+
   useEffect(() => {
     if (filter.value === "") {
       setFilteredProjects([...projects]);
@@ -273,7 +301,7 @@ const Home = () => {
             onOpenTakeoffModal={(data) => {
               // 关闭Create-Project-Modal弹窗
               closeModal();
-              uploadFiles.current = data;
+              uploadFiles.current = getFilesData(data);
               // 打开Create-Project-Takeoff-Modal弹窗
               setShowCreateProjectTakeOffModal(true);
             }}

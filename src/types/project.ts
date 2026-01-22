@@ -54,12 +54,7 @@ export type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onSuccess?: () => void;
-  uploadFilesData?: {
-    archFiles: UploadFile[];
-    quoteFiles: UploadFile[];
-    arcHingeMode: "1" | "2";
-    quoteHingeMode: "1" | "2";
-  };
+  uploadFilesData?: any[];
   onOpenTakeoffModal?: (data: any) => void;
 };
 

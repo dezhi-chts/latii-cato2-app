@@ -41,7 +41,7 @@ const LazyImage = ({
   }, [src]);
 
   return (
-    <div className="w-full h-[137px] relative overflow-hidden">
+    <div className="w-full h-[100px] relative overflow-hidden">
       {!loaded && (
         <div className="absolute inset-0 w-[100%] h-[100%] bg-gray-300 animate-pulse"></div>
       )}
@@ -93,30 +93,30 @@ const Thumbnail = ({
 
   return (
     <div
-      className="absolute py-2 right-0 top-0 transition-all duration-200 z-9999 bg-white border-l border-primaryN30 shadow-lg shadow-primaryN30"
+      className="right-0 top-0 transition-all duration-200 z-9999"
       style={{
-        width: showThumbnail ? "310px" : "0px",
+        width: showThumbnail ? "250px" : "0px",
         height: "100%",
       }}
     >
-      <div className="mr-2 mt-1 text-right">
+      {/* <div className="mr-2 mt-1 text-right">
         <CloseOutlined
           style={{ color: "black", cursor: "pointer" }}
           onClick={() => {
             setShowThumbnail(false);
           }}
         />
-      </div>
+      </div> */}
       <div
         className="w-full h-full pb-8 overflow-y-auto"
         ref={scrollContainerRef}
       >
-        <div className="px-[35px] flex flex-col gap-4 min-h-full">
+        <div className="px-[35px] py-6 flex flex-col gap-4 min-h-full">
           {data.map((info, index) => {
             return (
               <div
                 key={info.s3_key}
-                className={`w-[240px] h-[187px] rounded bg-primaryN50 shadow-md cursor-pointer border-[2px] ${index + 1 === page
+                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${index + 1 === page
                   ? "border-forumBlue"
                   : "border-transparent hover:border-forumBlue/50"
                   }`}

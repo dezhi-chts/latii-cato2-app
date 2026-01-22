@@ -104,15 +104,12 @@ export const AddRectBoxControls = ({
 }: any) => {
   return (
     <div
-      className={`rounded pl-1 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 ${adding.isAdding && adding.type === "Table"
-        ? "text-accentIndigo bg-primaryN30"
-        : "text-basicGray bg-primaryN20"
-        }`}
+      className={`w-[124px] h-[28px] bg-forumBlue text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
       onClick={() => handleAddRectBox()}
     >
-      <p className="text-xs text-center w-20">Add Table</p>
+      <p className="text-xs text-center">Index Box</p>
       <Image
-        src={`/assets/icons/add-table-indigo.svg`}
+        src={`/assets/icons/add-table-white.svg`}
         alt="add item icon"
         width={14}
         height={14}

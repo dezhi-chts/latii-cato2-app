@@ -22,6 +22,7 @@ const CreateProjectTakeoffModal = ({
   uploadFilesData,
   onSuccess,
 }: CreateProjectModalProps) => {
+  const router = useRouter();
   const projectId = 1;
   const projectFormRef = useRef<any>(null);
   const pdfRef = useRef<PdfWrapperRefMethods>(null);
@@ -30,7 +31,6 @@ const CreateProjectTakeoffModal = ({
     ...defaultProjectSettings,
   });
   const [selectedFileId, setSelectedFileId] = useState(-1);
-  const [takeOff, setTakeOff] = useState<any>();
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
 
@@ -54,31 +54,8 @@ const CreateProjectTakeoffModal = ({
         url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
       },
     ];
-    let filesList: any[] = [];
-    if (uploadFilesData?.archFiles) {
-      uploadFilesData?.archFiles.forEach((file: UploadFile) => {
-        console.log('######## file', file);
-        let fileInfo = {
-          id: file.uid,
-          file_name: file.name,
-          upload_status: file.status,
-          url: URL.createObjectURL(file.originFileObj),
-        };
-        filesList.push(fileInfo);
-      });
-    }
-    if (uploadFilesData?.quoteFiles) {
-      uploadFilesData?.quoteFiles.forEach((file: UploadFile) => {
-        let fileInfo = {
-          id: file.uid,
-          file_name: file.name,
-          upload_status: file.status,
-          url: URL.createObjectURL(file.originFileObj),
-        };
-        filesList.push(fileInfo);
-      });
-    }
-    return filesList;
+    let list = uploadFilesData && uploadFilesData?.length > 0 ? uploadFilesData : data;
+    return list;
   });
 
   useEffect(() => {
@@ -151,6 +128,8 @@ const CreateProjectTakeoffModal = ({
       return;
     }
     // 跳转到page index页面
+    router.push(`/projects/${projectId}/takeoff/${projectId}/identification-index`);
+
   }
 
   const handleAddOCRBox = (fieldName: any) => {
@@ -176,14 +155,14 @@ const CreateProjectTakeoffModal = ({
     <Modal
       open={isOpen}
       title={
-        <p className="text-forumBlue text-lg font-semibold">Create New Project</p>
+        <p className="text-forumBlue text-lg font-normal">Create New Project</p>
       }
       width={'80vw'}
       footer={null}
       closable={false}
       onCancel={closeModal}
     >
-      <div className="my-4 text-lg text-baseGray">sub title</div>
+      <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
       <div className="mt-8 h-[80vh] flex flex-row justify-between">
         <div className="w-[400px] max-h-[80vh] flex flex-col overflow-hidden">
           <div className="overflow-y-auto">
