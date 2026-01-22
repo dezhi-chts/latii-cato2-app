@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Classification - SSE Two-Step Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* 设置面板 */
+        .settings-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .setting-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .setting-input {
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .setting-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .setting-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* 上传区域 */
+        .upload-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .upload-btn {
+            padding: 12px 32px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .upload-btn:hover:not(:disabled) {
+            background: #663a8f;
+            transform: translateY(-2px);
+        }
+
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-name {
+            color: #666;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* 连接状态 */
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .connection-status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .connection-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .connection-status.idle {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        .status-dot.disconnected {
+            background: #dc3545;
+        }
+
+        .status-dot.idle {
+            background: #6c757d;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 进度区域 */
+        .progress-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .progress-percentage {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* 日志容器 */
+        .logs-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+        }
+
+        .log-entry {
+            padding: 4px 10px;
+            margin-bottom: 3px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            border-left: 3px solid #667eea;
+            background: #f8f9fa;
+            line-height: 1.3;
+        }
+
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+            color: #dc3545;
+        }
+
+        .log-entry.success {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .log-entry.info {
+            border-left-color: #17a2b8;
+            background: #f0f9ff;
+        }
+
+        /* 结果区域 */
+        .result-section {
+            display: none;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .result-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .result-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        /* 按钮组 */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .download-btn {
+            flex: 1;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            flex: 1;
+            padding: 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* 任务信息 */
+        .task-info {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .task-info.active {
+            display: block;
+        }
+
+        .task-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .task-info-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .task-info-value {
+            color: #0066cc;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* 滚动条样式 */
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>PDF Classification System</h1>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <input type="file" id="pdfFile" accept=".pdf">
+                    <label for="pdfFile" class="file-input-label">📄 Select PDF File</label>
+                </div>
+                <span class="file-name" id="fileName">No file selected</span>
+                <button class="upload-btn" id="uploadBtn" disabled>🚀 Start Classification</button>
+                <div class="connection-status idle" id="connectionStatus">
+                    <span class="status-dot idle"></span>
+                    <span>Idle</span>
+                </div>
+            </div>
+
+            <!-- Task Information -->
+            <div class="task-info" id="taskInfo">
+                <div class="task-info-item">
+                    <span class="task-info-label">Task ID:</span>
+                    <span class="task-info-value" id="requestIdDisplay">-</span>
+                </div>
+                <div class="task-info-item">
+                    <span class="task-info-label">SSE URL:</span>
+                    <span class="task-info-value" id="sseUrlDisplay">-</span>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection">
+                <div class="progress-header">
+                    <span class="progress-title">Processing Progress</span>
+                    <span class="progress-percentage" id="progressPercentage">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="logs-container" id="logsContainer"></div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="result-section" id="resultSection">
+                <h2 style="margin-bottom: 20px;">📊 Classification Results</h2>
+                <div class="result-grid" id="resultGrid"></div>
+                <div class="button-group">
+                    <button class="download-btn" id="downloadBtn">💾 Download Results (JSON)</button>
+                    <button class="reset-btn" id="resetBtn">🔄 Start New</button>
+                </div>
+            </div>
+
+            <!-- Settings Panel (at bottom) -->
+            <div class="settings-panel" id="settingsPanel" style="display: block; margin-top: 30px; border-top: 1px solid #dee2e6; padding-top: 20px;">
+                <h3 style="margin-bottom: 15px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500;" id="settingsHeader">
+                    <span id="settingsArrow">▶</span>
+                    Classification Settings
+                </h3>
+
+                <div id="settingsContent" style="display: none;">
+                    <!-- API Configuration -->
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-weight: 600; color: #856404; font-size: 13px;">🌐 API Server URL</span>
+                        </div>
+                        <input type="text" class="setting-input" id="apiBaseUrl" value="http://localhost"
+                               placeholder="http://localhost"
+                               style="width: 100%; margin-bottom: 10px;">
+                        <button id="testApiUrl" style="padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                            🔍 Test Connection
+                        </button>
+                        <div id="apiTestResult" style="margin-top: 10px; font-size: 12px; display: none;"></div>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label class="setting-label">Detection Model</label>
+                            <input type="text" class="setting-input" id="modelName" value="unit_detect_8l_v1">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">Confidence Threshold</label>
+                            <input type="number" class="setting-input" id="confidenceThreshold" value="0.35" step="0.05" min="0" max="1">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">IoU Threshold</label>
+                            <input type="number" class="setting-input" id="iouThreshold" value="0.45" step="0.05" min="0" max="1">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">DPI</label>
+                            <input type="number" class="setting-input" id="dpi" value="100" min="72" max="300">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">Max Concurrent Batches</label>
+                            <input type="number" class="setting-input" id="maxConcurrentBatches" value="3" min="1" max="10">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">Fallback Models (comma-separated)</label>
+                            <input type="text" class="setting-input" id="fallbackModels" placeholder="door_window_v2,door_window_v1">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-label">Page Numbers (comma-separated)</label>
+                            <input type="text" class="setting-input" id="pageNumbers" placeholder="Leave empty for all pages">
+                        </div>
+                        <div class="setting-item">
+                            <label class="setting-checkbox">
+                                <input type="checkbox" id="enableAiClassification" checked>
+                                <span>Enable AI Classification</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== API 配置 =====
+        const API_CONFIG = {
+            // 生产环境: 修改为实际的API域名
+            baseUrl: 'https://cato-service2.dev.latii.com',
+            // baseUrl: 'http://localhost',
+            // baseUrl: 'https://pdf-api.example.com',
+
+            // API端点
+            endpoints: {
+                init: '/api/sse/classify-pages-sse-init',
+                sse: '/api/sse/classify-status'
+            }
+        };
+
+        // 辅助函数：构建完整URL
+        function buildUrl(endpoint, path = '') {
+            return `${API_CONFIG.baseUrl}${endpoint}${path}`;
+        }
+
+        // ===== 主要变量 =====
+        let currentRequestId = null;
+        let currentResult = null;
+        let eventSource = null;
+
+        const elements = {
+            // File selection
+            pdfFile: document.getElementById('pdfFile'),
+            fileName: document.getElementById('fileName'),
+            uploadBtn: document.getElementById('uploadBtn'),
+
+            // API configuration
+            apiBaseUrl: document.getElementById('apiBaseUrl'),
+            testApiUrl: document.getElementById('testApiUrl'),
+            apiTestResult: document.getElementById('apiTestResult'),
+
+            // Settings
+            settingsPanel: document.getElementById('settingsPanel'),
+            settingsHeader: document.getElementById('settingsHeader'),
+            settingsContent: document.getElementById('settingsContent'),
+            settingsArrow: document.getElementById('settingsArrow'),
+            modelName: document.getElementById('modelName'),
+            confidenceThreshold: document.getElementById('confidenceThreshold'),
+            iouThreshold: document.getElementById('iouThreshold'),
+            dpi: document.getElementById('dpi'),
+            maxConcurrentBatches: document.getElementById('maxConcurrentBatches'),
+            fallbackModels: document.getElementById('fallbackModels'),
+            pageNumbers: document.getElementById('pageNumbers'),
+            enableAiClassification: document.getElementById('enableAiClassification'),
+
+            // 任务信息
+            taskInfo: document.getElementById('taskInfo'),
+            requestIdDisplay: document.getElementById('requestIdDisplay'),
+            sseUrlDisplay: document.getElementById('sseUrlDisplay'),
+
+            // 进度
+            progressSection: document.getElementById('progressSection'),
+            progressBar: document.getElementById('progressBar'),
+            progressPercentage: document.getElementById('progressPercentage'),
+            logsContainer: document.getElementById('logsContainer'),
+
+            // 结果
+            resultSection: document.getElementById('resultSection'),
+            resultGrid: document.getElementById('resultGrid'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+
+            // 状态
+            connectionStatus: document.getElementById('connectionStatus')
+        };
+
+        // Settings panel toggle (click on header)
+        elements.settingsHeader.addEventListener('click', () => {
+            const isHidden = elements.settingsContent.style.display === 'none';
+            elements.settingsContent.style.display = isHidden ? 'block' : 'none';
+            elements.settingsArrow.textContent = isHidden ? '▼' : '▶';
+        });
+
+        // Update API base URL when input changes
+        elements.apiBaseUrl.addEventListener('input', () => {
+            const newUrl = elements.apiBaseUrl.value.trim();
+            if (newUrl) {
+                API_CONFIG.baseUrl = newUrl;
+            }
+        });
+
+        // Test API connection
+        elements.testApiUrl.addEventListener('click', async () => {
+            const testUrl = elements.apiBaseUrl.value.trim();
+            if (!testUrl) {
+                showApiTestResult('❌ API URL cannot be empty', 'error');
+                return;
+            }
+
+            showApiTestResult('🔍 Testing connection...', 'info');
+
+            try {
+                const response = await fetch(`${testUrl}/api/pdf/batch/classify-health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showApiTestResult(`✅ Connection successful! Service status: ${data.status}`, 'success');
+                    addLog(`✅ API connection test successful`, 'success');
+                } else {
+                    showApiTestResult(`❌ Connection failed: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showApiTestResult(`❌ Connection error: ${error.message}`, 'error');
+            }
+        });
+
+        // Show API test result
+        function showApiTestResult(message, type) {
+            elements.apiTestResult.style.display = 'block';
+            elements.apiTestResult.textContent = message;
+
+            const colors = {
+                'success': '#28a745',
+                'error': '#dc3545',
+                'info': '#17a2b8'
+            };
+
+            elements.apiTestResult.style.color = colors[type] || '#333';
+        }
+
+        // File selection
+        elements.pdfFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                elements.fileName.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+                elements.uploadBtn.disabled = false;
+            } else {
+                elements.fileName.textContent = 'No file selected';
+                elements.uploadBtn.disabled = true;
+            }
+        });
+
+        // 开始分类
+        elements.uploadBtn.addEventListener('click', async () => {
+            const file = elements.pdfFile.files[0];
+            if (!file) return;
+
+            // 重置界面
+            resetUI();
+
+            // 禁用按钮
+            elements.uploadBtn.disabled = true;
+            updateConnectionStatus('connecting');
+
+            try {
+                // Step 1: Initialize task
+                addLog('📤 Uploading PDF file...', 'info');
+                const initResult = await initializeTask(file);
+
+                currentRequestId = initResult.request_id;
+
+                // Show task information
+                elements.taskInfo.classList.add('active');
+                elements.requestIdDisplay.textContent = initResult.request_id;
+                elements.sseUrlDisplay.textContent = initResult.sse_url;
+
+                addLog('✅ Task created: ' + initResult.request_id, 'success');
+                addLog('🔗 Establishing SSE connection...', 'info');
+
+                // Show progress section
+                elements.progressSection.classList.add('active');
+
+                // Step 2: Subscribe to SSE stream
+                connectSSE(initResult.request_id);
+
+            } catch (error) {
+                console.error('Error:', error);
+                addLog('❌ Error: ' + error.message, 'error');
+                updateConnectionStatus('error');
+                elements.uploadBtn.disabled = false;
+            }
+        });
+
+        // Step 1: 初始化任务
+        async function initializeTask(file) {
+            const formData = new FormData();
+            formData.append('pdf_file', file);
+
+            // 构建查询参数
+            const params = new URLSearchParams({
+                model_name: elements.modelName.value,
+                confidence_threshold: elements.confidenceThreshold.value,
+                iou_threshold: elements.iouThreshold.value,
+                dpi: elements.dpi.value,
+                enable_ai_classification: elements.enableAiClassification.checked,
+                max_concurrent_batches: elements.maxConcurrentBatches.value
+            });
+
+            if (elements.fallbackModels.value.trim()) {
+                params.append('fallback_models', elements.fallbackModels.value.trim());
+            }
+
+            if (elements.pageNumbers.value.trim()) {
+                params.append('page_numbers', elements.pageNumbers.value.trim());
+            }
+
+            const url = buildUrl(API_CONFIG.endpoints.init, `?${params}`);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || `HTTP ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Step 2: Connect to SSE
+        function connectSSE(requestId) {
+            const sseUrl = buildUrl(API_CONFIG.endpoints.sse, `/${requestId}`);
+
+            addLog(`🔗 Connecting to: ${sseUrl}`, 'info');
+
+            eventSource = new EventSource(sseUrl);
+
+            let lastEventTime = Date.now();
+            let heartbeatTimer = null;
+
+            // Cleanup function to clear the heartbeat timer
+            const cleanup = () => {
+                if (heartbeatTimer) {
+                    clearInterval(heartbeatTimer);
+                    heartbeatTimer = null;
+                }
+            };
+
+            // 心跳检测
+            heartbeatTimer = setInterval(() => {
+                const elapsed = Date.now() - lastEventTime;
+                if (elapsed > 60000) { // 60秒没有收到消息
+                    addLog('⚠️ No data received for 60s, connection may be stale', 'info');
+                    cleanup(); // Stop checking after warning
+                }
+            }, 10000);
+
+            eventSource.onopen = () => {
+                updateConnectionStatus('connected');
+                addLog('✅ SSE connection established', 'success');
+                addLog(`ℹ️ ReadyState: ${eventSource.readyState} (OPEN)`, 'info');
+                lastEventTime = Date.now();
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    lastEventTime = Date.now();
+
+                    // 调试：打印原始数据
+                    console.log('[SSE] Received:', event.data);
+
+                    const data = JSON.parse(event.data);
+                    handleSSEEvent(data, cleanup);
+                } catch (e) {
+                    console.error('Failed to parse SSE data:', e);
+                    addLog('⚠️ Failed to parse event data: ' + e.message, 'error');
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('[SSE] Error event:', error);
+                console.error('[SSE] ReadyState:', eventSource.readyState);
+                console.error('[SSE] URL:', eventSource.url);
+
+                cleanup();
+
+                // ReadyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
+                const stateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
+                const currentState = stateNames[eventSource.readyState] || 'UNKNOWN';
+
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    addLog(`⚠️ SSE connection closed (State: ${currentState})`, 'error');
+                    addLog('ℹ️ Possible causes:', 'info');
+                    addLog('  1. Task completed (check if you received results)', 'info');
+                    addLog('  2. Backend error (check server logs)', 'info');
+                    addLog('  3. Network timeout', 'info');
+                    addLog('  4. CORS issue', 'info');
+
+                    eventSource.close();
+                    updateConnectionStatus('error');
+                    elements.uploadBtn.disabled = false;
+                } else if (eventSource.readyState === EventSource.CONNECTING) {
+                    addLog('🔄 SSE reconnecting...', 'info');
+                    updateConnectionStatus('connecting');
+                }
+            };
+        }
+
+        // Handle SSE events (enhanced)
+        function handleSSEEvent(data, cleanup) {
+            console.log('[SSE] Event type:', data.type);
+
+            switch (data.type) {
+                case 'CONNECTED':
+                    addLog('✅ Connection confirmed by server', 'success');
+                    break;
+
+                case 'PROGRESS':
+                    updateProgress(data.progress, data.message);
+                    addLog(data.message, data.level?.toLowerCase() || 'info');
+                    break;
+
+                case 'COMPLETED':
+                    currentResult = data.result;
+                    displayResult(data.result);
+                    addLog('✅ Classification completed!', 'success');
+                    updateConnectionStatus('completed');
+                    cleanup(); // Clean up heartbeat timer
+                    if (eventSource) {
+                        eventSource.close();
+                    }
+                    elements.uploadBtn.disabled = false;
+                    break;
+
+                case 'DONE':
+                    addLog('ℹ️ Stream ended normally', 'info');
+                    cleanup(); // Clean up heartbeat timer
+                    if (eventSource) {
+                        eventSource.close();
+                    }
+                    break;
+
+                case 'ERROR':
+                    addLog('❌ Server error: ' + data.message, 'error');
+                    updateConnectionStatus('error');
+                    cleanup(); // Clean up heartbeat timer
+                    if (eventSource) {
+                        eventSource.close();
+                    }
+                    elements.uploadBtn.disabled = false;
+                    break;
+
+                case 'CANCELLED':
+                    addLog('⚠️ Task cancelled by server', 'info');
+                    updateConnectionStatus('error');
+                    cleanup(); // Clean up heartbeat timer
+                    if (eventSource) {
+                        eventSource.close();
+                    }
+                    elements.uploadBtn.disabled = false;
+                    break;
+
+                default:
+                    console.warn('[SSE] Unknown event type:', data.type);
+                    addLog(`⚠️ Unknown event type: ${data.type}`, 'info');
+            }
+        }
+
+        // 更新进度
+        function updateProgress(progress, message) {
+            const percentage = Math.round(progress * 100);
+            elements.progressBar.style.width = percentage + '%';
+            elements.progressPercentage.textContent = percentage + '%';
+        }
+
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry ' + type;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            elements.logsContainer.appendChild(logEntry);
+            elements.logsContainer.scrollTop = elements.logsContainer.scrollHeight;
+        }
+
+        // Display results
+        function displayResult(result) {
+            elements.resultSection.classList.add('active');
+
+            const summary = result.summary || {};
+            const pdfInfo = result.pdf_info || {};
+            const aiStats = summary.ai_classification_stats || {};
+
+            elements.resultGrid.innerHTML = `
+                <div class="result-item">
+                    <div class="result-label">📄 Total Pages</div>
+                    <div class="result-value">${pdfInfo.total_pages || 0}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">🔍 Detections</div>
+                    <div class="result-value">${summary.total_detections_all_pages || 0}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">📊 Classified Pages</div>
+                    <div class="result-value">${aiStats.classified_pages || 0}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">⏱️ Processing Time</div>
+                    <div class="result-value">${result.processing_time || 0}s</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">✅ Successful Pages</div>
+                    <div class="result-value">${summary.successful_pages || 0}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">❌ Failed Pages</div>
+                    <div class="result-value">${summary.failed_pages || 0}</div>
+                </div>
+            `;
+        }
+
+        // Download results
+        elements.downloadBtn.addEventListener('click', () => {
+            if (!currentResult) return;
+
+            const dataStr = JSON.stringify(currentResult, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const filename = currentResult.pdf_info?.filename || 'document';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            a.download = `classification_${filename}_${timestamp}.json`;
+
+            a.click();
+            URL.revokeObjectURL(url);
+
+            addLog('💾 Results downloaded', 'success');
+        });
+
+        // Reset
+        elements.resetBtn.addEventListener('click', () => {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            resetUI();
+            elements.pdfFile.value = '';
+            elements.fileName.textContent = 'No file selected';
+            elements.uploadBtn.disabled = true;
+            updateConnectionStatus('idle');
+
+            addLog('🔄 Reset complete, ready for new task', 'info');
+        });
+
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const statusText = elements.connectionStatus.querySelector('span:last-child');
+            const statusDot = elements.connectionStatus.querySelector('.status-dot');
+
+            const statusConfig = {
+                'idle': { class: 'idle', text: 'Idle', dotClass: 'idle' },
+                'connecting': { class: 'connected', text: 'Connecting...', dotClass: 'connected' },
+                'connected': { class: 'connected', text: 'Processing', dotClass: 'connected' },
+                'completed': { class: 'idle', text: 'Completed', dotClass: 'idle' },
+                'error': { class: 'disconnected', text: 'Error', dotClass: 'disconnected' }
+            };
+
+            const config = statusConfig[status] || statusConfig.idle;
+
+            elements.connectionStatus.className = 'connection-status ' + config.class;
+            statusDot.className = 'status-dot ' + config.dotClass;
+            statusText.textContent = config.text;
+        }
+
+        // 重置界面
+        function resetUI() {
+            elements.progressBar.style.width = '0%';
+            elements.progressPercentage.textContent = '0%';
+            elements.logsContainer.innerHTML = '';
+            elements.progressSection.classList.remove('active');
+            elements.resultSection.classList.remove('active');
+            elements.taskInfo.classList.remove('active');
+            currentResult = null;
+            currentRequestId = null;
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Page loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize API base URL from input
+            elements.apiBaseUrl.value = API_CONFIG.baseUrl;
+
+            addLog('🎉 System ready, please select a PDF file', 'info');
+            addLog(`🌐 API URL: ${API_CONFIG.baseUrl}`, 'info');
+
+            // Show settings panel (visible but content collapsed)
+            elements.settingsPanel.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
