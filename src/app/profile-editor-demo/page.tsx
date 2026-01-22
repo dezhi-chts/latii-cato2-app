@@ -103,7 +103,6 @@ const ProfileEditorCom = () => {
 	const addSubOptionHandler = (optionItemMsg: OptionMsgVO) => {
 		let newOptionItemMsg = addSubOption(optionItemMsg)
 		let newProfileOptionMsg = updateOption(newOptionItemMsg, profileOptionMsg)
-		console.log(JSON.stringify(newProfileOptionMsg),'sss')
 		setProfileOptionMsg(newProfileOptionMsg)
 	};
 
