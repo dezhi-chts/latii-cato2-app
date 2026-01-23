@@ -5,7 +5,7 @@ import {
   defaultProjectSettings,
   ProjectSettings,
 } from "@/types/project";
-import { Button, Input, Modal, message, Tabs, notification } from "antd";
+import { Button, Input, Modal, message, Tabs, notification, Spin } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 
 import { useRouter } from "next/navigation";
@@ -57,7 +57,17 @@ const CreateProjectTakeoffModal = ({
         url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
       },
     ];
-    let list = uploadFilesData && uploadFilesData?.length > 0 ? uploadFilesData : data;
+    let list: any = [];
+    if (uploadFilesData && uploadFilesData?.archFiles?.length > 0) {
+      list = uploadFilesData.archFiles.map((item: any) => ({
+        id: item.uid,
+        file_name: item.name,
+        upload_status: 1,
+        url: URL.createObjectURL(item.originFileObj),
+      }));
+    } else {
+      list = data;
+    }
     return list;
   });
 
@@ -280,6 +290,7 @@ const CreateProjectTakeoffModal = ({
           </div>
         </div>
       </div>
+      {loading && <Spin spinning={loading} fullscreen={true} />}
     </Modal>
   );
 };
