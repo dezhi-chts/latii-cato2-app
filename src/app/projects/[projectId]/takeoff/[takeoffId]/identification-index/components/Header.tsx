@@ -61,7 +61,7 @@ const Header = ({
     setTimeout(() => {
       setLoading(false);
       // 跳转到识别结果页面
-      router.push(`/projects/${projectId}/takeoff/${takeOff?.take_off_id}/identification`);
+      router.push(`/projects/${projectId}/takeoff/${1}/identification`);
     }, 3000);
   };
   const handleAnalyzeClick = async () => {
