@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CloseOutlined } from "@ant-design/icons";
-import { notification } from "antd";
+import { notification, Select, Dropdown, Space } from "antd";
+import { DownOutlined } from "@ant-design/icons";
+import LabelTypesSelect from "./Label-Types-Select";
 const LazyImage = ({
   src,
   alt,
@@ -57,6 +59,27 @@ const LazyImage = ({
   );
 };
 
+interface ThumbnailProps {
+  pdfRef?: any;  // pdf 实例
+  showThumbnail: boolean; // 是否显示缩略图
+  setShowThumbnail: (showThumbnail: boolean) => void; // 设置是否显示缩略图
+  data: {  // 缩略图数据列表
+    page: number; // 页面编号
+    file_name: string;
+    s3_key: string;
+    s3_url: string;
+    type: string; // 页面类型
+  }[];
+  page: number; // 当前选中的页面
+  setPage: (page: number) => void; // 设置当前选中的页面
+  showCategory?: boolean; // 是否显示分类
+  categoryList?: {  // 分类列表
+    type: string;
+    primaryColor: string;
+  }[];
+  onChangePageType?: (page: number, type: string) => void; // 切换页面类型回调
+}
+
 const Thumbnail = ({
   pdfRef,
   showThumbnail,
@@ -64,32 +87,59 @@ const Thumbnail = ({
   data,
   page,
   setPage,
-}: {
-  pdfRef?: any;
-  showThumbnail: boolean;
-  setShowThumbnail: (showThumbnail: boolean) => void;
-  data: {
-    file_name: string;
-    s3_key: string;
-    s3_url: string;
-  }[];
-  page: number;
-  setPage: (page: number) => void;
-}) => {
+  showCategory = false, // 是否显示分类
+  categoryList = [], // 分类列表
+  onChangePageType, // 切换页面类型回调
+}: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    if (showThumbnail && thumbnailRefs.current[page - 1]) {
-      const targetThumbnail = thumbnailRefs.current[page - 1];
+    if (showThumbnail) {
+      let id = `thumbnail-page-${page}`;
+      const targetThumbnail = document.getElementById(id);
+      if (!targetThumbnail) return;
       if (targetThumbnail && scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({
-          top: targetThumbnail.offsetTop - 50,
-          behavior: "smooth",
-        });
+        // 计算滚动容器的当前滚动位置和高度
+        const scrollTop = scrollContainerRef.current.scrollTop;
+        const containerHeight = scrollContainerRef.current.clientHeight;
+
+        // 计算目标缩略图在滚动容器内的位置
+        const targetTop = targetThumbnail.offsetTop;
+        const targetBottom = targetTop + targetThumbnail.clientHeight;
+
+
+        // 判断目标是否在滚动容器的可视区域内
+        // 可视区域的范围是 [scrollTop, scrollTop + containerHeight]
+        const isInViewport = targetTop >= scrollTop &&
+          targetBottom <= scrollTop + containerHeight;
+
+
+        // 如果目标不在可视区域内，则执行滚动
+        if (!isInViewport) {
+          scrollContainerRef.current.scrollTo({
+            top: targetThumbnail.offsetTop - 50,
+            behavior: "smooth",
+          });
+        }
       }
     }
   }, [page, showThumbnail]);
+
+  const onChangePage = (page: number) => {
+    if (typeof pdfRef !== "undefined") {
+      pdfRef?.current
+        ?.checkAndHandleUnsavedCrops?.()
+        .then((unsaved: boolean) => {
+          if (unsaved) {
+            setPage(page);
+          }
+        });
+      return;
+    }
+
+    setPage(page);
+  }
 
   return (
     <div
@@ -108,46 +158,44 @@ const Thumbnail = ({
         />
       </div> */}
       <div
-        className="w-full h-full pb-8 overflow-y-auto"
+        className="w-full h-full pb-8 overflow-y-auto relative"
         ref={scrollContainerRef}
       >
         <div className="px-[35px] py-6 flex flex-col gap-4 min-h-full">
           {data.map((info, index) => {
             return (
               <div
+                id={`thumbnail-page-${info.page}`}
                 key={info.s3_key}
-                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${index + 1 === page
+                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${info.page === page
                   ? "border-forumBlue"
                   : "border-transparent hover:border-forumBlue/50"
                   }`}
-                onClick={() => {
-                  if (typeof pdfRef !== "undefined") {
-                    pdfRef?.current
-                      ?.checkAndHandleUnsavedCrops?.()
-                      .then((unsaved: boolean) => {
-                        if (unsaved) {
-                          setPage(index + 1);
-                        }
-                      });
-                    return;
-                  }
-
-                  setPage(index + 1);
-                }}
-                ref={(el) => {
-                  thumbnailRefs.current[index] = el;
-                }}
+                onClick={() => onChangePage(info.page)}
               >
                 <div className="p-[10px]">
-                  <p className="mb-3 text-xxs text-basicGray">{index + 1}</p>
-                  <LazyImage
-                    src={info.s3_url}
-                    alt={info.file_name}
-                    onError={(e) => {
-                      e.currentTarget.src =
-                        "/assets/placeholder-images/placeholder.png";
-                    }}
-                  />
+                  <div className="h-[30px] flex flex-row justify-between">
+                    <p className="mb-3 text-xxs text-basicGray">{info.page}</p>
+                    {showCategory && <div>
+                      <LabelTypesSelect
+                        typeList={categoryList}
+                        selectedType={info.type}
+                        onChangeType={(type: string) => {
+                          onChangePageType && onChangePageType(info.page, type);
+                        }}
+                      ></LabelTypesSelect>
+                    </div>}
+                  </div>
+                  <div>
+                    <LazyImage
+                      src={info.s3_url}
+                      alt={info.file_name}
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "/assets/placeholder-images/placeholder.png";
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             );

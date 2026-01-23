@@ -15,6 +15,7 @@ import { PageControls, ZoomControls } from "../takeoff/[takeoffId]/components/pd
 import ProjectForm from "./Project-Form";
 import debounce from "lodash/debounce";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
+import { uploadFiles } from "@/services/filesService";
 
 const CreateProjectTakeoffModal = ({
   isOpen,
@@ -23,7 +24,7 @@ const CreateProjectTakeoffModal = ({
   onSuccess,
 }: CreateProjectModalProps) => {
   const router = useRouter();
-  const projectId = 1;
+  const projectId = '01KFMB9K2JB0F5GJKCJ1ZN38AK';
   const projectFormRef = useRef<any>(null);
   const pdfRef = useRef<PdfWrapperRefMethods>(null);
 
@@ -38,6 +39,8 @@ const CreateProjectTakeoffModal = ({
   const [totalPage, setTotalPage] = useState(1);
 
   const [OCRFieldName, setOCRFieldName] = useState<string>('');
+
+  const [loading, setLoading] = useState<boolean>(false);
 
   const [filesData, setFilesData] = useState<any[]>(() => {
     let data = [
@@ -122,14 +125,41 @@ const CreateProjectTakeoffModal = ({
     setOCRFieldName('');
   };
 
-  const handleConfirm = () => {
-    if (!projectFormRef?.current?.isValidForm()) {
-      message.warning("Please fill out all required fields.");
-      return;
-    }
-    // 跳转到page index页面
-    router.push(`/projects/${projectId}/takeoff/${projectId}/identification-index`);
+  const handleConfirm = async () => {
+    // if (!projectFormRef?.current?.isValidForm()) {
+    //   message.warning("Please fill out all required fields.");
+    //   return;
+    // }
 
+    console.log('########## uploadFilesData', uploadFilesData);
+    const { archFiles = [], arcHingeMode = '1', quoteFiles = [], quoteHingeMode = '1' } = uploadFilesData;
+    // 目前只处理archFiles文件
+
+    const filesInfo = archFiles.map((file: UploadFile) => ({
+      file_name: file.name,
+      operation_type: 'Architecture_drawing',
+      file_type: 'PDF',
+      country_of_origin: "United States",
+    }));
+
+    const files = archFiles;
+
+    setLoading(true);
+
+    let res = await uploadFiles(
+      filesInfo,
+      files,
+      projectId,
+      arcHingeMode
+    );
+    setLoading(false);
+    if (res.status === 'success') {
+      message.success("Upload success.");
+      // 跳转到page index页面
+      router.push(`/projects/${projectId}/takeoff/${1}/identification-index`);
+    } else {
+      message.warning("Upload failed. Please try again.");
+    }
   }
 
   const handleAddOCRBox = (fieldName: any) => {

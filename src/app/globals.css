@@ -84,22 +84,42 @@ body {
 
 /* Button primary type global styles */
 .ant-btn-primary {
-  background-color: #427CCE !important;
-  border-color: #427CCE !important;
+  background-color: #427cce !important;
+  border-color: #427cce !important;
 }
 
 .ant-btn-primary:hover,
 .ant-btn-primary:focus {
-  background-color: #356BB3 !important;
-  border-color: #356BB3 !important;
+  background-color: #356bb3 !important;
+  border-color: #356bb3 !important;
 }
 
 /* Checkbox global styles */
 .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #427CCE !important;
-  border-color: #427CCE !important;
+  background-color: #427cce !important;
+  border-color: #427cce !important;
 }
 
 .ant-checkbox-inner {
-  border-color: #98A1B0 !important;
+  border-color: #98a1b0 !important;
+}
+
+.custom-select-page .ant-select-selector {
+  color: #717171 !important;
+  font-size: 10px !important;
+  text-align: center;
+}
+
+/* 确保选择器本身也没有内边距 */
+.custom-select-page .ant-select-selector {
+  padding: 0 !important;
+}
+
+/* 为Select.Option组件设置padding为0 */
+.custom-select-page .ant-select-item-option {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
