@@ -58,6 +58,7 @@ import {
   PdfWrapperRefMethods,
   Bounds,
 } from "../../types/evidence";
+import LabelTypesSelect from "./Label-Types-Select";
 
 const { confirm } = Modal;
 
@@ -120,6 +121,7 @@ const PdfWrapper = forwardRef(
       zoom,
       allEvidence,
       selectedEvidenceIds,
+      typeList,
       onRefreshEvidence,
       resetAdding,
       onTotalPages,
@@ -130,7 +132,7 @@ const PdfWrapper = forwardRef(
       onUpdateSafeZoom,
       onSuccessOCRText,
     }: PdfWrapperProps,
-    ref: any
+    ref: any,
   ) => {
     const api = process.env.NEXT_PUBLIC_PROJECTS_API;
     // Canvas maximum size on one side, exceeding this size may cause browser performance issues
@@ -215,7 +217,7 @@ const PdfWrapper = forwardRef(
         handleBatchSubmit,
         handleBatchDelete,
         checkAndHandleUnsavedCrops,
-      })
+      }),
     );
 
     useEffect(() => {
@@ -299,7 +301,7 @@ const PdfWrapper = forwardRef(
 
     const handleBatchSubmit = async () => {
       const filteredCropSections = cropSections.filter(
-        (section) => section.bounds.width !== 0 && section.bounds.height !== 0
+        (section) => section.bounds.width !== 0 && section.bounds.height !== 0,
       );
       if (filteredCropSections.length === 0) {
         message.warning("No evidence to submit.");
@@ -352,7 +354,8 @@ const PdfWrapper = forwardRef(
         setFullLoading(true);
 
         const filteredCropSections = cropSections.filter(
-          (section) => section.bounds.width !== 0 && section.bounds.height !== 0
+          (section) =>
+            section.bounds.width !== 0 && section.bounds.height !== 0,
         );
         const uploadData = filteredCropSections.map((section: GroupFrame) => {
           let rotateAngle: number = (viewport as any).rotation ?? 0;
@@ -434,8 +437,7 @@ const PdfWrapper = forwardRef(
 
       // 保存成功后通知父组件更新页面
       onAppendEvidence && onAppendEvidence([uploadData]);
-
-    }
+    };
 
     const batchDelete = async (deleteIds?: number[]) => {
       setFullLoading(true);
@@ -460,7 +462,8 @@ const PdfWrapper = forwardRef(
     const checkAndHandleUnsavedCrops = useCallback(
       async (proceedWithoutConfirmation?: boolean) => {
         const filteredCropSections = cropSections.filter(
-          (section) => section.bounds.width !== 0 && section.bounds.height !== 0
+          (section) =>
+            section.bounds.width !== 0 && section.bounds.height !== 0,
         );
         if (filteredCropSections.length === 0) {
           return Promise.resolve(true);
@@ -502,7 +505,7 @@ const PdfWrapper = forwardRef(
           });
         });
       },
-      [cropSections]
+      [cropSections],
     );
 
     const updateEvidence = async (evid: EvidenceType) => {
@@ -621,7 +624,7 @@ const PdfWrapper = forwardRef(
                     const [vx, vy] =
                       currentViewportRef.current!.convertToViewportPoint(
                         p.x,
-                        p.y
+                        p.y,
                       );
                     return { x: vx, y: vy };
                   });
@@ -782,11 +785,11 @@ const PdfWrapper = forwardRef(
 
       const maxLeft = Math.max(
         0,
-        (stageWidth || container.scrollWidth) - viewW
+        (stageWidth || container.scrollWidth) - viewW,
       );
       const maxTop = Math.max(
         0,
-        (stageHeight || container.scrollHeight) - viewH
+        (stageHeight || container.scrollHeight) - viewH,
       );
       if (targetLeft < 0) targetLeft = 0;
       else if (targetLeft > maxLeft) targetLeft = maxLeft;
@@ -828,7 +831,7 @@ const PdfWrapper = forwardRef(
           if (currentViewportRef.current) {
             const [px, py] = currentViewportRef.current.convertToPdfPoint(
               pos.x,
-              pos.y
+              pos.y,
             );
             newPdfPolygons.push({ x: px, y: py });
           }
@@ -883,17 +886,17 @@ const PdfWrapper = forwardRef(
 
         pdfPolygons: currentViewportRef.current
           ? [
-            {
-              x: currentViewportRef.current.convertToPdfPoint(
-                pos.x,
-                pos.y
-              )[0],
-              y: currentViewportRef.current.convertToPdfPoint(
-                pos.x,
-                pos.y
-              )[1],
-            },
-          ]
+              {
+                x: currentViewportRef.current.convertToPdfPoint(
+                  pos.x,
+                  pos.y,
+                )[0],
+                y: currentViewportRef.current.convertToPdfPoint(
+                  pos.x,
+                  pos.y,
+                )[1],
+              },
+            ]
           : [],
         bounds: {
           minX: pos.x,
@@ -901,7 +904,7 @@ const PdfWrapper = forwardRef(
           width: 0,
           height: 0,
         } as any,
-      }
+      };
       setCropSections((prev: any) => [newGroup]);
     };
 
@@ -952,7 +955,7 @@ const PdfWrapper = forwardRef(
           newPdfPolygons = newPolygons.map((p) => {
             const [px, py] = currentViewportRef.current!.convertToPdfPoint(
               p.x,
-              p.y
+              p.y,
             );
             return { x: px, y: py };
           });
@@ -1043,23 +1046,23 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-          {
-            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-          },
-        ]
+            {
+              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+            },
+          ]
         : [];
 
       const groupFrame = {
@@ -1079,7 +1082,10 @@ const PdfWrapper = forwardRef(
         setSelectedShapeId(groupFrame.id);
       }
     };
-    const autoAddRectArea = (addingOption: any, pdfPolygon: Array<{ x: number; y: number }>) => {
+    const autoAddRectArea = (
+      addingOption: any,
+      pdfPolygon: Array<{ x: number; y: number }>,
+    ) => {
       const viewPort = currentViewportRef.current;
       if (!viewPort) return;
 
@@ -1094,13 +1100,15 @@ const PdfWrapper = forwardRef(
       }
       const rotation: number = viewPort.rotation;
       const viewBox = viewPort.viewBox;
-      const offsetX = Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
-      const offsetY = Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
-      const fixedPdfPolygon = pdfPolygon.map(p => ({
+      const offsetX =
+        Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+      const offsetY =
+        Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
+      const fixedPdfPolygon = pdfPolygon.map((p) => ({
         x: p.x + offsetX,
         y: p.y + offsetY,
       }));
-      const viewportPoints = fixedPdfPolygon.map(p => {
+      const viewportPoints = fixedPdfPolygon.map((p) => {
         const [vx, vy] = viewPort.convertToViewportPoint(p.x, p.y);
         return { x: vx, y: vy };
       });
@@ -1108,8 +1116,8 @@ const PdfWrapper = forwardRef(
       const groupFrame = {
         id: `group-${Date.now()}-${Math.random()}`,
         type: addingOption?.type,
-        polygons: viewportPoints,      // 前端绘制用
-        pdfPolygons: fixedPdfPolygon,       // 原始 pdfjs 坐标
+        polygons: viewportPoints, // 前端绘制用
+        pdfPolygons: fixedPdfPolygon, // 原始 pdfjs 坐标
         completed: true,
         bounds: getZoneBounds(viewportPoints),
       };
@@ -1126,27 +1134,29 @@ const PdfWrapper = forwardRef(
 
     //生成截图
     const createImage = (groupId: string) => {
-      console.log('========== 开始多边形区域裁剪 ==========');
+      console.log("========== 开始多边形区域裁剪 ==========");
 
       const canvas = pdfCanvas.current;
       const viewport = currentViewportRef.current;
       if (!canvas) {
-        console.log('无法获取画布，请刷新页面重试');
+        console.log("无法获取画布，请刷新页面重试");
         return null;
       }
       if (!viewport) {
-        console.log('无法获取视图信息，请重新加载文档');
+        console.log("无法获取视图信息，请重新加载文档");
         return null;
       }
 
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
-        console.log('画布初始化失败，请刷新页面');
+        console.log("画布初始化失败，请刷新页面");
         return null;
       }
 
       //查找目标多边形组
-      const targetGroup = cropSections.find((group: any) => group.id === groupId);
+      const targetGroup = cropSections.find(
+        (group: any) => group.id === groupId,
+      );
       if (!targetGroup) {
         console.log(`未找到指定的区域 ID: ${groupId}`);
         return null;
@@ -1155,7 +1165,7 @@ const PdfWrapper = forwardRef(
       //验证多边形有效性
       const polygonPoints = targetGroup.polygons;
       if (!polygonPoints || polygonPoints.length < 3) {
-        console.log('无效的区域，多边形至少需要3个点）');
+        console.log("无效的区域，多边形至少需要3个点）");
         return null;
       }
 
@@ -1164,13 +1174,13 @@ const PdfWrapper = forwardRef(
 
       //视图参数
       const { width: vpW, height: vpH } = viewport;
-      console.log('viewport 尺寸：', { vpW, vpH });
+      console.log("viewport 尺寸：", { vpW, vpH });
 
       //直接使用 viewport 点计算边界框（与原始 canvas 像素同一坐标系）
-      const minX = Math.min(...vpPoints.map(p => p.x));
-      const minY = Math.min(...vpPoints.map(p => p.y));
-      const maxX = Math.max(...vpPoints.map(p => p.x));
-      const maxY = Math.max(...vpPoints.map(p => p.y));
+      const minX = Math.min(...vpPoints.map((p) => p.x));
+      const minY = Math.min(...vpPoints.map((p) => p.y));
+      const maxX = Math.max(...vpPoints.map((p) => p.x));
+      const maxY = Math.max(...vpPoints.map((p) => p.y));
 
       //处理原始 canvas 与 viewport 的像素比例
       const vp2px = canvas.width / viewport.width; //一般为1
@@ -1179,16 +1189,22 @@ const PdfWrapper = forwardRef(
       const srcW = Math.max(1, Math.round((maxX - minX) * vp2px));
       const srcH = Math.max(1, Math.round((maxY - minY) * vp2px));
 
-      console.log('裁剪源区域（canvas 像素）：', { srcX, srcY, srcW, srcH, vp2px });
+      console.log("裁剪源区域（canvas 像素）：", {
+        srcX,
+        srcY,
+        srcW,
+        srcH,
+        vp2px,
+      });
 
       //目标画布尺寸 = 源像素尺寸 / 比例，保证与屏幕可见 1:1
       const outW = Math.max(1, Math.round(srcW / Math.max(1e-6, vp2px)));
       const outH = Math.max(1, Math.round(srcH / Math.max(1e-6, vp2px)));
 
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
+      const tempCanvas = document.createElement("canvas");
+      const tempCtx = tempCanvas.getContext("2d");
       if (!tempCtx) {
-        console.log('无法获取临时Canvas上下文');
+        console.log("无法获取临时Canvas上下文");
         return null;
       }
       tempCanvas.width = outW;
@@ -1201,38 +1217,29 @@ const PdfWrapper = forwardRef(
       vpPoints.forEach((p, i) => {
         const x = p.x - minX;
         const y = p.y - minY;
-        if (i === 0) tempCtx.moveTo(x, y); else tempCtx.lineTo(x, y);
+        if (i === 0) tempCtx.moveTo(x, y);
+        else tempCtx.lineTo(x, y);
       });
       tempCtx.closePath();
       tempCtx.clip();
 
       //绘制源到目标（不缩放，像素一一对应，视觉一致）
-      tempCtx.drawImage(
-        canvas,
-        srcX,
-        srcY,
-        srcW,
-        srcH,
-        0,
-        0,
-        outW,
-        outH
-      );
+      tempCtx.drawImage(canvas, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
       tempCtx.restore();
-      const imageUrl = tempCanvas.toDataURL('image/png');
+      const imageUrl = tempCanvas.toDataURL("image/png");
       tempCanvas.remove();
-      console.log('========== 多边形区域裁剪完成 ==========');
+      console.log("========== 多边形区域裁剪完成 ==========");
       return imageUrl;
     };
 
     //将base64转换为File对象
-    const base64ToFile = (base64String: string, filename = 'image.png') => {
+    const base64ToFile = (base64String: string, filename = "image.png") => {
       //解析base64头部信息（如data:image/png;base64,）
-      const arr = base64String.split(',');
+      const arr = base64String.split(",");
       const mimeMatch = arr[0].match(/:(.*?);/);
 
       //提取MIME类型（如image/png）
-      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const mime = mimeMatch ? mimeMatch[1] : "image/png";
 
       //解码base64数据为二进制
       const bstr = atob(arr[1]);
@@ -1258,7 +1265,7 @@ const PdfWrapper = forwardRef(
       setFullLoading(true);
       const res: any = await pdfOcrDetect(file);
       const { data, status } = res;
-      if (status === 'success') {
+      if (status === "success") {
         // 识别成功，调用回调
         onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
         // 删除当前group
@@ -1274,7 +1281,7 @@ const PdfWrapper = forwardRef(
         });
       }
       setFullLoading(false);
-    }
+    };
 
     /**
      *
@@ -1288,7 +1295,7 @@ const PdfWrapper = forwardRef(
       shape: GroupFrame | EvidenceType,
       circlePt: CirclePoint,
       absX: number,
-      absY: number
+      absY: number,
     ): Point[] => {
       const frozen = dragCtxRef.current[shape.id];
       const startMinX = frozen.minX;
@@ -1406,7 +1413,7 @@ const PdfWrapper = forwardRef(
       vertexIndex: number,
       circlePt: CirclePoint,
       stageX: number,
-      stageY: number
+      stageY: number,
     ) => {
       setCropSections((prev) => {
         const list = [...prev];
@@ -1430,7 +1437,7 @@ const PdfWrapper = forwardRef(
             pdfPts = pts.map((p) => {
               const [px, py] = currentViewportRef.current!.convertToPdfPoint(
                 p.x,
-                p.y
+                p.y,
               );
               return { x: px, y: py };
             });
@@ -1438,7 +1445,7 @@ const PdfWrapper = forwardRef(
             if (pdfPts[vertexIndex]) {
               const [px, py] = currentViewportRef.current.convertToPdfPoint(
                 stageX,
-                stageY
+                stageY,
               );
               pdfPts[vertexIndex] = { x: px, y: py };
             }
@@ -1457,7 +1464,7 @@ const PdfWrapper = forwardRef(
       vertexIndex: number,
       circlePt: CirclePoint,
       stageX: number,
-      stageY: number
+      stageY: number,
     ) => {
       setPageEvidence((prev) => {
         const list = [...prev];
@@ -1481,7 +1488,7 @@ const PdfWrapper = forwardRef(
           pdfPts = pts.map((p) => {
             const [px, py] = currentViewportRef.current!.convertToPdfPoint(
               p.x,
-              p.y
+              p.y,
             );
             return { x: px, y: py };
           });
@@ -1511,7 +1518,7 @@ const PdfWrapper = forwardRef(
           newPdfPolygons = newPolygons.map((p: Point) => {
             const [px, py] = currentViewportRef.current!.convertToPdfPoint(
               p.x,
-              p.y
+              p.y,
             );
             return { x: px, y: py };
           });
@@ -1529,7 +1536,7 @@ const PdfWrapper = forwardRef(
     const dragEvidenceMoveByOffset = (
       evidenceId: string,
       dx: number,
-      dy: number
+      dy: number,
     ) => {
       setPageEvidence((prev: any) => {
         const list = [...prev];
@@ -1543,7 +1550,7 @@ const PdfWrapper = forwardRef(
           newPdfPolygons = newPolygons.map((p: Point) => {
             const [px, py] = currentViewportRef.current!.convertToPdfPoint(
               p.x,
-              p.y
+              p.y,
             );
             return { x: px, y: py };
           });
@@ -1625,7 +1632,7 @@ const PdfWrapper = forwardRef(
         const immediateScroll = (
           element: HTMLElement,
           targetLeft: number,
-          targetTop: number
+          targetTop: number,
         ) => {
           element.scrollLeft = targetLeft;
           element.scrollTop = targetTop;
@@ -1644,11 +1651,11 @@ const PdfWrapper = forwardRef(
 
           const maxAllowedScroll = Math.max(
             0,
-            containerScrollWidth - containerWidth
+            containerScrollWidth - containerWidth,
           );
           targetScrollLeft = Math.min(
             maxAllowedScroll,
-            scrollLeft + overflowDistance
+            scrollLeft + overflowDistance,
           );
         }
 
@@ -1662,11 +1669,11 @@ const PdfWrapper = forwardRef(
 
           const maxAllowedScroll = Math.max(
             0,
-            containerScrollHeight - containerHeight
+            containerScrollHeight - containerHeight,
           );
           targetScrollTop = Math.min(
             maxAllowedScroll,
-            scrollTop + overflowDistance
+            scrollTop + overflowDistance,
           );
         }
 
@@ -1700,7 +1707,7 @@ const PdfWrapper = forwardRef(
         .slice()
         .sort(
           (a, b) =>
-            Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx)
+            Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx),
         );
 
       const area = sorted.reduce((acc, p, i) => {
@@ -1755,7 +1762,7 @@ const PdfWrapper = forwardRef(
           0,
           0,
           pdfCanvas.current?.width || 0,
-          pdfCanvas.current?.height || 0
+          pdfCanvas.current?.height || 0,
         );
       }
     };
@@ -1798,13 +1805,13 @@ const PdfWrapper = forwardRef(
       const newWin = window.open(
         `/evidence/evidence-window?project_id=${project_id}&project_file_id=${project_file_id}`,
         "CenteredFloatingWindow",
-        windowFeatures
+        windowFeatures,
       );
     };
 
     const handleChangeEvidenceType = async (
       evidenceId: string,
-      type: "Item" | "Table"
+      type: "Item" | "Table",
     ) => {
       setFullLoading(true);
       const response = await changeEvidenceType(evidenceId, type);
@@ -1817,7 +1824,7 @@ const PdfWrapper = forwardRef(
     const handleCopyShape = (
       sections: GroupFrame[],
       group: GroupFrame,
-      direction: "right" | "bottom"
+      direction: "right" | "bottom",
     ) => {
       let groupObj = sections.find((e: any) => e.id === group.id);
       if (!groupObj) return;
@@ -1926,11 +1933,11 @@ const PdfWrapper = forwardRef(
       const newPolygons = groupObj.polygons.map((polygon: any) => {
         const nx = Math.min(
           Math.max(0, polygon.x + dx),
-          Math.max(0, stageWidth)
+          Math.max(0, stageWidth),
         );
         const ny = Math.min(
           Math.max(0, polygon.y + dy),
-          Math.max(0, stageHeight)
+          Math.max(0, stageHeight),
         );
         return {
           x: nx,
@@ -1960,7 +1967,7 @@ const PdfWrapper = forwardRef(
 
     const copyGroupShape = (
       group: GroupFrame,
-      direction: "right" | "bottom"
+      direction: "right" | "bottom",
     ) => {
       setCropSections((prev) => {
         let list = [...prev];
@@ -1977,7 +1984,7 @@ const PdfWrapper = forwardRef(
       }
 
       const filterPageEvidence = allEvidence.filter(
-        (item: any) => item.project_file_page_number === pageNum
+        (item: any) => item.project_file_page_number === pageNum,
       );
 
       if (filterPageEvidence.length === 0) {
@@ -2000,11 +2007,11 @@ const PdfWrapper = forwardRef(
 
         const viewPoints = Array.isArray(pdfPolygons)
           ? pdfPolygons.map((p: Point) => {
-            const viewport = currentViewportRef.current;
-            if (!viewport) return { x: p.x, y: p.y };
-            const [px, py] = viewport.convertToViewportPoint(p.x, p.y);
-            return { x: px, y: py };
-          })
+              const viewport = currentViewportRef.current;
+              if (!viewport) return { x: p.x, y: p.y };
+              const [px, py] = viewport.convertToViewportPoint(p.x, p.y);
+              return { x: px, y: py };
+            })
           : [];
 
         return { ...item, viewportPolygons: viewPoints };
@@ -2017,7 +2024,7 @@ const PdfWrapper = forwardRef(
       if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) return [];
 
       const evid = pageEvidence.filter((item: any) =>
-        selectedEvidenceIds.includes(item.id)
+        selectedEvidenceIds.includes(item.id),
       );
 
       if (evid.length > 0) {
@@ -2036,10 +2043,10 @@ const PdfWrapper = forwardRef(
               style={
                 operationMode === "edit"
                   ? {
-                    display: "grid",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }
+                      display: "grid",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }
                   : {}
               }
             >
@@ -2100,7 +2107,7 @@ const PdfWrapper = forwardRef(
                             setDraggingShapeId(null);
                             setTimeout(() => {
                               const updatedEvid = pageEvidence.find(
-                                (item) => item.id === evid.id
+                                (item) => item.id === evid.id,
                               );
                               if (updatedEvid) {
                                 updateEvidence(updatedEvid);
@@ -2126,14 +2133,14 @@ const PdfWrapper = forwardRef(
                               circleIndex,
                               circlePt,
                               x,
-                              y
+                              y,
                             );
                           }}
                           onCircleDragEnd={() => {
                             delete dragCtxRef.current[evid.id];
                             setTimeout(() => {
                               const updatedEvid = pageEvidence.find(
-                                (item) => item.id === evid.id
+                                (item) => item.id === evid.id,
                               );
                               if (updatedEvid) {
                                 updateEvidence(updatedEvid);
@@ -2179,7 +2186,7 @@ const PdfWrapper = forwardRef(
                               circleIndex,
                               circlePt,
                               x,
-                              y
+                              y,
                             );
                           }}
                           onCircleDragEnd={(e, info) => {
@@ -2204,7 +2211,7 @@ const PdfWrapper = forwardRef(
                     return null;
                   }
                   let { minX, minY, width, height } = getZoneBounds(
-                    item.viewportPolygons
+                    item.viewportPolygons,
                   );
 
                   let color: string = colorList.forumBlue;
@@ -2216,7 +2223,7 @@ const PdfWrapper = forwardRef(
                         ? colorList.forumBlue
                         : colorList.accentIndigo;
                     type = typeParams.name;
-                  } catch (error) { }
+                  } catch (error) {}
 
                   return (
                     <div
@@ -2282,27 +2289,51 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
-
+                      {/** 类型选择 */}
+                      {/* <div
+                        style={{
+                          position: "absolute",
+                          left: width - 40,
+                          top: "-20px",
+                          backgroundColor: "orange",
+                        }}
+                      >
+                        <LabelTypesSelect
+                          typeList={typeList as any}
+                          selectedType={
+                            group.type === "Table" ? "Floor Plan" : ""
+                          }
+                          onChangeType={(type: string) => {}}
+                        />
+                      </div> */}
                       <div
                         className="absolute flex flex-row items-center gap-1"
                         style={{
-                          left: group.type === 'Text' ? width - 110 : width - 90,
+                          left:
+                            group.type === "Text" ? width - 110 : width - 90,
                           top: "10px",
                         }}
                       >
-                        {
-                          group.type === 'Text' ? <div className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                        {group.type === "Text" ? (
+                          <div
+                            className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
                             onClick={() => {
                               // 转换成图片进行OCR识别
                               OCRRecogize(group.id);
                             }}
-                          >Read Content</div> :
-                            <div className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
-                              onClick={() => {
-                                evidencSubmit(group.id);
-                              }}
-                            >Confirm</div>
-                        }
+                          >
+                            Read Content
+                          </div>
+                        ) : (
+                          <div
+                            className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                            onClick={() => {
+                              evidencSubmit(group.id);
+                            }}
+                          >
+                            Confirm
+                          </div>
+                        )}
 
                         <div
                           className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md"
@@ -2414,7 +2445,7 @@ const PdfWrapper = forwardRef(
         )}
       </div>
     );
-  }
+  },
 );
 
 const ShapeWrapper = ({
@@ -2490,7 +2521,7 @@ const ShapeWrapper = ({
     try {
       const typeParams = JSON.parse(shape.type);
       shapeTypeAttr = typeParams.name;
-    } catch (error) { }
+    } catch (error) {}
   }
 
   color =

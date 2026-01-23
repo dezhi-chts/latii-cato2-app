@@ -54,38 +54,43 @@ const Header = ({
   const [hasFinishedAnalyzing, setHasFinishedAnalyzing] = useState(false);
   const [showAnalyzeModal, setShowAnalyzeModal] = useState<boolean>(false);
 
-
   const handleAnalyze = async () => {
-
+    console.log(' handleAnalyze');
+    setShowAnalyzeModal(false);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      // 跳转到识别结果页面
+      router.push(`/projects/${projectId}/takeoff/${takeOff?.take_off_id}/identification`);
+    }, 3000);
   };
-
   const handleAnalyzeClick = async () => {
-    await pdfRef?.current?.checkAndHandleUnsavedCrops?.(true);
     setShowAnalyzeModal(true);
   };
 
   return (
-    <div className="h-[110px]">
-      <div className="px-14 flex justify-between items-center border-b-neutralsN50 bg-white border-b  z-50 zoomed-container">
+    <div className="w-full h-[110px]">
+      <div className="px-14 h-full flex justify-between items-center border-b-neutralsN50 bg-white border-b  z-50 ">
         <div>
-          <div className="flex flex-row  gap-3 text-base text-forumBlue">Page Index
+          <div className="flex flex-row gap-2 text-base text-forumBlue">Page Index
             <Popover
               placement="rightBottom"
               title={null}
               content={
-                <div className="w-[200px] flex flex-col gap-2">
+                <div className="w-[200px] flex flex-col">
                   <div className="text-xxs">Page Index</div>
                   <div className="text-xxs text-baseGray">If the drawing includes a section that outlines the pages in the drawing, CATO will improve the accuracy to filter to the window and door pages you need.</div>
                 </div>
               }
               trigger="hover"
             >
-              <Image src="/assets/icons/info-forum-blue.svg" alt="info circle icon" width={14} height={14}></Image>            </Popover>
+              <Image src="/assets/icons/info-forum-blue.svg" alt="info circle icon" width={14} height={14}></Image>
+            </Popover>
           </div>
-          <div className="mt-2 text-sm text-baseGray">If available add your page index so CATO can perform a better reading.</div>
+          <div className="text-xs text-baseGray">If available add your page index so CATO can perform a better reading.</div>
         </div>
         <div></div>
-        <div className="flex items-center gap-4 h-20">
+        <div className="flex items-center gap-4">
           <div className="flex gap-4">
             {filesData?.map((file: any, index: number) => {
               const uploadFile: UploadFile = {

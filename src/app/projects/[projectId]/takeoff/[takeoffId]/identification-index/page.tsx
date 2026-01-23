@@ -23,7 +23,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Image from "next/image";
 
-import { generateEvidenceByFileId, getEvidenceByFileId } from "@/services/evidenceService";
+import {
+  generateEvidenceByFileId,
+  getEvidenceByFileId,
+} from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
 import { fetchProject } from "@/services/projectService";
 
@@ -32,7 +35,12 @@ import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
 import { EvidenceType, PdfWrapperRefMethods } from "../types/evidence";
 import debounce from "lodash/debounce";
-import { ZoomControls, AddRectBoxControls } from "../components/pdf/Pdf-Controls";
+import {
+  ZoomControls,
+  AddRectBoxControls,
+  PageControls,
+  SelectPagesControls,
+} from "../components/pdf/Pdf-Controls";
 import StepProgress from "./components/StepProgress";
 
 type AddingType = "Item" | "Table";
@@ -41,22 +49,28 @@ export type Adding = {
   type: AddingType | null;
 };
 
-const LabelTypeList = [{
-  label: "Floor Plan", // 平面图
-  value: "Floor Plan"
-}, {
-  label: "Elevation",  // 立面图
-  value: "Elevation"
-}, {
-  label: "Schedule", // 表格页
-  value: "Schedule"
-}, {
-  label: "General Notes", // 一般备注
-  value: "General Notes"
-}, {
-  label: "Mix", // 混合图
-  value: "Mix"
-}]
+const LabelTypeList = [
+  {
+    label: "Floor Plan", // 平面图
+    value: "Floor Plan",
+  },
+  {
+    label: "Elevation", // 立面图
+    value: "Elevation",
+  },
+  {
+    label: "Schedule", // 表格页
+    value: "Schedule",
+  },
+  {
+    label: "General Notes", // 一般备注
+    value: "General Notes",
+  },
+  {
+    label: "Mix", // 混合图
+    value: "Mix",
+  },
+];
 
 const IdentificationIndex = () => {
   const projectId = 1; //useParams().projectId;
@@ -82,26 +96,21 @@ const IdentificationIndex = () => {
   const fileList = [
     {
       id: 1,
-      file_name: 'Architectural-example.pdf',
-      upload_status: 'done',
-      url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f'
+      file_name: "Architectural-example.pdf",
+      upload_status: "done",
+      url: "https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f",
     },
     {
       id: 2,
-      file_name: 'Quote-example.pdf',
-      upload_status: 'done',
-      url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
+      file_name: "Quote-example.pdf",
+      upload_status: "done",
+      url: "https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96",
     },
   ];
 
-  useEffect(() => {
+  useEffect(() => {}, [takeOff]);
 
-  }, [takeOff]);
-
-
-  const getFileEvidences = () => {
-
-  }
+  const getFileEvidences = () => {};
 
   useEffect(() => {
     if (selectedFileId === -1) return;
@@ -121,9 +130,7 @@ const IdentificationIndex = () => {
         setThumbnailList((prev: any) => []);
 
         //设置新的url
-        let file = fileList.find(
-          (file: any) => file.id === selectedFileId
-        );
+        let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
           let newPdfUrl = file?.url;
 
@@ -138,7 +145,6 @@ const IdentificationIndex = () => {
 
   useEffect(() => {
     if (takeOffId) {
-
     }
   }, [takeOffId]);
 
@@ -148,16 +154,15 @@ const IdentificationIndex = () => {
       // 构造假的缩略图列表
       for (let i = 0; i < totalPage; i++) {
         list.push({
-          id: i + 1,
-          file_name: 'fake_thumbnail.png',
+          page: i + 1,
+          file_name: "fake_thumbnail.png",
           s3_key: `${projectId}_${selectedFileId}_${i + 1}`,
-          s3_url: '/assets/placeholder-images/example_2.png'
+          s3_url: "/assets/placeholder-images/example_2.png",
         });
       }
       setThumbnailList(list);
     }
   }, [totalPage]);
-
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -173,9 +178,9 @@ const IdentificationIndex = () => {
       {
         leading: true, // 立即执行第一次调用
         trailing: true, // 也执行 trailing 调用
-      }
+      },
     ),
-    [zoom]
+    [zoom],
   );
 
   const handleZoomChange = (value: number) => {
@@ -184,7 +189,7 @@ const IdentificationIndex = () => {
 
   const handleSafeZoomChange = (value: number) => {
     message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`
+      `The current scale may affect browser performance, and the previous scale will be set soon`,
     );
     debouncedZoomChange(value - 0.1);
   };
@@ -219,14 +224,13 @@ const IdentificationIndex = () => {
     setFileEvidence((prev: any) => [...prev, ...newUploadData]);
     // 清空当前页面的crop区域
     pdfRef?.current?.clearCropSections?.();
-  }
-
-  const handleDeleteEvidence = (deleteIds: number[]) => {
   };
+
+  const handleDeleteEvidence = (deleteIds: number[]) => {};
 
   const handleAddRectBox = () => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
-      pdfRef.current?.addingRect({ type: 'Table' });
+      pdfRef.current?.addingRect({ type: "Table" });
     }
   };
 
@@ -240,10 +244,10 @@ const IdentificationIndex = () => {
         let data = {
           id: i,
           name: `A${i + 1}: Floor Plan`,
-          content: 'This is a content',
-          type: 'text',
-          created_at: '2023-01-01',
-          updated_at: '2023-01-01',
+          content: "This is a content",
+          type: "text",
+          created_at: "2023-01-01",
+          updated_at: "2023-01-01",
         };
         list.push(data);
       }
@@ -254,7 +258,7 @@ const IdentificationIndex = () => {
       setPage(1);
       setFullLoading(false);
     }, 3000);
-  }
+  };
 
   return (
     <div className="w-full h-[100vh] flex flex-col">
@@ -267,46 +271,58 @@ const IdentificationIndex = () => {
         showContentView={showContentView}
       />
 
-      <div className={`flex-1 flex flex-row overflow-hidden`}>
-        <div className="pl-4 flex flex-col border-r border-primaryN30"
-          style={{ width: showContentView ? '500px' : '300px' }}
+      <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
+        <div
+          className="pl-4 flex flex-col border-r border-primaryN30"
+          style={{ width: showContentView ? "500px" : "300px" }}
         >
-          {
-            showContentView ? <ContentView contentData={contentData} setContentData={setContentData} /> : (
-              <Thumbnail
-                pdfRef={pdfRef}
-                showThumbnail={showThumbnail}
-                setShowThumbnail={setShowThumbnail}
-                data={thumbnailList}
-                page={page}
-                setPage={setPage}
-              ></Thumbnail>
-            )
-          }
+          {showContentView ? (
+            <ContentView
+              contentData={contentData}
+              setContentData={setContentData}
+            />
+          ) : (
+            <Thumbnail
+              pdfRef={pdfRef}
+              showThumbnail={showThumbnail}
+              setShowThumbnail={setShowThumbnail}
+              data={thumbnailList}
+              page={page}
+              setPage={setPage}
+            ></Thumbnail>
+          )}
         </div>
-        <div className={`flex-1 flex flex-col px-6 pt-4 overflow-hidden`}>
+        <div className={`flex-1 flex flex-col pl-6 pt-4 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
-            {!showContentView ? <div className="flex items-center gap-2">
-              <AddRectBoxControls
-                handleAddRectBox={handleAddRectBox} />
-              <Button
+            {!showContentView ? (
+              <div className="flex items-center gap-2">
+                <AddRectBoxControls
+                  theme="primary"
+                  handleAddRectBox={handleAddRectBox}
+                />
+                {/* <Button
                 className="w-[76px] h-[28px] bg-primaryN30 rounded-md"
                 onClick={() => { }}
               >
                 Skip
-              </Button>
-              <Button
-                className="w-[86px] h-[28px] bg-primaryN30 rounded-md"
-                onClick={handleAIContent}
-              >
-                AI-Content
-              </Button>
-            </div> : <div className="flex-1"></div>}
-            <div>
-              <ZoomControls
-                zoom={zoom}
-                handleZoomChange={handleZoomChange}
+              </Button> */}
+                <Button
+                  className="w-[86px] h-[28px] bg-primaryN30 rounded-md"
+                  onClick={handleAIContent}
+                >
+                  AI-Content
+                </Button>
+              </div>
+            ) : (
+              <div className="flex-1"></div>
+            )}
+            <div className="flex flex-row gap-2">
+              <SelectPagesControls
+                page={page}
+                totalPages={totalPage}
+                handlePageChange={handlePageChange}
               />
+              <ZoomControls zoom={zoom} handleZoomChange={handleZoomChange} />
             </div>
           </div>
           <div className="flex-1 flex overflow-hidden border border-primaryN30 rounded-md">
@@ -364,37 +380,50 @@ const useFileEvidenceState = () => {
   };
 };
 
-const ContentView = ({
-  contentData,
-  setContentData
-}: any) => {
-
+const ContentView = ({ contentData, setContentData }: any) => {
   const handleChecked = (item: any, value: boolean) => {
-    setContentData((prev: any) => prev.map((i: any) => ({
-      ...i,
-      checked: i.id === item.id ? value : i.checked,
-    })));
-  }
+    setContentData((prev: any) =>
+      prev.map((i: any) => ({
+        ...i,
+        checked: i.id === item.id ? value : i.checked,
+      })),
+    );
+  };
   const contentItem = (item: any) => {
     return (
       <div className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
-        <div className="w-[20px]"><Checkbox className="rounded-lg" checked={item.checked} onChange={(e) => handleChecked(item, e.target.checked)}></Checkbox></div>
-        <div className={`mx-1 w-[60%] text-xs ${item.checked ? 'text-forumBlue' : 'text-black'}`}>{item.name}</div>
+        <div className="w-[20px]">
+          <Checkbox
+            className="rounded-lg"
+            checked={item.checked}
+            onChange={(e) => handleChecked(item, e.target.checked)}
+          ></Checkbox>
+        </div>
+        <div
+          className={`mx-1 w-[60%] text-xs ${item.checked ? "text-forumBlue" : "text-black"}`}
+        >
+          {item.name}
+        </div>
         <div className="w-[40%] text-center">
-          <Select className="w-[150px] h-[28px] text-xxs" placeholder="Floor Plan,etc.">
-            {
-              LabelTypeList.map((item: any) => (
-                <Select.Option key={item.value} value={item.value}>{item.label}</Select.Option>
-              ))
-            }
+          <Select
+            className="w-[150px] h-[28px] text-xxs"
+            placeholder="Floor Plan,etc."
+          >
+            {LabelTypeList.map((item: any) => (
+              <Select.Option key={item.value} value={item.value}>
+                {item.label}
+              </Select.Option>
+            ))}
           </Select>
         </div>
       </div>
-    )
-  }
+    );
+  };
   return (
     <div className="pl-2 pr-6 w-full h-full flex flex-col">
-      <div className="mt-8 mb-2 text-xs text-baseGray">Select Pages and respective type of content.</div>
+      <div className="mt-8 mb-2 text-xs text-baseGray">
+        Select Pages and respective type of content.
+      </div>
       <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
         <div className="w-[50%] text-center">Index</div>
         <div className="w-[50%] text-center">Type</div>
@@ -403,5 +432,5 @@ const ContentView = ({
         {contentData?.map((item: any) => contentItem(item))}
       </div>
     </div>
-  )
-} 
+  );
+};
