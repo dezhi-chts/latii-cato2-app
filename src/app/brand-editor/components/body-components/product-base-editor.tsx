@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Image as AntdImage, notification } from 'antd';
+import { Button, Input, Image as AntdImage, notification, Tooltip, Checkbox, Popconfirm } from 'antd';
 import { useState, useEffect } from "react";
 import { SearchOutlined, EyeOutlined, PlusOutlined, CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import LoadingScreen from "@/components/loading-screen";
@@ -75,6 +75,9 @@ const ParameterBaseEditor = () => {
 	const [unitAttributesTree, setUnitAttributesTree] = useState<any[]>([]);
 	const [productTypeMsg, setProductTypeMsg] = useState<any[]>([]);
 
+	const [selectedProductType, setSelectedProductType] = useState<any>({});
+	const [operabilityMsg, setOperabilityMsg] = useState<any[]>([]);
+
 	useEffect(() => {
 		initAllData()
 	}, []);
@@ -84,6 +87,17 @@ const ParameterBaseEditor = () => {
 			getAttribute()
 		}
 	}, [selectedProfile]);
+
+	useEffect(() => {
+		if (!productTypeMsg || productTypeMsg.length === 0) return;
+		changeProductTypesLibrarySearchWordAndAlreadyExistence(null);
+	}, [productTypeMsg]);
+
+	useEffect(() => {
+		if (selectedProductType?.id) {
+			
+		}
+	}, [selectedProductType]);
 
 	const initAllData = async () => {
 		const companyRes = await fetchCompanyByKeycloakUser();
@@ -244,10 +258,15 @@ const ParameterBaseEditor = () => {
 		}
 	};
 
-	const changeProductTypesLibrarySearchWord = (e: any) => {
-		const value = e?.target?.value
-		setProductTypesLibrarySearchWord(value)
-		const keyword = value.toLowerCase();
+	const changeProductTypesLibrarySearchWordAndAlreadyExistence = (e: any) => {
+		let keyword = ""
+		if (e) {
+			const value = e?.target?.value
+			setProductTypesLibrarySearchWord(value)
+			keyword = value.toLowerCase();
+		} else {
+			keyword = productTypesLibrarySearchWord.toLowerCase();
+		}
 		productTypesLibrary.forEach((item: any) => {
 			item.isShow = false;
 
@@ -257,6 +276,12 @@ const ParameterBaseEditor = () => {
 			) {
 				item.isShow = true;
 			}
+			productTypeMsg.forEach((item1: any) => {
+				if (item.product_type_code == item1.option) {
+
+					item.isShow = false;
+				}
+			})
 		});
 		setProductTypesLibrary([...productTypesLibrary])
 	};
@@ -324,34 +349,112 @@ const ParameterBaseEditor = () => {
 			})
 		}
 
+		let allProductOptions = getOptionsByAttributeCode("unit$product", unitAttributesTree[0])
+		let allProductTypeOptions = getOptionsByAttributeCode("unit$product_type", unitAttributesTree[0])
+		const productOption = allProductOptions.find(
+			(item: any) => item.code === productType?.product_code
+		);
+
+		const productTypeOption = allProductTypeOptions.find(
+			(item: any) => item.code === productType?.product_type_code
+		);
+
 		let optionItemMsg: any = {}
+		let optionProductTypeItemMsg: any = {}
 		profileOptionMsg.children.forEach((item: any) => {
 			if (item.attribute == "unit$product" && item.option == productType?.product_code) {
 				optionItemMsg = item
 			}
+			item.children.forEach((item1: any) => {
+				if (item.attribute == "unit$product_type" && item.option == productType?.product_type_code) {
+					optionProductTypeItemMsg = item
+				}
+			})
 		})
-		if (optionItemMsg?.id) {
+
+		if (productOption?.code && productTypeOption?.code) {
+			let productAttributeMsg = getAttributeMsgByAttribute("unit$product", unitAttributesTree[0]);
+			let productOptionMsg = productOption
+
+			let productTypeAttributeMsg = getAttributeMsgByAttribute("unit$product_type", unitAttributesTree[0]);
+			let productTypeOptionMsg = productTypeOption
+
+			if (optionItemMsg?.id) {
+				let newOptionItemMsgForProductType = addSubOption(optionItemMsg)
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attribute = "unit$product_type"
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attributeMsg = productTypeAttributeMsg
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].option = productTypeOptionMsg.code
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].optionMsg = productTypeOptionMsg
+
+				let newProfileOptionMsg = updateOption(newOptionItemMsgForProductType, profileOptionMsg)
+				setProfileOptionMsg(newProfileOptionMsg)
+				const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
+				setProductTypeMsg(productTypeMsg)
+				onSaveScript(newProfileOptionMsg)
+			} else {
+				let newOptionItemMsg = addSubOption(profileOptionMsg)
+				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attribute = "unit$product"
+				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attributeMsg = productAttributeMsg
+				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].option = productOptionMsg.code
+				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].optionMsg = productOptionMsg
+
+				let newOptionItemMsgForProductType = addSubOption(newOptionItemMsg.children[newOptionItemMsg.children.length - 1])
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attribute = "unit$product_type"
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attributeMsg = productTypeAttributeMsg
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].option = productTypeOptionMsg.code
+				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].optionMsg = productTypeOptionMsg
+
+				let newProfileOptionMsg = updateOption(newOptionItemMsgForProductType, profileOptionMsg)
+				setProfileOptionMsg(newProfileOptionMsg)
+				const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
+				setProductTypeMsg(productTypeMsg)
+				onSaveScript(newProfileOptionMsg)
+			}
+		} else if (productOption?.code && !productTypeOption?.code) {
 			const [
 				createProductTypeOptionRes
 			] = await Promise.all([
 				createOption(productTypeParams)
 			]);
 			if (createProductTypeOptionRes.status == "success") {
+				let productAttributeMsg = getAttributeMsgByAttribute("unit$product", unitAttributesTree[0]);
+				let productOptionMsg = productOption
+
 				let productTypeAttributeMsg = getAttributeMsgByAttribute("unit$product_type", unitAttributesTree[0]);
 				let productTypeOptionMsg = createProductTypeOptionRes?.data
 
-				let newOptionItemMsg = addSubOption(optionItemMsg)
-				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attribute = "unit$product_type"
-				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attributeMsg = productTypeAttributeMsg
-				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].option = productTypeOptionMsg.code
-				newOptionItemMsg.children[newOptionItemMsg.children.length - 1].optionMsg = productTypeOptionMsg
+				if (optionItemMsg?.id) {
+					let newOptionItemMsgForProductType = addSubOption(optionItemMsg)
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attribute = "unit$product_type"
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attributeMsg = productTypeAttributeMsg
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].option = productTypeOptionMsg.code
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].optionMsg = productTypeOptionMsg
 
-				let newProfileOptionMsg = updateOption(newOptionItemMsg, profileOptionMsg)
-				setProfileOptionMsg(newProfileOptionMsg)
-				const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
-				setProductTypeMsg(productTypeMsg)
-				onSaveScript(newProfileOptionMsg)
-			}else{
+					let newProfileOptionMsg = updateOption(newOptionItemMsgForProductType, profileOptionMsg)
+					setProfileOptionMsg(newProfileOptionMsg)
+					const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
+					setProductTypeMsg(productTypeMsg)
+					onSaveScript(newProfileOptionMsg)
+				} else {
+					let newOptionItemMsg = addSubOption(profileOptionMsg)
+					newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attribute = "unit$product"
+					newOptionItemMsg.children[newOptionItemMsg.children.length - 1].attributeMsg = productAttributeMsg
+					newOptionItemMsg.children[newOptionItemMsg.children.length - 1].option = productOptionMsg.code
+					newOptionItemMsg.children[newOptionItemMsg.children.length - 1].optionMsg = productOptionMsg
+
+					let newOptionItemMsgForProductType = addSubOption(newOptionItemMsg.children[newOptionItemMsg.children.length - 1])
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attribute = "unit$product_type"
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attributeMsg = productTypeAttributeMsg
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].option = productTypeOptionMsg.code
+					newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].optionMsg = productTypeOptionMsg
+
+					let newProfileOptionMsg = updateOption(newOptionItemMsgForProductType, profileOptionMsg)
+					setProfileOptionMsg(newProfileOptionMsg)
+					const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
+					setProductTypeMsg(productTypeMsg)
+					onSaveScript(newProfileOptionMsg)
+				}
+			} else {
 				notification.error({
 					message: "Error",
 					description: createProductTypeOptionRes?.data?.response?.data?.detail || "Add failed."
@@ -389,7 +492,7 @@ const ParameterBaseEditor = () => {
 				const productTypeMsg = findProductTypeWithParent(newProfileOptionMsg)
 				setProductTypeMsg(productTypeMsg)
 				onSaveScript(newProfileOptionMsg)
-			}else{
+			} else {
 				notification.error({
 					message: "Error",
 					description: createProductOptionRes?.data?.response?.data?.detail || "Add failed."
@@ -408,9 +511,6 @@ const ParameterBaseEditor = () => {
 		] = await Promise.all([
 			fetchUnitAttributesWithOptionsByVersionId(selectedProfile?.unit_version_id)
 		]);
-		setUnitMsg(unitAttributesWithOptions?.data);
-		let unitAttributesTreeMsg = processUnitAttributeTree(unitAttributesWithOptions?.data?.attribute_tree)
-		setUnitAttributesTree([unitAttributesTreeMsg])
 
 		let scriptMsg: string = generateProfileScriptFromProfileOptionMsg(
 			projectMsg?.attribute_tree,
@@ -419,9 +519,8 @@ const ParameterBaseEditor = () => {
 			unitAttributesWithOptions?.data?.attribute_tree,
 			profileOptionMsg
 		);
+		console.log(scriptMsg,'scriptMsgscriptMsg')
 		setFullLoading(false)
-		let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
-		if (checkReturnMsg.status == "success") {
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(selectedProfile.id, scriptMsg);
 
 			if (saveReturnMsg.status == "success") {
@@ -430,6 +529,8 @@ const ParameterBaseEditor = () => {
 					message: "Success",
 					description: "Edit successfully.",
 				});
+				setSelectedProfile(saveReturnMsg?.data)
+				generateOptionMsg(saveReturnMsg?.data, unitAttributesWithOptions?.data)
 			} else {
 				setFullLoading(false)
 				notification.error({
@@ -437,13 +538,32 @@ const ParameterBaseEditor = () => {
 					description: saveReturnMsg?.data?.response?.data?.detail || "Edit failed."
 				});
 			}
-		} else {
-			setFullLoading(false)
-			notification.error({
-				message: "Error",
-				description: checkReturnMsg?.data?.response?.data?.detail || "Profile script base check failed."
-			});
-		}
+		// let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
+		// if (checkReturnMsg.status == "success") {
+		// 	let saveReturnMsg: Record<string, any> = await saveProfileScript(selectedProfile.id, scriptMsg);
+
+		// 	if (saveReturnMsg.status == "success") {
+		// 		setFullLoading(false)
+		// 		notification.success({
+		// 			message: "Success",
+		// 			description: "Edit successfully.",
+		// 		});
+		// 		setSelectedProfile(saveReturnMsg?.data)
+		// 		generateOptionMsg(saveReturnMsg?.data, unitAttributesWithOptions?.data)
+		// 	} else {
+		// 		setFullLoading(false)
+		// 		notification.error({
+		// 			message: "Error",
+		// 			description: saveReturnMsg?.data?.response?.data?.detail || "Edit failed."
+		// 		});
+		// 	}
+		// } else {
+		// 	setFullLoading(false)
+		// 	notification.error({
+		// 		message: "Error",
+		// 		description: checkReturnMsg?.data?.response?.data?.detail || "Profile script base check failed."
+		// 	});
+		// }
 	};
 
 	const getFileUrlByAllProductTypeLibrary = (msg: any) => {
@@ -455,6 +575,25 @@ const ParameterBaseEditor = () => {
 			}
 		})
 		return fileUrl
+	};
+
+	const onChangeProductTypeSelected = (e:any, msg:any) => {
+		productTypeMsg.forEach((item:any)=>{
+			if (item.id == msg.id){
+				item.isChecked = e.target.checked
+			}
+		})
+		setProductTypeMsg([...productTypeMsg])
+	};
+
+	const onDeleteProductType = (msg:any) => {
+		let newProfileOptionMsg = deleteItem(msg, profileOptionMsg)
+		setProfileOptionMsg(newProfileOptionMsg)
+		onSaveScript(newProfileOptionMsg)
+	};
+
+	const onSelectedProductType = (msg:any) => {
+		setSelectedProductType(msg)
 	};
 
 	return (
@@ -484,6 +623,7 @@ const ParameterBaseEditor = () => {
 											? <div
 												key={index}
 												className='w-full flex p-2 border-b border-b-[#EBEDF0] items-center'
+												onClick={(e)=>{e.stopPropagation()}}
 											>
 												<Input
 													placeholder="Profile/Line"
@@ -531,6 +671,7 @@ const ParameterBaseEditor = () => {
 													"
 													onChange={(e: any) => { handleChangeAddProfile(e, index) }}
 													onBlur={() => { editProfileToDB(item, index) }}
+													onClick={(e)=>{e.stopPropagation()}}
 												/>
 
 												<div
@@ -546,8 +687,17 @@ const ParameterBaseEditor = () => {
 														group-hover:pointer-events-auto
 													"
 												>
-													<CopyOutlined disabled className="text-[#B1B1B1] hover:text-[#595959]" />
-													<DeleteOutlined onClick={() => { deleteProfileFromDB(item, index) }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+													<CopyOutlined onClick={(e)=>{e.stopPropagation()}} disabled className="text-[#B1B1B1] hover:text-[#595959]" />
+													<Popconfirm
+														title="Delete the profile"
+														description="Are you sure to delete this profile?"
+														onConfirm={()=>deleteProfileFromDB(item, index)}
+														onCancel={()=>{}}
+														okText="Yes"
+														cancelText="No"
+													>
+														<DeleteOutlined onClick={(e)=>{e.stopPropagation()}} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+													</Popconfirm>
 												</div>
 											</div>
 									)
@@ -570,7 +720,7 @@ const ParameterBaseEditor = () => {
 						<Button size='small' className='text-[#717171] text-[12px]'>Copy & Move to</Button>
 					</div>
 					<div className='flex flex-col flex-1 p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='h-[50%]'>
+						<div className='h-[50%] overflow-y-auto'>
 							{
 								!selectedProfile?.id &&
 								<div
@@ -594,23 +744,82 @@ const ParameterBaseEditor = () => {
 								<div className='text-[12px]'>
 									{
 										productTypeMsg.map((item: any, index: any) => {
+											let isSelected = item.id === selectedProductType.id;
+											const selectedStyle = isSelected
+												? {
+													background: "#E3EBF8"
+												}
+												: {
+
+												}
 											return <div
 												key={item.option}
-												className='flex p-2 border-b border-b-[#EBEDF0] items-center cursor-pointer'
+												className="
+													group
+													w-full
+													flex
+													p-2
+													pt-3
+													pb-3
+													border-b
+													border-b-[#EBEDF0]
+													items-center
+													justify-between
+													hover:bg-[#E3EBF8]
+													transition-colors
+													rounded-md
+													cursor-pointer
+												"
+												style={selectedStyle}
+												onClick={()=>onSelectedProductType(item)}
 											>
-												<AntdImage
-													src={getFileUrlByAllProductTypeLibrary(item)}
-													width={35}
-													style={{ borderRadius: "6px" }}
-													preview={{
-														mask: <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '14px' }}><EyeOutlined /></div>,
-													}}
-												>
+												<div className='flex'>
+													<AntdImage
+														src={getFileUrlByAllProductTypeLibrary(item)}
+														width={35}
+														style={{ borderRadius: "6px" }}
+														preview={{
+															mask: <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '14px' }}><EyeOutlined /></div>,
+														}}
+													>
 
-												</AntdImage>
-												<div className='ml-2'>
-													<div>{item?.optionMsg?.name}</div>
-													<div style={{ fontSize: "10px" }} className='text-[#717171]'>{item.parent?.optionMsg?.name}</div>
+													</AntdImage>
+
+													<div className='ml-2'>
+														<div>{item?.optionMsg?.name}</div>
+														<div style={{ fontSize: "10px" }} className='text-[#717171]'>{item.parent?.optionMsg?.name}</div>
+													</div>
+												</div>
+												<div
+													className="
+														ml-6
+														flex
+														gap-4
+														transition-opacity
+														duration-200
+														pointer-events-none
+														group-hover:pointer-events-auto
+													"
+												>
+													<Popconfirm
+														title="Delete the product type"
+														description="Are you sure to delete this product type?"
+														onConfirm={()=>onDeleteProductType(item)}
+														onCancel={()=>{}}
+														okText="Yes"
+														cancelText="No"
+													>
+														<DeleteOutlined onClick={(e)=>{e.stopPropagation()}} style={{fontSize:"14px"}} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+													</Popconfirm>
+													<Checkbox
+														style={{
+															transform: "scale(0.8)",
+															transformOrigin: "left center",
+														}}
+														checked={item.isChecked}
+														onChange={(e)=>{onChangeProductTypeSelected(e, item)}}
+														onClick={(e)=>{e.stopPropagation()}}
+													></Checkbox>
 												</div>
 											</div>
 										})
@@ -625,7 +834,7 @@ const ParameterBaseEditor = () => {
 									placeholder="Single Swing, Hopper"
 									prefix={<SearchOutlined className='text-[#DCDCDC]' />}
 									value={productTypesLibrarySearchWord}
-									onChange={changeProductTypesLibrarySearchWord}
+									onChange={changeProductTypesLibrarySearchWordAndAlreadyExistence}
 								/>
 							</div>
 							<div style={{ height: "calc(100% - 50px)" }} className='overflow-y-auto'>
@@ -648,10 +857,12 @@ const ParameterBaseEditor = () => {
 													>
 
 													</AntdImage>
-													<div className='ml-2'>
-														<div>{item.product_type_name}</div>
-														<div style={{ fontSize: "10px" }} className='text-[#717171]'>{item.product_name}</div>
-													</div>
+													<Tooltip placement="right" title={'Click to add'}>
+														<div className='ml-2 flex-1'>
+															<div>{item.product_type_name}</div>
+															<div style={{ fontSize: "10px" }} className='text-[#717171]'>{item.product_name}</div>
+														</div>
+													</Tooltip>
 												</div>
 												: null
 										)
@@ -666,8 +877,16 @@ const ParameterBaseEditor = () => {
 						<div>Opens</div>
 					</div>
 					<div className='flex flex-col p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='bg-black h-[50%]'>
-
+						<div className='h-[50%] overflow-y-auto'>
+							{
+								(!selectedProfile?.id || !selectedProductType?.id) &&
+								<div
+									style={{ border: "1px dashed #EBEDF0" }}
+									className='p-6 pl-10 pr-10 flex text-center items-center justify-center rounded-md text-[#A3A3A3]'
+								>
+									Please select profile and product type
+								</div>
+							}
 						</div>
 						<div className='text-[12px] mt-4 h-[50%]'>
 							<div className='text-[#717171]'>Options</div>
