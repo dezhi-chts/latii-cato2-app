@@ -4,7 +4,7 @@ const ParameterOption = () => {
 
 	return (
 		<div>
-			ParameterOption
+			Option
 		</div>
 	);
 };

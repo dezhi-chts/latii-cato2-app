@@ -809,4 +809,47 @@ export const findProductTypeWithParent = (treeObj: OptionMsgVO) => {
 		}));
 
 	return result;
-}
+};
+
+export const pickProductProductTypeOpen = (root: OptionMsgVO): OptionMsgVO => {
+  // 复制顶级节点，保证不破坏原数据
+  const newRoot: OptionMsgVO = { ...root };
+
+  // 第一层：找到所有 product 节点
+  const productNodes =
+    newRoot.children
+      ?.filter(child => child.attribute === "unit$product")
+      .map(productNode => {
+        // 第二层：找到所有 product_type 节点
+        const productTypeNodes =
+          productNode.children
+            ?.filter(child => child.attribute === "unit$product_type")
+            .map(productTypeNode => {
+              // 第三层：找到所有 unit$operability 节点
+              const openNodes =
+                productTypeNode.children
+                  ?.filter(child => child.attribute === "unit$operability")
+                  .map(openNode => ({
+                    ...openNode,
+                    children: [], // 截断
+                  })) ?? [];
+
+              return {
+                ...productTypeNode,
+                children: openNodes,
+              };
+            }) ?? [];
+
+        return {
+          ...productNode,
+          children: productTypeNodes,
+        };
+      }) ?? [];
+
+  // 如果第一层都没找到，children = []
+  return {
+    ...newRoot,
+    children: productNodes.length > 0 ? productNodes : [],
+  };
+};
+
