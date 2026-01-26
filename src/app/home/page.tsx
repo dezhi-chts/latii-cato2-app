@@ -1,14 +1,18 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
 import { Input, Segmented } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 import HomeProjectsTable from "./components/Home-Projects-Table";
+import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
+import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
+import type { UploadFile } from "antd/es/upload/interface";
+
 
 export const projects: ProjectRow[] = [
   {
@@ -124,6 +128,23 @@ export const projects: ProjectRow[] = [
   },
 ];
 
+const defaultFields: { field_name: string, Hint_text: string }[] = [{
+  field_name: "project_name",
+  Hint_text: "Project Name",
+}, {
+  field_name: "last_edit",
+  Hint_text: "Last Edit",
+}, {
+  field_name: "status",
+  Hint_text: "Status",
+}, {
+  field_name: "notes",
+  Hint_text: "Notes",
+}, {
+  field_name: "is_favorite",
+  Hint_text: "Favorite",
+}]
+
 type Filter = {
   value: string;
   category: Category;
@@ -132,8 +153,9 @@ type Category = "Projects" | "Take Offs";
 
 const Home = () => {
   const { first_name } = useUser();
-  const [showCreateProjectModal, setShowCreateProjectModal] =
-    useState<boolean>(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState<boolean>(false);
+  const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] = useState<boolean>(false);
+  const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [filter, setFilter] = useState<Filter>({
     value: "",
     category: "Projects",
@@ -141,6 +163,11 @@ const Home = () => {
   const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([
     ...projects,
   ]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
+    return defaultFields.map((field) => field.field_name)
+  });
+
+  const uploadFiles = useRef<any>(null);
 
   function handleValueChange(value: string) {
     setFilter((prev) => ({ ...prev, value }));
@@ -160,6 +187,10 @@ const Home = () => {
 
   function closeModal() {
     setShowCreateProjectModal(false);
+  }
+
+  function handleColumnsChange(columns: string[]) {
+    setSelectedColumns(columns);
   }
 
   useEffect(() => {
@@ -185,11 +216,11 @@ const Home = () => {
         </p>
       </div>
       <div className="flex flex-col gap-4 w-full">
-        <p className="text-[22px]">Home</p>
         <div className="flex items-center justify-between w-full">
           <div className="flex gap-4">
             <Input
               className="min-w-[400px] w-[20vw] rounded-2xl"
+              allowClear
               value={filter.value}
               onChange={(e) => handleValueChange(e.target.value)}
               prefix={
@@ -200,16 +231,6 @@ const Home = () => {
                   height={12}
                 />
               }
-              suffix={
-                filter && (
-                  <p
-                    onClick={emptyFilterValue}
-                    className="text-baseGray text-sm cursor-pointer"
-                  >
-                    X
-                  </p>
-                )
-              }
               placeholder="Project Name, Status, Client and More."
             />
             <Segmented
@@ -218,28 +239,70 @@ const Home = () => {
             />
           </div>
           <div className="flex gap-4">
-            <Image
-              src="/assets/icons/edit.svg"
-              alt="Edit button"
-              width={20}
-              height={20}
-            />
+            <div className="p-1 rounded-md border border-primaryN30">
+              <Image
+                src="/assets/icons/edit.svg"
+                alt="Edit button"
+                width={20}
+                height={20}
+                onClick={() => setShowColumnView(true)}
+                className="cursor-pointer"
+              />
+            </div>
+
             <Button
               backgroundColor="forumBlue"
-              className="rounded-md py-2 text-xs w-32"
+              className="rounded-md py-2 text-xs"
               onClick={openModal}
             >
               + Create Project
             </Button>
           </div>
         </div>
-        <HomeProjectsTable projects={filteredProjects} />
+        <HomeProjectsTable
+          projects={filteredProjects}
+          selectedColumns={selectedColumns}
+        />
       </div>
 
-      <CreateProjectModal
-        isOpen={showCreateProjectModal}
-        closeModal={closeModal}
-      />
+      {
+        showCreateProjectModal && (
+          <CreateProjectModal
+            isOpen={showCreateProjectModal}
+            closeModal={closeModal}
+            onOpenTakeoffModal={(data) => {
+              // 关闭Create-Project-Modal弹窗
+              closeModal();
+              uploadFiles.current = data;
+              // 打开Create-Project-Takeoff-Modal弹窗
+              setShowCreateProjectTakeOffModal(true);
+            }}
+          />
+        )
+      }
+      {
+        showCreateProjectTakeOffModal && (
+          <CreateProjectTakeoffModal
+            isOpen={showCreateProjectTakeOffModal}
+            closeModal={() => {
+              // 关闭Create-Project-Takeoff-Modal弹窗
+              setShowCreateProjectTakeOffModal(false);
+            }}
+            uploadFilesData={uploadFiles.current}
+          />
+        )
+      }
+      {
+        showColumnView && (
+          <ColumnView
+            open={showColumnView}
+            onClose={() => setShowColumnView(false)}
+            columns={defaultFields}
+            onColumnsChange={handleColumnsChange}
+            selectedColumns={selectedColumns}
+          />
+        )
+      }
     </div>
   );
 };

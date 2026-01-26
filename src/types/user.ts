@@ -3,7 +3,8 @@ export type UserDataForUpdate = {
   last_name?: string;
   email?: string;
   job_title?: string;
-  password?: string;
+  new_password?: string;
+  current_password?: string;
 };
 
 export type passwordChangeData = {

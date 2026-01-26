@@ -29,6 +29,7 @@ const LocationSelector = ({
   handleInputChange,
   handleDropdownChange,
   height,
+  style
 }: LocationSelectorProps) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [states, setStates] = useState<StateType[]>([]);
@@ -67,10 +68,10 @@ const LocationSelector = ({
   }, [projectSettings?.state, states]);
 
   return (
-    <div className="relative">
+    <div className="relative" style={{...style}}>
       <Input
         placeholder="State, City, Postal Code, Address"
-        className={`rounded-full cursor-pointer truncate ... ${
+        className={`cursor-pointer truncate ... ${
           height === "small" && "text-xs"
         }`}
         value={getFullLocation({
@@ -81,6 +82,7 @@ const LocationSelector = ({
         })}
         readOnly
         onClick={() => setIsOpen(true)}
+        size="large"
       />
       {isOpen && (
         <div
