@@ -156,7 +156,7 @@ const CreateProjectTakeoffModal = ({
 
     setLoading(true);
 
-    let res = await uploadFiles(
+    let res: any = await uploadFiles(
       filesInfo,
       files,
       projectId,
@@ -165,8 +165,9 @@ const CreateProjectTakeoffModal = ({
     setLoading(false);
     if (res.status === 'success') {
       message.success("Upload success.");
+      const takeOffId = res?.data?.take_off_id ?? null;
       // 跳转到page index页面
-      router.push(`/projects/${projectId}/takeoff/${1}/identification-index`);
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification-index`);
     } else {
       message.warning("Upload failed. Please try again.");
     }
