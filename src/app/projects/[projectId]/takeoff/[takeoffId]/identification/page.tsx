@@ -26,7 +26,6 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { fetchProject } from "@/services/projectService";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -79,24 +78,9 @@ const defaultPageCategory = [
   },
 ];
 
-const fileList = [
-  {
-    id: 1,
-    file_name: "Architectural-example.pdf",
-    upload_status: "done",
-    url: "https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f",
-  },
-  {
-    id: 2,
-    file_name: "Quote-example.pdf",
-    upload_status: "done",
-    url: "https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96",
-  },
-];
-
 const Identification = () => {
-  const projectId = 1; //useParams().projectId;
-  const takeOffId = 1; //useParams().takeoffId;
+  const projectId = useParams().projectId;
+  const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
 
   const [selectedFileId, setSelectedFileId] = useState<number>(1);
@@ -108,7 +92,6 @@ const Identification = () => {
 
   const { fileEvidence, setFileEvidence, fileEvidenceRef } =
     useFileEvidenceState();
-  const [project, setProject] = useState<any>({});
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(true);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
@@ -120,14 +103,40 @@ const Identification = () => {
   });
   const thumbnailListRef = useRef<any>([]);
 
-  const getFileEvidences = () => {};
+  const getFileEvidences = () => { };
 
   useEffect(() => {
-    if (selectedFileId === -1) return;
+    // 获取takeOff详情
+    getTakeOffDetails();
+  }, [takeOffId]);
+
+  const getTakeOffDetails = async () => {
+    let res: any = await getTakeOffById(takeOffId as any);
+    if (res.status === 'success') {
+      let project_files = res?.data?.project_files ?? [];
+      setTakeOff(res?.data ?? {});
+      if (project_files?.length > 0) {
+        setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
+        setPdfUrl(project_files[0].parse_detail.uploaded_file_url); // 设置默认选中文件的PDF URL
+      } else {
+        notification.error({
+          message: "Error",
+          description: "No files found in this take off",
+        });
+      }
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get take off",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (selectedFileId === -1 || !takeOff) return;
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
       if (unsaved) {
         // 没有crop需要保存
-
         pdfRef?.current?.resetAllInfo();
 
         // 重置 file evidence
@@ -139,57 +148,53 @@ const Identification = () => {
 
         setThumbnailList((prev: any) => []);
 
+        const fileList = takeOff?.project_files ?? [];
+
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
           let newPdfUrl = file?.url;
+
           setPdfUrl(newPdfUrl);
+          let list = file?.parse_detail?.image_page_infos ?? [];
+          list = list.map((item: any) => {
+            let type = "";
+            const number = Math.floor(Math.random() * 6) + 1;
+            if (number > 0 && number < 7) {
+              type = defaultPageCategory[number].type;
+            }
+            return { ...item, type }
+          })
+          thumbnailListRef.current = list;
+          // 设置新的缩略图数据
+          setThumbnailList(() => [...list]);
+          // 更新pageCategory中每一种类型的数量
+          setPageCategory((prev: any) => {
+            return prev.map((item: any) => {
+              const count = list.filter(
+                (file: any) => file.type === item.type,
+              ).length;
+              return {
+                ...item,
+                count: item.type === "All" ? list.length : count,
+              };
+            });
+          });
           //获取file evidence
           getFileEvidences();
         }
         return;
       }
     });
-  }, [selectedFileId]);
-
-  useEffect(() => {
-    if (pdfUrl && totalPage > 0) {
-      let list = [];
-      // 构造假的缩略图列表
-      for (let i = 0; i < totalPage; i++) {
-        let type = "";
-        const number = Math.floor(Math.random() * 6) + 1;
-        if (number > 0 && number < 7) {
-          type = defaultPageCategory[number].type;
-        }
-        list.push({
-          page: i + 1,
-          file_name: "fake_thumbnail.png",
-          s3_key: `${projectId}_${selectedFileId}_${i + 1}`,
-          s3_url: "/assets/placeholder-images/example_2.png",
-          type: type,
-        });
-      }
-      thumbnailListRef.current = list;
-      setThumbnailList(list);
-
-      // 更新pageCategory中每一种类型的数量
-      setPageCategory((prev: any) => {
-        return prev.map((item: any) => {
-          const count = list.filter(
-            (file: any) => file.type === item.type,
-          ).length;
-          return {
-            ...item,
-            count: item.type === "All" ? list.length : count,
-          };
-        });
-      });
-    }
-  }, [totalPage]);
+  }, [selectedFileId, takeOff]);
 
   const handlePageTypeChange = (page: number, type: string) => {
     const newThumbnailList = thumbnailList.map((item: any) => {
+      let itemPageNum: number = 0;
+      if (typeof item.file_name === 'string') {
+        let pageArr = item.file_name?.split(".")[0];
+        itemPageNum = parseInt(pageArr) + 1;
+      }
       if (item.page === page) {
         return {
           ...item,
@@ -278,9 +283,9 @@ const Identification = () => {
     pdfRef?.current?.clearCropSections?.();
   };
 
-  const handleAppendEvidence = () => {};
+  const handleAppendEvidence = () => { };
 
-  const handleDeleteEvidence = () => {};
+  const handleDeleteEvidence = () => { };
 
   const handleAddRectBox = () => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
@@ -297,7 +302,6 @@ const Identification = () => {
     <div className="w-full h-[100vh] flex flex-col">
       <Header
         pdfRef={pdfRef}
-        project={project}
         takeOff={takeOff}
         checkEvidenceCount={getCurrentEvidenceCount}
         selectedFileId={selectedFileId}

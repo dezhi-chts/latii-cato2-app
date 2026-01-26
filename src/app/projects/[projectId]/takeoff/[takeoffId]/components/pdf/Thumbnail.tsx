@@ -72,6 +72,7 @@ interface ThumbnailProps {
   }[];
   page: number; // 当前选中的页面
   setPage: (page: number) => void; // 设置当前选中的页面
+  fixed?: boolean; // 是否固定位置
   showCategory?: boolean; // 是否显示分类
   categoryList?: {  // 分类列表
     type: string;
@@ -87,6 +88,7 @@ const Thumbnail = ({
   data,
   page,
   setPage,
+  fixed = false, // 是否固定位置
   showCategory = false, // 是否显示分类
   categoryList = [], // 分类列表
   onChangePageType, // 切换页面类型回调
@@ -143,7 +145,7 @@ const Thumbnail = ({
 
   return (
     <div
-      className="right-0 top-0 transition-all duration-200 z-9999"
+      className={`${fixed ? "absolute" : ""} top-0 left-0 transition-all duration-200 bg-white z-9999`}
       style={{
         width: showThumbnail ? "250px" : "0px",
         height: "100%",
@@ -158,30 +160,36 @@ const Thumbnail = ({
         />
       </div> */}
       <div
-        className="w-full h-full pb-8 overflow-y-auto relative"
+        className="w-full h-full pb-8 overflow-y-auto relative shadow-inner"
         ref={scrollContainerRef}
       >
         <div className="px-[35px] py-6 flex flex-col gap-4 min-h-full">
           {data.map((info, index) => {
+            let itemPageNum: number = 0;
+            if (typeof info.file_name === 'string') {
+              let pageArr = info.file_name?.split(".")[0];
+              itemPageNum = parseInt(pageArr) + 1;
+            }
+
             return (
               <div
-                id={`thumbnail-page-${info.page}`}
+                id={`thumbnail-page-${itemPageNum}`}
                 key={info.s3_key}
-                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${info.page === page
+                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
                   ? "border-forumBlue"
                   : "border-transparent hover:border-forumBlue/50"
                   }`}
-                onClick={() => onChangePage(info.page)}
+                onClick={() => onChangePage(itemPageNum)}
               >
                 <div className="p-[10px]">
                   <div className="h-[30px] flex flex-row justify-between">
-                    <p className="mb-3 text-xxs text-basicGray">{info.page}</p>
+                    <p className="mb-3 text-xxs text-basicGray">{itemPageNum}</p>
                     {showCategory && <div>
                       <LabelTypesSelect
                         typeList={categoryList}
                         selectedType={info.type}
                         onChangeType={(type: string) => {
-                          onChangePageType && onChangePageType(info.page, type);
+                          onChangePageType && onChangePageType(itemPageNum, type);
                         }}
                       ></LabelTypesSelect>
                     </div>}

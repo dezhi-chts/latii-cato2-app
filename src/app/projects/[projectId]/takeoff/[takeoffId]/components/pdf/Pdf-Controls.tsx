@@ -102,9 +102,13 @@ export const RotateControls = ({
 // 添加矩形框
 export const AddRectBoxControls = ({
   theme = 'default',
+  text,
+  fullWidth = false,
   handleAddRectBox,
 }: {
   theme?: 'default' | 'primary',
+  text?: string,
+  fullWidth?: boolean,
   handleAddRectBox: () => void;
 }) => {
   const themeInfos = {
@@ -116,7 +120,7 @@ export const AddRectBoxControls = ({
     },
     'primary': {
       icon: '/assets/icons/add-table-white.svg',
-      text: 'Add Index Box',
+      text: 'Index Box',
       textColor: 'text-white',
       bgColor: 'bg-forumBlue'
     },
@@ -124,10 +128,13 @@ export const AddRectBoxControls = ({
   const themeInfo = themeInfos[theme] || themeInfos['default']
   return (
     <div
-      className={`w-[124px] h-[28px] ${themeInfo.bgColor} text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
+      className={`h-[28px] ${themeInfo.bgColor} text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
+      style={{
+        width: fullWidth ? '100%' : '124px',
+      }}
       onClick={() => handleAddRectBox()}
     >
-      <p className={`text-xs text-center ${themeInfo.textColor}`}>{themeInfo.text}</p>
+      <p className={`text-xs text-center ${themeInfo.textColor}`}>{text || themeInfo.text}</p>
       <Image
         src={`${themeInfo.icon}`}
         alt="add item icon"
@@ -199,6 +206,22 @@ export const ClearAllControls = () => {
       <span className="ml-2 text-basicGray text-xs">Clear All</span>
     </div>
 
+  )
+}
+
+export const ThumbnailControls = ({
+  showThumbnail,
+  setShowThumbnail,
+  onClick,
+}: {
+  showThumbnail: boolean;
+  setShowThumbnail: (showThumbnail: boolean) => void;
+  onClick: () => void;
+}) => {
+  return (
+    <div className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer" onClick={onClick}>
+      <Image src={`/assets/icons/thumbnail.svg`} alt="thumbnail icon" width={16} height={16}></Image>
+    </div>
   )
 }
 
