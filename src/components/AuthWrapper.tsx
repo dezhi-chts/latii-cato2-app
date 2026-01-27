@@ -99,10 +99,11 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             name: session?.user.name,
           };
 
-          const existingUserData = localStorage.getItem("userData");
-          if (!existingUserData) {
-            localStorage.setItem("userData", JSON.stringify(userData));
-          }
+//           const existingUserData = localStorage.getItem("userData");
+//           if (!existingUserData) {
+//             localStorage.setItem("userData", JSON.stringify(userData));
+//           }
+          localStorage.setItem("userData", JSON.stringify(userData));
 
           setLoading(false);
         } else {
