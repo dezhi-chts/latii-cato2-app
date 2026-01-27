@@ -61,8 +61,8 @@ const Header = ({ selectedOptionId, setSelectedOptionId }: HeaderProps) => {
 					let isSelected = option.id === selectedOptionId;
 					const conditionalStyle = isSelected
 						? {
-							color: "#555555",
-							borderBottom: "2px solid #555555",
+							color: "#427CCE",
+							borderBottom: "2px solid #427CCE",
 							fontWeight: "border",
 						}
 						: {

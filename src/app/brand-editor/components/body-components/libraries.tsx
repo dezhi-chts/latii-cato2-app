@@ -63,7 +63,8 @@ const Libraries = () => {
 								background: "#ECF2FA",
 								borderRadius: "6px",
 								cursor: "pointer",
-								fontSize: "12px"
+								fontSize: "12px",
+								fontWeight:"bolder"
 							}
 						}
 						return <div
