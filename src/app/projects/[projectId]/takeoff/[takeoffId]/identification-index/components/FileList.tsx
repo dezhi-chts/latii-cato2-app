@@ -57,8 +57,6 @@ export const FileItem = ({
   handleClickFile,
   showStatus = false,
 }: any) => {
-  console.log('selectedFileId', selectedFileId);
-  console.log('file.id', file.id);
   return (
     <div
       className={`rounded cursor-pointer`}

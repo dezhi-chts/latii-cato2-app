@@ -212,8 +212,6 @@ const IdentificationIndex = () => {
           return item;
         });
       });
-      // 切换到第一页
-      setPage(1);
     }, 3000);
   };
 
@@ -281,7 +279,6 @@ const IdentificationIndex = () => {
   };
 
   const handleDeleteEvidence = async (deleteIds: number[]) => {
-    console.log('######### deleteIds', deleteIds);
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
     if (res.status === 'success') {
@@ -305,32 +302,6 @@ const IdentificationIndex = () => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
       pdfRef.current?.addingRect({ type: type });
     }
-  };
-
-  const handleAIContent = async () => {
-    setFullLoading(true);
-    // 模拟请求
-    setTimeout(() => {
-      let list: any = [];
-      // 模拟假数据
-      for (let i = 0; i < 30; i++) {
-        let data = {
-          id: i,
-          name: `A${i + 1}: Floor Plan`,
-          content: "This is a content",
-          type: "text",
-          created_at: "2023-01-01",
-          updated_at: "2023-01-01",
-        };
-        list.push(data);
-      }
-      setContentData(list);
-      // 获取到content数据
-      setShowContentView(true);
-      // 切换到第一页
-      setPage(1);
-      setFullLoading(false);
-    }, 3000);
   };
 
   const handleCropsCount = (count: number) => {
