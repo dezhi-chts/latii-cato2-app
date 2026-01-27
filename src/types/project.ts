@@ -1,4 +1,4 @@
-import { UploadFile } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
 
 export type ProjectSettings = {
   project_name: string;
@@ -54,7 +54,12 @@ export type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onSuccess?: () => void;
-  uploadFilesData?: any[];
+  uploadFilesData: {
+    archFiles: UploadFile[];
+    arcHingeMode: string;
+    quoteFiles: UploadFile[];
+    quoteHingeMode: string;
+  };
   onOpenTakeoffModal?: (data: any) => void;
 };
 

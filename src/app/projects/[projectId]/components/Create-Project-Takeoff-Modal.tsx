@@ -2,11 +2,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CreateProjectModalProps,
-  defaultProjectSettings,
   ProjectSettings,
 } from "@/types/project";
 import { Button, Input, Modal, message, Tabs, notification, Spin } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
+import Image from "next/image";
 
 import { useRouter } from "next/navigation";
 import { FilePanel } from "./Create-Takeoff/Cato-Upload";
@@ -16,6 +16,7 @@ import ProjectForm from "./Project-Form";
 import debounce from "lodash/debounce";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 import { uploadFiles } from "@/services/filesService";
+import { createProject } from "@/services/projectService";
 
 const CreateProjectTakeoffModal = ({
   isOpen,
@@ -24,13 +25,11 @@ const CreateProjectTakeoffModal = ({
   onSuccess,
 }: CreateProjectModalProps) => {
   const router = useRouter();
-  const projectId = '01KFMB9K2JB0F5GJKCJ1ZN38AK';
+  //const projectId = '01KFMB9K2JB0F5GJKCJ1ZN38AK';
   const projectFormRef = useRef<any>(null);
   const pdfRef = useRef<PdfWrapperRefMethods>(null);
 
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
-    ...defaultProjectSettings,
-  });
+  const [projectSettings, setProjectSettings] = useState<any>({ project_name: '', location: '' });
   const [selectedFileId, setSelectedFileId] = useState(-1);
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
@@ -41,22 +40,9 @@ const CreateProjectTakeoffModal = ({
   const [OCRFieldName, setOCRFieldName] = useState<string>('');
 
   const [loading, setLoading] = useState<boolean>(false);
+  const [pdfFullScreen, setPdfFullScreen] = useState<boolean>(false);
 
   const [filesData, setFilesData] = useState<any[]>(() => {
-    let data = [
-      {
-        id: 1,
-        file_name: 'Architectural-example.pdf',
-        upload_status: 'done',
-        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f'
-      },
-      {
-        id: 2,
-        file_name: 'Quote-example.pdf',
-        upload_status: 'done',
-        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
-      },
-    ];
     let list: any = [];
     if (uploadFilesData && uploadFilesData?.archFiles?.length > 0) {
       list = uploadFilesData.archFiles.map((item: any) => ({
@@ -65,8 +51,6 @@ const CreateProjectTakeoffModal = ({
         upload_status: 1,
         url: URL.createObjectURL(item.originFileObj),
       }));
-    } else {
-      list = data;
     }
     return list;
   });
@@ -89,6 +73,8 @@ const CreateProjectTakeoffModal = ({
 
       // 切换文件的时候，重置OCRFieldName
       setOCRFieldName('');
+      // 取消pdf全屏显示
+      setPdfFullScreen(false);
 
       const file = filesData.find((file: any) => file.id === selectedFileId);
       setPdfUrl(file?.url);
@@ -136,16 +122,30 @@ const CreateProjectTakeoffModal = ({
   };
 
   const handleConfirm = async () => {
-    // if (!projectFormRef?.current?.isValidForm()) {
-    //   message.warning("Please fill out all required fields.");
-    //   return;
-    // }
+    if (!projectFormRef?.current?.isValidForm()) {
+      message.warning("Please fill out all required fields.");
+      return;
+    }
+    setLoading(true);
+
+    // 先创建工程，工程创建成功，才可以上传文件
+    let projectRes: any = await createProject(projectSettings);
+    if (projectRes?.status !== 'success') {
+      setLoading(false);
+      notification.error({
+        message: 'Create project failed',
+        description: projectRes?.message,
+      });
+      return;
+    }
+
+    // 上传文件
+    const projectId = projectRes?.data?.project_id;
 
     console.log('########## uploadFilesData', uploadFilesData);
     const { archFiles = [], arcHingeMode = '1', quoteFiles = [], quoteHingeMode = '1' } = uploadFilesData;
     // 目前只处理archFiles文件
-
-    const filesInfo = archFiles.map((file: UploadFile) => ({
+    const filesInfo: any = archFiles.map((file: UploadFile) => ({
       file_name: file.name,
       operation_type: 'Architecture_drawing',
       file_type: 'PDF',
@@ -154,13 +154,11 @@ const CreateProjectTakeoffModal = ({
 
     const files = archFiles;
 
-    setLoading(true);
-
     let res: any = await uploadFiles(
       filesInfo,
       files,
       projectId,
-      arcHingeMode
+      arcHingeMode as any
     );
     setLoading(false);
     if (res.status === 'success') {
@@ -176,8 +174,9 @@ const CreateProjectTakeoffModal = ({
   const handleAddOCRBox = (fieldName: any) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
       setOCRFieldName(fieldName);
+      setPdfFullScreen(true);
       pdfRef.current?.clearCropSections();
-      pdfRef.current?.addingRect({ type: 'Text' });
+      pdfRef.current?.addingRect({ type: 'OCR' });
     }
   };
 
@@ -185,6 +184,7 @@ const CreateProjectTakeoffModal = ({
     console.log("text", text);
     if (OCRFieldName.length > 0) {
       setOCRFieldName('');
+      setPdfFullScreen(false);
       setProjectSettings({
         ...projectSettings,
         [OCRFieldName]: text,
@@ -198,15 +198,15 @@ const CreateProjectTakeoffModal = ({
       title={
         <p className="text-forumBlue text-lg font-normal">Create New Project</p>
       }
-      width={'80vw'}
+      width={'85vw'}
       footer={null}
       closable={false}
       onCancel={closeModal}
     >
       <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
-      <div className="mt-8 h-[80vh] flex flex-row justify-between">
-        <div className="w-[400px] max-h-[80vh] flex flex-col overflow-hidden">
-          <div className="overflow-y-auto">
+      <div className="mt-8 h-[90vh] flex flex-row justify-between">
+        <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
+          <div className="overflow-y-auto bg-white">
             <ProjectForm
               ref={projectFormRef}
               projectSettings={projectSettings}
@@ -231,7 +231,16 @@ const CreateProjectTakeoffModal = ({
             </Button>
           </div>
         </div>
-        <div className="ml-10 flex-1 flex flex-col overflow-hidden">
+        {
+          pdfFullScreen && <div className="flex flex-row justify-center items-center">
+            <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
+            <div className="cursor-pointer" onClick={() => setPdfFullScreen(false)}>
+              <Image src="/assets/icons/arrow-right-gray.svg" alt="arrow right" width={20} height={20} style={{ width: "auto", height: "auto" }}></Image>
+            </div>
+          </div>
+        }
+
+        <div className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? 'ml-1' : 'ml-10'} transition-all duration-300 ease-in-out`}>
           <div className="flex flex-row gap-2">
             {filesData?.map((file: any, index: number) => {
               const uploadFile: UploadFile = {
@@ -279,7 +288,7 @@ const CreateProjectTakeoffModal = ({
               mode="edit"
               typeList={[]}
               pdfUrl={pdfUrl as string}
-              project_id={projectId as any}
+              project_id={''}
               project_file_id={selectedFileId}
               zoom={zoom}
               page={page}
