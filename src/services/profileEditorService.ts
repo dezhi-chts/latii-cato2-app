@@ -56,6 +56,17 @@ export const fetchUnitAttributesWithOptionsByVersionId = async (versionId: strin
 	}
 };
 
+export const fetchUnitAttributesByVersionId = async (versionId: string) => {
+	try {
+		const url = `/product_attribute/unit/all`;
+		const response = await http.get(url, { version_id: versionId });
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error fetchUnitAttributesByVersionId:", error);
+		return { data: null, status: "error" };
+	}
+};
+
 export const baseCheckProfileScript = async (scriptMsg: string) => {
 	try {
 		const url = `/profile/script/base_check`;
