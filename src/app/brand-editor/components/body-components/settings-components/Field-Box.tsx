@@ -1,5 +1,6 @@
 "use client";
 
+import { formatLabel } from "@/lib/functions";
 import {
   PROJECT_INPUT_TYPES_OPTIONS,
   ProjectFieldBoxProps,
@@ -21,48 +22,41 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
     onDelete,
   } = field;
 
-  const formatLabel = (value: string) =>
-    value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
-
   const inputTypeOptions = PROJECT_INPUT_TYPES_OPTIONS.map((t) => ({
     value: t,
     label: formatLabel(t),
   }));
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-neutral-200 bg-white">
+    <div className="w-full overflow-hidden rounded-xl bg-white">
       {/* Row 1 */}
-      <div className="flex items-center gap-3 bg-basicLightGray px-4 py-3">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 bg-white text-xs text-neutral-600">
+      <div className="flex items-center gap-3 bg-baseLight p-4">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-basicGray">
           {id}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <Input
-            size="small"
-            value={name}
-            onChange={(e) => onChange?.({ name: e.target.value })}
-            placeholder="Project Name"
-          />
-        </div>
+        <Input
+          value={name}
+          onChange={(e) => onChange?.({ name: e.target.value })}
+          placeholder="Project Name"
+          className="rounded-md px-3 h-8 w-60 font-normal"
+        />
 
-        <div className="shrink-0">
-          <Select
-            size="small"
-            value={type}
-            onChange={(value: ProjectInputTypesOptions) =>
-              onChange?.({ type: value })
-            }
-            options={inputTypeOptions}
-            style={{ width: 220 }}
-          />
-        </div>
+        <Select
+          value={type}
+          onChange={(value: ProjectInputTypesOptions) =>
+            onChange?.({ type: value })
+          }
+          options={inputTypeOptions}
+          className="w-52 rounded-md h-8 font-normal"
+          placeholder="Select Type"
+        />
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3 mr-3">
           <button
             type="button"
             onClick={onDelete}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50"
+            className="items-center justify-center"
           >
             <Image
               src="/assets/icons/delete.svg"
@@ -75,7 +69,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           <button
             type="button"
             onClick={onDuplicate}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50"
+            className="items-center justify-center"
           >
             <Image
               src="/assets/icons/duplicate.svg"
@@ -87,38 +81,38 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="h-px w-full bg-neutral-100" />
+      <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3">
+        {/* Row 2 */}
+        <div className="flex items-center justify-between px-4 py-3 ">
+          <Checkbox
+            checked={!!has_hint_text}
+            onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
+          >
+            Hint Text
+          </Checkbox>
 
-      {/* Row 2 */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <Checkbox
-          checked={!!has_hint_text}
-          onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
-        >
-          Hint Text
-        </Checkbox>
-
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-700">Required</span>
-          <Switch
-            checked={!!required}
-            onChange={(checked) => onChange?.({ required: checked })}
-          />
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-neutral-700">Required</span>
+            <Switch
+              checked={!!required}
+              onChange={(checked) => onChange?.({ required: checked })}
+              className="!bg-accentGreen"
+            />
+          </div>
         </div>
+
+        {/* Hint text input (si está activo) */}
+        {has_hint_text && (
+          <div className="px-4 pb-4">
+            <Input
+              size="small"
+              value={hint_text ?? ""}
+              onChange={(e) => onChange?.({ hint_text: e.target.value })}
+              placeholder="Hint text..."
+            />
+          </div>
+        )}
       </div>
-
-      {/* Hint text input (si está activo) */}
-      {has_hint_text && (
-        <div className="px-4 pb-4">
-          <Input
-            size="small"
-            value={hint_text ?? ""}
-            onChange={(e) => onChange?.({ hint_text: e.target.value })}
-            placeholder="Hint text..."
-          />
-        </div>
-      )}
     </div>
   );
 };

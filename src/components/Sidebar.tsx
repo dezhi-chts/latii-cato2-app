@@ -95,7 +95,7 @@ export default function Sidebar() {
         }));
       }, 250);
     },
-    [expanded.sidebar]
+    [expanded.sidebar],
   );
 
   const sidebarIcon = expanded.sidebar
@@ -185,7 +185,7 @@ export default function Sidebar() {
                 e.stopPropagation();
                 toggleExpand("sidebar");
               }}
-              className="h-7 w-7 rounded-full border border-baseLightGray flex items-center justify-center"
+              className="h-7 w-7 rounded-full border border-baseLightHover flex items-center justify-center"
             >
               <Image
                 src={sidebarIcon}

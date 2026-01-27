@@ -18,7 +18,8 @@ export type ProjectField = {
   required: boolean;
   has_hint_text?: boolean;
   hint_text?: string;
-  options: String[];
+  options?: String[];
+  is_multiselect?: boolean;
 };
 
 export type ProjectFieldBoxProps = ProjectField & {

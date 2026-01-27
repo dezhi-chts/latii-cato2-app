@@ -24,7 +24,7 @@ export const colorList = {
   dragonOrange: "#FF931E",
   accentRed: "#FE3C30",
   accentBananas: "#F6CE4C",
-  accentGreen: "#2A845A",
+  accentGreen: "#02A960",
   accentIndigo: "#5856D7",
   accentBrown: "#A3835F",
   primaryBlueHover: "#03122C",

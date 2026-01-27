@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
 import Image from "next/image";
-import { Button, Upload, message } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
+import { Button, Upload, message } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
 
 export type FilePanelProps = {
   file: UploadFile;
@@ -21,10 +21,10 @@ export type UploadBoxProps = {
 type TakeoffUploadProps = {
   showUploadTipLink?: boolean; // 是否显示上传提示链接
   onHandleUpload?: (data: {
-    archFiles: UploadFile[],
-    quoteFiles: UploadFile[],
-    arcHingeMode?: "1" | "2",
-    quoteHingeMode?: "1" | "2"
+    archFiles: UploadFile[];
+    quoteFiles: UploadFile[];
+    arcHingeMode?: "1" | "2";
+    quoteHingeMode?: "1" | "2";
   }) => void;
 };
 
@@ -42,8 +42,9 @@ export const UploadFileList = ({
   return (
     <div
       key={file.uid}
-      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${!isSelected && "border border-primaryN50"
-        }`}
+      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${
+        !isSelected && "border border-primaryN50"
+      }`}
     >
       {canBeRemoved && handleRemove && (
         <button
@@ -68,7 +69,6 @@ export const UploadFileList = ({
     </div>
   );
 };
-
 
 export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
   const maxFileLimit = 2;
@@ -104,8 +104,8 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
             </p>
           </Upload>
           <p className="text-basicGray text-center">
-            Up to 2 files. Only the PDF format is
-            accepted. Maximum weight of 00MG
+            Up to 2 files. Only the PDF format is accepted. Maximum weight of
+            00MG
           </p>
         </div>
       )}
@@ -113,9 +113,7 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
   );
 };
 
-export const HingeMode = ({
-  onChangeHinegeStatus,
-}: HingeModeProps) => {
+export const HingeMode = ({ onChangeHinegeStatus }: HingeModeProps) => {
   const [hingeStatus, setHingeStatus] = useState<"1" | "2">("1");
   const handleHingeStatusChange = (value: "1" | "2") => {
     setHingeStatus(value);
@@ -128,7 +126,9 @@ export const HingeMode = ({
   return (
     <div className="w-full flex flex-col gap-1 ">
       <p className="mt-4 text-xs">Hinge Orientation</p>
-      <p className="text-xxs text-baseGray">Select the orientation rule so Cato reads your file accurately.</p>
+      <p className="text-xxs text-baseGray">
+        Select the orientation rule so Cato reads your file accurately.
+      </p>
       <div className="flex gap-4">
         <div
           className="cursor-pointer"
@@ -180,14 +180,7 @@ export const HingeMode = ({
               strokeDasharray="3 3"
             />
             <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
-            <rect
-              x="11.5"
-              y="43"
-              width="10"
-              height="2"
-              rx="1"
-              fill="#C6C6C6"
-            />
+            <rect x="11.5" y="43" width="10" height="2" rx="1" fill="#C6C6C6" />
           </svg>
         </div>
         <div
@@ -240,66 +233,79 @@ export const HingeMode = ({
               strokeDasharray="3 3"
             />
             <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
-            <rect
-              x="11.5"
-              y="43"
-              width="10"
-              height="2"
-              rx="1"
-              fill="#C6C6C6"
-            />
+            <rect x="11.5" y="43" width="10" height="2" rx="1" fill="#C6C6C6" />
           </svg>
         </div>
       </div>
     </div>
-  )
-}
-
-export const ArchitecturalUpload = ({ files, setFiles, onChangeHinegeStatus }: UploadBoxProps) => {
-  return <div className="p-4 pb-16 border-2 border-baseLightGray rounded-lg">
-    <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
-      <Image
-        src="/assets/cato-images/architectural-drawings-new.png"
-        alt="Architectural"
-        width={250} height={100}
-        style={{ width: '100%', height: 'auto' }}
-      ></Image>
-    </div>
-    <div className="text-forumBlue my-4 text-base">Architectural Drawings</div>
-
-    <UploadBox files={files} setFiles={setFiles} />
-    {
-      files.length > 0 && <HingeMode onChangeHinegeStatus={(value: "1" | "2") => {
-        onChangeHinegeStatus?.(value);
-      }} />
-    }
-
-  </div>;
+  );
 };
 
+export const ArchitecturalUpload = ({
+  files,
+  setFiles,
+  onChangeHinegeStatus,
+}: UploadBoxProps) => {
+  return (
+    <div className="p-4 pb-16 border-2 border-baseLightHover rounded-lg">
+      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+        <Image
+          src="/assets/cato-images/architectural-drawings-new.png"
+          alt="Architectural"
+          width={250}
+          height={100}
+          style={{ width: "100%", height: "auto" }}
+        ></Image>
+      </div>
+      <div className="text-forumBlue my-4 text-base">
+        Architectural Drawings
+      </div>
 
-export const QuoteUpload = ({ files, setFiles, onChangeHinegeStatus }: UploadBoxProps) => {
-  return <div className="p-4 pb-16 border-2 border-baseLightGray rounded-lg">
-    <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
-      <Image
-        src="/assets/cato-images/product-quotes-new.png"
-        alt="Quote"
-        width={250} height={100}
-        style={{ width: '100%', height: 'auto' }}
-      ></Image>
+      <UploadBox files={files} setFiles={setFiles} />
+      {files.length > 0 && (
+        <HingeMode
+          onChangeHinegeStatus={(value: "1" | "2") => {
+            onChangeHinegeStatus?.(value);
+          }}
+        />
+      )}
     </div>
-    <div className="text-forumBlue my-4 text-base">Quote Lists</div>
-    <UploadBox files={files} setFiles={setFiles} />
-    {
-      files.length > 0 && <HingeMode onChangeHinegeStatus={(value: "1" | "2") => {
-        onChangeHinegeStatus?.(value);
-      }} />
-    }
-  </div>;
+  );
 };
 
+export const QuoteUpload = ({
+  files,
+  setFiles,
+  onChangeHinegeStatus,
+}: UploadBoxProps) => {
+  return (
+    <div className="p-4 pb-16 border-2 border-baseLightHover rounded-lg">
+      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+        <Image
+          src="/assets/cato-images/product-quotes-new.png"
+          alt="Quote"
+          width={250}
+          height={100}
+          style={{ width: "100%", height: "auto" }}
+        ></Image>
+      </div>
+      <div className="text-forumBlue my-4 text-base">Quote Lists</div>
+      <UploadBox files={files} setFiles={setFiles} />
+      {files.length > 0 && (
+        <HingeMode
+          onChangeHinegeStatus={(value: "1" | "2") => {
+            onChangeHinegeStatus?.(value);
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUploadProps) => {
+const TakeoffUpload = ({
+  showUploadTipLink = true,
+  onHandleUpload,
+}: TakeoffUploadProps) => {
   const [archFiles, setArchFiles] = useState<UploadFile[]>([]);
   const [quoteFiles, setQuoteFiles] = useState<UploadFile[]>([]);
   const arcHingeMode = useRef<"1" | "2">("1");
@@ -307,34 +313,53 @@ const TakeoffUpload = ({ showUploadTipLink = true, onHandleUpload }: TakeoffUplo
 
   const handleUpload = () => {
     if (archFiles.length === 0 && quoteFiles.length === 0) {
-      message.warning('Please upload at least one file.');
+      message.warning("Please upload at least one file.");
       return;
     }
     // 如果父组件有处理上传的函数，调用它
     if (onHandleUpload) {
-      onHandleUpload({ archFiles, quoteFiles, arcHingeMode: arcHingeMode.current, quoteHingeMode: quoteHingeMode.current });
+      onHandleUpload({
+        archFiles,
+        quoteFiles,
+        arcHingeMode: arcHingeMode.current,
+        quoteHingeMode: quoteHingeMode.current,
+      });
     }
-  }
+  };
 
   return (
     <div className="w-full h-full flex flex-col justify-between">
       <div className="grid grid-cols-2 gap-4">
         <div className="">
-          <ArchitecturalUpload files={archFiles} setFiles={setArchFiles} onChangeHinegeStatus={(value: "1" | "2") => {
-            arcHingeMode.current = value;
-          }} />
+          <ArchitecturalUpload
+            files={archFiles}
+            setFiles={setArchFiles}
+            onChangeHinegeStatus={(value: "1" | "2") => {
+              arcHingeMode.current = value;
+            }}
+          />
         </div>
         <div>
-          <QuoteUpload files={quoteFiles} setFiles={setQuoteFiles} onChangeHinegeStatus={(value: "1" | "2") => {
-            quoteHingeMode.current = value;
-          }} />
+          <QuoteUpload
+            files={quoteFiles}
+            setFiles={setQuoteFiles}
+            onChangeHinegeStatus={(value: "1" | "2") => {
+              quoteHingeMode.current = value;
+            }}
+          />
         </div>
       </div>
       {/* {showUploadTipLink && (
         <div className="mt-4 text-xs text-center text-basicGray underline cursor-pointer">Not sure what to upload?</div>
       )} */}
       <div className="flex-1 flex items-end justify-center">
-        <Button type="primary" className="w-[124px] mt-4 mb-4" onClick={handleUpload}>Create</Button>
+        <Button
+          type="primary"
+          className="w-[124px] mt-4 mb-4"
+          onClick={handleUpload}
+        >
+          Create
+        </Button>
       </div>
     </div>
   );

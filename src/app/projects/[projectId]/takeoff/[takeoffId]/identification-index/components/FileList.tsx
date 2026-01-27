@@ -4,7 +4,6 @@ import type { UploadFile } from "antd/es/upload/interface";
 import { CloseOutlined } from "@ant-design/icons";
 import Image from "next/image";
 
-
 type FilePanelProps = {
   file: UploadFile;
   handleRemove?: (id: string) => void;
@@ -24,7 +23,7 @@ export const FilePanel = ({
 }: FilePanelProps) => {
   return (
     <div
-      className={`relative w-32 h-20 rounded flex flex-row items-center justify-center p-1 ${!isSelected ? "border border-primaryN50" : "bg-baseLightGray"}`}
+      className={`relative w-32 h-20 rounded flex flex-row items-center justify-center p-1 ${!isSelected ? "border border-primaryN50" : "bg-baseLightHover"}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -69,14 +68,13 @@ export const FileItem = ({
         isSelected={selectedFileId === file.id}
         fileContainerStyle={fileContainerStyle}
       />
-      {
-        showStatus && (
-          <div className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === 'complete' ? 'bg-[#D9F2E7]' : 'bg-forumBlueLight'}`}>
-            {file.status === 'complete' ? 'Completed' : 'Progress'}
-          </div>
-        )
-      }
+      {showStatus && (
+        <div
+          className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === "complete" ? "bg-[#D9F2E7]" : "bg-forumBlueLight"}`}
+        >
+          {file.status === "complete" ? "Completed" : "Progress"}
+        </div>
+      )}
     </div>
-  )
-}
-
+  );
+};

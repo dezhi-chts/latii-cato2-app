@@ -9,7 +9,7 @@ type CreateTakeOffModalProps = {
   setIsOpen: (isOpen: boolean) => void;
   handleCreateTakeOff: (
     files: UploadFile[],
-    filesInfo: CatoUploadFile[]
+    filesInfo: CatoUploadFile[],
   ) => Promise<void>;
 };
 
@@ -34,8 +34,12 @@ const CreateTakeOffModal = ({
       title={
         <div className="py-4 flex flex-col gap-2">
           <div className="text-forumBlue text-lg">Create a Quotii</div>
-          <div className="text-sm text-basicGray">Use our AI Agent to create your quote, save time and prevent errors.</div>
-          <div className="mt-4 text-xs">Name <span>工程名</span></div>
+          <div className="text-sm text-basicGray">
+            Use our AI Agent to create your quote, save time and prevent errors.
+          </div>
+          <div className="mt-4 text-xs">
+            Name <span>工程名</span>
+          </div>
         </div>
       }
       closable={false}
@@ -44,21 +48,26 @@ const CreateTakeOffModal = ({
       centered
     >
       <div className="mt-8 p-2 flex flex-row justify-between">
-        <div className="p-4 w-[300px] flex flex-col border-2 border-baseLightGray rounded-lg">
+        <div className="p-4 w-[300px] flex flex-col border-2 border-baseLightHover rounded-lg">
           <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
             <Image
               src="/assets/cato-images/architectural-drawings-new.png"
               alt="Architectural"
-              width={250} height={100}
-              style={{ width: '100%', height: 'auto' }}
+              width={250}
+              height={100}
+              style={{ width: "100%", height: "auto" }}
             ></Image>
           </div>
           <div className="text-forumBlue my-4 text-lg">Blank Template</div>
-          <div className="text-sm text-basicGray">Create a blank Quotii from zero.</div>
-          <div className="mt-1 text-xs text-basicGray">We recommend you use this for small projects.</div>
+          <div className="text-sm text-basicGray">
+            Create a blank Quotii from zero.
+          </div>
+          <div className="mt-1 text-xs text-basicGray">
+            We recommend you use this for small projects.
+          </div>
           <div className="flex-1 flex items-end justify-center">
             <Button
-              onClick={() => { }}
+              onClick={() => {}}
               className="w-full mt-4 mb-4 bg-[#ECF2FA]"
             >
               Create
@@ -66,14 +75,14 @@ const CreateTakeOffModal = ({
           </div>
         </div>
         <div></div>
-        <div className="p-4 w-[720px] flex flex-col border-2 border-baseLightGray rounded-lg">
+        <div className="p-4 w-[720px] flex flex-col border-2 border-baseLightHover rounded-lg">
           <TakeoffUpload
             showUploadTipLink={false}
             onHandleUpload={({ archFiles, quoteFiles }) => {
               setTakeOffFiles([...archFiles, ...quoteFiles]);
-            }} />
+            }}
+          />
         </div>
-
       </div>
     </Modal>
   );
