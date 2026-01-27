@@ -8,22 +8,23 @@ const testFields: CustomField[] = [{
   Hint_text: "Project Name",
   required: true,
 }, {
-  field_name: 'project_location',
-  field_type: FieldType.LOCATION,
+  field_name: 'location',
+  field_type: FieldType.INPUT_TEXT,
   Hint_text: "Primary Location",
   required: true,
-}, {
-  field_name: 'project_end_customer',
-  field_type: FieldType.INPUT_TEXT,
-  Hint_text: "End Customer(Optional)",
-  required: false,
 },
-{
-  field_name: 'project_date',
-  field_type: FieldType.DATE,
-  Hint_text: "Client Expected Delivery Date",
-  required: true,
-},
+  // {
+  //   field_name: 'project_end_customer',
+  //   field_type: FieldType.INPUT_TEXT,
+  //   Hint_text: "End Customer(Optional)",
+  //   required: false,
+  // },
+  // {
+  //   field_name: 'project_date',
+  //   field_type: FieldType.DATE,
+  //   Hint_text: "Client Expected Delivery Date",
+  //   required: true,
+  // },
   // {
   //   field_name: 'project_award',
   //   field_type: FieldType.DROPDOWN,

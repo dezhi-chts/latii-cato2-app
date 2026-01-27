@@ -127,7 +127,8 @@ export const HingeMode = ({
 
   return (
     <div className="w-full flex flex-col gap-1 ">
-      <p className="my-4 text-xs">Hinge Orientation</p>
+      <p className="mt-4 text-xs">Hinge Orientation</p>
+      <p className="text-xxs text-baseGray">Select the orientation rule so Cato reads your file accurately.</p>
       <div className="flex gap-4">
         <div
           className="cursor-pointer"

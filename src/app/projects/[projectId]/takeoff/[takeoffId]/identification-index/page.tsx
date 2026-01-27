@@ -11,6 +11,7 @@ import {
   Radio,
   Select,
   Spin,
+  Modal
 } from "antd";
 import {
   ArrowDownOutlined,
@@ -22,8 +23,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Image from "next/image";
+const { confirm } = Modal;
 
 import {
+  deleteEvidenceById,
+  evidenceBatchDelete,
   generateEvidenceByFileId,
   getEvidenceByFileId,
 } from "@/services/evidenceService";
@@ -42,35 +46,15 @@ import {
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
 import StepProgress from "./components/StepProgress";
+import BuildingBackground from "./components/BuildingBackground";
+import IndexRectView from "./components/IndexRectView";
+import ContentView from "./components/ContentView";
 
 type AddingType = "Item" | "Table";
 export type Adding = {
   isAdding: boolean;
   type: AddingType | null;
 };
-
-const LabelTypeList = [
-  {
-    label: "Floor Plan", // 平面图
-    value: "Floor Plan",
-  },
-  {
-    label: "Elevation", // 立面图
-    value: "Elevation",
-  },
-  {
-    label: "Schedule", // 表格页
-    value: "Schedule",
-  },
-  {
-    label: "General Notes", // 一般备注
-    value: "General Notes",
-  },
-  {
-    label: "Mix", // 混合图
-    value: "Mix",
-  },
-];
 
 const IdentificationIndex = () => {
   const projectId = useParams().projectId;
@@ -84,14 +68,17 @@ const IdentificationIndex = () => {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
+  const [fileList, setFileList] = useState<any>([]);
   const [fileEvidence, setFileEvidence] = useState<any>([]);
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(false);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
+  const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [showContentView, setShowContentView] = useState<boolean>(false);
   const [contentData, setContentData] = useState<any>({});
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
+  const [cropsCount, setCropsCount] = useState<number>(0);
 
   useEffect(() => {
     // 获取takeOff详情
@@ -99,11 +86,13 @@ const IdentificationIndex = () => {
   }, [takeOffId]);
 
   const getTakeOffDetails = async () => {
+    setFullLoading(true);
     let res: any = await getTakeOffById(takeOffId as any);
     if (res.status === 'success') {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
+        setFileList(project_files);
         setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
         setPdfUrl(project_files[0].parse_detail.uploaded_file_url); // 设置默认选中文件的PDF URL
       } else {
@@ -118,6 +107,7 @@ const IdentificationIndex = () => {
         description: "Failed to get take off",
       });
     }
+    setFullLoading(false);
   };
 
   // 获取当前文件的evidence，并按照type进行分类
@@ -156,7 +146,7 @@ const IdentificationIndex = () => {
   }, [selectedFileId, takeOff]);
 
   useEffect(() => {
-    if (selectedFileId === -1 || !takeOff) return;
+    if (selectedFileId === -1 || fileList.length === 0) return;
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
       if (unsaved) {
         // 没有crop需要保存
@@ -170,8 +160,6 @@ const IdentificationIndex = () => {
         setTotalPage(1);
 
         setThumbnailList((prev: any) => []);
-
-        const fileList = takeOff?.project_files ?? [];
 
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
@@ -189,7 +177,45 @@ const IdentificationIndex = () => {
         return;
       }
     });
-  }, [selectedFileId, takeOff]);
+  }, [selectedFileId, fileList]);
+
+
+  const getContentData = async () => {
+    setBuildLoading(true)
+    setTimeout(() => {
+      setBuildLoading(false);
+      let list: any = [];
+      // 模拟假数据
+      for (let i = 0; i < 30; i++) {
+        let data = {
+          id: i,
+          name: `A${i + 1}: Floor Plan`,
+          content: "This is a content",
+          type: "text",
+          created_at: "2023-01-01",
+          updated_at: "2023-01-01",
+        };
+        list.push(data);
+      }
+      setContentData(list);
+      // 获取到content数据
+      setShowContentView(true);
+      // 设置当前文件状态未complete
+      setFileList((prev: any) => {
+        return prev.map((item: any) => {
+          if (item.id === selectedFileId) {
+            return {
+              ...item,
+              status: "complete",
+            };
+          }
+          return item;
+        });
+      });
+      // 切换到第一页
+      setPage(1);
+    }, 3000);
+  };
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -254,7 +280,26 @@ const IdentificationIndex = () => {
     pdfRef?.current?.clearCropSections?.();
   };
 
-  const handleDeleteEvidence = (deleteIds: number[]) => { };
+  const handleDeleteEvidence = async (deleteIds: number[]) => {
+    console.log('######### deleteIds', deleteIds);
+    setFullLoading(true);
+    let res: any = await evidenceBatchDelete(deleteIds);
+    if (res.status === 'success') {
+      // 重新获取evidence
+      getFileEvidences();
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to delete evidence",
+      })
+    }
+    setFullLoading(false);
+  }
+
+  const handleUpdateEvidence = (updateData: any) => {
+    // 刷新当前文件的evidence
+    getFileEvidences();
+  };
 
   const handleAddRectBox = (type: string) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
@@ -288,13 +333,42 @@ const IdentificationIndex = () => {
     }, 3000);
   };
 
+  const handleCropsCount = (count: number) => {
+    // 如果当前页面有未处理的crop
+    setCropsCount(count);
+  }
+
+  const handleNext = () => {
+    // 处理右上角的next按钮
+    if (!showContentView) {
+      // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
+      if (indexBoxList.length > 0 && labelList.length > 0) {
+        getContentData();
+      } else {
+        confirm({
+          title: "Warning",
+          content: "Current page has not been completed. Do you want to continue?",
+          okText: "OK",
+          cancelText: "Cancel",
+          onOk: () => {
+            // 获取content解析内容
+            getContentData();
+          },
+        })
+      }
+    } else {
+      // 当前在目录页面，检查当前文件是否有未处理过的，如果有未处理过的，则进行下个文件的处理
+    }
+  }
+
   return (
-    <div className="w-full h-[100vh] flex flex-col">
+    <div className="w-full h-[100vh] flex flex-col relative">
       <Header
         pdfRef={pdfRef}
-        takeOff={takeOff}
+        fileList={fileList}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
+        handleNext={handleNext}
       />
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
@@ -312,8 +386,9 @@ const IdentificationIndex = () => {
               <IndexRectView
                 indexBoxList={indexBoxList}
                 labelList={labelList}
+                cropsCount={cropsCount}
                 handleAddRectBox={handleAddRectBox}
-                handleAIContent={handleAIContent}
+                handleDeleteEvidence={handleDeleteEvidence}
               ></IndexRectView>
             )
           }
@@ -321,6 +396,27 @@ const IdentificationIndex = () => {
         <div className={`flex-1 flex flex-col pl-6 pt-4 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
+              {showContentView &&
+                <div className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
+                  onClick={() => {
+                    setShowContentView(false);
+                    // 设置当前文件状态未undo
+                    setFileList((prev: any) => {
+                      return prev.map((item: any) => {
+                        if (item.id === selectedFileId) {
+                          return {
+                            ...item,
+                            status: "undo",
+                          };
+                        }
+                        return item;
+                      });
+                    });
+                  }}
+                >
+                  <span className="text-baseGray text-xs">Restart Index</span>
+                </div>
+              }
               <SelectPagesControls
                 page={page}
                 totalPages={totalPage}
@@ -354,7 +450,9 @@ const IdentificationIndex = () => {
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
+              onUpdateEvidence={handleUpdateEvidence}
               onUpdateSafeZoom={handleSafeZoomChange}
+              onCropSectionsCount={handleCropsCount}
             ></PdfWrapper>
             {
               <Thumbnail
@@ -371,6 +469,11 @@ const IdentificationIndex = () => {
         </div>
       </div>
       {fullLoading && <Spin fullscreen />}
+      {buildLoading && <BuildingBackground
+        isDone={true}
+        totalDuration={90000}
+        onFinish={() => setBuildLoading(false)}
+      />}
     </div>
   );
 };
@@ -378,162 +481,3 @@ const IdentificationIndex = () => {
 // 为自定义 Select 选项添加必要的全局样式
 export default IdentificationIndex;
 
-const ContentView = ({ contentData, setContentData }: any) => {
-  const handleChecked = (item: any, value: boolean) => {
-    setContentData((prev: any) =>
-      prev.map((i: any) => ({
-        ...i,
-        checked: i.id === item.id ? value : i.checked,
-      })),
-    );
-  };
-  const contentItem = (item: any) => {
-    return (
-      <div className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
-        <div className="w-[20px]">
-          <Checkbox
-            className="rounded-lg"
-            checked={item.checked}
-            onChange={(e) => handleChecked(item, e.target.checked)}
-          ></Checkbox>
-        </div>
-        <div
-          className={`mx-1 w-[60%] text-xs ${item.checked ? "text-forumBlue" : "text-black"}`}
-        >
-          {item.name}
-        </div>
-        <div className="w-[40%] text-center">
-          <Select
-            className="w-[150px] h-[28px] text-xxs"
-            placeholder="Floor Plan,etc."
-          >
-            {LabelTypeList.map((item: any) => (
-              <Select.Option key={item.value} value={item.value}>
-                {item.label}
-              </Select.Option>
-            ))}
-          </Select>
-        </div>
-      </div>
-    );
-  };
-  return (
-    <div className="pl-2 pr-6 w-full h-full flex flex-col">
-      <div className="mt-8 mb-2 text-xs text-baseGray">
-        Select Pages and respective type of content.
-      </div>
-      <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
-        <div className="w-[50%] text-center">Index</div>
-        <div className="w-[50%] text-center">Type</div>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {contentData?.map((item: any) => contentItem(item))}
-      </div>
-    </div>
-  );
-};
-
-export const IndexRectView = ({ indexBoxList = [], labelList = [], handleAddRectBox, handleAIContent }: any) => {
-  const [selectedIndexId, setSelectedIndexId] = useState<number>(-1);
-  const [selectedLabelId, setSelectedLabelId] = useState<number>(-1);
-
-  const handleSelectIndex = (indexId: number) => {
-    if (indexId !== selectedIndexId) {
-      setSelectedIndexId(indexId);
-    } else {
-      setSelectedIndexId(-1);
-    }
-    setSelectedLabelId(-1);
-  };
-
-  const handleSelectLabel = (labelId: number) => {
-    if (labelId !== selectedLabelId) {
-      setSelectedLabelId(labelId);
-    } else {
-      setSelectedLabelId(-1);
-    }
-    setSelectedIndexId(-1);
-  };
-
-
-  return (
-    <div className="pl-14 pr-6 pt-6">
-      <div className="text-sm text-forumBlue">Index Identification</div>
-      <div className="mt-4 text-xs text-basicGray">Select the Page Index and label examples to improve CATO’s accuracy.</div>
-      <div>
-        <div className="mt-6 flex flex-row justify-between items-center">
-          <div className="flex flex-row"><span className="w-[14px] h-[14px] rounded-[7px] bg-baseGray text-white text-xxs block text-center">1</span><span className="ml-2 text-xs text-basicGray">Define Index Area</span></div>
-          <div className="underline text-baseGray text-xs">Learn More</div>
-        </div>
-        <div className="mt-2 flex flex-row"><span className="ml-5 text-xs">Add a box around the entire Index or Table of Contents.</span></div>
-        {/** index rect box  */}
-        <div className="my-2 mx-4 flex flex-col gap-4">
-          {indexBoxList.map((item: any) => {
-            return <div key={item.id} className={`border-2 border-solid rounded-md ${selectedIndexId === item.id ? 'border-forumBlue' : 'border-transparent'}`} onClick={() => handleSelectIndex(item.id)}>
-              <Image
-                src={'/assets/placeholder-images/example_2.png'}
-                alt={''}
-                width={100}
-                height={50}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                }}
-              />
-            </div>
-          })}
-        </div>
-        <div className="mx-4 my-2 flex flex-row justify-center">
-          <AddRectBoxControls
-            theme="primary"
-            fullWidth={true}
-            handleAddRectBox={() => handleAddRectBox('Table')}
-          />
-        </div>
-      </div>
-      <div>
-        <div className="mt-6 flex flex-row justify-between items-center">
-          <div className="flex flex-row"><span className="w-[14px] h-[14px] rounded-[7px] bg-baseGray text-white text-xxs block text-center">2</span><span className="ml-2 text-xs text-basicGray">Identify label Format</span></div>
-        </div>
-        {
-          true &&
-          (<>
-            <div className="mt-2 flex flex-row"><span className="ml-5 text-xs">Add a box around the entire Index or Table of Contents.</span></div>
-            {/** index rect box  */}
-            <div className="my-2 mx-4">
-              {labelList.map((item: any) => {
-                return <div key={item.id} className={`border-2 border-solid rounded-md ${selectedLabelId === item.id ? 'border-forumBlue' : 'border-transparent'}`} onClick={() => handleSelectLabel(item.id)}>
-                  <Image
-                    src={'/assets/placeholder-images/example_2.png'}
-                    alt={''}
-                    width={100}
-                    height={50}
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                    }}
-                  />
-                </div>
-              })}
-            </div>
-            <div className="my-2 mx-4 flex flex-row justify-center">
-              <AddRectBoxControls
-                theme="primary"
-                text="Label"
-                fullWidth={true}
-                handleAddRectBox={() => handleAddRectBox('Item')}
-              />
-            </div>
-          </>)
-        }
-      </div>
-      {
-        (indexBoxList.length > 0 || labelList.length > 0) &&
-        <div className="mt-6 mx-4 flex flex-row justify-center" onClick={handleAIContent}>
-          <Button type="primary" style={{ width: '100%' }}>Analyze</Button>
-        </div>
-      }
-
-    </div>
-  );
-}
