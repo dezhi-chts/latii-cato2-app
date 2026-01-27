@@ -20,10 +20,26 @@ export interface Bounds {
   height: number;
 }
 
+/** 形状类型 */
+export enum GroupShapeType {
+  Rectangle = "rectangle",
+  Polygon = "polygon",
+}
+
+/** 框所代表的label类型 */
+export enum GroupType {
+  OCR = "OCR", // ocr框
+  Label = "Label", // label框
+  Index = "Index", // 索引框
+  Item = "Item", // 项目项框
+  Table = "Table",
+}
+
 //矩形/多边形框
 export interface GroupFrame {
   id: string;
-  type: "Text" | "Item" | "Table" | "polygon"; // Text(文本) Item（项目项） Table(表格) polygon（多边形）
+  type: GroupType;
+  shapeType: GroupShapeType;
   polygons: Point[];
   pdfPolygons: Point[]; //多边形的pdf坐标
   completed: boolean; //绘制是否已经完成
@@ -125,8 +141,4 @@ export interface PdfWrapperRefMethods {
   handleBatchSubmit: () => void; //批量提交
   handleBatchDelete: () => void; //批量删除
   checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域
-  autoAddRectArea: (
-    rect: { isAdding: boolean; type: string },
-    data: any,
-  ) => void; //自动添加矩形框
 }

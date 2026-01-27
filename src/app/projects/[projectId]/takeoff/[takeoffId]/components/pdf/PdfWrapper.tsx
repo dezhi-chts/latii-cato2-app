@@ -15,7 +15,6 @@ import {
   notification,
   Input,
   Select,
-  Table,
   Tooltip,
   Spin,
   Popconfirm,
@@ -57,12 +56,16 @@ import {
   PdfWrapperProps,
   PdfWrapperRefMethods,
   Bounds,
+  GroupShapeType,
+  GroupType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
+import { ShapeType } from "../drawing/datas";
 
 const { confirm } = Modal;
 
 GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+
 
 const getZoneBounds = (polygons: Point[]) => {
   const xs = polygons.map((p) => p.x);
@@ -211,7 +214,6 @@ const PdfWrapper = forwardRef(
         resetAllInfo,
         getPageAmount,
         addingRect,
-        autoAddRectArea,
         rotatePDF,
         clearCropSections,
         handleBatchSubmit,
@@ -342,7 +344,7 @@ const PdfWrapper = forwardRef(
       });
     };
 
-    const batchSubmit = (showAlert = true): Promise<string> => {
+    const batchSubmit = (showAlert = true, groupId?: string): Promise<string> => {
       return new Promise((resolve, reject) => {
         if (!currentViewportRef.current) {
           reject(new Error("Viewport not found"));
@@ -353,10 +355,21 @@ const PdfWrapper = forwardRef(
 
         setFullLoading(true);
 
-        const filteredCropSections = cropSections.filter(
+        let filteredCropSections = cropSections.filter(
           (section) =>
             section.bounds.width !== 0 && section.bounds.height !== 0,
         );
+
+        // 如果存在groupId，则单独提交该group，不存在则提交所有group
+        if (groupId !== undefined) {
+          let section = filteredCropSections.find((item) => item.id === groupId);
+          if (!section) {
+            reject(new Error("Group not found"));
+            return;
+          }
+          filteredCropSections = [section];
+        }
+
         const uploadData = filteredCropSections.map((section: GroupFrame) => {
           let rotateAngle: number = (viewport as any).rotation ?? 0;
           return {
@@ -410,33 +423,7 @@ const PdfWrapper = forwardRef(
     };
 
     const evidencSubmit = (groupId: string) => {
-      const section = cropSections.find((item) => item.id === groupId);
-      if (!section) {
-        return;
-      }
-      if (!currentViewportRef.current) {
-        return;
-      }
-
-      const viewport = currentViewportRef.current;
-      let rotateAngle: number = (viewport as any).rotation ?? 0;
-      let uploadData: any = {
-        project_id: project_id,
-        project_file_id: project_file_id,
-        project_file_page_number: page,
-        polygon: JSON.stringify(section.pdfPolygons),
-        device_pixel_ratio: window.devicePixelRatio || 1,
-        type: JSON.stringify({ name: section.type }),
-        scale: viewport.scale,
-        page_width_pdf: viewport.width,
-        page_height_pdf: viewport.height,
-        view_box: JSON.stringify(viewport.viewBox),
-        is_rotate: rotateAngle !== 0,
-        rotation_angle: rotateAngle,
-      };
-
-      // 保存成功后通知父组件更新页面
-      onAppendEvidence && onAppendEvidence([uploadData]);
+      batchSubmit(false, groupId);
     };
 
     const batchDelete = async (deleteIds?: number[]) => {
@@ -686,7 +673,8 @@ const PdfWrapper = forwardRef(
       setCropSections((prev) => [
         {
           id: `group-${Date.now()}`,
-          type: "polygon",
+          shapeType: GroupShapeType.Polygon,
+          type: GroupType.Label,
           completed: false,
           polygons: [],
           pdfPolygons: [],
@@ -886,17 +874,17 @@ const PdfWrapper = forwardRef(
 
         pdfPolygons: currentViewportRef.current
           ? [
-              {
-                x: currentViewportRef.current.convertToPdfPoint(
-                  pos.x,
-                  pos.y,
-                )[0],
-                y: currentViewportRef.current.convertToPdfPoint(
-                  pos.x,
-                  pos.y,
-                )[1],
-              },
-            ]
+            {
+              x: currentViewportRef.current.convertToPdfPoint(
+                pos.x,
+                pos.y,
+              )[0],
+              y: currentViewportRef.current.convertToPdfPoint(
+                pos.x,
+                pos.y,
+              )[1],
+            },
+          ]
           : [],
         bounds: {
           minX: pos.x,
@@ -1016,16 +1004,7 @@ const PdfWrapper = forwardRef(
       const viewPort = currentViewportRef.current;
       if (!viewPort) return;
 
-      if (addingOption?.type === "Item") {
-        setCropMode("Item");
-      } else if (addingOption?.type === "Table") {
-        setCropMode("Table");
-      } else if (addingOption?.type === "Text") {
-        setCropMode("Text");
-      } else {
-        setCropMode(null);
-        return;
-      }
+      setCropMode(addingOption.type ?? GroupType.Item);
 
       let container = scrollRef.current;
       if (!container) return;
@@ -1046,27 +1025,28 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-            {
-              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-            },
-          ]
+          {
+            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+          },
+        ]
         : [];
 
       const groupFrame = {
         id: `group-${Date.now()}`,
+        shapeType: GroupShapeType.Rectangle, //矩形框
         type: addingOption?.type,
         polygons: [p1, p2, p3, p4],
         pdfPolygons: pdfPoints,
@@ -1081,55 +1061,6 @@ const PdfWrapper = forwardRef(
       if (operationMode !== "view") {
         setSelectedShapeId(groupFrame.id);
       }
-    };
-    const autoAddRectArea = (
-      addingOption: any,
-      pdfPolygon: Array<{ x: number; y: number }>,
-    ) => {
-      const viewPort = currentViewportRef.current;
-      if (!viewPort) return;
-
-      // 设置模式
-      if (addingOption?.type === "Item") {
-        setCropMode("Item");
-      } else if (addingOption?.type === "Table") {
-        setCropMode("Table");
-      } else {
-        setCropMode(null);
-        return;
-      }
-      const rotation: number = viewPort.rotation;
-      const viewBox = viewPort.viewBox;
-      const offsetX =
-        Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
-      const offsetY =
-        Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
-      const fixedPdfPolygon = pdfPolygon.map((p) => ({
-        x: p.x + offsetX,
-        y: p.y + offsetY,
-      }));
-      const viewportPoints = fixedPdfPolygon.map((p) => {
-        const [vx, vy] = viewPort.convertToViewportPoint(p.x, p.y);
-        return { x: vx, y: vy };
-      });
-      // 2️⃣ 构造 group
-      const groupFrame = {
-        id: `group-${Date.now()}-${Math.random()}`,
-        type: addingOption?.type,
-        polygons: viewportPoints, // 前端绘制用
-        pdfPolygons: fixedPdfPolygon, // 原始 pdfjs 坐标
-        completed: true,
-        bounds: getZoneBounds(viewportPoints),
-      };
-
-      insertGroup(groupFrame);
-
-      if (operationMode !== "view") {
-        setSelectedShapeId(groupFrame.id);
-      }
-
-      setCropMode(null);
-      resetAdding && resetAdding();
     };
 
     //生成截图
@@ -1422,9 +1353,11 @@ const PdfWrapper = forwardRef(
         const g = list[groupIndex];
         let pts = [...g.polygons];
 
-        if (g.type === "Text" || g.type === "Item" || g.type === "Table") {
+        if (g.shapeType === GroupShapeType.Rectangle) {
+          // 矩形框
           pts = onMoveCircle(group, circlePt, stageX, stageY);
         } else {
+          // 多边形框
           pts[vertexIndex] = {
             x: stageX,
             y: stageY,
@@ -1433,7 +1366,8 @@ const PdfWrapper = forwardRef(
 
         let pdfPts = g.pdfPolygons ? [...g.pdfPolygons] : [];
         if (currentViewportRef.current) {
-          if (g.type === "Text" || g.type === "Item" || g.type === "Table") {
+          if (g.shapeType === GroupShapeType.Rectangle) {
+            // 矩形框
             pdfPts = pts.map((p) => {
               const [px, py] = currentViewportRef.current!.convertToPdfPoint(
                 p.x,
@@ -1442,6 +1376,7 @@ const PdfWrapper = forwardRef(
               return { x: px, y: py };
             });
           } else {
+            // 多边形框
             if (pdfPts[vertexIndex]) {
               const [px, py] = currentViewportRef.current.convertToPdfPoint(
                 stageX,
@@ -1809,18 +1744,6 @@ const PdfWrapper = forwardRef(
       );
     };
 
-    const handleChangeEvidenceType = async (
-      evidenceId: string,
-      type: "Item" | "Table",
-    ) => {
-      setFullLoading(true);
-      const response = await changeEvidenceType(evidenceId, type);
-      if (response.status === "success") {
-        onRefreshEvidence && onRefreshEvidence();
-      }
-      setFullLoading(false);
-    };
-
     const handleCopyShape = (
       sections: GroupFrame[],
       group: GroupFrame,
@@ -1955,6 +1878,7 @@ const PdfWrapper = forwardRef(
 
       let crop = {
         id: `group-${Date.now()}-${sections.length + 1}`,
+        shapeType: groupObj.shapeType,
         type: groupObj.type,
         completed: true,
         polygons: newPolygons,
@@ -2007,11 +1931,11 @@ const PdfWrapper = forwardRef(
 
         const viewPoints = Array.isArray(pdfPolygons)
           ? pdfPolygons.map((p: Point) => {
-              const viewport = currentViewportRef.current;
-              if (!viewport) return { x: p.x, y: p.y };
-              const [px, py] = viewport.convertToViewportPoint(p.x, p.y);
-              return { x: px, y: py };
-            })
+            const viewport = currentViewportRef.current;
+            if (!viewport) return { x: p.x, y: p.y };
+            const [px, py] = viewport.convertToViewportPoint(p.x, p.y);
+            return { x: px, y: py };
+          })
           : [];
 
         return { ...item, viewportPolygons: viewPoints };
@@ -2043,10 +1967,10 @@ const PdfWrapper = forwardRef(
               style={
                 operationMode === "edit"
                   ? {
-                      display: "grid",
-                      alignItems: "center",
-                      justifyItems: "center",
-                    }
+                    display: "grid",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }
                   : {}
               }
             >
@@ -2218,12 +2142,9 @@ const PdfWrapper = forwardRef(
                   let type = "";
                   try {
                     const typeParams = JSON.parse(item.type);
-                    color =
-                      typeParams.name === "Item"
-                        ? colorList.forumBlue
-                        : colorList.accentIndigo;
+                    color = colorList.accentIndigo;
                     type = typeParams.name;
-                  } catch (error) {}
+                  } catch (error) { }
 
                   return (
                     <div
@@ -2275,10 +2196,7 @@ const PdfWrapper = forwardRef(
                   let color: string = colorList.forumBlue;
                   let type = "";
 
-                  color =
-                    group.type === "Item"
-                      ? colorList.forumBlue
-                      : colorList.accentIndigo;
+                  color = colorList.accentIndigo;
                   type = group.type;
                   return (
                     <div
@@ -2310,11 +2228,11 @@ const PdfWrapper = forwardRef(
                         className="absolute flex flex-row items-center gap-1"
                         style={{
                           left:
-                            group.type === "Text" ? width - 110 : width - 90,
+                            group.type === GroupType.OCR ? width - 110 : width - 90,
                           top: "10px",
                         }}
                       >
-                        {group.type === "Text" ? (
+                        {group.type === GroupType.OCR ? (
                           <div
                             className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
                             onClick={() => {
@@ -2521,11 +2439,10 @@ const ShapeWrapper = ({
     try {
       const typeParams = JSON.parse(shape.type);
       shapeTypeAttr = typeParams.name;
-    } catch (error) {}
+    } catch (error) { }
   }
 
-  color =
-    shapeTypeAttr === "Item" ? colorList.forumBlue : colorList.accentIndigo;
+  color = colorList.accentIndigo;
   borderColor = color;
 
   if (draggingShapeId === shape.id) {

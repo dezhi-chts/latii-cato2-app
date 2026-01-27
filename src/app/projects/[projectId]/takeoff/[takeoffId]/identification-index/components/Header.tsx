@@ -10,9 +10,8 @@ import {
   Popover,
 } from "antd";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "antd";
 import { FilePanel } from "@/app/projects/[projectId]/components/Create-Takeoff/Cato-Upload";
 import { analyzeItem } from "@/services/DrawingAiService";
@@ -23,36 +22,22 @@ import ConfirmAnalyzeModal from "./ConfirmAnalyzeModal";
 
 const Header = ({
   pdfRef,
-  project,
   takeOff,
   selectedFileId,
   setSelectedFileId,
-  showContentView
 }: any) => {
   const router = useRouter();
   const projectId = useParams().projectId;
+  const takeOffId = useParams().takeoffId;
 
-  const [takeOffData, setTakeOffData] = useState<any>();
-  const [filesData, setFilesData] = useState<any>(() => {
-    let data = [
-      {
-        id: 1,
-        file_name: 'Architectural-example.pdf',
-        upload_status: 'done',
-        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/6a0f8d76ba474ddcae31e942e9c3cbb2_24_6004.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T062920Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=a5dbd176be9ca1a3a68968a225545686f103dfa79d78d71adc26fc1bb18eaa2f'
-      },
-      {
-        id: 2,
-        file_name: 'Quote-example.pdf',
-        upload_status: 'done',
-        url: 'https://latii-automation-dev.s3.amazonaws.com/s3_evidences/original/935d889f8e954ad29fd0f7205dab5bd8_1107_114353.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260121%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260121T063110Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=15e3a5d67fd627179a8abae980b2becb38fe4f897c886b96b090f1af61496f96',
-      },
-    ];
-    return data;
-  });
   const [loading, setLoading] = useState(false);
   const [hasFinishedAnalyzing, setHasFinishedAnalyzing] = useState(false);
   const [showAnalyzeModal, setShowAnalyzeModal] = useState<boolean>(false);
+
+  const filesData = useMemo(() => {
+    if (!takeOff) return [];
+    return takeOff?.project_files ?? [];
+  }, [takeOff]);
 
   const handleAnalyze = async () => {
     console.log(' handleAnalyze');
@@ -61,7 +46,7 @@ const Header = ({
     setTimeout(() => {
       setLoading(false);
       // 跳转到识别结果页面
-      router.push(`/projects/${projectId}/takeoff/${1}/identification`);
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
     }, 3000);
   };
   const handleAnalyzeClick = async () => {
@@ -97,7 +82,7 @@ const Header = ({
                 uid: String(file.id),
                 name: file.file_name,
                 status: "done",
-                url: file.url,
+                url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",
                 size: 0,
               };
@@ -129,20 +114,13 @@ const Header = ({
             })}
           </div>
           <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
-          {
-            showContentView ? <Button
-              className="w-[124px] bg-forumBlue text-white rounded-md"
-              onClick={() => handleAnalyzeClick()}
-            >
-              Next
-            </Button> : <Button
-              className="w-[76px] bg-primaryN30 rounded-md"
-              onClick={() => handleAnalyzeClick()}
-            >
-              Skip
-            </Button>
-          }
-
+          <Button
+            type="primary"
+            className="w-[100px] text-white rounded-md"
+            onClick={() => handleAnalyzeClick()}
+          >
+            Next
+          </Button>
         </div>
       </div>
       {loading && (

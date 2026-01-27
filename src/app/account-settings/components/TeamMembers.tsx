@@ -1,94 +1,83 @@
 "use client";
 
-import Button from "@/components/Button";
-import { Divider, Input } from "antd";
 import UserTable from "./UserTable";
+import NewUserForm from "./NewUserForm";
+import { getContactsByCompanyId } from "@/services/contactsService";
+import { Contact } from "@/types/user";
+import { useEffect, useState } from "react";
 
 const TeamMembers = () => {
+  const CONTACTS_TIMEOUT_MS = 10_000;
+
+  const [usersData, setUsersData] = useState<Contact[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  const fetchCompanyContacts = async () => {
+    setIsLoading(true);
+    setHasError(false);
+
+    let timedOut = false;
+
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      setHasError(true);
+      setIsLoading(false);
+    }, CONTACTS_TIMEOUT_MS);
+
+    try {
+      const response = await getContactsByCompanyId({ company_id: 1 });
+
+      if (timedOut) return;
+
+      const mappedContacts: Contact[] = response.data.map((item: any) => ({
+        name: item.name,
+        email: item.email,
+        phone: item.phone,
+        job_title: item.job_title,
+        id: item.id,
+        note: item.note,
+      }));
+
+      clearTimeout(timeoutId);
+      setUsersData(mappedContacts);
+      setIsLoading(false);
+    } catch (err) {
+      if (timedOut) return;
+      clearTimeout(timeoutId);
+      setHasError(true);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanyContacts();
+  }, []);
+
   return (
-    <div className="mt-8 ml-4 flex flex-col gap-12 w-full">
+    <div className="ml-4 flex flex-col gap-12 w-11/12">
       <div className="flex">
-        <div className="w-8/12">
-          <p>User Panel</p>
+        <div className="w-8/12 pt-10">
+          <p className="text-kahuBlue text-base">User Panel</p>
           <div className="w-11/12">
-            <UserTable />
+            {isLoading ? (
+              <p className="animate-pulse pt-4">
+                Loading Contacts, please wait...
+              </p>
+            ) : hasError ? (
+              <p className="pt-4 text-red-500">
+                Error loading contacts. Please try again.
+              </p>
+            ) : (
+              <UserTable
+                refreshContacts={fetchCompanyContacts}
+                contacts={usersData || []}
+              />
+            )}
           </div>
         </div>
 
-        <div className="w-4/12 flex flex-col gap-6 border-l-2 pl-12">
-          <p className="py-2 text-kahuBlue text-base">New User</p>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">
-              First Name <span className="text-accentRed">*</span>
-            </p>
-            <Input
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">
-              Last Name <span className="text-accentRed">*</span>
-            </p>
-            <Input
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">Company</p>
-            <Input
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">Role</p>
-            <Input
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">
-              Email <span className="text-accentRed">*</span>
-            </p>
-            <Input
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex flex-col gap-2 w-full ">
-            <p className=" text-sm">
-              Password <span className="text-accentRed">*</span>
-            </p>
-            <Input.Password
-              className="w-7/12 rounded-xl"
-              name="first_name"
-              size="large"
-              value=""
-              onChange={(e) => console.log(e)}
-            />
-          </div>
-          <div className="flex justify-end w-7/12">
-            <Button backgroundColor={"forumBlue"}> Create </Button>
-          </div>
-        </div>
+        <NewUserForm refreshContacts={fetchCompanyContacts} />
       </div>
     </div>
   );
