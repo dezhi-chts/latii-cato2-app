@@ -67,7 +67,8 @@ export const http = {
   put: <T>(endpoint: string, data?: Record<string, unknown> | FormData | any) =>
     request.put<T>(endpoint, data),
 
-  delete: <T>(endpoint: string) => request.delete<T>(endpoint),
+  delete: <T>(endpoint: string, data?: Record<string, unknown> | any) =>
+    request.delete<T>(endpoint, { data }),
 
   patch: <T>(endpoint: string, data?: Record<string, unknown>) =>
     request.patch<T>(endpoint, data),
