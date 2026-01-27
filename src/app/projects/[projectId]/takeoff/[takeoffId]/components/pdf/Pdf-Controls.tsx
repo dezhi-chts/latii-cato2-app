@@ -106,7 +106,7 @@ export const AddRectBoxControls = ({
   fullWidth = false,
   handleAddRectBox,
 }: {
-  theme?: 'default' | 'primary',
+  theme?: 'default' | 'primary' | 'primary-light',
   text?: string,
   fullWidth?: boolean,
   handleAddRectBox: () => void;
@@ -124,6 +124,12 @@ export const AddRectBoxControls = ({
       textColor: 'text-white',
       bgColor: 'bg-forumBlue'
     },
+    'primary-light': {
+      icon: '/assets/icons/add-table-white.svg',
+      text: 'Index Box',
+      textColor: 'text-white',
+      bgColor: 'bg-forumBlueLight'
+    }
   }
   const themeInfo = themeInfos[theme] || themeInfos['default']
   return (
