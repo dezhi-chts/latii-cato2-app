@@ -36,7 +36,7 @@ import { getTakeOffById } from "@/services/takeOffService";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 import debounce from "lodash/debounce";
 import {
   ZoomControls,
@@ -121,18 +121,16 @@ const IdentificationIndex = () => {
       setIndexBoxList(evidenceList.filter((item: any) => {
         try {
           let type = JSON.parse(item.type).name;
-          return type === GroupType.Table;
+          return type === GroupType.DrawingIndex;
         } catch (e) {
-          console.log(e);
         }
         return false;
       }));
       setLabelList(evidenceList.filter((item: any) => {
         try {
           let type = JSON.parse(item.type).name;
-          return type === GroupType.Item;
+          return type === GroupType.TitleInfo;
         } catch (e) {
-          console.log(e);
         }
         return false;
       }));
@@ -144,6 +142,7 @@ const IdentificationIndex = () => {
       })
     }
   }, [selectedFileId, takeOff]);
+
 
   useEffect(() => {
     if (selectedFileId === -1 || fileList.length === 0) return;
@@ -164,8 +163,7 @@ const IdentificationIndex = () => {
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
-          let newPdfUrl = file?.url;
-
+          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? '';
           setPdfUrl(newPdfUrl);
           // 设置新的缩略图数据
           setThumbnailList(() =>
@@ -173,17 +171,36 @@ const IdentificationIndex = () => {
           );
           //获取file evidence
           getFileEvidences();
+
+          // 判断当前文件的状态，如果状态为complete，则显示contentView
+          if (file.status === FileStatus.Completed) {
+            setShowContentView(true);
+            getContentData('changeFile');
+          } else {
+            // 获取evidence显示
+            setShowContentView(false);
+            getFileEvidences();
+          }
         }
         return;
       }
     });
-  }, [selectedFileId, fileList]);
+  }, [selectedFileId]);
 
 
-  const getContentData = async () => {
-    setBuildLoading(true)
+  const getContentData = async (eventType: string) => {
+    if (eventType === 'next') {
+      setBuildLoading(true)
+    } else {
+      setFullLoading(true)
+    }
+
     setTimeout(() => {
-      setBuildLoading(false);
+      if (eventType === 'next') {
+        setBuildLoading(false);
+      } else {
+        setFullLoading(false);
+      }
       let list: any = [];
       // 模拟假数据
       for (let i = 0; i < 30; i++) {
@@ -206,7 +223,7 @@ const IdentificationIndex = () => {
           if (item.id === selectedFileId) {
             return {
               ...item,
-              status: "complete",
+              status: FileStatus.Completed,
             };
           }
           return item;
@@ -314,21 +331,40 @@ const IdentificationIndex = () => {
     if (!showContentView) {
       // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
       if (indexBoxList.length > 0 && labelList.length > 0) {
-        getContentData();
+        getContentData('next');
       } else {
         confirm({
-          title: "Warning",
-          content: "Current page has not been completed. Do you want to continue?",
-          okText: "OK",
+          title: <div className="text-base font-normal text-forumBlue">Skip Page Index Step</div>,
+          icon: null,
+          content: "Are you sure you want to skip this step for this file?",
+          okText: "Skip",
           cancelText: "Cancel",
           onOk: () => {
             // 获取content解析内容
-            getContentData();
+            getContentData('next');
           },
         })
       }
     } else {
-      // 当前在目录页面，检查当前文件是否有未处理过的，如果有未处理过的，则进行下个文件的处理
+      // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
+      const findNextFile = fileList.find((item: any) => {
+        return item.status !== FileStatus.Completed;
+      });
+      if (findNextFile) {
+        // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
+        confirm({
+          title: "Warning",
+          content: `Detected unprocessed file: ${findNextFile.file_name}. Do you want to continue processing this file?`,
+          okText: "OK",
+          cancelText: "Cancel",
+          onOk: () => {
+            // 切换到下一个未处理的文件
+            setSelectedFileId(findNextFile.id);
+          }
+        })
+      } else {
+        // 检测到所有文件都已经处理，则即将跳转下一个页面
+      }
     }
   }
 
@@ -377,7 +413,7 @@ const IdentificationIndex = () => {
                         if (item.id === selectedFileId) {
                           return {
                             ...item,
-                            status: "undo",
+                            status: FileStatus.Processing,
                           };
                         }
                         return item;

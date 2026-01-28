@@ -17,7 +17,7 @@ import { Button } from "antd";
 import { BuildingBackground } from "@/app/projects/[projectId]/components/Create-Takeoff/Building-Background";
 import { useParams } from "next/navigation";
 import ConfirmAnalyzeModal from "./ConfirmAnalyzeModal";
-import { PageAnalysisStepActive, PageIndexStepActive, PageLebelingStepActive } from "./HeaderStepProgress";
+import { PageAnalysisStepInActive, PageIndexStepActive, PageLebelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
 
 const Header = ({
@@ -58,7 +58,6 @@ const Header = ({
     const unsaved =
       await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
     if (unsaved) {
-      console.log("########### file change");
       // 没有未保存的crop，切换文件
       setSelectedFileId(file.id);
     }
@@ -77,7 +76,7 @@ const Header = ({
             {filesData?.map((file: any, index: number) => {
               const uploadFile: UploadFile = {
                 id: file.id,
-                name: file.file_name + file.file_name,
+                name: file.file_name,
                 status: file.status || 'undo',
                 url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",
@@ -96,8 +95,8 @@ const Header = ({
               />;
             })}
           </div>
-          <PageLebelingStepActive />
-          <PageAnalysisStepActive />
+          <PageLebelingStepInActive />
+          <PageAnalysisStepInActive />
         </div>
         <Button
           type="primary"

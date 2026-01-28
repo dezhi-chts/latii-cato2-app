@@ -31,7 +31,7 @@ export const PageLebelingStepActive = () => {
 }
 export const PageLebelingStepInActive = () => {
   return (
-    <div className="h-full">
+    <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-r border-primaryN30">
       <div className="text-sm text-forumBlue">Page Index</div>
       <div className="text-xs text-basicGray">Step 2</div>
     </div>

@@ -3,9 +3,16 @@ import { Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { CloseOutlined } from "@ant-design/icons";
 import Image from "next/image";
+import { FileStatus } from "../../types/evidence";
+
+interface File {
+  id: string;
+  name: string;
+  status: FileStatus;
+}
 
 type FilePanelProps = {
-  file: UploadFile;
+  file: File;
   handleRemove?: (id: string) => void;
   canBeRemoved?: boolean;
   textClassName?: string;
@@ -17,7 +24,6 @@ export const FilePanel = ({
   file,
   handleRemove,
   canBeRemoved = false,
-  textClassName,
   isSelected = false,
   fileContainerStyle = {},
 }: FilePanelProps) => {
@@ -40,11 +46,11 @@ export const FilePanel = ({
         width={18}
         height={21}
       />
-      <p
-        className={`${textClassName} text-center text-[7px] px-1 text-elusionDarkGrayTint text-ellipsis line-clamp-2 whitespace-normal max-w-full`}
+      <div
+        className={`px-1 break-all text-xs line-clamp-2 text-center text-[7px] text-elusionDarkGrayTint`}
       >
         {file.name}
-      </p>
+      </div>
     </div>
   );
 };
@@ -64,15 +70,14 @@ export const FileItem = ({
       <FilePanel
         file={file}
         canBeRemoved={false}
-        textClassName="text-xs"
         isSelected={selectedFileId === file.id}
         fileContainerStyle={fileContainerStyle}
       />
       {showStatus && (
         <div
-          className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === "complete" ? "bg-[#D9F2E7]" : "bg-forumBlueLight"}`}
+          className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === FileStatus.Completed ? "bg-[#D9F2E7]" : "bg-forumBlueLight"}`}
         >
-          {file.status === "complete" ? "Completed" : "Progress"}
+          {file.status === FileStatus.Completed ? "Completed" : "Progress"}
         </div>
       )}
     </div>
