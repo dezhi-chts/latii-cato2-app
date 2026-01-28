@@ -18,6 +18,10 @@ const headerOptions: HeaderOption[] = [
     text: "Libraries",
   },
   {
+    id: 3,
+    text: "Product Editor",
+  },
+  {
     id: 5,
     text: "Settings",
   },
