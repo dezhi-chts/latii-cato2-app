@@ -88,7 +88,7 @@ const ParameterBaseEditor = () => {
 	useEffect(() => {
 		if (selectedProfile?.id) {
 			getAttribute()
-		}else{
+		} else {
 			setProductTypeMsg([])
 			setOperabilityMsg([])
 		}
@@ -130,7 +130,7 @@ const ParameterBaseEditor = () => {
 			if (profileRes.status == "success") {
 				setAllProfile(profileRes?.data)
 
-				if (profileRes?.data.length!=0){
+				if (profileRes?.data.length != 0) {
 					const [
 						projectAttributesWithOptions,
 						quoteAttributesWithOptions,
@@ -298,7 +298,7 @@ const ParameterBaseEditor = () => {
 			});
 			allProfile.splice(index, 1)
 			setAllProfile([...allProfile])
-			if (selectedProfile.id == res?.data.id){
+			if (selectedProfile.id == res?.data.id) {
 				setSelectedProfile({})
 			}
 		} else {
@@ -881,7 +881,7 @@ const ParameterBaseEditor = () => {
 				}
 			})
 			setAllProfile([...allProfile])
-			if (saveReturnMsg?.data.id == selectedProfile?.id){
+			if (saveReturnMsg?.data.id == selectedProfile?.id) {
 				setSelectedProfile(saveReturnMsg?.data)
 			}
 			notification.success({
@@ -900,7 +900,7 @@ const ParameterBaseEditor = () => {
 		}
 	};
 
-	const onCopyProfile = async (profile:any) => {
+	const onCopyProfile = async (profile: any) => {
 		if (!copyProfileName) {
 			notification.warning({
 				message: "Warning",
@@ -917,9 +917,9 @@ const ParameterBaseEditor = () => {
 			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
 			let addProfileData = createProfileRes?.data;
 
-			const addProfileOptionMsg:any = pickProductProductTypeOpen(copyProfileOptionMsg)
+			const addProfileOptionMsg: any = pickProductProductTypeOpen(copyProfileOptionMsg)
 
-			if (!addProfileOptionMsg){
+			if (!addProfileOptionMsg) {
 				notification.success({
 					message: "Success",
 					description: "Copy successfully",
@@ -934,7 +934,7 @@ const ParameterBaseEditor = () => {
 				unitMsg?.attribute_tree,
 				addProfileOptionMsg
 			);
-			console.log(addProfileOptionMsg,'addProfileOptionMsgaddProfileOptionMsg')
+			console.log(addProfileOptionMsg, 'addProfileOptionMsgaddProfileOptionMsg')
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(addProfileData.id, scriptMsg);
 
 			if (saveReturnMsg.status == "success") {
@@ -1055,7 +1055,7 @@ const ParameterBaseEditor = () => {
 												>
 													<Popover
 														content={
-															<div className="w-[200px]">
+															<div className="w-[200px]" onClick={(e)=>{e.stopPropagation();}}>
 																<Input
 																	size="small"
 																	placeholder="Enter profile name"
@@ -1089,7 +1089,7 @@ const ParameterBaseEditor = () => {
 														trigger="click"
 														open={open}
 														placement="bottom"
-														onOpenChange={(v) => {
+														onOpenChange={(v: any) => {
 															setCopyProfileName("")
 															setCopyProfileopenId(v ? item.id : null);
 														}}
