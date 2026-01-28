@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Input, Image as AntdImage, notification, Tooltip, Checkbox, Popconfirm, Dropdown, Popover } from 'antd';
+import { Button, Input, Image as AntdImage, notification, Tooltip, Checkbox, Popconfirm, Dropdown, Popover, Modal } from 'antd';
 import { useState, useEffect } from "react";
 import { SearchOutlined, EyeOutlined, PlusOutlined, CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import LoadingScreen from "@/components/loading-screen";
+import ViewScriptCom from "@/app/profile-editor-demo/components/viewScript";
 import {
 	fetchProductTypesLibrary,
 	fetchOperabilityLibrary,
@@ -80,6 +81,9 @@ const ParameterBaseEditor = () => {
 
 	const [selectedProductType, setSelectedProductType] = useState<any>({});
 	const [operabilityMsg, setOperabilityMsg] = useState<any[]>([]);
+
+	const [isShowViewScriptDataModal, setIsShowViewScriptDataModal] = useState<boolean>(false);
+	const [profileScriptMsg, setProfileScriptMsg] = useState<string>("");
 
 	useEffect(() => {
 		initAllData()
@@ -960,6 +964,11 @@ const ParameterBaseEditor = () => {
 		}
 	};
 
+	const onViewProfileScript = (scriptMsg: string) => {
+		setProfileScriptMsg(scriptMsg)
+		setIsShowViewScriptDataModal(true)
+	};
+
 	return (
 		<div
 			className="pr-6 flex w-full overflow-x-auto overflow-y-hidden"
@@ -1055,7 +1064,7 @@ const ParameterBaseEditor = () => {
 												>
 													<Popover
 														content={
-															<div className="w-[200px]" onClick={(e)=>{e.stopPropagation();}}>
+															<div className="w-[200px]" onClick={(e) => { e.stopPropagation(); }}>
 																<Input
 																	size="small"
 																	placeholder="Enter profile name"
@@ -1111,6 +1120,13 @@ const ParameterBaseEditor = () => {
 													>
 														<DeleteOutlined onClick={(e) => { e.stopPropagation() }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
 													</Popconfirm>
+													<EyeOutlined
+														onClick={(e) => {
+															e.stopPropagation();
+															onViewProfileScript(item?.script_msg)
+														}}
+														className="text-[#B1B1B1] hover:text-[#595959]"
+													/>
 												</div>
 											</div>
 									)
@@ -1460,6 +1476,20 @@ const ParameterBaseEditor = () => {
 					<div></div>
 				</div>
 			</div>
+			<Modal
+				title="View Script Data"
+				open={isShowViewScriptDataModal}
+				onCancel={()=>setIsShowViewScriptDataModal(false)}
+				footer={null}
+				centered
+				maskClosable={false}
+				width={'1000px'}
+				destroyOnHidden={true}
+			>
+				<ViewScriptCom scriptMsg={profileScriptMsg}>
+
+				</ViewScriptCom>
+			</Modal>
 			<LoadingScreen isLoading={fullLoading}></LoadingScreen>
 		</div>
 	);
