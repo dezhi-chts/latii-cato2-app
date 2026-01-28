@@ -590,7 +590,7 @@ const LibraryOption = () => {
 						{
 							options.map((item: any, index: any) => {
 								return (
-									<div className="flex items-center">
+									<div className="flex items-center" key={index}>
 										<div
 											className="border border-[#E8E8E8] w-[370px] rounded-lg"
 										>
@@ -655,7 +655,7 @@ const LibraryOption = () => {
 																	customRequest={({ file }) => { uploadFile(file, item, index) }}
 																>
 																	<div className="text-[#717171] text-[10px] relative bottom-1">
-																		<span>Click or</span>
+																		<span>Click to</span>
 																		<span className="text-[#427CCE] ml-1">upload</span>
 																	</div>
 																</Upload>
@@ -674,7 +674,8 @@ const LibraryOption = () => {
 																>
 																	<img
 																		src={item?.other_msg?.file_url}
-																		alt="Selected Item"
+																		alt="Image"
+																		title="click to upload"
 																		style={{
 																			maxWidth: "90%",
 																			maxHeight: "90%",

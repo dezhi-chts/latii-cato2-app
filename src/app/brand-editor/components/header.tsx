@@ -16,25 +16,6 @@ const headerOptions: HeaderOption[] = [
   {
     id: 2,
     text: "Libraries",
-    // isDirectory: true,
-    // children: [
-    // 	{
-    // 		id: 2.1,
-    // 		text: "Parameters",
-    // 		isDirectory: false,
-    // 		children: []
-    // 	}, {
-    // 		id: 2.2,
-    // 		text: "Base",
-    // 		isDirectory: false,
-    // 		children: []
-    // 	}, {
-    // 		id: 2.3,
-    // 		text: "Options",
-    // 		isDirectory: false,
-    // 		children: []
-    // 	}
-    // ]
   },
   {
     id: 5,
