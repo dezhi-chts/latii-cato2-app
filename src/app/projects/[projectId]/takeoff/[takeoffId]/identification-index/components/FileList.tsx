@@ -3,27 +3,42 @@ import { Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import { CloseOutlined } from "@ant-design/icons";
 import Image from "next/image";
+import { FileStatus } from "../../types/evidence";
+
+interface File {
+  id: string;
+  name: string;
+  status: FileStatus;
+}
 
 type FilePanelProps = {
-  file: UploadFile;
+  file: File;
   handleRemove?: (id: string) => void;
   canBeRemoved?: boolean;
   textClassName?: string;
   isSelected?: boolean;
   fileContainerStyle?: React.CSSProperties;
+  showBorder?: boolean;
+  flexRow?: boolean;
+  switchBgColor?: boolean; // 选中时，是否切换背景颜色
+  switchTextColor?: boolean; // 选中时，是否切换文字颜色
 };
 
 export const FilePanel = ({
   file,
   handleRemove,
   canBeRemoved = false,
-  textClassName,
   isSelected = false,
   fileContainerStyle = {},
+  showBorder = true,
+  flexRow = true,
+  switchBgColor = true, // 选中时，是否切换背景颜色
+  switchTextColor = false, // 选中时，是否切换文字颜色
 }: FilePanelProps) => {
+  const imageSize = flexRow ? { width: 18, height: 21 } : { width: 25, height: 30 };
   return (
     <div
-      className={`relative w-32 h-20 rounded flex flex-row items-center justify-center p-1 ${!isSelected ? "border border-primaryN50" : "bg-baseLightHover"}`}
+      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border border-baseLightHover' : ''}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -37,14 +52,14 @@ export const FilePanel = ({
       <Image
         src="/assets/icons/extensions/pdf.svg"
         alt="file pdf icon"
-        width={18}
-        height={21}
+        width={imageSize.width}
+        height={imageSize.height}
       />
-      <p
-        className={`${textClassName} text-center text-[7px] px-1 text-elusionDarkGrayTint text-ellipsis line-clamp-2 whitespace-normal max-w-full`}
+      <div
+        className={`${flexRow ? 'px-2' : 'pt-3'} break-all line-clamp-2 text-center text-[8px] ${isSelected && switchTextColor ? 'text-forumBlue' : 'text-basicGray'} `}
       >
         {file.name}
-      </p>
+      </div>
     </div>
   );
 };
@@ -55,7 +70,26 @@ export const FileItem = ({
   fileContainerStyle = {},
   handleClickFile,
   showStatus = false,
+  showBorder = true,
 }: any) => {
+  const statusMapInfo: any = {
+    [FileStatus.Completed]: {
+      text: "Completed",
+      bgColor: "bg-[#D9F2E7]",
+      textColor: "text-[#02A960]",
+    },
+    [FileStatus.Processing]: {
+      text: "Progress",
+      bgColor: "bg-[#C4D6F0]",
+      textColor: "text-forumBlue",
+    },
+    'default': {
+      text: "Not Applicable",
+      bgColor: "bg-[#DCDCDC]",
+      textColor: "text-basicGray",
+    }
+  };
+  const statusInfo = statusMapInfo[file.status] || statusMapInfo[FileStatus.Processing];
   return (
     <div
       className={`rounded cursor-pointer`}
@@ -64,15 +98,18 @@ export const FileItem = ({
       <FilePanel
         file={file}
         canBeRemoved={false}
-        textClassName="text-xs"
         isSelected={selectedFileId === file.id}
         fileContainerStyle={fileContainerStyle}
+
       />
       {showStatus && (
         <div
-          className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === "complete" ? "bg-[#D9F2E7]" : "bg-forumBlueLight"}`}
+          className={`my-2 h-[16px] flex items-center`}
         >
-          {file.status === "complete" ? "Completed" : "Progress"}
+          <div className={`px-2 text-xxs rounded-md ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+            {statusInfo.text}
+          </div>
+
         </div>
       )}
     </div>

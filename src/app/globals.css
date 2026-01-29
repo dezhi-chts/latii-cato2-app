@@ -123,3 +123,33 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* 自定义的primary按钮样式 */
+.custom-primary-btn {
+  width: 124px;
+  height: 28px;
+  font-family: "Nunito Sans";
+  background-color: #427cce;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.custom-primary-btn:hover,
+.custom-primary-btn:focus {
+  background-color: #356bb3 !important;
+  color: #ffffff !important;
+  border-color: #356bb3 !important;
+}
+
+/* 自定义的default按钮样式 */
+.custom-default-btn {
+  width: 76px;
+  height: 28px;
+  font-family: "Nunito Sans";
+  background-color: #f8f8f8;
+  border-width: 0px;
+  border-radius: 6px;
+  color: #555555;
+  font-size: 12px;
+}

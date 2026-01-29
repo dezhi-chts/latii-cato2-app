@@ -47,6 +47,11 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
               value={projectSettings[field.field_name]}
               onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
               placeholder={field.Hint_text}
+              suffix={field.suffixIcon && (
+                <div>
+                  <Image src={field.suffixIcon} alt={field.Hint_text} width={12} height={12} />
+                </div>
+              )}
             />
           </div>
         </div>

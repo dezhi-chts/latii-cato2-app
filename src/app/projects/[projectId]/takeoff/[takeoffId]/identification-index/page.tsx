@@ -36,7 +36,7 @@ import { getTakeOffById } from "@/services/takeOffService";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 import debounce from "lodash/debounce";
 import {
   ZoomControls,
@@ -45,18 +45,21 @@ import {
   SelectPagesControls,
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
-import StepProgress from "./components/StepProgress";
 import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
+import SkipTipModal from "./components/SkipTipModal";
+import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
-type AddingType = "Item" | "Table";
-export type Adding = {
-  isAdding: boolean;
-  type: AddingType | null;
-};
+
+enum BuildLoadingStep {
+  PageAnalysis = 'page-analysis',
+  PageLabel = 'page-label',
+  PageIndex = 'page-index',
+}
 
 const IdentificationIndex = () => {
+  const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
@@ -72,17 +75,21 @@ const IdentificationIndex = () => {
   const [fileEvidence, setFileEvidence] = useState<any>([]);
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(false);
+  const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
+  const [buildLoadingStep, setBuildLoadingStep] = useState<string>(BuildLoadingStep.PageIndex);
   const [showContentView, setShowContentView] = useState<boolean>(false);
   const [contentData, setContentData] = useState<any>({});
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
+  const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
 
   useEffect(() => {
     // 获取takeOff详情
     getTakeOffDetails();
+    getTypeList();
   }, [takeOffId]);
 
   const getTakeOffDetails = async () => {
@@ -121,18 +128,16 @@ const IdentificationIndex = () => {
       setIndexBoxList(evidenceList.filter((item: any) => {
         try {
           let type = JSON.parse(item.type).name;
-          return type === GroupType.Table;
+          return type === GroupType.DrawingIndex;
         } catch (e) {
-          console.log(e);
         }
         return false;
       }));
       setLabelList(evidenceList.filter((item: any) => {
         try {
           let type = JSON.parse(item.type).name;
-          return type === GroupType.Item;
+          return type === GroupType.TitleInfo;
         } catch (e) {
-          console.log(e);
         }
         return false;
       }));
@@ -144,6 +149,19 @@ const IdentificationIndex = () => {
       })
     }
   }, [selectedFileId, takeOff]);
+
+  const getTypeList = async () => {
+    let res: any = await getDrawingIndexTypeList();
+    if (res.status === 'success') {
+      setDrawingTypeList(res?.data?.fixed_types ?? []);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get drawing index type list",
+      })
+    }
+  }
+
 
   useEffect(() => {
     if (selectedFileId === -1 || fileList.length === 0) return;
@@ -164,8 +182,7 @@ const IdentificationIndex = () => {
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
-          let newPdfUrl = file?.url;
-
+          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? '';
           setPdfUrl(newPdfUrl);
           // 设置新的缩略图数据
           setThumbnailList(() =>
@@ -173,46 +190,68 @@ const IdentificationIndex = () => {
           );
           //获取file evidence
           getFileEvidences();
+
+          // 判断当前文件的状态，如果状态为complete，则显示contentView
+          if (file.status === FileStatus.Completed) {
+            setShowContentView(true);
+            getDrawingIndexData();
+          } else {
+            // 获取evidence显示
+            setShowContentView(false);
+          }
         }
         return;
       }
     });
-  }, [selectedFileId, fileList]);
+  }, [selectedFileId]);
 
+  const recognizeDrawingIndexData = async () => {
+    setBuildLoadingStep(BuildLoadingStep.PageIndex);
+    setBuildLoading(true);
 
-  const getContentData = async () => {
-    setBuildLoading(true)
-    setTimeout(() => {
-      setBuildLoading(false);
-      let list: any = [];
-      // 模拟假数据
-      for (let i = 0; i < 30; i++) {
-        let data = {
-          id: i,
-          name: `A${i + 1}: Floor Plan`,
-          content: "This is a content",
-          type: "text",
-          created_at: "2023-01-01",
-          updated_at: "2023-01-01",
-        };
-        list.push(data);
-      }
-      setContentData(list);
+    let res: any = await recognizeDrawingIndex(projectId as string, selectedFileId as number);
+    setBuildLoading(false);
+
+    if (res.status === 'success') {
+      notification.success({
+        message: "Success",
+        description: "Drawing index recognized successfully",
+      })
+      // 识别成功后重新获取drawing index数据
+      getDrawingIndexData();
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to recognize drawing index",
+      })
+    }
+  }
+
+  const getDrawingIndexData = async () => {
+    setFullLoading(true)
+
+    let res: any = await getDrawingIndexInfoById(projectId as string, selectedFileId as number);
+
+    setFullLoading(false);
+
+    if (res.status === 'success') {
+      setContentData(res?.data?.drawings ?? []);
       // 获取到content数据
       setShowContentView(true);
-      // 设置当前文件状态未complete
-      setFileList((prev: any) => {
-        return prev.map((item: any) => {
-          if (item.id === selectedFileId) {
-            return {
-              ...item,
-              status: "complete",
-            };
-          }
-          return item;
-        });
+
+      // 设置当前文件状态为complete
+      updateFileStatus(selectedFileId, FileStatus.Completed)
+
+      // 如果发现drawingTypeList为空，则再次调用getTypeList
+      if (drawingTypeList.length === 0) {
+        getTypeList();
+      }
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get drawing index",
       });
-    }, 3000);
+    }
   };
 
   // 使用 lodash 的防抖函数来处理缩放
@@ -258,13 +297,6 @@ const IdentificationIndex = () => {
     });
   };
 
-  const handleThumbnail = () => {
-    setShowThumbnail(!showThumbnail);
-  };
-
-  const handleClearAllCrop = () => {
-    pdfRef?.current?.clearCropSections?.();
-  };
 
   const handleAppendEvidence = (uploadData: any) => {
     let newUploadData = uploadData.map((item: any) => ({
@@ -314,22 +346,70 @@ const IdentificationIndex = () => {
     if (!showContentView) {
       // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
       if (indexBoxList.length > 0 && labelList.length > 0) {
-        getContentData();
+        recognizeDrawingIndexData();
       } else {
+        setShowSkipModal(true);
+      }
+    } else {
+      // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
+      const findNextFile = fileList.find((item: any) => {
+        return item.status !== FileStatus.Completed;
+      });
+      if (findNextFile) {
+        // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
         confirm({
           title: "Warning",
-          content: "Current page has not been completed. Do you want to continue?",
+          content: `Detected unprocessed file: ${findNextFile.file_name}. Do you want to continue processing this file?`,
           okText: "OK",
           cancelText: "Cancel",
           onOk: () => {
-            // 获取content解析内容
-            getContentData();
-          },
+            // 切换到下一个未处理的文件
+            setSelectedFileId(findNextFile.id);
+          }
+        })
+      } else {
+        // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
+        confirm({
+          title: "Tip",
+          content: `All files have been processed. Do you want to continue to the analysis step?`,
+          okText: "OK",
+          cancelText: "Cancel",
+          onOk: () => {
+            // 进行分析请求，请求成功，则跳转
+            handleAnalysis();
+          }
         })
       }
-    } else {
-      // 当前在目录页面，检查当前文件是否有未处理过的，如果有未处理过的，则进行下个文件的处理
     }
+  }
+
+  const handleAnalysis = async () => {
+    setBuildLoadingStep(BuildLoadingStep.PageLabel);
+    setBuildLoading(true);
+    setTimeout(() => {
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
+    }, 3000);
+  }
+
+  const updateFileStatus = (fileId: number, status: FileStatus) => {
+    // 设置当前文件状态未undo
+    setFileList((prev: any) => {
+      return prev.map((item: any) => {
+        if (item.id === fileId) {
+          return {
+            ...item,
+            status: status,
+          };
+        }
+        return item;
+      });
+    });
+  }
+
+  const handleRestartIndex = () => {
+    setShowContentView(false);
+    // 设置当前文件状态未undo
+    updateFileStatus(selectedFileId, FileStatus.Processing)
   }
 
   return (
@@ -352,6 +432,7 @@ const IdentificationIndex = () => {
               <ContentView
                 contentData={contentData}
                 setContentData={setContentData}
+                drawingTypeList={drawingTypeList}
               />
             ) : (
               <IndexRectView
@@ -369,21 +450,7 @@ const IdentificationIndex = () => {
             <div className="flex items-center gap-2">
               {showContentView &&
                 <div className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
-                  onClick={() => {
-                    setShowContentView(false);
-                    // 设置当前文件状态未undo
-                    setFileList((prev: any) => {
-                      return prev.map((item: any) => {
-                        if (item.id === selectedFileId) {
-                          return {
-                            ...item,
-                            status: "undo",
-                          };
-                        }
-                        return item;
-                      });
-                    });
-                  }}
+                  onClick={handleRestartIndex}
                 >
                   <span className="text-baseGray text-xs">Restart Index</span>
                 </div>
@@ -439,11 +506,17 @@ const IdentificationIndex = () => {
           </div>
         </div>
       </div>
+      {showSkipModal && <SkipTipModal
+        isOpen={showSkipModal}
+        closeModal={() => { setShowSkipModal(false) }}
+        handleSkip={() => {
+          setShowSkipModal(false);
+          recognizeDrawingIndexData();
+        }}
+      />}
       {fullLoading && <Spin fullscreen />}
       {buildLoading && <BuildingBackground
-        isDone={true}
-        totalDuration={90000}
-        onFinish={() => setBuildLoading(false)}
+        step={buildLoadingStep}
       />}
     </div>
   );

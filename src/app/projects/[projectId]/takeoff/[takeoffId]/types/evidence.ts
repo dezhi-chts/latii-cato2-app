@@ -30,9 +30,10 @@ export enum GroupShapeType {
 export enum GroupType {
   OCR = "OCR", // ocr框
   Label = "Label", // label框
-  Index = "Index", // 索引框
   Item = "Item", // 项目项框
   Table = "Table",
+  TitleInfo = "Title Info", // 标题信息框
+  DrawingIndex = "Drawing Index", // 绘图索引框
 }
 
 //矩形/多边形框
@@ -107,6 +108,12 @@ export interface FileItem {
   id: number;
   project_file_id: number;
   total_pages: number;
+}
+
+// 文件状态
+export enum FileStatus {
+  Completed = "Completed",
+  Processing = "Processing",
 }
 
 //pdf wrapper props

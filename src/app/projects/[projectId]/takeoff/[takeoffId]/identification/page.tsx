@@ -26,6 +26,7 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
+import { getDrawingIndexTypeList } from "@/services/drawingIndexService";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -38,7 +39,7 @@ import {
   SelectPagesControls,
   ClearAllControls,
 } from "../components/pdf/Pdf-Controls";
-import StepProgress from "../identification-index/components/StepProgress";
+import DrawingTagsView from "./components/DrawingTagsView";
 
 const defaultPageCategory = [
   {
@@ -90,17 +91,15 @@ const Identification = () => {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
-  const { fileEvidence, setFileEvidence, fileEvidenceRef } =
-    useFileEvidenceState();
+  const [fileEvidence, setFileEvidence] = useState<any>([]);
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(true);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
+  const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
+  const [currentType, setCurrentType] = useState<string>("All");
 
-  const [pageCategory, setPageCategory] = useState(() => {
-    return defaultPageCategory;
-  });
   const thumbnailListRef = useRef<any>([]);
 
   const getFileEvidences = () => { };
@@ -108,7 +107,20 @@ const Identification = () => {
   useEffect(() => {
     // 获取takeOff详情
     getTakeOffDetails();
+    getTypeList();
   }, [takeOffId]);
+
+  useEffect(() => {
+    setThumbnailList((prev: any) => {
+      if (currentType === "All") {
+        return thumbnailListRef.current.map((item: any) => ({ ...item }));
+      } else {
+        return thumbnailListRef.current.filter(
+          (item: any) => item.type === currentType,
+        );
+      }
+    });
+  }, [currentType])
 
   const getTakeOffDetails = async () => {
     let res: any = await getTakeOffById(takeOffId as any);
@@ -169,8 +181,8 @@ const Identification = () => {
           // 设置新的缩略图数据
           setThumbnailList(() => [...list]);
           // 更新pageCategory中每一种类型的数量
-          setPageCategory((prev: any) => {
-            return prev.map((item: any) => {
+          setDrawingTypeList((prev: any) => {
+            let newList = prev.map((item: any) => {
               const count = list.filter(
                 (file: any) => file.type === item.type,
               ).length;
@@ -179,6 +191,7 @@ const Identification = () => {
                 count: item.type === "All" ? list.length : count,
               };
             });
+            return [...newList];
           });
           //获取file evidence
           getFileEvidences();
@@ -187,6 +200,24 @@ const Identification = () => {
       }
     });
   }, [selectedFileId, takeOff]);
+
+  const getTypeList = async () => {
+    let res: any = await getDrawingIndexTypeList();
+    if (res.status === 'success') {
+      let list = res?.data?.fixed_types ?? [];
+      list.unshift({
+        type: "All",
+        color: "#717171",
+        icon: 'A'
+      });
+      setDrawingTypeList(list);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get drawing index type list",
+      })
+    }
+  }
 
   const handlePageTypeChange = (page: number, type: string) => {
     const newThumbnailList = thumbnailList.map((item: any) => {
@@ -204,29 +235,6 @@ const Identification = () => {
       return item;
     });
     setThumbnailList((prev: any) => [...newThumbnailList]);
-    setPageCategory((prev: any) => {
-      return prev.map((item: any) => {
-        const count = newThumbnailList.filter(
-          (file: any) => file.type === item.type,
-        ).length;
-        return {
-          ...item,
-          count: item.type === "All" ? newThumbnailList.length : count,
-        };
-      });
-    });
-  };
-
-  const handleFilterPageType = (type: string) => {
-    setThumbnailList((prev) => {
-      if (type === "All") {
-        return thumbnailListRef.current.map((item: any) => ({ ...item }));
-      } else {
-        return thumbnailListRef.current.filter(
-          (item: any) => item.type === type,
-        );
-      }
-    });
   };
 
   // 使用 lodash 的防抖函数来处理缩放
@@ -293,57 +301,20 @@ const Identification = () => {
     }
   };
 
-  // 🎯 获取实时evidence数量
-  const getCurrentEvidenceCount = () => {
-    return fileEvidenceRef.current.length;
-  };
 
   return (
     <div className="w-full h-[100vh] flex flex-col">
       <Header
         pdfRef={pdfRef}
         takeOff={takeOff}
-        checkEvidenceCount={getCurrentEvidenceCount}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
       />
-      <div className="px-14 my-6 flex flex-row gap-3">
-        {pageCategory.map((item) => {
-          const bgColor = item.primaryColor + "1A";
-          const miniBtnColor =
-            item.type !== "All" ? item.primaryColor + "B3" : item.primaryColor;
-          const typeTextColor =
-            item.type !== "All" ? item.primaryColor + "80" : item.primaryColor;
-          return (
-            <div
-              key={item.type}
-              className="px-2 h-[26px] rounded-md flex flex-row items-center cursor-pointer"
-              style={{ backgroundColor: bgColor }}
-              onClick={() => {
-                handleFilterPageType(item.type);
-              }}
-            >
-              {item.type !== "All" && (
-                <span
-                  className="px-[5px] py-[1px] rounded-md text-xxs text-white"
-                  style={{ backgroundColor: miniBtnColor }}
-                >
-                  {item.type?.length > 0 ? item.type[0].toUpperCase() : ""}
-                </span>
-              )}
-              <span className="ml-2 text-xxs" style={{ color: typeTextColor }}>
-                {item.type}
-              </span>
-              <span
-                className="ml-4 px-[5px] py-[1px] text-xxs bg-white rounded"
-                style={{ color: miniBtnColor }}
-              >
-                {item.count}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      <DrawingTagsView
+        drawingTypeList={drawingTypeList}
+        currentType={currentType}
+        setCurrentType={setCurrentType}
+      ></DrawingTagsView>
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
         <div
@@ -358,9 +329,7 @@ const Identification = () => {
             page={page}
             setPage={setPage}
             showCategory={true}
-            categoryList={defaultPageCategory.filter(
-              (item) => item.type !== "All",
-            )}
+            categoryList={drawingTypeList}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -384,9 +353,7 @@ const Identification = () => {
               ref={pdfRef}
               operationMode={"edit"}
               mode="edit"
-              typeList={defaultPageCategory.filter(
-                (item) => item.type !== "All",
-              )}
+              typeList={drawingTypeList}
               pdfUrl={pdfUrl as string}
               project_id={projectId as any}
               project_file_id={selectedFileId}
@@ -404,9 +371,6 @@ const Identification = () => {
           </div>
         </div>
       </div>
-      <div className="h-[130px] border-t border-primaryN30 flex items-center justify-center">
-        <StepProgress currentStep={2} />
-      </div>
       {fullLoading && <Spin fullscreen />}
     </div>
   );
@@ -414,24 +378,3 @@ const Identification = () => {
 
 // 为自定义 Select 选项添加必要的全局样式
 export default Identification;
-
-// fileEvidence 相关状态管理
-const useFileEvidenceState = () => {
-  const [fileEvidence, setFileEvidence] = useState<any>([]);
-  const fileEvidenceRef = useRef<any>([]);
-
-  // 同步更新函数
-  const setFileEvidenceWithSync = useCallback((updater: any) => {
-    setFileEvidence((prev: any) => {
-      const newState = typeof updater === "function" ? updater(prev) : updater;
-      fileEvidenceRef.current = newState;
-      return newState;
-    });
-  }, []);
-
-  return {
-    fileEvidence,
-    setFileEvidence: setFileEvidenceWithSync,
-    fileEvidenceRef,
-  };
-};

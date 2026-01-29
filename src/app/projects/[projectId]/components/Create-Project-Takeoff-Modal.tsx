@@ -1,15 +1,15 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CreateProjectModalProps,
   ProjectSettings,
 } from "@/types/project";
-import { Button, Input, Modal, message, Tabs, notification, Spin } from "antd";
+import { Button, Input, Modal, message, notification, Spin } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import Image from "next/image";
 
 import { useRouter } from "next/navigation";
-import { FilePanel } from "./Create-Takeoff/Cato-Upload";
+import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import { PageControls, ZoomControls } from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ProjectForm from "./Project-Form";
@@ -17,6 +17,42 @@ import debounce from "lodash/debounce";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 import { uploadFiles } from "@/services/filesService";
 import { createProject } from "@/services/projectService";
+
+
+const TabList = ({
+  items,
+  activeIndex,
+  onClick
+}: {
+  items: any[],
+  activeIndex: number,
+  onClick: (index: number) => void
+}) => {
+  return (
+    <div className="w-full relative">
+      <div className="flex flex-row gap-2 relative mb-[-1px]">
+        {items.map((item, index) => (
+          <div
+            key={item.id}
+            className={`
+              cursor-pointer rounded-md rounded-bl-none rounded-br-none 
+              border border-primaryN30
+              ${activeIndex === index
+                ? "border-b-white bg-white relative z-10"
+                : "border-b-0 border-b-transparent"
+              }
+            `}
+            onClick={() => onClick(index)}
+          >
+            {item.label}
+          </div>
+        ))}
+      </div>
+      <div className="h-[0.5px] bg-primaryN30"></div>
+    </div>
+  )
+}
+
 
 const CreateProjectTakeoffModal = ({
   isOpen,
@@ -192,111 +228,136 @@ const CreateProjectTakeoffModal = ({
     }
   }
 
+  const items = useMemo(() => {
+    return filesData.map((file: any) => {
+      const uploadFile: any = {
+        uid: String(file.id),
+        id: file.id,
+        name: file.file_name,
+        status: "done",
+        url: file.uploaded_file_url,
+        type: "application/pdf",
+        size: 0,
+      };
+      let label =
+        <div
+          className={`rounded cursor-pointer`}
+          onClick={() => setSelectedFileId(file.id)}
+        >
+          <FilePanel
+            file={uploadFile}
+            canBeRemoved={false}
+            textClassName="text-xs"
+            flexRow={false}
+            showBorder={false}
+            isSelected={uploadFile.id === selectedFileId}
+            switchBgColor={false}
+            switchTextColor={true}
+          />
+        </div>
+
+      return {
+        label: label,
+        key: file.id,
+      }
+    })
+  }, [filesData, selectedFileId]);
+
+  const activeIndex = useMemo(() => {
+    if (selectedFileId === -1) return -1;
+    let index = filesData.findIndex((file: any) => file.id === selectedFileId);
+    return index !== -1 ? index : -1;
+  }, [filesData, selectedFileId]);
+
   return (
     <Modal
       open={isOpen}
       title={
-        <p className="text-forumBlue text-lg font-normal">Create New Project</p>
+        <p className="text-forumBlue text-lg font-normal font-nunito">Create New Project</p>
       }
+      centered={true}
       width={'85vw'}
       footer={null}
       closable={false}
       onCancel={closeModal}
     >
-      <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
-      <div className="mt-8 h-[90vh] flex flex-row justify-between">
-        <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
-          <div className="overflow-y-auto bg-white">
-            <ProjectForm
-              ref={projectFormRef}
-              projectSettings={projectSettings}
-              setProjectSettings={setProjectSettings}
-              showOCRIcon={true}
-              OCRFieldName={OCRFieldName}
-              handleAddOCRBox={handleAddOCRBox} />
-          </div>
-          <div className="flex-1 flex gap-4 items-end justify-center">
-            <Button
-              onClick={closeModal}
-              className="w-[84px] mb-4"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              type="primary"
-              className="w-[124px] mb-4"
-            >
-              Confirm
-            </Button>
-          </div>
-        </div>
-        {
-          pdfFullScreen && <div className="flex flex-row justify-center items-center">
-            <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
-            <div className="cursor-pointer" onClick={() => setPdfFullScreen(false)}>
-              <Image src="/assets/icons/arrow-right-gray.svg" alt="arrow right" width={20} height={20} style={{ width: "auto", height: "auto" }}></Image>
+      <div className="font-nunito">
+        <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
+        <div className="mt-8 h-[80vh] flex flex-row justify-between">
+          <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
+            <div className="overflow-y-auto bg-white">
+              <ProjectForm
+                ref={projectFormRef}
+                projectSettings={projectSettings}
+                setProjectSettings={setProjectSettings}
+                showOCRIcon={true}
+                OCRFieldName={OCRFieldName}
+                handleAddOCRBox={handleAddOCRBox} />
+            </div>
+            <div className="flex-1 flex gap-4 items-end justify-center">
+              <Button
+                onClick={closeModal}
+                className="mb-4 custom-default-btn"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                className="mb-4 custom-primary-btn"
+              >
+                Confirm
+              </Button>
             </div>
           </div>
-        }
+          {
+            pdfFullScreen && <div className="flex flex-row justify-center items-center">
+              <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
+              <div className="cursor-pointer" onClick={() => setPdfFullScreen(false)}>
+                <Image src="/assets/icons/arrow-right-gray.svg" alt="arrow right" width={20} height={20} style={{ width: "auto", height: "auto" }}></Image>
+              </div>
+            </div>
+          }
 
-        <div className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? 'ml-1' : 'ml-10'} transition-all duration-300 ease-in-out`}>
-          <div className="flex flex-row gap-2">
-            {filesData?.map((file: any, index: number) => {
-              const uploadFile: UploadFile = {
-                uid: String(file.id),
-                name: file.file_name,
-                status: "done",
-                url: file.uploaded_file_url,
-                type: "application/pdf",
-                size: 0,
-              };
-              return (
-                <div
-                  key={index}
-                  className={`rounded cursor-pointer ${selectedFileId === file.id
-                    ? "bg-primaryN20"
-                    : "hover:bg-primaryN10"
-                    }`}
-                  onClick={() => setSelectedFileId(file.id)}
-                >
-                  <FilePanel
-                    file={uploadFile}
-                    canBeRemoved={false}
-                    textClassName="text-xs"
-                    isSelected={selectedFileId === file.id}
+          <div className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? 'ml-1' : 'ml-10'} transition-all duration-300 ease-in-out`}>
+            <TabList
+              activeIndex={activeIndex}
+              onClick={(index: number) => {
+                setSelectedFileId(filesData[index].id);
+              }}
+              items={items}
+            />
+            <div className="-mt-[1px] px-3 flex-1 flex flex-col border border-t-0 border-primaryN30 rounded-md rounded-tl-none rounded-tr-none roun overflow-hidden">
+              <div className="py-3 flex justify-between ">
+                <div>
+                  <PageControls
+                    page={page}
+                    totalPages={totalPage}
+                    handlePageChange={handlePageChange}
                   />
                 </div>
-              );
-            })}
-          </div>
-          <div className="mt-2 flex-1 flex flex-col border border-basicLightGray rounded-md overflow-hidden">
-            <div className="py-2 mr-10 flex justify-end gap-4">
-              <PageControls
-                page={page}
-                totalPages={totalPage}
-                handlePageChange={handlePageChange}
-              />
-              <ZoomControls
+                <div>
+                  <ZoomControls
+                    zoom={zoom}
+                    handleZoomChange={handleZoomChange}
+                  />
+                </div>
+              </div>
+              <PdfWrapper
+                ref={pdfRef}
+                operationMode={"edit"}
+                mode="edit"
+                typeList={[]}
+                pdfUrl={pdfUrl as string}
+                project_id={''}
+                project_file_id={selectedFileId}
                 zoom={zoom}
-                handleZoomChange={handleZoomChange}
+                page={page}
+                allEvidence={[]}
+                onTotalPages={setTotalPage}
+                onUpdateSafeZoom={handleSafeZoomChange}
+                onSuccessOCRText={handleOCRText}
               />
             </div>
-            <PdfWrapper
-              ref={pdfRef}
-              operationMode={"edit"}
-              mode="edit"
-              typeList={[]}
-              pdfUrl={pdfUrl as string}
-              project_id={''}
-              project_file_id={selectedFileId}
-              zoom={zoom}
-              page={page}
-              allEvidence={[]}
-              onTotalPages={setTotalPage}
-              onUpdateSafeZoom={handleSafeZoomChange}
-              onSuccessOCRText={handleOCRText}
-            />
           </div>
         </div>
       </div>

@@ -42,9 +42,8 @@ export const UploadFileList = ({
   return (
     <div
       key={file.uid}
-      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${
-        !isSelected && "border border-primaryN50"
-      }`}
+      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${!isSelected && "border border-primaryN50"
+        }`}
     >
       {canBeRemoved && handleRemove && (
         <button
@@ -103,7 +102,7 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
               Upload
             </p>
           </Upload>
-          <p className="text-basicGray text-center">
+          <p className="text-baseGray text-center">
             Up to 2 files. Only the PDF format is accepted. Maximum weight of
             00MG
           </p>
@@ -247,7 +246,7 @@ export const ArchitecturalUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-16 border-2 border-baseLightHover rounded-lg">
+    <div className="p-4 pb-16 border border-baseLightHover rounded-lg">
       <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/architectural-drawings-new.png"
@@ -279,7 +278,7 @@ export const QuoteUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-16 border-2 border-baseLightHover rounded-lg">
+    <div className="p-4 pb-16 border border-baseLightHover rounded-lg">
       <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
@@ -354,8 +353,7 @@ const TakeoffUpload = ({
       )} */}
       <div className="flex-1 flex items-end justify-center">
         <Button
-          type="primary"
-          className="w-[124px] mt-4 mb-4"
+          className="mt-4 mb-4 custom-primary-btn"
           onClick={handleUpload}
         >
           Create

@@ -16,8 +16,7 @@ import { Button } from "antd";
 
 import { BuildingBackground } from "@/app/projects/[projectId]/components/Create-Takeoff/Building-Background";
 import { useParams } from "next/navigation";
-import ConfirmAnalyzeModal from "./ConfirmAnalyzeModal";
-import { PageAnalysisStepActive, PageIndexStepActive, PageLebelingStepActive } from "./HeaderStepProgress";
+import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
 
 const Header = ({
@@ -32,52 +31,35 @@ const Header = ({
   const takeOffId = useParams().takeoffId;
 
   const [loading, setLoading] = useState(false);
-  const [hasFinishedAnalyzing, setHasFinishedAnalyzing] = useState(false);
-  const [showAnalyzeModal, setShowAnalyzeModal] = useState<boolean>(false);
 
   const filesData = useMemo(() => {
     if (!fileList) return [];
     return fileList ?? [];
   }, [fileList]);
 
-  const handleAnalyze = async () => {
-    console.log(' handleAnalyze');
-    setShowAnalyzeModal(false);
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // 跳转到识别结果页面
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
-    }, 3000);
-  };
-  const handleAnalyzeClick = async () => {
-    setShowAnalyzeModal(true);
-  };
-
   const handleClickFile = async (file: any) => {
     const unsaved =
       await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
     if (unsaved) {
-      console.log("########### file change");
       // 没有未保存的crop，切换文件
       setSelectedFileId(file.id);
     }
   }
 
   return (
-    <div className="px-14 w-full h-[110px]">
+    <div className="px-14 w-full h-[110px] border-b border-primaryN30">
       <div className="h-full flex flex-row justify-between items-center">
         <div>
-          <Image src="/assets/icons/arrow-left-gray.svg" alt="logo" width={12} height={8}></Image>
+          <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={8}></Image>
         </div>
         <div className="ml-10 h-full flex-1 flex flex-row gap-4 items-center">
           <PageIndexStepActive />
 
-          <div className="mr-14 flex gap-4">
+          <div className="ml-4 mr-14 flex gap-4">
             {filesData?.map((file: any, index: number) => {
               const uploadFile: UploadFile = {
                 id: file.id,
-                name: file.file_name + file.file_name,
+                name: file.file_name,
                 status: file.status || 'undo',
                 url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",
@@ -90,36 +72,22 @@ const Header = ({
                 handleClickFile={handleClickFile}
                 showStatus={true}
                 fileContainerStyle={{
-                  width: "150px",
-                  height: "50px",
+                  width: "130px",
+                  height: "30px",
                 }}
               />;
             })}
           </div>
-          <PageLebelingStepActive />
-          <PageAnalysisStepActive />
+          <PageLabelingStepInActive />
+          <PageAnalysisStepInActive />
         </div>
         <Button
-          type="primary"
-          className="w-[100px] text-white rounded-md"
+          className="custom-primary-btn w-[102px] h-[26px]"
           onClick={() => handleNext()}
         >
-          Next
+          Next Step
         </Button>
       </div>
-
-      {loading && (
-        <BuildingBackground
-          isDone={hasFinishedAnalyzing}
-          totalDuration={90000}
-          onFinish={() => setLoading(false)}
-        />
-      )}
-      <ConfirmAnalyzeModal
-        isOpen={showAnalyzeModal}
-        setIsOpen={setShowAnalyzeModal}
-        onConfirm={handleAnalyze}
-      />
     </div>
   );
 };

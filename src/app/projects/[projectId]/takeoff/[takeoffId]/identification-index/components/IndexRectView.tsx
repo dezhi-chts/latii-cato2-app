@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button, Popconfirm, Popover } from 'antd';
 import Image from 'next/image';
 import { AddRectBoxControls } from '../../components/pdf/Pdf-Controls';
+import DrawingIndexModal from './DrawingIndexModal';
+import TitleInfoModal from './TitleInfoModal';
 const IndexRectView = ({
   indexBoxList = [],
   labelList = [],
@@ -10,6 +12,8 @@ const IndexRectView = ({
   handleDeleteEvidence }: any) => {
   const [selectedIndexId, setSelectedIndexId] = useState<number>(-1);
   const [selectedLabelId, setSelectedLabelId] = useState<number>(-1);
+  const [showDrawingModal, setShowDrawingModal] = useState<boolean>(false);
+  const [showTitleInfoModal, setShowTitleInfoModal] = useState<boolean>(false);
 
   const handleSelectIndex = (indexId: number) => {
     if (indexId !== selectedIndexId) {
@@ -53,14 +57,19 @@ const IndexRectView = ({
       <div className="mt-4 text-xs text-basicGray">Select the Page Index and label examples to improve CATO’s accuracy.</div>
       <div>
         <div className="mt-6 flex flex-row justify-between items-center">
-          <div className="flex flex-row"><span className="w-[14px] h-[14px] rounded-[7px] bg-baseGray text-white text-xxs block text-center">1</span><span className="ml-2 text-xs text-basicGray">Define Index Area</span></div>
-          <div className="underline text-baseGray text-xs">Learn More</div>
+          <div className="flex flex-row">
+            <div className="w-[16px] h-[16px] rounded-full bg-baseGray text-xxs text-white flex justify-center items-center">
+              <span>1</span>
+            </div>
+            <span className="ml-2 text-xs text-basicGray">Define Index Area</span>
+          </div>
+          <div className="underline text-baseGray text-xs cursor-pointer" onClick={() => setShowDrawingModal(true)}>Learn More</div>
         </div>
         <div className="mt-2 flex flex-row"><span className="ml-5 text-xs">Add a box around the entire Index or Table of Contents.</span></div>
         {/** index rect box  */}
         <div className="my-2 mx-4 flex flex-col gap-4">
           {indexBoxList.map((item: any) => {
-            return <div key={item.id} className={`rounded-md relative`} onClick={() => handleSelectIndex(item.id)}>
+            return <div key={item.id} className={`rounded-md relative`}>
               <Image
                 src={'/assets/placeholder-images/example_2.png'}
                 alt={''}
@@ -70,6 +79,7 @@ const IndexRectView = ({
                   width: "100%",
                   height: "auto",
                 }}
+                onClick={() => handleSelectIndex(item.id)}
               />
               {
                 selectedIndexId === item.id &&
@@ -77,6 +87,7 @@ const IndexRectView = ({
                   <div className='absolute right-1 top-1'>
                     <Popconfirm
                       title="Are you sure you want to delete this evidence?"
+                      trigger="click"
                       onConfirm={() => { handleDeleteEvidence([item.id]) }}
                     >
                       <div className="w-[18px] h-[16px] flex items-center justify-center bg-white rounded-md cursor-pointer shadow-md">
@@ -99,14 +110,20 @@ const IndexRectView = ({
             theme={cropsCount > 0 ? "primary-light" : "primary"}
             fullWidth={true}
             handleAddRectBox={() => {
-              cropsCount === 0 && handleAddRectBox('Table')
+              cropsCount === 0 && handleAddRectBox('Drawing Index')
             }}
           />
         </div>
       </div>
       <div>
         <div className="mt-6 flex flex-row justify-between items-center">
-          <div className="flex flex-row"><span className="w-[14px] h-[14px] rounded-[7px] bg-baseGray text-white text-xxs block text-center">2</span><span className="ml-2 text-xs text-basicGray">Identify label Format</span></div>
+          <div className="flex flex-row">
+            <div className="w-[16px] h-[16px] rounded-full bg-baseGray text-xxs text-white flex justify-center items-center">
+              <span>2</span>
+            </div>
+            <span className="ml-2 text-xs text-basicGray">Identify label Format</span>
+          </div>
+          <div className="underline text-baseGray text-xs cursor-pointer" onClick={() => setShowTitleInfoModal(true)}>Learn More</div>
         </div>
         {
           true &&
@@ -157,13 +174,24 @@ const IndexRectView = ({
                 text="Label"
                 fullWidth={true}
                 handleAddRectBox={() => {
-                  cropsCount === 0 && handleAddRectBox('Item')
+                  cropsCount === 0 && handleAddRectBox('Title Info')
                 }}
               />
             </div>
           </>)
         }
       </div>
+      {showDrawingModal && <DrawingIndexModal
+        isOpen={showDrawingModal}
+        closeModal={() => setShowDrawingModal(false)}
+      />}
+      {
+        showTitleInfoModal &&
+        <TitleInfoModal
+          isOpen={showTitleInfoModal}
+          closeModal={() => setShowTitleInfoModal(false)}
+        />
+      }
     </div>
   );
 }

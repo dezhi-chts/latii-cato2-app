@@ -12,6 +12,7 @@ const testFields: CustomField[] = [{
   field_type: FieldType.INPUT_TEXT,
   Hint_text: "Primary Location",
   required: true,
+  suffixIcon: '/assets/icons/location.svg'
 },
   // {
   //   field_name: 'project_end_customer',
