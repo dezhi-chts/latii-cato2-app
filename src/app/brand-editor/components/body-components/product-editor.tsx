@@ -15,7 +15,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full"
+								className="w-full placeholder-text-12"
 							>
 							</Select>
 						</div>
@@ -26,7 +26,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full"
+								className="w-full placeholder-text-12"
 							>
 							</Select>
 						</div>
@@ -37,7 +37,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full"
+								className="w-full placeholder-text-12"
 							>
 							</Select>
 						</div>
@@ -52,6 +52,13 @@ const ProductEditor = () => {
 			<div className="flex-1 border border-[#E8E8E8] rounded-md ml-4 h-full overflow-y-auto">
 
 			</div>
+			<style global jsx>
+				{`
+					.placeholder-text-12 .ant-select-selection-placeholder {
+						font-size: 12px;
+					}
+				`}
+			</style>
 		</div>
 	);
 };
