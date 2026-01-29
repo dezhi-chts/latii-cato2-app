@@ -226,6 +226,66 @@
             50% { opacity: 0.5; }
         }
 
+
+        /* 上传状态提示 */
+        .upload-status {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upload-status.active {
+            display: flex;
+        }
+
+        .upload-status-icon {
+            font-size: 24px;
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .upload-status-text {
+            flex: 1;
+        }
+
+        .upload-status-title {
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 4px;
+        }
+
+        .upload-status-detail {
+            font-size: 12px;
+            color: #856404;
+            opacity: 0.8;
+        }
+
+        .upload-progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #fff;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .upload-progress-fill {
+            height: 100%;
+            background: #ffc107;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+
         /* 进度区域 */
         .progress-section {
             background: #f8f9fa;
@@ -471,6 +531,19 @@
             </div>
 
             <!-- Progress Section -->
+
+            <!-- 上传状态 -->
+            <div class="upload-status" id="uploadStatus">
+                <span class="upload-status-icon">📤</span>
+                <div class="upload-status-text">
+                    <div class="upload-status-title">Uploading PDF file...</div>
+                    <div class="upload-status-detail" id="uploadStatusDetail">Preparing upload...</div>
+                    <div class="upload-progress-bar">
+                        <div class="upload-progress-fill" id="uploadProgressFill"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="progress-section" id="progressSection">
                 <div class="progress-header">
                     <span class="progress-title">Processing Progress</span>
@@ -727,6 +800,10 @@
                 // Show progress section
                 elements.progressSection.classList.add('active');
 
+                // ✅ 重置处理进度条为0%
+                elements.progressBar.style.width = '0%';
+                elements.progressPercentage.textContent = '0%';
+
                 // Step 2: Subscribe to SSE stream
                 connectSSE(initResult.request_id);
 
@@ -738,7 +815,7 @@
             }
         });
 
-        // Step 1: 初始化任务
+        // Step 1: 初始化任务（带上传进度）
         async function initializeTask(file) {
             const formData = new FormData();
             formData.append('pdf_file', file);
@@ -763,17 +840,76 @@
 
             const url = buildUrl(API_CONFIG.endpoints.init, `?${params}`);
 
-            const response = await fetch(url, {
-                method: 'POST',
-                body: formData
+            // ✅ 显示上传状态
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadStatusDetail = document.getElementById('uploadStatusDetail');
+            const uploadProgressFill = document.getElementById('uploadProgressFill');
+
+            uploadStatus.classList.add('active');
+            uploadStatusDetail.textContent = `Uploading ${file.name} (${formatFileSize(file.size)})...`;
+            uploadProgressFill.style.width = '0%';
+
+            // ✅ 使用 XMLHttpRequest 以支持上传进度
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 监听上传进度
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        uploadProgressFill.style.width = percentComplete + '%';
+                        uploadStatusDetail.textContent =
+                            `Uploading ${file.name} (${formatFileSize(e.loaded)} / ${formatFileSize(e.total)}) - ${percentComplete}%`;
+                    }
+                });
+
+                // 监听加载完成
+                xhr.addEventListener('load', () => {
+                    // 隐藏上传状态
+                    uploadStatus.classList.remove('active');
+
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response);
+                        } catch (e) {
+                            reject(new Error('Failed to parse response: ' + e.message));
+                        }
+                    } else {
+                        try {
+                            const error = JSON.parse(xhr.responseText);
+                            reject(new Error(error.detail || `HTTP ${xhr.status}`));
+                        } catch (e) {
+                            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                        }
+                    }
+                });
+
+                // 监听错误
+                xhr.addEventListener('error', () => {
+                    uploadStatus.classList.remove('active');
+                    reject(new Error('Network error during upload'));
+                });
+
+                // 监听中断
+                xhr.addEventListener('abort', () => {
+                    uploadStatus.classList.remove('active');
+                    reject(new Error('Upload cancelled'));
+                });
+
+                // 发送请求
+                xhr.open('POST', url, true);
+                xhr.send(formData);
             });
+        }
 
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || `HTTP ${response.status}`);
-            }
-
-            return await response.json();
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
 
         // Step 2: Connect to SSE
