@@ -45,7 +45,6 @@ import {
   SelectPagesControls,
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
-import StepProgress from "./components/StepProgress";
 import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
@@ -57,6 +56,7 @@ export type Adding = {
 };
 
 const IdentificationIndex = () => {
+  const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
@@ -275,13 +275,6 @@ const IdentificationIndex = () => {
     });
   };
 
-  const handleThumbnail = () => {
-    setShowThumbnail(!showThumbnail);
-  };
-
-  const handleClearAllCrop = () => {
-    pdfRef?.current?.clearCropSections?.();
-  };
 
   const handleAppendEvidence = (uploadData: any) => {
     let newUploadData = uploadData.map((item: any) => ({
@@ -363,9 +356,26 @@ const IdentificationIndex = () => {
           }
         })
       } else {
-        // 检测到所有文件都已经处理，则即将跳转下一个页面
+        // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
+        confirm({
+          title: "Warning",
+          content: `All files have been processed. Do you want to continue to the analysis step?`,
+          okText: "OK",
+          cancelText: "Cancel",
+          onOk: () => {
+            // 进行分析请求，请求成功，则跳转
+            handleAnalysis();
+          }
+        })
       }
     }
+  }
+
+  const handleAnalysis = async () => {
+    setBuildLoading(true);
+    setTimeout(() => {
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
+    }, 3000);
   }
 
   return (

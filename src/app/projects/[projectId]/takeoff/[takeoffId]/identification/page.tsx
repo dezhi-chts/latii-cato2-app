@@ -38,7 +38,6 @@ import {
   SelectPagesControls,
   ClearAllControls,
 } from "../components/pdf/Pdf-Controls";
-import StepProgress from "../identification-index/components/StepProgress";
 
 const defaultPageCategory = [
   {
@@ -403,9 +402,6 @@ const Identification = () => {
             ></PdfWrapper>
           </div>
         </div>
-      </div>
-      <div className="h-[130px] border-t border-primaryN30 flex items-center justify-center">
-        <StepProgress currentStep={2} />
       </div>
       {fullLoading && <Spin fullscreen />}
     </div>

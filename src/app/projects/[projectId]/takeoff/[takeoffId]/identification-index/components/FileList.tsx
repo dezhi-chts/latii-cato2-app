@@ -18,6 +18,10 @@ type FilePanelProps = {
   textClassName?: string;
   isSelected?: boolean;
   fileContainerStyle?: React.CSSProperties;
+  showBorder?: boolean;
+  flexRow?: boolean;
+  switchBgColor?: boolean; // 选中时，是否切换背景颜色
+  switchTextColor?: boolean; // 选中时，是否切换文字颜色
 };
 
 export const FilePanel = ({
@@ -26,10 +30,15 @@ export const FilePanel = ({
   canBeRemoved = false,
   isSelected = false,
   fileContainerStyle = {},
+  showBorder = true,
+  flexRow = true,
+  switchBgColor = true, // 选中时，是否切换背景颜色
+  switchTextColor = false, // 选中时，是否切换文字颜色
 }: FilePanelProps) => {
+  const imageSize = flexRow ? { width: 18, height: 21 } : { width: 25, height: 30 };
   return (
     <div
-      className={`relative w-32 h-20 rounded flex flex-row items-center justify-center p-1 ${!isSelected ? "border border-primaryN50" : "bg-baseLightHover"}`}
+      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border-2 border-baseLight' : ''}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -43,11 +52,11 @@ export const FilePanel = ({
       <Image
         src="/assets/icons/extensions/pdf.svg"
         alt="file pdf icon"
-        width={18}
-        height={21}
+        width={imageSize.width}
+        height={imageSize.height}
       />
       <div
-        className={`px-1 break-all text-xs line-clamp-2 text-center text-[7px] text-elusionDarkGrayTint`}
+        className={`${flexRow ? 'px-1' : 'pt-3'} break-all text-xs line-clamp-2 text-center text-[7px] ${isSelected && switchTextColor ? 'text-forumBlue' : 'text-baseGray'} `}
       >
         {file.name}
       </div>

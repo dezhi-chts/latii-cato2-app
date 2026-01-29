@@ -1,5 +1,28 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { Progress } from "antd";
+
+const DrawingIndexContent = () => {
+  return (
+    <div>
+      <p className="text-xl text-forumBlue">Getting things ready...</p>
+      <p className="text-center">
+        Analyzing document structure and preparing the Index.
+      </p>
+    </div>
+  )
+}
+
+const LabelingContent = () => {
+  return (
+    <div>
+      <p className="text-xl text-forumBlue">Getting things ready...</p>
+      <p className="text-center">
+        Creating labels on your files.
+      </p>
+    </div>
+  )
+}
 
 const BuildingBackground = ({
   isDone = false,
@@ -27,6 +50,7 @@ const BuildingBackground = ({
           onFinish={onFinish}
           totalDuration={totalDuration}
         />
+        {/* <CircleProgress /> */}
         <p className="text-xl text-forumBlue">Getting things ready...</p>
         <p className="text-center">
           Analyzing document structure and preparing the Index.
@@ -35,6 +59,29 @@ const BuildingBackground = ({
       </div>
     </div>
   );
+};
+
+const CircleProgress = () => {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          return 0;
+        }
+        return prev + 0.05; // 减小每次增加的值以减慢速度
+      });
+    }, 50); // 适当调整间隔以保持动画流畅
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div>
+      <Progress type="circle" percent={progress} showInfo={false} size={120} />
+    </div>
+  )
 };
 
 const ProgressSpinner = ({

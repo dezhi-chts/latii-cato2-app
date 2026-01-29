@@ -44,30 +44,29 @@ const CreateProjectModal = ({
     <Modal
       open={isOpen}
       title={
-        <p className="ml-1 text-forumBlue text-lg font-normal">Create New Project</p>
+        <p className="ml-1 text-forumBlue text-lg font-normal font-nunito">Create New Project</p>
       }
       width={1250}
       footer={null}
       onCancel={closeModal}
     >
-      <div className="mt-8 p-2 flex flex-row justify-between">
-        <div className="w-[400px] max-h-[80vh] flex flex-col border border-basicLightGray rounded-md overflow-hidden">
-          <div className="px-5 my-4 text-lg text-baseGray">Blank Template</div>
+      <div className="mt-8 p-2 flex flex-row justify-between font-nunito">
+        <div className="w-[400px] max-h-[80vh] flex flex-col border border-baseLightHover rounded-md overflow-hidden">
+          <div className="px-5 my-4 text-lg">Start from Blank Template</div>
           <div className="px-5 py-2 overflow-y-auto">
             <ProjectForm ref={projectFormRef} projectSettings={projectSettings} setProjectSettings={setProjectSettings} />
           </div>
           <div className="flex-1 flex items-end justify-center">
             <Button
               onClick={handleProjectSubmit}
-              type="primary"
-              className="w-[124px] mb-4"
+              className="mb-4 custom-primary-btn"
             >
               Create
             </Button>
           </div>
         </div>
-        <div className="px-5 w-[720px] flex flex-col border border-basicLightGray rounded-md overflow-y-auto">
-          <div className="my-4 text-lg text-baseGray">From Takeoff</div>
+        <div className="px-5 w-[720px] flex flex-col border border-baseLightHover rounded-md overflow-y-auto">
+          <div className="my-4 text-lg">Start from Takeoff</div>
           <div className="flex-1">
             <TakeoffUpload onHandleUpload={handleUpload} />
           </div>
