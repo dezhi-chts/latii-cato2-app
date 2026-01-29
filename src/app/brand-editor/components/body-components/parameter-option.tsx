@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { InfoCircleOutlined, PlusOutlined, DeleteOutlined, FileOutlined, CopyOutlined } from "@ant-design/icons";
-import { Tooltip, Button, TreeSelect, notification, Popconfirm, Empty, Input, Upload, Popover } from 'antd';
+import { InfoCircleOutlined, PlusOutlined, DeleteOutlined, FileOutlined, CopyOutlined, UploadOutlined, EyeOutlined } from "@ant-design/icons";
+import { Tooltip, Button, TreeSelect, notification, Popconfirm, Empty, Input, Upload, Popover, Image as AntdImage } from 'antd';
 import LoadingScreen from "@/components/loading-screen";
 const { TextArea } = Input;
 import {
@@ -333,7 +333,8 @@ const LibraryOption = () => {
 		return code;
 	};
 
-	const onBlurSubOption = (option: any, $index: any) => {
+	const onBlurSubOption = (optionMsg: any, $index: any) => {
+		let option = JSON.parse(JSON.stringify(optionMsg))
 		if (!option?.name) {
 			return
 		}
@@ -455,7 +456,7 @@ const LibraryOption = () => {
 		}
 	};
 
-	const onCopyLibrary = async (fromLibraryOption:any) => {
+	const onCopyLibrary = async (fromLibraryOption: any) => {
 		if (!copyToLibraryOptionId) {
 			notification.warning({
 				message: "Warning",
@@ -611,7 +612,7 @@ const LibraryOption = () => {
 											<Popover
 												zIndex={10}
 												content={
-													<div className="w-[200px]" onClick={(e)=>{e.stopPropagation();}}>
+													<div className="w-[200px]" onClick={(e) => { e.stopPropagation(); }}>
 														<TreeSelect
 															style={{ width: '100%', textAlign: "left" }}
 															styles={{
@@ -840,31 +841,44 @@ const LibraryOption = () => {
 															</div>
 														}
 														{item?.other_msg?.file_key && (
-															<Upload
-																showUploadList={false}
-																beforeUpload={beforeUpload}
-																customRequest={({ file }) => uploadFile(file, item, index)}
-																className="mt-1"
-															>
-																<div
-																	className="mt-1 w-[95px] h-[95px] rounded-md border border-dashed border-[#E8E8E8] overflow-hidden flex items-center justify-center cursor-pointer"
-																	style={{ width: "95px", height: "95px", marginLeft: "auto", marginRight: "auto", display: "table-cell", verticalAlign: "middle" }}
-																>
-																	<img
-																		src={item?.other_msg?.file_url}
-																		alt="Image"
-																		title="click to upload"
-																		style={{
-																			maxWidth: "90%",
-																			maxHeight: "90%",
-																			margin: "auto",
-																			display: "block"
-																		}}
-																	/>
-																</div>
-															</Upload>
-														)}
+															<div className="w-[95px] h-[95px] mx-auto rounded-md border border-dashed border-[#E8E8E8] overflow-hidden flex items-center justify-center bg-[#fafafa]">
+																<AntdImage
+																	src={item?.other_msg?.file_url}
+																	className="block"
+																	style={{
+																		maxWidth: "100%",
+																		maxHeight: "100%",
+																		objectFit: "contain",
+																		margin: "auto",
+																	}}
+																	preview={{
+																		mask: (
+																			<div
+																				className="flex items-center justify-center gap-3 text-white"
+																			>
+																				{/* 重新上传 */}
+																				<Upload
+																					showUploadList={false}
+																					beforeUpload={beforeUpload}
+																					customRequest={({ file }) => uploadFile(file, item, index)}
+																				>
+																					<UploadOutlined
+																						onClick={e => e.stopPropagation()}
+																						className="text-white text-[16px] cursor-pointer hover:text-[#427cce]"
+																					/>
+																				</Upload>
 
+																				{/* 预览（Image 自带） */}
+																				<EyeOutlined
+																					className="text-[16px] cursor-pointer hover:text-[#427cce]"
+																				/>
+																			</div>
+																		),
+																		maskClassName: "rounded-md",
+																	}}
+																/>
+															</div>
+														)}
 													</div>
 													<div className="ml-2 flex-1">
 														<div className="text-[#717171]">Hint Text</div>
