@@ -3,7 +3,7 @@
 import { InputNumber } from "antd";
 import RequiredHint from "./RequiredHint";
 
-type NumberProps = {
+type NumbersProps = {
   name: string;
   required: boolean;
   hint_text?: string;
@@ -11,13 +11,13 @@ type NumberProps = {
   onBlur?: () => void;
 };
 
-const Number = ({
+const Numbers = ({
   name,
   required,
   hint_text = "",
   value,
   onBlur,
-}: NumberProps) => {
+}: NumbersProps) => {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
@@ -25,7 +25,7 @@ const Number = ({
       </p>
       <InputNumber
         placeholder={hint_text}
-        className="max-w-80"
+        className="min-w-80 max-w-80"
         value={value}
         onBlur={onBlur}
       />
@@ -33,4 +33,4 @@ const Number = ({
   );
 };
 
-export default Number;
+export default Numbers;

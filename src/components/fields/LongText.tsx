@@ -22,13 +22,14 @@ const LongText = ({
       <p className="text-sm">
         {name} {RequiredHint(required)}
       </p>
-      <TextArea
-        rows={4}
-        placeholder={hint_text}
-        className="max-w-80"
-        value={value}
-        onBlur={onBlur}
-      />
+      <div className="max-w-80">
+        <TextArea
+          rows={4}
+          placeholder={hint_text}
+          value={value}
+          onBlur={onBlur}
+        />
+      </div>
     </div>
   );
 };

@@ -32,7 +32,7 @@ export const PROJECT_INPUT_TYPES_OPTIONS = [
   "short_text",
   "long_text",
   "location",
-  "number",
+  "numbers",
   "date",
   "link",
   "selector",
