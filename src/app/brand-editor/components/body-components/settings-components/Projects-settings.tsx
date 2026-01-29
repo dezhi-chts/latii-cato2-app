@@ -5,6 +5,7 @@ import { FieldBox } from "./Field-Box";
 import { Divider } from "antd";
 import ShortText from "@/components/fields/ShortText";
 import Selector from "@/components/fields/Selector";
+import LongText from "@/components/fields/LongText";
 
 const ProjectsSettings = () => {
   const mockedFields = [
@@ -24,16 +25,51 @@ const ProjectsSettings = () => {
       has_hint_text: false,
       options: ["option1", "option2", "option3"],
     },
+    {
+      id: 1,
+      name: "Project Name",
+      type: "short_text",
+      required: true,
+      has_hint_text: true,
+      hint_text: "Input a recognizable name for you.",
+    },
+    {
+      id: 2,
+      name: "Selector",
+      type: "selector",
+      required: true,
+      has_hint_text: false,
+      options: ["option1", "option2", "option3"],
+    },
+    {
+      id: 1,
+      name: "Project Name",
+      type: "short_text",
+      required: true,
+      has_hint_text: true,
+      hint_text: "Input a recognizable name for you.",
+    },
   ];
+  const fieldsCount = mockedFields.length;
+
+  const gridConfig =
+    fieldsCount <= 7
+      ? { cols: 1, rows: fieldsCount }
+      : fieldsCount <= 10
+      ? { cols: 2, rows: 5 }
+      : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
+
+  const isTwoColumns = gridConfig.cols > 1;
 
   const FIELD_COMPONENTS: Record<string, (props: any) => React.ReactNode> = {
     short_text: (props) => <ShortText {...props} />,
     selector: (props) => <Selector {...props} />,
+    long_text: (props) => <LongText {...props} />,
   };
 
   return (
-    <div className="flex gap-20">
-      <div className="w-1/2 flex flex-col gap-8">
+    <div className="flex gap-20 mb-10">
+      <div className="w-5/12 flex flex-col gap-8">
         <div className="flex justify-between items-end">
           <div className="flex flex-col gap-1">
             <p className="text-baseDark text-base">Project Information</p>
@@ -60,7 +96,7 @@ const ProjectsSettings = () => {
         </div>
       </div>
       <Divider type="vertical" className="h-auto" />
-      <div className="w-1/2">
+      <div className="w-7/12">
         <div className="flex flex-col gap-1">
           <p className="text-baseDark text-base">Preview</p>
 
@@ -69,7 +105,11 @@ const ProjectsSettings = () => {
           </p>
         </div>
 
-        <div className="mt-6 border-primaryN30 border rounded-lg w-4/6 p-6 ">
+        <div
+          className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all
+    ${isTwoColumns ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"}
+  `}
+        >
           <div className="flex gap-4 items-center pb-6">
             <svg
               width="26"
@@ -99,7 +139,14 @@ const ProjectsSettings = () => {
             </svg>
             <p className="text-forumBlue">Create New Project</p>
           </div>
-          <div className="flex flex-col gap-4">
+          <div
+            className="grid gap-4"
+            style={{
+              gridTemplateColumns: `repeat(${gridConfig.cols}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${gridConfig.rows}, auto)`,
+              gridAutoFlow: "column",
+            }}
+          >
             {mockedFields.map((field) => {
               const RenderComponent = FIELD_COMPONENTS[field.type];
 

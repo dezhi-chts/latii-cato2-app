@@ -7,6 +7,7 @@ type SelectorProps = {
   required: boolean;
   hint_text?: string;
   options?: string[];
+  onChange?: () => void;
 };
 
 const Selector = ({
@@ -14,6 +15,7 @@ const Selector = ({
   required,
   hint_text = "",
   options = [],
+  onChange,
 }: SelectorProps) => {
   const inputTypeOptions = options.map((t) => ({
     value: t,
@@ -29,6 +31,7 @@ const Selector = ({
         placeholder={hint_text}
         className="max-w-80"
         options={inputTypeOptions}
+        onChange={onChange}
       />
     </div>
   );

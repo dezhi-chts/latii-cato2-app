@@ -1,7 +1,7 @@
 import { Input } from "antd";
 import RequiredHint from "./RequiredHint";
 
-type ShortTextProps = {
+type LongTextProps = {
   name: string;
   required: boolean;
   hint_text?: string;
@@ -9,19 +9,21 @@ type ShortTextProps = {
   onBlur?: () => void;
 };
 
-const ShortText = ({
+const LongText = ({
   name,
   required,
   hint_text = "",
   value,
   onBlur,
-}: ShortTextProps) => {
+}: LongTextProps) => {
+  const { TextArea } = Input;
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
         {name} {RequiredHint(required)}
       </p>
-      <Input
+      <TextArea
+        rows={4}
         placeholder={hint_text}
         className="max-w-80"
         value={value}
@@ -31,4 +33,4 @@ const ShortText = ({
   );
 };
 
-export default ShortText;
+export default LongText;

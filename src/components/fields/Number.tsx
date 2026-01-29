@@ -1,7 +1,9 @@
-import { Input } from "antd";
+"use client";
+
+import { InputNumber } from "antd";
 import RequiredHint from "./RequiredHint";
 
-type ShortTextProps = {
+type NumberProps = {
   name: string;
   required: boolean;
   hint_text?: string;
@@ -9,19 +11,19 @@ type ShortTextProps = {
   onBlur?: () => void;
 };
 
-const ShortText = ({
+const Number = ({
   name,
   required,
   hint_text = "",
   value,
   onBlur,
-}: ShortTextProps) => {
+}: NumberProps) => {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
         {name} {RequiredHint(required)}
       </p>
-      <Input
+      <InputNumber
         placeholder={hint_text}
         className="max-w-80"
         value={value}
@@ -31,4 +33,4 @@ const ShortText = ({
   );
 };
 
-export default ShortText;
+export default Number;
