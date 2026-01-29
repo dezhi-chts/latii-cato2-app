@@ -856,19 +856,17 @@ const LibraryOption = () => {
 																			<div
 																				className="flex items-center justify-center gap-3 text-white"
 																			>
-																				{/* 重新上传 */}
-																				<Upload
-																					showUploadList={false}
-																					beforeUpload={beforeUpload}
-																					customRequest={({ file }) => uploadFile(file, item, index)}
-																				>
-																					<UploadOutlined
-																						onClick={e => e.stopPropagation()}
-																						className="text-white text-[16px] cursor-pointer hover:text-[#427cce]"
-																					/>
-																				</Upload>
-
-																				{/* 预览（Image 自带） */}
+																				<div onClick={(e)=>{e.stopPropagation()}}>
+																					<Upload
+																						showUploadList={false}
+																						beforeUpload={beforeUpload}
+																						customRequest={({ file }) => uploadFile(file, item, index)}
+																					>
+																						<UploadOutlined
+																							className="text-white text-[16px] cursor-pointer hover:text-[#427cce]"
+																						/>
+																					</Upload>
+																				</div>
 																				<EyeOutlined
 																					className="text-[16px] cursor-pointer hover:text-[#427cce]"
 																				/>
