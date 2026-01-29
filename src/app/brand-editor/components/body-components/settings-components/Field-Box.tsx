@@ -24,7 +24,16 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
   const inputTypeOptions = PROJECT_INPUT_TYPES_OPTIONS.map((t) => ({
     value: t,
-    label: formatLabel(t),
+    label: (
+      <div className="flex items-center gap-2">
+        <img
+          src={`/assets/icons/fields/${t}.svg`}
+          alt={t}
+          className="w-4 h-4"
+        />
+        <span>{formatLabel(t)}</span>
+      </div>
+    ),
   }));
 
   return (
