@@ -9,7 +9,7 @@ const TitleInfoModal = ({
       onCancel={closeModal}
       title={null}
       closable={false}
-      width={'800px'}
+      width={'auto'}
       centered={true}
       footer={
         <div className='flex justify-end font-nunito'>
@@ -19,7 +19,7 @@ const TitleInfoModal = ({
         </div>
       }
     >
-      <div className='flex flex-col font-nunito'>
+      <div className='w-[784px] h-[265px] flex flex-col font-nunito'>
         <div className='flex flex-row gap-4'>
           <div className='w-[310px]'>
             <div className='text-lg text-forumBlue'>How to select a Label Example</div>
@@ -29,8 +29,8 @@ const TitleInfoModal = ({
             </ul>
             <div className='text-xs font-light'>This teaches Cato the pattern of your numbering (e.g., "Letter-Number" vs. "Number-Only"). Once you pick one, Cato will find all similar matching text in all pages.</div>
           </div>
-          <div className="w-[460px] h-[260px]">
-            <img src="/assets/images/title-info.gif" alt="title info example" width={460} height={260} style={{ maxWidth: '100%' }} />
+          <div className="w-[457px] h-[265px]">
+            <img src="/assets/images/title-info.gif" alt="title info example" width={457} height={265} />
           </div>
         </div>
       </div>

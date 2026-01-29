@@ -16,7 +16,7 @@ import { Button } from "antd";
 
 import { BuildingBackground } from "@/app/projects/[projectId]/components/Create-Takeoff/Building-Background";
 import { useParams } from "next/navigation";
-import { PageAnalysisStepInActive, PageIndexStepActive, PageLebelingStepInActive } from "./HeaderStepProgress";
+import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
 
 const Header = ({
@@ -50,7 +50,7 @@ const Header = ({
     <div className="px-14 w-full h-[110px] border-b border-primaryN30">
       <div className="h-full flex flex-row justify-between items-center">
         <div>
-          <Image src="/assets/icons/arrow-left-gray.svg" alt="logo" width={12} height={8}></Image>
+          <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={8}></Image>
         </div>
         <div className="ml-10 h-full flex-1 flex flex-row gap-4 items-center">
           <PageIndexStepActive />
@@ -78,7 +78,7 @@ const Header = ({
               />;
             })}
           </div>
-          <PageLebelingStepInActive />
+          <PageLabelingStepInActive />
           <PageAnalysisStepInActive />
         </div>
         <Button

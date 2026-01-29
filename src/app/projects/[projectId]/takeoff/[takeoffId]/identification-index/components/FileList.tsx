@@ -38,7 +38,7 @@ export const FilePanel = ({
   const imageSize = flexRow ? { width: 18, height: 21 } : { width: 25, height: 30 };
   return (
     <div
-      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border-1 border-baseLight' : ''}`}
+      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border border-baseLightHover' : ''}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -70,6 +70,7 @@ export const FileItem = ({
   fileContainerStyle = {},
   handleClickFile,
   showStatus = false,
+  showBorder = true,
 }: any) => {
   const statusMapInfo: any = {
     [FileStatus.Completed]: {
@@ -99,6 +100,7 @@ export const FileItem = ({
         canBeRemoved={false}
         isSelected={selectedFileId === file.id}
         fileContainerStyle={fileContainerStyle}
+
       />
       {showStatus && (
         <div

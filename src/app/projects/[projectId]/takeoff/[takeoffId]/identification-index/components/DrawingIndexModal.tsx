@@ -10,7 +10,7 @@ const DrawingIndexModal = ({
       title={null}
       closable={false}
       centered={true}
-      width={'800px'}
+      width={'auto'}
       footer={
         <div className='my-2 flex justify-end font-nunito'>
           <Button className='custom-default-btn' onClick={closeModal}>
@@ -19,8 +19,8 @@ const DrawingIndexModal = ({
         </div>
       }
     >
-      <div className='flex flex-col gap-y-4 font-nunito'>
-        <div className='flex flex-row gap-4'>
+      <div className='w-[784px] h-[302px] flex flex-col gap-y-4 font-nunito'>
+        <div className='flex flex-row justify-between'>
           <div className='w-[300px]'>
             <div className='text-lg text-forumBlue'>How to select the Index Area</div>
             <div className='my-4 text-xs font-light'>Draw a box that encapsulates the entire Table of Contents or Sheet Index list.</div>
@@ -30,8 +30,8 @@ const DrawingIndexModal = ({
               <li>Cato will strictly limit its search to this area, anything outside this box may be ignored.</li>
             </ul>
           </div>
-          <div className="w-[460px] h-[300px]">
-            <img src="/assets/images/drawing-index.gif" alt="drawing index example" width={460} height={300} style={{ maxWidth: '100%' }} />
+          <div className="w-[457px] h-[302px]">
+            <img src="/assets/images/drawing-index.gif" alt="drawing index example" width={457} height={302} />
           </div>
         </div>
       </div>

@@ -76,7 +76,8 @@ interface ThumbnailProps {
   showCategory?: boolean; // 是否显示分类
   categoryList?: {  // 分类列表
     type: string;
-    primaryColor: string;
+    color: string;
+    icon: string;
   }[];
   onChangePageType?: (page: number, type: string) => void; // 切换页面类型回调
 }
