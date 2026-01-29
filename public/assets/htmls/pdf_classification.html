@@ -458,6 +458,115 @@
             margin-top: 10px;
             display: inline-block;
         }
+
+        /* ========== 上传进度状态 ========== */
+        .upload-status {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .upload-status.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-status-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .upload-status-icon {
+            font-size: 32px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .upload-status-text {
+            flex: 1;
+        }
+
+        .upload-status-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 4px;
+        }
+
+        .upload-status-detail {
+            font-size: 13px;
+            color: #636e72;
+        }
+
+        .upload-progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+            position: relative;
+        }
+
+        .upload-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b894 0%, #00cec9 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .upload-progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .upload-progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #2d3436;
+            font-weight: 500;
+        }
+
+
     </style>
 </head>
 <body>
@@ -518,6 +627,28 @@
             <a class="toggle-settings" onclick="toggleSettings()">Advanced Settings ⚙️</a>
 
             <!-- 进度区域 -->
+
+            <!-- 上传进度状态 -->
+            <div class="upload-status" id="uploadStatus">
+                <div class="upload-status-header">
+                    <span class="upload-status-icon">📤</span>
+                    <div class="upload-status-text">
+                        <div class="upload-status-title">Uploading PDF file...</div>
+                        <div class="upload-status-detail" id="uploadStatusDetail">
+                            Preparing upload...
+                        </div>
+                    </div>
+                </div>
+                <div class="upload-progress-bar-container">
+                    <div class="upload-progress-bar-fill" id="uploadProgressFill"></div>
+                </div>
+                <div class="upload-progress-info">
+                    <span id="uploadProgressLoaded">0 MB</span>
+                    <span id="uploadProgressPercent">0%</span>
+                    <span id="uploadProgressTotal">0 MB</span>
+                </div>
+            </div>
+
             <div class="progress-section" id="progressSection">
                 <div class="progress-header">
                     <span class="progress-title">Processing...</span>
@@ -655,7 +786,71 @@
             settings.style.display = settings.style.display === 'none' ? 'block' : 'none';
         }
 
-        // 上传文件
+
+        // ========== 工具函数 ==========
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 使用 XMLHttpRequest 上传并监听进度
+        function uploadWithProgress(url, formData, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 监听上传进度
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const progress = {
+                            loaded: e.loaded,
+                            total: e.total,
+                            percent: (e.loaded / e.total) * 100
+                        };
+                        onProgress(progress);
+                    }
+                });
+
+                // 监听完成
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response);
+                        } catch (e) {
+                            reject(new Error('Failed to parse response: ' + e.message));
+                        }
+                    } else {
+                        try {
+                            const error = JSON.parse(xhr.responseText);
+                            reject(new Error(error.detail || `HTTP ${xhr.status}`));
+                        } catch (e) {
+                            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                        }
+                    }
+                });
+
+                // 监听错误
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error during upload'));
+                });
+
+                // 监听中断
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload cancelled'));
+                });
+
+                // 发送请求
+                xhr.open('POST', url, true);
+                xhr.send(formData);
+            });
+        }
+
+        // 上传文件（带上传进度）
         async function uploadFile() {
             if (!selectedFile) return;
 
@@ -664,13 +859,25 @@
             const uploadBtnText = document.getElementById('uploadBtnText');
 
             const progressSection = document.getElementById('progressSection');
-            progressSection.style.display = 'block'; // 强制显示
+            progressSection.style.display = 'block';
             progressSection.classList.add('show');
 
             // 禁用按钮
             uploadBtn.disabled = true;
             uploadSpinner.style.display = 'inline-block';
             uploadBtnText.textContent = 'Uploading...';
+
+            // ✅ 显示上传状态
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadStatusDetail = document.getElementById('uploadStatusDetail');
+            const uploadProgressFill = document.getElementById('uploadProgressFill');
+            const uploadProgressLoaded = document.getElementById('uploadProgressLoaded');
+            const uploadProgressPercent = document.getElementById('uploadProgressPercent');
+            const uploadProgressTotal = document.getElementById('uploadProgressTotal');
+
+            uploadStatus.classList.add('active');
+            uploadStatusDetail.textContent = `Uploading ${selectedFile.name} (${formatFileSize(selectedFile.size)})...`;
+            uploadProgressTotal.textContent = formatFileSize(selectedFile.size);
 
             // 准备表单数据
             const formData = new FormData();
@@ -682,19 +889,22 @@
             const maxBatches = document.getElementById('maxBatches').value;
 
             try {
-                const response = await fetch(
-                    `${API_BASE_URL}/pdf/batch/classify-pages-async?model_name=${modelName}&dpi=${dpi}&max_concurrent_batches=${maxBatches}`,
-                    {
-                        method: 'POST',
-                        body: formData
-                    }
-                );
+                // ✅ 使用 XMLHttpRequest 支持上传进度
+                const url = `${API_BASE_URL}/pdf/batch/classify-pages-async?model_name=${modelName}&dpi=${dpi}&max_concurrent_batches=${maxBatches}`;
 
-                if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.status}`);
-                }
+                const data = await uploadWithProgress(url, formData, (progress) => {
+                    // 实时更新进度
+                    const percent = Math.round(progress.percent);
+                    uploadProgressFill.style.width = percent + '%';
+                    uploadProgressLoaded.textContent = formatFileSize(progress.loaded);
+                    uploadProgressPercent.textContent = percent + '%';
+                    uploadStatusDetail.textContent =
+                        `Uploading ${selectedFile.name} - ${percent}% (${formatFileSize(progress.loaded)} / ${formatFileSize(progress.total)})`;
+                });
 
-                const data = await response.json();
+                // ✅ 上传完成，隐藏上传状态
+                uploadStatus.classList.remove('active');
+
                 currentRequestId = data.request_id;
 
                 // 显示进度区域
@@ -704,10 +914,21 @@
                 // 显示正在处理的文件名
                 document.getElementById('processingFileName').textContent = selectedFile.name;
 
+                // ✅ 重置处理进度条为0%
+                const progressBar = document.getElementById('progressBar');
+                const progressPercentage = document.getElementById('progressPercentage');
+                if (progressBar) progressBar.style.width = '0%';
+                if (progressPercentage) progressPercentage.textContent = '0%';
+
                 // 连接WebSocket
                 connectWebSocket(currentRequestId);
 
             } catch (error) {
+                // ✅ 错误时隐藏上传状态
+                if (uploadStatus) {
+                    uploadStatus.classList.remove('active');
+                }
+
                 alert(`Upload failed: ${error.message}`);
                 uploadBtn.disabled = false;
                 uploadSpinner.style.display = 'none';
