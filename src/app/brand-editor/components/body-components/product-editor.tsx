@@ -15,7 +15,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full [&_.ant-select-selection-placeholder]:text-[12px]"
+								className="w-full"
 							>
 							</Select>
 						</div>
@@ -26,7 +26,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full [&_.ant-select-selection-placeholder]:text-[12px]"
+								className="w-full"
 							>
 							</Select>
 						</div>
@@ -37,7 +37,7 @@ const ProductEditor = () => {
 							<Select
 								placeholder="Please select"
 								size="small"
-								className="w-full [&_.ant-select-selection-placeholder]:text-[12px]"
+								className="w-full"
 							>
 							</Select>
 						</div>
