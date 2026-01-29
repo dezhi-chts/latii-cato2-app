@@ -38,7 +38,7 @@ export const FilePanel = ({
   const imageSize = flexRow ? { width: 18, height: 21 } : { width: 25, height: 30 };
   return (
     <div
-      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border-2 border-baseLight' : ''}`}
+      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border-1 border-baseLight' : ''}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -56,7 +56,7 @@ export const FilePanel = ({
         height={imageSize.height}
       />
       <div
-        className={`${flexRow ? 'px-1' : 'pt-3'} break-all text-xs line-clamp-2 text-center text-[7px] ${isSelected && switchTextColor ? 'text-forumBlue' : 'text-baseGray'} `}
+        className={`${flexRow ? 'px-2' : 'pt-3'} break-all line-clamp-2 text-center text-[8px] ${isSelected && switchTextColor ? 'text-forumBlue' : 'text-basicGray'} `}
       >
         {file.name}
       </div>
@@ -71,6 +71,24 @@ export const FileItem = ({
   handleClickFile,
   showStatus = false,
 }: any) => {
+  const statusMapInfo: any = {
+    [FileStatus.Completed]: {
+      text: "Completed",
+      bgColor: "bg-[#D9F2E7]",
+      textColor: "text-[#02A960]",
+    },
+    [FileStatus.Processing]: {
+      text: "Progress",
+      bgColor: "bg-[#C4D6F0]",
+      textColor: "text-forumBlue",
+    },
+    'default': {
+      text: "Not Applicable",
+      bgColor: "bg-[#DCDCDC]",
+      textColor: "text-basicGray",
+    }
+  };
+  const statusInfo = statusMapInfo[file.status] || statusMapInfo[FileStatus.Processing];
   return (
     <div
       className={`rounded cursor-pointer`}
@@ -84,9 +102,12 @@ export const FileItem = ({
       />
       {showStatus && (
         <div
-          className={`my-2 w-[64px] h-[16px] flex items-center justify-center text-xxs rounded-md ${file.status === FileStatus.Completed ? "bg-[#D9F2E7]" : "bg-forumBlueLight"}`}
+          className={`my-2 h-[16px] flex items-center`}
         >
-          {file.status === FileStatus.Completed ? "Completed" : "Progress"}
+          <div className={`px-2 text-xxs rounded-md ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+            {statusInfo.text}
+          </div>
+
         </div>
       )}
     </div>

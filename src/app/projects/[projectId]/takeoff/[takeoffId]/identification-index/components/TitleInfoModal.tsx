@@ -10,13 +10,16 @@ const TitleInfoModal = ({
       title={null}
       closable={false}
       width={'800px'}
+      centered={true}
       footer={
-        <div className='flex justify-end'>
-          <div className='w-[76px] h-[28px] text-xs text-basicGray flex items-center justify-center bg-primaryN30 rounded-md cursor-pointer' onClick={closeModal}>Close</div>
+        <div className='flex justify-end font-nunito'>
+          <Button className='custom-default-btn' onClick={closeModal}>
+            Close
+          </Button>
         </div>
       }
     >
-      <div className='flex flex-col'>
+      <div className='flex flex-col font-nunito'>
         <div className='flex flex-row gap-4'>
           <div className='w-[310px]'>
             <div className='text-lg text-forumBlue'>How to select a Label Example</div>

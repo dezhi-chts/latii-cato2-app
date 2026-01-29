@@ -72,8 +72,8 @@ const Header = ({
                 handleClickFile={handleClickFile}
                 showStatus={true}
                 fileContainerStyle={{
-                  width: "150px",
-                  height: "50px",
+                  width: "130px",
+                  height: "30px",
                 }}
               />;
             })}
@@ -82,8 +82,7 @@ const Header = ({
           <PageAnalysisStepInActive />
         </div>
         <Button
-          type="primary"
-          className="w-[104px] text-white rounded-md"
+          className="custom-primary-btn w-[102px] h-[26px]"
           onClick={() => handleNext()}
         >
           Next Step

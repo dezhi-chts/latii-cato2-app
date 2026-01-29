@@ -46,6 +46,7 @@ const CreateProjectModal = ({
       title={
         <p className="ml-1 text-forumBlue text-lg font-normal font-nunito">Create New Project</p>
       }
+      centered={true}
       width={1250}
       footer={null}
       onCancel={closeModal}

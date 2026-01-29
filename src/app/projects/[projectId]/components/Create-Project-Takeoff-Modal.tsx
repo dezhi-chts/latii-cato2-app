@@ -275,6 +275,7 @@ const CreateProjectTakeoffModal = ({
       title={
         <p className="text-forumBlue text-lg font-normal font-nunito">Create New Project</p>
       }
+      centered={true}
       width={'85vw'}
       footer={null}
       closable={false}
@@ -282,7 +283,7 @@ const CreateProjectTakeoffModal = ({
     >
       <div className="font-nunito">
         <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
-        <div className="mt-8 h-[90vh] flex flex-row justify-between">
+        <div className="mt-8 h-[80vh] flex flex-row justify-between">
           <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
             <div className="overflow-y-auto bg-white">
               <ProjectForm
