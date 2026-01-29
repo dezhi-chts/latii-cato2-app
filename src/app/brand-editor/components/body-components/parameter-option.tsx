@@ -2,16 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { InfoCircleOutlined, PlusOutlined, DeleteOutlined, FileOutlined, CopyOutlined } from "@ant-design/icons";
-import { Tooltip, Button, TreeSelect, notification, Popconfirm, Empty, Input, Upload } from 'antd';
+import { Tooltip, Button, TreeSelect, notification, Popconfirm, Empty, Input, Upload, Popover } from 'antd';
 import LoadingScreen from "@/components/loading-screen";
 const { TextArea } = Input;
-import Image from "next/image";
 import {
 	fetchCompanyByKeycloakUser
 } from "@/services/companyService";
 import {
 	fetchProductAttributeVersionByAttributeNameCompanyId,
-	fetchUnitAttributesWithOptionsByVersionId,
 	fetchUnitAttributesByVersionId
 } from "@/services/profileEditorService";
 import {
@@ -22,7 +20,9 @@ import {
 	createOption,
 	updateFileForProductAttrOption,
 	updateOptionByOptionId,
-	deleteOptionByOptionId
+	deleteOptionByOptionId,
+	copySubOption,
+	copyLibraryOption
 } from "@/services/productBaseEditorService";
 
 const LibraryOption = () => {
@@ -40,14 +40,14 @@ const LibraryOption = () => {
 	const [companyMsg, setCompanyMsg] = useState<Record<string, any>>({});
 	const [unitMsg, setUnitMsg] = useState<any[]>([]);
 	const [optionLibraryList, setOptionLibraryList] = useState<any[]>([]);
-	const [selectedOptionLibrary, setSelectedOptionLibrary] = useState<Record<string, any>>({
-		// id: 1 
-	});
-	const [options, setOptions] = useState<any[]>([
-		// {
-		// 	isAdd: true
-		// }
-	]);
+	const [selectedOptionLibrary, setSelectedOptionLibrary] = useState<Record<string, any>>({});
+	const [options, setOptions] = useState<any[]>([]);
+
+	const [copySubOptionName, setCopySubOptionName] = useState("");
+	const [copySubOptionId, setCopySubOptionId] = useState<any>(null);
+
+	const [copyFromLibraryOptionId, setCopyFromLibraryOptionId] = useState<any>(null);
+	const [copyToLibraryOptionId, setCopyToLibraryOptionId] = useState<any>(null);
 
 	useEffect(() => {
 		initData()
@@ -179,7 +179,7 @@ const LibraryOption = () => {
 			if (optionLibraryRes?.status == "success") {
 				setOptionLibraryList([...optionLibraryRes?.data])
 			}
-			if (optionLibrary.id == selectedOptionLibrary.id){
+			if (optionLibrary.id == selectedOptionLibrary.id) {
 				setSelectedOptionLibrary({})
 				setOptions([])
 			}
@@ -207,14 +207,13 @@ const LibraryOption = () => {
 				if (!item?.other_msg) {
 					// 如果没有 other_msg，直接赋空对象
 					item.other_msg = {};
-					return;
-				}
-
-				try {
-					item.other_msg = JSON.parse(item.other_msg);
-				} catch (err) {
-					// 解析失败，也赋空对象
-					item.other_msg = {};
+				} else {
+					try {
+						item.other_msg = JSON.parse(item.other_msg);
+					} catch (err) {
+						// 解析失败，也赋空对象
+						item.other_msg = {};
+					}
 				}
 			});
 
@@ -240,18 +239,20 @@ const LibraryOption = () => {
 				description: "Add successfully"
 			});
 			let item = optionsRes?.data
-			
+
 			if (!item?.other_msg) {
 				// 如果没有 other_msg，直接赋空对象
 				item.other_msg = {};
+			} else {
+				try {
+					item.other_msg = JSON.parse(item.other_msg);
+				} catch (err) {
+					// 解析失败，也赋空对象
+					item.other_msg = {};
+				}
 			}
 
-			try {
-				item.other_msg = JSON.parse(item.other_msg);
-			} catch (err) {
-				// 解析失败，也赋空对象
-				item.other_msg = {};
-			}
+
 			options[$index] = item
 			setOptions([...options])
 		} else {
@@ -279,14 +280,16 @@ const LibraryOption = () => {
 			if (!item?.other_msg) {
 				// 如果没有 other_msg，直接赋空对象
 				item.other_msg = {};
+			} else {
+				try {
+					item.other_msg = JSON.parse(item.other_msg);
+				} catch (err) {
+					// 解析失败，也赋空对象
+					item.other_msg = {};
+				}
 			}
 
-			try {
-				item.other_msg = JSON.parse(item.other_msg);
-			} catch (err) {
-				// 解析失败，也赋空对象
-				item.other_msg = {};
-			}
+
 			options[$index] = item
 			setOptions([...options])
 		} else {
@@ -375,12 +378,12 @@ const LibraryOption = () => {
 				message: "Success",
 				description: "Upload successfully"
 			});
-			if(!options[$index]?.isAdd){
+			if (!options[$index]?.isAdd) {
 				onBlurSubOption(options[$index], $index)
-			}else{
+			} else {
 				setOptions([...options])
 			}
-			
+
 		} else {
 			notification.error({
 				message: "Error",
@@ -411,6 +414,79 @@ const LibraryOption = () => {
 			notification.error({
 				message: "Error",
 				description: res?.data?.response?.data?.detail || "Delete failed."
+			});
+		}
+	};
+
+	const onCopySubOption = async (option: any) => {
+		if (!copySubOptionName) {
+			notification.warning({
+				message: "Warning",
+				description: "Name cannot be null"
+			});
+			return
+		}
+		const res = await copySubOption(option?.id, copySubOptionName)
+		if (res.status == "success" && res?.data?.id) {
+			let item = res?.data
+
+			if (!item?.other_msg) {
+				// 如果没有 other_msg，直接赋空对象
+				item.other_msg = {};
+			} else {
+				try {
+					item.other_msg = JSON.parse(item.other_msg);
+				} catch (err) {
+					// 解析失败，也赋空对象
+					item.other_msg = {};
+				}
+			}
+			options.push(item)
+			setOptions([...options])
+			notification.success({
+				message: "Success",
+				description: "Copy successfully"
+			});
+		} else {
+			notification.error({
+				message: "Error",
+				description: res?.data?.response?.data?.detail || "Copy failed."
+			});
+		}
+	};
+
+	const onCopyLibrary = async (fromLibraryOption:any) => {
+		if (!copyToLibraryOptionId) {
+			notification.warning({
+				message: "Warning",
+				description: "Select an attribute to paste into"
+			});
+			return
+		}
+		const res = await copyLibraryOption(fromLibraryOption?.id, copyToLibraryOptionId)
+		if (res.status == "success" && res?.data) {
+			const [
+				unitAttributes,
+				optionLibraryRes
+			] = await Promise.all([
+				fetchUnitAttributesByVersionId(unitMsg[0]?.children[0]?.version_id),
+				fetchAllOptionLibraryByCompany(companyMsg?.id)
+			]);
+			if (unitAttributes?.status == "success") {
+				let unitTreeData = initUnitMsg([unitAttributes?.data])
+				setUnitMsg([...unitTreeData]);
+			}
+			if (optionLibraryRes?.status == "success") {
+				setOptionLibraryList([...optionLibraryRes?.data])
+			}
+			notification.success({
+				message: "Success",
+				description: "Copy successfully"
+			});
+		} else {
+			notification.error({
+				message: "Error",
+				description: res?.data?.response?.data?.detail || "Copy failed."
 			});
 		}
 	};
@@ -448,6 +524,7 @@ const LibraryOption = () => {
 								: {
 
 								}
+							const open = copyFromLibraryOptionId === item.id;
 							return (
 								(item.isAdd && !item.id)
 									? <div
@@ -485,7 +562,7 @@ const LibraryOption = () => {
 											/>
 										}
 										<div className='ml-6'>
-											<DeleteOutlined onClick={() => onDeleteOptionLibrary(item, index, "add")} style={{ color: "#B1B1B1" }} />
+											<DeleteOutlined onClick={() => onDeleteOptionLibrary(item, index, "add")} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
 										</div>
 									</div>
 									: <div
@@ -531,12 +608,62 @@ const LibraryOption = () => {
 												group-hover:pointer-events-auto
 											"
 										>
-											<CopyOutlined
-												className="text-[#B1B1B1] hover:text-[#595959] cursor-pointer"
-												onClick={(e) => {
-													e.stopPropagation();
+											<Popover
+												zIndex={10}
+												content={
+													<div className="w-[200px]" onClick={(e)=>{e.stopPropagation();}}>
+														<TreeSelect
+															style={{ width: '100%', textAlign: "left" }}
+															styles={{
+																popup: { root: { maxHeight: 500, minWidth: 500, overflow: 'auto' } },
+															}}
+															placeholder="Please select"
+															treeDefaultExpandAll
+															treeData={unitMsg}
+															treeLine={true}
+															treeIcon={true}
+															value={copyToLibraryOptionId ? copyToLibraryOptionId.toString() : null}
+															onChange={(value) => { setCopyToLibraryOptionId(value) }}
+														/>
+														<div className="flex justify-end gap-2 mt-2">
+															<Button
+																size="small"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	setCopyFromLibraryOptionId(null)
+																}}
+															>
+																Cancel
+															</Button>
+															<Button
+																size="small"
+																type="primary"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	setCopyFromLibraryOptionId(null);
+																	onCopyLibrary(item)
+																}}
+															>
+																Confirm
+															</Button>
+														</div>
+													</div>
+												}
+												open={open}
+												trigger="click"
+												placement="bottom"
+												onOpenChange={(v: any) => {
+													setCopyToLibraryOptionId(null)
+													setCopyFromLibraryOptionId(v ? item.id : null);
 												}}
-											/>
+											>
+												<CopyOutlined
+													className="text-[#B1B1B1] hover:text-[#595959] cursor-pointer"
+													onClick={(e) => {
+														e.stopPropagation();
+													}}
+												/>
+											</Popover>
 											<Popconfirm
 												title="Delete the option library"
 												description="Are you sure to delete this option library?"
@@ -575,7 +702,7 @@ const LibraryOption = () => {
 					(selectedOptionLibrary?.id && options.length == 0) && <div
 						className="flex h-[calc(100%-100px)] items-center justify-center mt-6"
 					>
-						<Empty description="Please select option library">
+						<Empty>
 							<Button
 								type="primary"
 								onClick={onAddSubOption}
@@ -589,8 +716,9 @@ const LibraryOption = () => {
 					(selectedOptionLibrary?.id && options.length != 0) && <div className="mt-4 text-[12px] flex gap-6 flex-wrap">
 						{
 							options.map((item: any, index: any) => {
+								const open = copySubOptionId === item.id;
 								return (
-									<div className="flex items-center">
+									<div className="flex items-center" key={index}>
 										<div
 											className="border border-[#E8E8E8] w-[370px] rounded-lg"
 										>
@@ -608,23 +736,70 @@ const LibraryOption = () => {
 												</div>
 												<div className="ml-4 flex">
 													{
-														!item?.isAdd && <CopyOutlined
-															className="text-[#B1B1B1] hover:text-[#595959] cursor-pointer mr-2"
-															onClick={(e) => {
-																e.stopPropagation();
+														!item?.isAdd && <Popover
+															content={
+																<div className="w-[200px]">
+																	<Input
+																		size="small"
+																		placeholder="Please input name"
+																		value={copySubOptionName}
+																		onChange={(e) => setCopySubOptionName(e.target.value)}
+																	/>
+																	<div className="flex justify-end gap-2 mt-2">
+																		<Button
+																			size="small"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				setCopySubOptionId(null)
+																			}}
+																		>
+																			Cancel
+																		</Button>
+																		<Button
+																			size="small"
+																			type="primary"
+																			onClick={(e) => {
+																				e.stopPropagation();
+																				setCopySubOptionId(null);
+																				onCopySubOption(item)
+																			}}
+																		>
+																			Confirm
+																		</Button>
+																	</div>
+																</div>
+															}
+															open={open}
+															trigger="click"
+															placement="bottom"
+															onOpenChange={(v: any) => {
+																setCopySubOptionName("")
+																setCopySubOptionId(v ? item.id : null);
 															}}
-														/>
+														>
+															<CopyOutlined
+																className="text-[#B1B1B1] hover:text-[#595959] cursor-pointer mr-2"
+																onClick={(e) => {
+																	e.stopPropagation();
+																}}
+															/>
+														</Popover>
 													}
-													<Popconfirm
-														title="Delete the sub-option"
-														description="Are you sure to delete this sub-option?"
-														onConfirm={() => { onDeleteSubOption(item, index) }}
-														onCancel={() => { }}
-														okText="Yes"
-														cancelText="No"
-													>
-														<DeleteOutlined onClick={(e) => { e.stopPropagation() }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
-													</Popconfirm>
+													{
+														item?.isAdd
+															? <DeleteOutlined onClick={(e) => { e.stopPropagation(); onDeleteSubOption(item, index) }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+															: <Popconfirm
+																title="Delete the sub-option"
+																description="Are you sure to delete this sub-option?"
+																onConfirm={() => { onDeleteSubOption(item, index) }}
+																onCancel={() => { }}
+																okText="Yes"
+																cancelText="No"
+															>
+																<DeleteOutlined onClick={(e) => { e.stopPropagation() }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+															</Popconfirm>
+													}
+
 												</div>
 											</div>
 											<div
@@ -636,6 +811,9 @@ const LibraryOption = () => {
 														<TextArea
 															placeholder="Input a recognizable name for you."
 															rows={1}
+															style={{
+																resize: "none"
+															}}
 															value={item.description ?? ""}
 															onChange={(e) => { onChangeSubOption(e?.target?.value, "description", item, index) }}
 															onBlur={() => { onBlurSubOption(item, index) }}
@@ -655,7 +833,7 @@ const LibraryOption = () => {
 																	customRequest={({ file }) => { uploadFile(file, item, index) }}
 																>
 																	<div className="text-[#717171] text-[10px] relative bottom-1">
-																		<span>Click or</span>
+																		<span>Click to</span>
 																		<span className="text-[#427CCE] ml-1">upload</span>
 																	</div>
 																</Upload>
@@ -674,7 +852,8 @@ const LibraryOption = () => {
 																>
 																	<img
 																		src={item?.other_msg?.file_url}
-																		alt="Selected Item"
+																		alt="Image"
+																		title="click to upload"
 																		style={{
 																			maxWidth: "90%",
 																			maxHeight: "90%",

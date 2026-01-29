@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Input, Image as AntdImage, notification, Tooltip, Checkbox, Popconfirm, Dropdown, Popover } from 'antd';
+import { Button, Input, Image as AntdImage, notification, Tooltip, Checkbox, Popconfirm, Dropdown, Popover, Modal } from 'antd';
 import { useState, useEffect } from "react";
 import { SearchOutlined, EyeOutlined, PlusOutlined, CopyOutlined, DeleteOutlined } from "@ant-design/icons";
 import LoadingScreen from "@/components/loading-screen";
+import ViewScriptCom from "@/app/profile-editor-demo/components/viewScript";
 import {
 	fetchProductTypesLibrary,
 	fetchOperabilityLibrary,
@@ -81,6 +82,9 @@ const ParameterBaseEditor = () => {
 	const [selectedProductType, setSelectedProductType] = useState<any>({});
 	const [operabilityMsg, setOperabilityMsg] = useState<any[]>([]);
 
+	const [isShowViewScriptDataModal, setIsShowViewScriptDataModal] = useState<boolean>(false);
+	const [profileScriptMsg, setProfileScriptMsg] = useState<string>("");
+
 	useEffect(() => {
 		initAllData()
 	}, []);
@@ -88,7 +92,7 @@ const ParameterBaseEditor = () => {
 	useEffect(() => {
 		if (selectedProfile?.id) {
 			getAttribute()
-		}else{
+		} else {
 			setProductTypeMsg([])
 			setOperabilityMsg([])
 		}
@@ -130,7 +134,7 @@ const ParameterBaseEditor = () => {
 			if (profileRes.status == "success") {
 				setAllProfile(profileRes?.data)
 
-				if (profileRes?.data.length!=0){
+				if (profileRes?.data.length != 0) {
 					const [
 						projectAttributesWithOptions,
 						quoteAttributesWithOptions,
@@ -298,7 +302,7 @@ const ParameterBaseEditor = () => {
 			});
 			allProfile.splice(index, 1)
 			setAllProfile([...allProfile])
-			if (selectedProfile.id == res?.data.id){
+			if (selectedProfile.id == res?.data.id) {
 				setSelectedProfile({})
 			}
 		} else {
@@ -881,7 +885,7 @@ const ParameterBaseEditor = () => {
 				}
 			})
 			setAllProfile([...allProfile])
-			if (saveReturnMsg?.data.id == selectedProfile?.id){
+			if (saveReturnMsg?.data.id == selectedProfile?.id) {
 				setSelectedProfile(saveReturnMsg?.data)
 			}
 			notification.success({
@@ -900,7 +904,7 @@ const ParameterBaseEditor = () => {
 		}
 	};
 
-	const onCopyProfile = async (profile:any) => {
+	const onCopyProfile = async (profile: any) => {
 		if (!copyProfileName) {
 			notification.warning({
 				message: "Warning",
@@ -917,9 +921,9 @@ const ParameterBaseEditor = () => {
 			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
 			let addProfileData = createProfileRes?.data;
 
-			const addProfileOptionMsg:any = pickProductProductTypeOpen(copyProfileOptionMsg)
+			const addProfileOptionMsg: any = pickProductProductTypeOpen(copyProfileOptionMsg)
 
-			if (!addProfileOptionMsg){
+			if (!addProfileOptionMsg) {
 				notification.success({
 					message: "Success",
 					description: "Copy successfully",
@@ -934,7 +938,7 @@ const ParameterBaseEditor = () => {
 				unitMsg?.attribute_tree,
 				addProfileOptionMsg
 			);
-			console.log(addProfileOptionMsg,'addProfileOptionMsgaddProfileOptionMsg')
+			console.log(addProfileOptionMsg, 'addProfileOptionMsgaddProfileOptionMsg')
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(addProfileData.id, scriptMsg);
 
 			if (saveReturnMsg.status == "success") {
@@ -958,6 +962,11 @@ const ParameterBaseEditor = () => {
 				description: createProfileRes?.data?.response?.data?.detail || "Copy failed."
 			});
 		}
+	};
+
+	const onViewProfileScript = (scriptMsg: string) => {
+		setProfileScriptMsg(scriptMsg)
+		setIsShowViewScriptDataModal(true)
 	};
 
 	return (
@@ -1055,7 +1064,7 @@ const ParameterBaseEditor = () => {
 												>
 													<Popover
 														content={
-															<div className="w-[200px]">
+															<div className="w-[200px]" onClick={(e) => { e.stopPropagation(); }}>
 																<Input
 																	size="small"
 																	placeholder="Enter profile name"
@@ -1089,7 +1098,7 @@ const ParameterBaseEditor = () => {
 														trigger="click"
 														open={open}
 														placement="bottom"
-														onOpenChange={(v) => {
+														onOpenChange={(v: any) => {
 															setCopyProfileName("")
 															setCopyProfileopenId(v ? item.id : null);
 														}}
@@ -1111,6 +1120,13 @@ const ParameterBaseEditor = () => {
 													>
 														<DeleteOutlined onClick={(e) => { e.stopPropagation() }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
 													</Popconfirm>
+													<EyeOutlined
+														onClick={(e) => {
+															e.stopPropagation();
+															onViewProfileScript(item?.script_msg)
+														}}
+														className="text-[#B1B1B1] hover:text-[#595959]"
+													/>
 												</div>
 											</div>
 									)
@@ -1460,6 +1476,20 @@ const ParameterBaseEditor = () => {
 					<div></div>
 				</div>
 			</div>
+			<Modal
+				title="View Script Data"
+				open={isShowViewScriptDataModal}
+				onCancel={()=>setIsShowViewScriptDataModal(false)}
+				footer={null}
+				centered
+				maskClosable={false}
+				width={'1000px'}
+				destroyOnHidden={true}
+			>
+				<ViewScriptCom scriptMsg={profileScriptMsg}>
+
+				</ViewScriptCom>
+			</Modal>
 			<LoadingScreen isLoading={fullLoading}></LoadingScreen>
 		</div>
 	);

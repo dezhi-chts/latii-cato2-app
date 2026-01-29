@@ -161,3 +161,31 @@ export const updateFileForProductAttrOption = async (
 		return { data: null, status: "error" };
 	}
 };
+
+export const copySubOption = async (
+	option_id: number,
+	name: string
+) => {
+	try {
+		const url = `/product_attribute/option/option_library/copy_sub_option/${option_id}?name=${name}`;
+		const response = await http.post(url);
+		return { data: response.data as any, status: "success" };
+	} catch (error) {
+		console.error("Error copySubOption:", error);
+		return { data: error, status: "error" };
+	}
+};
+
+export const copyLibraryOption = async (
+	from_product_attribute_id: number,
+	to_product_attribute_id: string
+) => {
+	try {
+		const url = `/product_attribute/option/option_library/copy?from_product_attribute_id=${from_product_attribute_id}&to_product_attribute_id=${to_product_attribute_id}`;
+		const response = await http.post(url);
+		return { data: response.data as any, status: "success" };
+	} catch (error) {
+		console.error("Error copyLibraryOption:", error);
+		return { data: error, status: "error" };
+	}
+};
