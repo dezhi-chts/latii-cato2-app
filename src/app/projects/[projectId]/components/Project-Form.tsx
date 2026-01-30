@@ -8,7 +8,7 @@ const testFields: CustomField[] = [{
   Hint_text: "Project Name",
   required: true,
 }, {
-  field_name: 'location',
+  field_name: 'project_address',
   field_type: FieldType.INPUT_TEXT,
   Hint_text: "Primary Location",
   required: true,
