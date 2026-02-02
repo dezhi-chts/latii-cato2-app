@@ -18,7 +18,7 @@ export type ProjectField = {
   required: boolean;
   has_hint_text?: boolean;
   hint_text?: string;
-  options?: String[];
+  options?: string[];
   is_multiselect?: boolean;
   text?: string;
   is_ranged_date?: boolean;

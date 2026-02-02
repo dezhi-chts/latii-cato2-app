@@ -25,11 +25,12 @@ const LocationSelector = ({
   isOpen,
   setIsOpen,
   selectorClassName,
+  inputClassName,
   updateProject,
   handleInputChange,
   handleDropdownChange,
   height,
-  style
+  style,
 }: LocationSelectorProps) => {
   const divRef = useRef<HTMLDivElement>(null);
   const [states, setStates] = useState<StateType[]>([]);
@@ -42,7 +43,7 @@ const LocationSelector = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (divRef.current && !divRef.current.contains(event.target as Node)) {
         safeUpdateProject();
-        onClose();
+        if (onClose) onClose();
       }
     };
 
@@ -68,10 +69,10 @@ const LocationSelector = ({
   }, [projectSettings?.state, states]);
 
   return (
-    <div className="relative" style={{...style}}>
+    <div className="relative" style={{ ...style }}>
       <Input
         placeholder="State, City, Postal Code, Address"
-        className={`cursor-pointer truncate ... ${
+        className={`${inputClassName} cursor-pointer truncate ... ${
           height === "small" && "text-xs"
         }`}
         value={getFullLocation({
@@ -81,7 +82,9 @@ const LocationSelector = ({
             "",
         })}
         readOnly
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          if (setIsOpen) setIsOpen(true);
+        }}
         size="large"
       />
       {isOpen && (
@@ -110,6 +113,7 @@ const LocationSelector = ({
                 value={projectSettings?.state || undefined} // es isoCode
                 onChange={(val) => {
                   // val es el isoCode seleccionado
+                  if (!handleDropdownChange) return;
                   handleDropdownChange("state")(val);
                   handleDropdownChange("city")(""); // reset city
                 }}
@@ -136,6 +140,7 @@ const LocationSelector = ({
                 placeholder="Select City"
                 value={projectSettings?.city || undefined}
                 onChange={(val) => {
+                  if (!handleDropdownChange) return;
                   handleDropdownChange("city")(val);
                 }}
                 disabled={!projectSettings?.state}
@@ -158,7 +163,10 @@ const LocationSelector = ({
             <Input
               placeholder="70001, etc."
               className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-              onChange={handleInputChange("postal_code")}
+              onChange={() => {
+                if (!handleInputChange) return;
+                handleInputChange("postal_code");
+              }}
               defaultValue={projectSettings?.postal_code}
             />
           </div>
@@ -167,7 +175,10 @@ const LocationSelector = ({
             <Input
               placeholder="6002 Westplano Park, etc."
               className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-              onChange={handleInputChange("address")}
+              onChange={() => {
+                if (!handleInputChange) return;
+                handleInputChange("address");
+              }}
               defaultValue={projectSettings?.address}
             />
           </div>
