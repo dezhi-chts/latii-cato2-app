@@ -16,8 +16,10 @@ import ProjectForm from "./Project-Form";
 import debounce from "lodash/debounce";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 import { uploadFiles } from "@/services/filesService";
-import { createProject } from "@/services/projectService";
+import { createProject, updateProject, fetchProject } from "@/services/projectService";
+import { getPdfAnalyseProjectInfo } from "@/services/drawingIndexService";
 
+import { getTakeOffById } from "@/services/takeOffService";
 
 const TabList = ({
   items,
@@ -57,11 +59,11 @@ const TabList = ({
 const CreateProjectTakeoffModal = ({
   isOpen,
   closeModal,
-  uploadFilesData,
+  projectId,
+  takeOffId,
   onSuccess,
 }: CreateProjectModalProps) => {
   const router = useRouter();
-  //const projectId = '01KFMB9K2JB0F5GJKCJ1ZN38AK';
   const projectFormRef = useRef<any>(null);
   const pdfRef = useRef<PdfWrapperRefMethods>(null);
 
@@ -77,28 +79,75 @@ const CreateProjectTakeoffModal = ({
 
   const [loading, setLoading] = useState<boolean>(false);
   const [pdfFullScreen, setPdfFullScreen] = useState<boolean>(false);
-
-  const [filesData, setFilesData] = useState<any[]>(() => {
-    let list: any = [];
-    if (uploadFilesData && uploadFilesData?.archFiles?.length > 0) {
-      list = uploadFilesData.archFiles.map((item: any) => ({
-        id: item.uid,
-        file_name: item.name,
-        upload_status: 1,
-        url: URL.createObjectURL(item.originFileObj),
-      }));
-    }
-    return list;
-  });
+  const [takeoff, setTakeoff] = useState<any>(null);
+  const [fileList, setFileList] = useState<any>([]);
 
   useEffect(() => {
-    if (filesData.length > 0 && selectedFileId === -1) {
-      setSelectedFileId(filesData[0].id);
-    }
-  }, [filesData])
+    // 获取takeOff详情
+    getTakeOffDetails();
+  }, [takeOffId]);
 
   useEffect(() => {
-    if (selectedFileId !== -1) {
+    // 获取项目详情
+    //  getProjectInfo();
+    getPdfAnalyseProject();
+  }, [projectId]);
+
+
+  const getProjectInfo = async () => {
+    let res: any = await fetchProject(projectId);
+    if (res) {
+      setProjectSettings(res ?? {});
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get project",
+      });
+    }
+  };
+
+  const getPdfAnalyseProject = async () => {
+    let res: any = await getPdfAnalyseProjectInfo('01KG1CJC8D33D5B17TVGB9ZG5Y');
+    if (res.status === 'success') {
+      let info = res?.data?.data?.project_info ?? {};
+      console.log('######### info: ', info);
+      setProjectSettings(info ?? {});
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get pdf analyse project info",
+      });
+    }
+  };
+
+
+  const getTakeOffDetails = async () => {
+    setLoading(true);
+    let res: any = await getTakeOffById(takeOffId as any);
+    if (res.status === 'success') {
+      setTakeoff(res?.data ?? {});
+      let project_files = res?.data?.project_files ?? [];
+      if (project_files?.length > 0) {
+        setFileList(project_files);
+        setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
+        setPdfUrl(project_files[0].parse_detail.uploaded_file_url); // 设置默认选中文件的PDF URL
+      } else {
+        notification.error({
+          message: "Error",
+          description: "No files found in this take off",
+        });
+      }
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get take off",
+      });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (selectedFileId !== -1 && fileList.length > 0) {
       if (pdfRef.current) {
         pdfRef.current.resetAllInfo();
       }
@@ -112,8 +161,8 @@ const CreateProjectTakeoffModal = ({
       // 取消pdf全屏显示
       setPdfFullScreen(false);
 
-      const file = filesData.find((file: any) => file.id === selectedFileId);
-      setPdfUrl(file?.url);
+      const file = fileList.find((file: any) => file.id === selectedFileId);
+      setPdfUrl(file?.parse_detail?.uploaded_file_url);
     }
   }, [selectedFileId]);
 
@@ -162,48 +211,24 @@ const CreateProjectTakeoffModal = ({
       message.warning("Please fill out all required fields.");
       return;
     }
+
     setLoading(true);
 
-    // 先创建工程，工程创建成功，才可以上传文件
-    let projectRes: any = await createProject(projectSettings);
-    if (projectRes?.status !== 'success') {
-      setLoading(false);
-      notification.error({
-        message: 'Create project failed',
-        description: projectRes?.message,
-      });
-      return;
-    }
-
-    // 上传文件
-    const projectId = projectRes?.data?.project_id;
-
-    console.log('########## uploadFilesData', uploadFilesData);
-    const { archFiles = [], arcHingeMode = '1', quoteFiles = [], quoteHingeMode = '1' } = uploadFilesData;
-    // 目前只处理archFiles文件
-    const filesInfo: any = archFiles.map((file: UploadFile) => ({
-      file_name: file.name,
-      operation_type: 'Architecture_drawing',
-      file_type: 'PDF',
-      country_of_origin: "United States",
-    }));
-
-    const files = archFiles;
-
-    let res: any = await uploadFiles(
-      filesInfo,
-      files,
-      projectId,
-      arcHingeMode as any
-    );
+    // 更新工程信息
+    let res: any = await updateProject({ ...projectSettings, project_id: projectId, is_favorite: false });
     setLoading(false);
-    if (res.status === 'success') {
-      message.success("Upload success.");
-      const takeOffId = res?.data?.take_off_id ?? null;
-      // 跳转到page index页面
+    if (res) {
+      notification.success({
+        message: "Success",
+        description: 'Project updated successfully.',
+      });
+      // 跳转到下一页
       router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification-index`);
     } else {
-      message.warning("Upload failed. Please try again.");
+      notification.error({
+        message: "Error",
+        description: 'Failed to update project.',
+      });
     }
   }
 
@@ -229,7 +254,7 @@ const CreateProjectTakeoffModal = ({
   }
 
   const items = useMemo(() => {
-    return filesData.map((file: any) => {
+    return fileList.map((file: any) => {
       const uploadFile: any = {
         uid: String(file.id),
         id: file.id,
@@ -261,13 +286,13 @@ const CreateProjectTakeoffModal = ({
         key: file.id,
       }
     })
-  }, [filesData, selectedFileId]);
+  }, [fileList, selectedFileId]);
 
   const activeIndex = useMemo(() => {
     if (selectedFileId === -1) return -1;
-    let index = filesData.findIndex((file: any) => file.id === selectedFileId);
+    let index = fileList.findIndex((file: any) => file.id === selectedFileId);
     return index !== -1 ? index : -1;
-  }, [filesData, selectedFileId]);
+  }, [fileList, selectedFileId]);
 
   return (
     <Modal
@@ -280,6 +305,7 @@ const CreateProjectTakeoffModal = ({
       footer={null}
       closable={false}
       onCancel={closeModal}
+      maskClosable={false}
     >
       <div className="font-nunito">
         <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
@@ -322,7 +348,7 @@ const CreateProjectTakeoffModal = ({
             <TabList
               activeIndex={activeIndex}
               onClick={(index: number) => {
-                setSelectedFileId(filesData[index].id);
+                setSelectedFileId(fileList[index].id);
               }}
               items={items}
             />

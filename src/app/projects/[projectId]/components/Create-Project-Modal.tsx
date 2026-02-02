@@ -17,7 +17,7 @@ const CreateProjectModal = ({
   closeModal,
   onSuccess,
   onOpenTakeoffModal
-}: CreateProjectModalProps) => {
+}: any) => {
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     ...defaultProjectSettings,
   });

@@ -12,6 +12,8 @@ import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
 import type { UploadFile } from "antd/es/upload/interface";
+import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
+import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
 
 
 export const projects: ProjectRow[] = [
@@ -167,7 +169,11 @@ const Home = () => {
     return defaultFields.map((field) => field.field_name)
   });
 
+  const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
+  const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
+
   const uploadFiles = useRef<any>(null);
+  const projectInfo = useRef<any>(null);
 
   function handleValueChange(value: string) {
     setFilter((prev) => ({ ...prev, value }));
@@ -270,12 +276,60 @@ const Home = () => {
           <CreateProjectModal
             isOpen={showCreateProjectModal}
             closeModal={closeModal}
-            onOpenTakeoffModal={(data) => {
+            onOpenTakeoffModal={(data: any) => {
               // 关闭Create-Project-Modal弹窗
-              closeModal();
+              //closeModal();
               uploadFiles.current = data;
+              // 打开Upload-Files-Progress弹窗
+              setShowUploadProgess(true);
+              //setShowCreateProjectTakeOffModal(true);
+            }}
+          />
+        )
+      }
+
+      {
+        showColumnView && (
+          <ColumnView
+            open={showColumnView}
+            onClose={() => setShowColumnView(false)}
+            columns={defaultFields}
+            onColumnsChange={handleColumnsChange}
+            selectedColumns={selectedColumns}
+          />
+        )
+      }
+      {
+        showUploadProgess && (
+          <UploadFilesProgress
+            isOpen={showUploadProgess}
+            closeModal={() => setShowUploadProgess(false)}
+            uploadFilesData={uploadFiles.current}
+            onSuccess={(data: any) => {
+              // 关闭Upload-Files-Progress弹窗
+              setShowUploadProgess(false);
+              // 打开Pdf-Parse-Modal弹窗
+              projectInfo.current = data;
+              setShowPdfParseModal(true);
+            }}
+          />
+        )
+      }
+      {
+        showPdfParseModal && (
+          <PdfParseModal
+            isOpen={showPdfParseModal}
+            closeModal={() => setShowPdfParseModal(false)}
+            data={projectInfo.current}
+            handleNext={() => {
+              // 关闭Pdf-Parse-Modal弹窗
+              setShowPdfParseModal(false);
               // 打开Create-Project-Takeoff-Modal弹窗
               setShowCreateProjectTakeOffModal(true);
+            }}
+            handleCancel={() => {
+              // 关闭Pdf-Parse-Modal弹窗
+              setShowPdfParseModal(false);
             }}
           />
         )
@@ -288,18 +342,10 @@ const Home = () => {
               // 关闭Create-Project-Takeoff-Modal弹窗
               setShowCreateProjectTakeOffModal(false);
             }}
-            uploadFilesData={uploadFiles.current}
-          />
-        )
-      }
-      {
-        showColumnView && (
-          <ColumnView
-            open={showColumnView}
-            onClose={() => setShowColumnView(false)}
-            columns={defaultFields}
-            onColumnsChange={handleColumnsChange}
-            selectedColumns={selectedColumns}
+            projectId={projectInfo.current?.project_id ?? null}
+            takeOffId={projectInfo.current?.take_off_id ?? null}
+          //projectId={'38'}
+          //takeOffId={'15'}
           />
         )
       }

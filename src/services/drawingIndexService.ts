@@ -52,3 +52,14 @@ export const updateDrawingIndexType = async (
     return { data: null, status: "error" };
   }
 };
+
+export const getPdfAnalyseProjectInfo = async (projectId: string) => {
+  try {
+    const url = `/pdf/pdf-analysis/project/${projectId}/project-info`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting pdf analyse project info:", error);
+    return { data: null, status: "error" };
+  }
+};

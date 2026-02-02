@@ -36,32 +36,31 @@ export const UploadFileList = ({
   file,
   handleRemove,
   canBeRemoved = false,
-  textClassName,
   isSelected = false,
 }: FilePanelProps) => {
   return (
     <div
       key={file.uid}
-      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${!isSelected && "border border-primaryN50"
+      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${!isSelected && "border border-baseLightHover"
         }`}
     >
       {canBeRemoved && handleRemove && (
-        <button
+        <div
           onClick={() => handleRemove(file.uid)}
-          className="absolute top-0 right-1 text-gray-400 hover:text-red-500"
+          className="w-[15px] h-[15px] rounded-full bg-primaryN20 absolute top-1 right-1 text-gray-400 hover:text-red-500 cursor-pointer flex items-center justify-center"
         >
-          <CloseOutlined style={{ fontSize: 12 }} />
-        </button>
+          <CloseOutlined style={{ fontSize: 6, color: '#717171' }} />
+        </div>
       )}
       <Image
         src="/assets/icons/extensions/pdf.svg"
         alt="file pdf icon"
-        width={20}
-        height={20}
+        width={25}
+        height={30}
         className="w-auto h-auto"
       />
       <p
-        className={`${textClassName} text-center text-[7px] px-1 text-elusionDarkGrayTint line-clamp-2 max-w-full`}
+        className={`text-center text-[9px] px-1 pt-2 text-elusionDarkGrayTint line-clamp-2 max-w-full`}
       >
         {file.name}
       </p>
@@ -130,110 +129,18 @@ export const HingeMode = ({ onChangeHinegeStatus }: HingeModeProps) => {
       </p>
       <div className="flex gap-4">
         <div
-          className="cursor-pointer"
+          className={`w-[65px] h-[78px] ${hingeStatus === '1' ? 'bg-primaryN20' : ''} rounded-md cursor-pointer flex flex-col items-center justify-center`}
           onClick={() => handleHingeStatusChange("1")}
         >
-          <svg
-            width="80"
-            height="106"
-            viewBox="0 0 62 87"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x="0.5"
-              y="0.5"
-              width="61"
-              height="86"
-              rx="5.5"
-              fill={hingeStatus === "1" ? "#DCDDDE" : "white"}
-            />
-            <rect
-              x="0.5"
-              y="0.5"
-              width="61"
-              height="86"
-              rx="5.5"
-              stroke="#DCDDDE"
-            />
-            <rect
-              x="8.5"
-              y="8.5"
-              width="45"
-              height="70"
-              rx="1"
-              stroke="#717171"
-            />
-            <rect
-              x="11.5"
-              y="11.5"
-              width="39"
-              height="64"
-              rx="1"
-              stroke="#717171"
-            />
-            <path
-              d="M12 75L49.0713 44.2699C49.5537 43.87 49.5537 43.13 49.0713 42.7301L12 12"
-              stroke="#B1B1B1"
-              strokeWidth="0.8"
-              strokeDasharray="3 3"
-            />
-            <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
-            <rect x="11.5" y="43" width="10" height="2" rx="1" fill="#C6C6C6" />
-          </svg>
+          <Image src="/assets/icons/hinge-us.svg" alt="hinge mode icon" width={28} height={44}></Image>
+          <p className="mt-1 text-xxs text-baseGray">US</p>
         </div>
         <div
-          className="cursor-pointer"
+          className={`w-[65px] h-[78px] ${hingeStatus === '2' ? 'bg-primaryN20' : ''} rounded-md cursor-pointer flex flex-col items-center justify-center`}
           onClick={() => handleHingeStatusChange("2")}
         >
-          <svg
-            width="80"
-            height="106"
-            viewBox="0 0 62 87"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect
-              x="0.5"
-              y="0.5"
-              width="61"
-              height="86"
-              rx="5.5"
-              fill={hingeStatus === "2" ? "#DCDDDE" : "white"}
-            />
-            <rect
-              x="0.5"
-              y="0.5"
-              width="61"
-              height="86"
-              rx="5.5"
-              stroke="#DCDDDE"
-            />
-            <rect
-              x="8.5"
-              y="8.5"
-              width="45"
-              height="70"
-              rx="1"
-              stroke="#717171"
-            />
-            <rect
-              x="11.5"
-              y="11.5"
-              width="39"
-              height="64"
-              rx="1"
-              stroke="#717171"
-            />
-            <path
-              d="M50 12L12.9287 42.7301C12.4463 43.13 12.4463 43.87 12.9287 44.2699L50 75"
-              stroke="#B1B1B1"
-              strokeWidth="0.8"
-              strokeDasharray="3 3"
-            />
-            <circle cx="12" cy="44" r="2" fill="#D9D9D9" />
-            <rect x="11.5" y="43" width="10" height="2" rx="1" fill="#C6C6C6" />
-          </svg>
+          <Image src="/assets/icons/hinge-intl.svg" alt="hinge mode icon" width={28} height={44}></Image>
+          <p className="mt-1 text-xxs text-baseGray">INTL</p>
         </div>
       </div>
     </div>
