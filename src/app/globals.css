@@ -153,3 +153,8 @@ body {
   color: #555555;
   font-size: 12px;
 }
+
+.custom-default-btn:hover,
+.custom-default-btn:focus {
+  background-color: #e8e8e8 !important;
+}

@@ -18,6 +18,7 @@ import { BuildingBackground } from "@/app/projects/[projectId]/components/Create
 import { useParams } from "next/navigation";
 import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
+import { FileStatus } from "../../types/evidence";
 
 const Header = ({
   pdfRef,
@@ -36,6 +37,31 @@ const Header = ({
     if (!fileList) return [];
     return fileList ?? [];
   }, [fileList]);
+
+  const buttonInfo = useMemo(() => {
+    // 判断当前的文件状态
+    const currentFile = filesData.find((file: any) => file.id === selectedFileId);
+    console.log(currentFile?.status);
+
+    if (currentFile?.status === FileStatus.Processing
+      || currentFile?.status === FileStatus.Uploaded) {
+      return {
+        text: 'Next Step',
+      };
+    } else if (currentFile?.status === FileStatus.Completed) {
+      // 当前文件的状态为已完成，则判断是否有别的文件未处理
+      const hasUnprocessedFiles = filesData.some((file: any) => file.status === FileStatus.Processing || file.status === FileStatus.Uploaded);
+      if (hasUnprocessedFiles) {
+        return {
+          text: 'Next File',
+        };
+      } else {
+        return {
+          text: 'Next',
+        };
+      }
+    }
+  }, [fileList, selectedFileId])
 
   const handleClickFile = async (file: any) => {
     const unsaved =
@@ -83,9 +109,9 @@ const Header = ({
         </div>
         <Button
           className="custom-primary-btn w-[102px] h-[26px]"
-          onClick={() => handleNext()}
+          onClick={() => handleNext(buttonInfo?.text)}
         >
-          Next Step
+          {buttonInfo?.text}
         </Button>
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   ConfigProvider,
   Divider,
   message,
+  Modal,
   notification,
   Popover,
   Select,
@@ -26,12 +27,12 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { getDrawingIndexTypeList } from "@/services/drawingIndexService";
+import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary } from "@/services/drawingIndexService";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 import debounce from "lodash/debounce";
 import {
   AddRectBoxControls,
@@ -40,6 +41,9 @@ import {
   ClearAllControls,
 } from "../components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
+import { list } from "postcss";
+
+const { confirm } = Modal;
 
 const defaultPageCategory = [
   {
@@ -84,13 +88,14 @@ const Identification = () => {
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
 
-  const [selectedFileId, setSelectedFileId] = useState<number>(1);
+  const [selectedFileId, setSelectedFileId] = useState<number>(-1);
   const [takeOff, setTakeOff] = useState<any>();
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
+  const [fileList, setFileList] = useState<any>([]);
   const [fileEvidence, setFileEvidence] = useState<any>([]);
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(true);
@@ -99,10 +104,11 @@ const Identification = () => {
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [currentType, setCurrentType] = useState<string>("All");
+  const [summaryData, setSummaryData] = useState<any>(null);
 
   const thumbnailListRef = useRef<any>([]);
+  const evidenceIsLoaded = useRef<boolean>(false);
 
-  const getFileEvidences = () => { };
 
   useEffect(() => {
     // 获取takeOff详情
@@ -110,26 +116,14 @@ const Identification = () => {
     getTypeList();
   }, [takeOffId]);
 
-  useEffect(() => {
-    setThumbnailList((prev: any) => {
-      if (currentType === "All") {
-        return thumbnailListRef.current.map((item: any) => ({ ...item }));
-      } else {
-        return thumbnailListRef.current.filter(
-          (item: any) => item.type === currentType,
-        );
-      }
-    });
-  }, [currentType])
-
   const getTakeOffDetails = async () => {
     let res: any = await getTakeOffById(takeOffId as any);
     if (res.status === 'success') {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
+        setFileList(project_files);
         setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
-        setPdfUrl(project_files[0].parse_detail.uploaded_file_url); // 设置默认选中文件的PDF URL
       } else {
         notification.error({
           message: "Error",
@@ -144,8 +138,52 @@ const Identification = () => {
     }
   };
 
+  // 获取当前文件的evidence，并按照type进行分类
+  const getFileEvidences = useCallback(async () => {
+    if (selectedFileId === -1) return;
+
+    evidenceIsLoaded.current = false;
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId);
+    if (response.status === "success") {
+      evidenceIsLoaded.current = true;
+      const evidenceList = response?.data ?? [];
+      setFileEvidence(evidenceList.filter((item: any) => item.type !== GroupType.DrawingIndex && item.type !== GroupType.TitleInfo));
+    } else {
+      evidenceIsLoaded.current = false;
+      notification.error({
+        message: "Error",
+        description: "Failed to get file evidence",
+      })
+    }
+  }, [selectedFileId]);
+
+  const getPdfSummary = async () => {
+    let res: any = await getPdfAnalyseSummary(selectedFileId as any);
+    if (res.status === 'success') {
+      setSummaryData(res?.data?.data ?? null);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get pdf analyse pages",
+      });
+    }
+  }
+
+  const getTypeList = async () => {
+    let res: any = await getDrawingIndexTypeList();
+    if (res.status === 'success') {
+      let list = res?.data?.fixed_types ?? [];
+      setDrawingTypeList(list);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to get drawing index type list",
+      })
+    }
+  }
+
   useEffect(() => {
-    if (selectedFileId === -1 || !takeOff) return;
+    if (selectedFileId === -1 || fileList.length === 0) return;
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
       if (unsaved) {
         // 没有crop需要保存
@@ -160,73 +198,103 @@ const Identification = () => {
 
         setThumbnailList((prev: any) => []);
 
-        const fileList = takeOff?.project_files ?? [];
-
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
-          let newPdfUrl = file?.url;
+          let newPdfUrl = file?.parse_detail?.uploaded_file_url;
 
           setPdfUrl(newPdfUrl);
           let list = file?.parse_detail?.image_page_infos ?? [];
-          list = list.map((item: any) => {
-            let type = "";
-            const number = Math.floor(Math.random() * 6) + 1;
-            if (number > 0 && number < 7) {
-              type = defaultPageCategory[number].type;
-            }
-            return { ...item, type }
-          })
           thumbnailListRef.current = list;
           // 设置新的缩略图数据
           setThumbnailList(() => [...list]);
-          // 更新pageCategory中每一种类型的数量
-          setDrawingTypeList((prev: any) => {
-            let newList = prev.map((item: any) => {
-              const count = list.filter(
-                (file: any) => file.type === item.type,
-              ).length;
-              return {
-                ...item,
-                count: item.type === "All" ? list.length : count,
-              };
-            });
-            return [...newList];
-          });
           //获取file evidence
           getFileEvidences();
+          //获取pdf analyse summary
+          getPdfSummary();
         }
         return;
       }
     });
-  }, [selectedFileId, takeOff]);
+  }, [selectedFileId, fileList]);
 
-  const getTypeList = async () => {
-    let res: any = await getDrawingIndexTypeList();
-    if (res.status === 'success') {
-      let list = res?.data?.fixed_types ?? [];
-      list.unshift({
-        type: "All",
-        color: "#717171",
-        icon: 'A'
+  useEffect(() => {
+    // 获取总页数，从ref中获取完整列表的长度
+    if (drawingTypeList?.length >= 0 && summaryData) {
+      let list = [...drawingTypeList];
+      const totalPages = thumbnailListRef.current.length;
+      if (list?.length > 0) {
+        if (list[0].type !== 'All') {
+          list.unshift({
+            type: "All",
+            color: "#717171",
+            icon: 'A',
+            count: totalPages,
+          });
+        } else {
+          // 如果已经有"All"类型，更新其count为总页数
+          list[0].count = totalPages;
+        }
+      }
+      const page_classification = summaryData.page_classification ?? {};
+      let typeList = list.map((item: any) => {
+        if (item.type === "All") return item;
+        return {
+          ...item,
+          count: page_classification[item.type] ?? 0
+        }
       });
-      setDrawingTypeList(list);
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to get drawing index type list",
-      })
+      setDrawingTypeList(() => [...typeList]);
     }
-  }
 
-  const handlePageTypeChange = (page: number, type: string) => {
+    if (thumbnailListRef.current.length > 0 && summaryData) {
+      // 初始化数据
+      const list = thumbnailListRef.current.map((item: any) => {
+        let itemPageNum: number = 0;
+        if (typeof item.file_name === 'string') {
+          let pageArr = item.file_name?.split(".")[0];
+          itemPageNum = parseInt(pageArr) + 1;
+        }
+
+        const summaryPages = summaryData?.pages ?? [];
+        // 从 summaryPages 中查找对应的类型
+        let itemType = summaryPages.find((item: any) => item.page_number === itemPageNum)?.page_type ?? '';
+        return {
+          ...item,
+          type: itemType,
+        }
+      });
+
+      thumbnailListRef.current = list;
+      // 更新 thumbnailList 状态
+      setThumbnailList(() => [...list]);
+    }
+  }, [summaryData])
+
+
+  useEffect(() => {
+    // 当 currentType 变化时，更新 thumbnailList
+    if (thumbnailListRef.current.length > 0) {
+      // 根据 currentType 过滤
+      let list = thumbnailListRef.current.filter((item: any) => item.type === currentType);
+      // 更新 thumbnailList 状态
+      setThumbnailList(() => {
+        if (currentType === "All") return [...thumbnailListRef.current];
+        return [...list];
+      });
+    }
+  }, [currentType]);
+
+  const handlePageTypeChange = async (page: number, type: string) => {
+    let oldType = '';
     const newThumbnailList = thumbnailList.map((item: any) => {
       let itemPageNum: number = 0;
       if (typeof item.file_name === 'string') {
         let pageArr = item.file_name?.split(".")[0];
         itemPageNum = parseInt(pageArr) + 1;
       }
-      if (item.page === page) {
+      if (itemPageNum === page) {
+        oldType = item.type;
         return {
           ...item,
           type: type,
@@ -235,7 +303,39 @@ const Identification = () => {
       return item;
     });
     setThumbnailList((prev: any) => [...newThumbnailList]);
+
+    // 调用API更改page页的type，如果更新成功，则更改tags的数量，如果更新失败，则回滚到旧的type
+    let res = { status: 'success' }
+    if (res.status === 'success') {
+      // 更改tags的数量
+      setDrawingTypeList((prev: any) => {
+        return prev.map((item: any) => {
+          if (item.type === type) {
+            return {
+              ...item,
+              count: item.count + 1,
+            }
+          }
+          if (item.type === oldType) {
+            return {
+              ...item,
+              count: item.count - 1,
+            }
+          }
+          return item;
+        })
+      })
+      thumbnailListRef.current = newThumbnailList;
+    } else {
+      // 回滚到旧的type
+      setThumbnailList((prev: any) => [...thumbnailListRef.current]);
+      notification.error({
+        message: "Error",
+        description: "Failed to change page type",
+      });
+    }
   };
+
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -288,16 +388,66 @@ const Identification = () => {
   };
 
   const handleClearAllCrop = () => {
-    pdfRef?.current?.clearCropSections?.();
+    if (!pdfRef.current) return;
+
+    // 调用删除接口
+    pdfRef?.current?.handleBatchDelete();
   };
 
-  const handleAppendEvidence = () => { };
+  const handleAppendEvidence = (
+    (evidenceList: EvidenceType[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!evidenceList?.length) return;
+      setFileEvidence([...fileEvidence, ...evidenceList]);
+    }
+  );
 
-  const handleDeleteEvidence = () => { };
+  const handleDeleteEvidence = (
+    (deleteIds: number[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!deleteIds?.length) return;
+      setFileEvidence(
+        fileEvidence.filter(
+          (item: EvidenceType) => !deleteIds.includes(item.id)
+        )
+      );
+    }
+  );
+
+  const handleUpdateEvidence = (
+    (evidenceList: EvidenceType[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!evidenceList?.length) return;
+      setFileEvidence(
+        fileEvidence.map((item: EvidenceType) => {
+          // 找到需要更新的item
+          let updateItem = evidenceList.find(
+            (evid: EvidenceType) => evid.id === item.id
+          );
+          if (updateItem) {
+            return { ...updateItem };
+          }
+          return item;
+        })
+      );
+    }
+  );
 
   const handleAddRectBox = () => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
-      pdfRef.current?.addingRect({ type: "Item" });
+      pdfRef.current?.addingRect({ type: "Item", isSaveEvidence: true });
     }
   };
 
@@ -311,7 +461,7 @@ const Identification = () => {
         setSelectedFileId={setSelectedFileId}
       />
       <DrawingTagsView
-        drawingTypeList={drawingTypeList}
+        pageTypeTags={drawingTypeList}
         currentType={currentType}
         setCurrentType={setCurrentType}
       ></DrawingTagsView>
@@ -321,6 +471,19 @@ const Identification = () => {
           className="pl-4 flex flex-col border-r border-primaryN30"
           style={{ width: "300px" }}
         >
+          <div className="py-4 pl-10 flex flex-row ">
+            <p className="mr-2 text-sm text-baseGray">Page Labeling</p>
+            <Popover placement="rightBottom"
+              title={<div className="text-xxs font-medium">About Page Labeling</div>}
+              content={<div className="w-[300px] text-xxs text-baseGray">
+                Review and analyze the sections identified by CATO. You can verify existing results or add new labels manually.
+                Ensuring every section is correctly labeled guarantees the most accurate analysis from CATO.
+              </div>}
+              trigger="hover"
+            >
+              <Image src="/assets/icons/info.svg" alt="info circle icon" width={14} height={14}></Image>
+            </Popover>
+          </div>
           <Thumbnail
             pdfRef={pdfRef}
             showThumbnail={showThumbnail}
@@ -337,7 +500,7 @@ const Identification = () => {
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
               <AddRectBoxControls handleAddRectBox={handleAddRectBox} />
-              <ClearAllControls />
+              <ClearAllControls handleClearAll={handleClearAllCrop} />
             </div>
             <div className="flex flex-row gap-2">
               <SelectPagesControls
@@ -360,12 +523,14 @@ const Identification = () => {
               zoom={zoom}
               page={page}
               allEvidence={fileEvidence}
+              showEvidenceType={true}
               onRefreshEvidence={() => {
                 getFileEvidences();
               }}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
+              onUpdateEvidence={handleUpdateEvidence}
               onUpdateSafeZoom={handleSafeZoomChange}
             ></PdfWrapper>
           </div>

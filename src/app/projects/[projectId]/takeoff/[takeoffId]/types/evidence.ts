@@ -112,6 +112,7 @@ export interface FileItem {
 
 // 文件状态
 export enum FileStatus {
+  Uploaded = "Uploaded",
   Completed = "Completed",
   Processing = "Processing",
 }
@@ -126,8 +127,9 @@ export interface PdfWrapperProps {
   page: number;
   zoom: number;
   allEvidence: EvidenceType[]; //当前文件所有的evidence
-  typeList?: TypeItem[] | []; //当前文件所有的type
+  typeList?: any[]; //当前文件所有的type
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
+  showEvidenceType?: boolean; //是否显示evidence type
   onRefreshEvidence?: () => void;
   resetAdding?: () => void;
   onTotalPages?: (total: number) => void; //获取总页数
@@ -142,7 +144,7 @@ export interface PdfWrapperProps {
 export interface PdfWrapperRefMethods {
   resetAllInfo: () => void; //重置所有信息
   getPageAmount: () => number; //获取总页数
-  addingRect: (rect: { type: string }) => void; //添加矩形框
+  addingRect: (rect: { type: string; isSaveEvidence?: boolean }) => void; //添加矩形框
   rotatePDF: () => void; //旋转PDF
   clearCropSections: () => void; //清除所有裁剪区域
   handleBatchSubmit: () => void; //批量提交

@@ -80,7 +80,7 @@ const IdentificationIndex = () => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [buildLoadingStep, setBuildLoadingStep] = useState<string>(BuildLoadingStep.PageIndex);
   const [showContentView, setShowContentView] = useState<boolean>(false);
-  const [contentData, setContentData] = useState<any>({});
+  const [contentData, setContentData] = useState<any>([]);
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
@@ -101,7 +101,6 @@ const IdentificationIndex = () => {
       if (project_files?.length > 0) {
         setFileList(project_files);
         setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
-        setPdfUrl(project_files[0].parse_detail.uploaded_file_url); // 设置默认选中文件的PDF URL
       } else {
         notification.error({
           message: "Error",
@@ -341,45 +340,36 @@ const IdentificationIndex = () => {
     setCropsCount(count);
   }
 
-  const handleNext = () => {
+  const handleNext = (btnText: 'Next Step' | 'Next File' | 'Next') => {
     // 处理右上角的next按钮
-    if (!showContentView) {
+    if (btnText === 'Next Step') {
       // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
       if (indexBoxList.length > 0 && labelList.length > 0) {
         recognizeDrawingIndexData();
       } else {
         setShowSkipModal(true);
       }
-    } else {
+    } else if (btnText === 'Next File') {
       // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
       const findNextFile = fileList.find((item: any) => {
         return item.status !== FileStatus.Completed;
       });
       if (findNextFile) {
         // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
-        confirm({
-          title: "Warning",
-          content: `Detected unprocessed file: ${findNextFile.file_name}. Do you want to continue processing this file?`,
-          okText: "OK",
-          cancelText: "Cancel",
-          onOk: () => {
-            // 切换到下一个未处理的文件
-            setSelectedFileId(findNextFile.id);
-          }
-        })
-      } else {
-        // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
-        confirm({
-          title: "Tip",
-          content: `All files have been processed. Do you want to continue to the analysis step?`,
-          okText: "OK",
-          cancelText: "Cancel",
-          onOk: () => {
-            // 进行分析请求，请求成功，则跳转
-            handleAnalysis();
-          }
-        })
+        setSelectedFileId(findNextFile.id);
       }
+    } else if (btnText === 'Next') {
+      // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
+      confirm({
+        title: null,
+        content: `All files have been processed. Do you want to continue to the analysis step?`,
+        okText: "OK",
+        cancelText: "Cancel",
+        onOk: () => {
+          // 进行分析请求，请求成功，则跳转
+          handleAnalysis();
+        }
+      })
     }
   }
 

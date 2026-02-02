@@ -13,18 +13,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "antd";
-import { FilePanel } from "@/app/projects/[projectId]/components/Create-Takeoff/Cato-Upload";
-import { analyzeItem } from "@/services/DrawingAiService";
 
-import { BuildingBackground } from "@/app/projects/[projectId]/components/Create-Takeoff/Building-Background";
 import { useParams } from "next/navigation";
-import ConfirmAnalyzeModal from "./ConfirmAnalyzeModal";
 import { FileItem } from '../../identification-index/components/FileList';
 import { PageIndexStepInActive, PageLabelingStepActive, PageAnalysisStepInActive } from '../../identification-index/components/HeaderStepProgress';
 
 const Header = ({
   pdfRef,
-  takeOff,
+  fileList,
   selectedFileId,
   setSelectedFileId,
   showContentView,
@@ -34,9 +30,9 @@ const Header = ({
   const projectId = useParams().projectId;
 
   const filesData = useMemo(() => {
-    if (!takeOff) return [];
-    return takeOff?.project_files ?? [];
-  }, [takeOff]);
+    if (!fileList) return [];
+    return fileList ?? [];
+  }, [fileList]);
 
   const [loading, setLoading] = useState(false);
 

@@ -42,6 +42,7 @@ const LabelTypesSelect = ({
   return (
     <div>
       <Dropdown
+        className='cursor-pointer'
         menu={{ items }}
         trigger={['click']}
         open={visible}

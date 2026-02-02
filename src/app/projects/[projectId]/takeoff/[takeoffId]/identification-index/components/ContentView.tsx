@@ -92,6 +92,7 @@ const ContentView = ({
       </div>
     );
   };
+  console.log('######### contentData', contentData);
   return (
     <div className="pl-14 pr-6 w-full h-full flex flex-col">
       <div className="mt-8 mb-2 text-xs text-basicGray">

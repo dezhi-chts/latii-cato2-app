@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
 import Image from "next/image";
-import { Button, Upload, message } from "antd";
+import { Button, Upload, message, Modal } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
 
 export type FilePanelProps = {
@@ -77,7 +77,7 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
   };
 
   return (
-    <div className="w-full flex justify-center gap-4 rounded border border-dashed border-neutralsN50 px-2 h-[120px] items-center">
+    <div className="w-full flex justify-center gap-4 rounded border border-dashed border-neutralsN50 px-2 h-[140px] items-center">
       {files.map((file: UploadFile) => (
         <div key={file.uid}>
           <UploadFileList
@@ -153,7 +153,7 @@ export const ArchitecturalUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-16 border border-baseLightHover rounded-lg">
+    <div className="p-4 pb-20 border border-baseLightHover rounded-lg">
       <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/architectural-drawings-new.png"
@@ -185,7 +185,7 @@ export const QuoteUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-16 border border-baseLightHover rounded-lg">
+    <div className="p-4 pb-20 border border-baseLightHover rounded-lg">
       <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
@@ -208,6 +208,70 @@ export const QuoteUpload = ({
   );
 };
 
+export const ArchitecturalDrawingModal = ({
+  isOpen,
+  setIsOpen,
+}: any) => {
+  return (
+    <Modal
+      width={800}
+      open={isOpen}
+      onCancel={() => setIsOpen(false)}
+      footer={null}
+      centered
+      closable={false}
+    >
+      <div className="p-4 flex flex-col gap-8 font-nunito">
+        <div className="flex flex-col gap-2.5">
+          <p className="text-forumBlue text-lg">Not sure what to drop?</p>
+          <p className="font-light text-xs">
+            To ensure accurate AI reading and faster processing, please follow these guidelines when uploading your PDFs.
+          </p>
+        </div>
+        <div className="w-full flex gap-8">
+          <Image
+            src="/assets/cato-images/schedules-tables-2.png"
+            alt="architectural drawings image"
+            width={290}
+            height={180}
+            className="w-1/2 h-auto"
+          />
+          <div className="w-1/2 text-xs font-light flex flex-col gap-4">
+            <ul className="list-disc list-inside flex flex-col gap-1">
+              <li>CATO only reads PDFs, with architectural schedules and tables.</li>
+              <li>
+                All text must be typed and legible — no handwritten notes.
+              </li>
+              <li>
+                Upload files in the reading Orientation of the PDF
+              </li>
+            </ul>
+            <div>
+              <p>⚠️ Important:</p>
+              <ul className="list-disc list-inside">
+                <li>
+                  Do not place drawings or marks on top of the plans, as they may interfere with AI recognition.
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p>💡 Pro Tip (Preferred):</p>
+              <ul className="list-disc list-inside">
+                <li>
+                  Remove any unnecessary pages before uploading to reduce processing time and improve quoting accuracy.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 mt-3 mb-2 w-full flex justify-end">
+        <Button className="custom-default-btn" onClick={() => setIsOpen(false)}>Close</Button>
+      </div>
+    </Modal>
+  );
+};
+
 const TakeoffUpload = ({
   showUploadTipLink = true,
   onHandleUpload,
@@ -216,6 +280,7 @@ const TakeoffUpload = ({
   const [quoteFiles, setQuoteFiles] = useState<UploadFile[]>([]);
   const arcHingeMode = useRef<"1" | "2">("1");
   const quoteHingeMode = useRef<"1" | "2">("1");
+  const [showDrawingModal, setShowDrawingModal] = useState(false);
 
   const handleUpload = () => {
     if (archFiles.length === 0 && quoteFiles.length === 0) {
@@ -255,9 +320,9 @@ const TakeoffUpload = ({
           />
         </div>
       </div>
-      {/* {showUploadTipLink && (
-        <div className="mt-4 text-xs text-center text-basicGray underline cursor-pointer">Not sure what to upload?</div>
-      )} */}
+      {showUploadTipLink && (
+        <div className="mt-5 text-xs text-center text-basicGray underline cursor-pointer" onClick={() => { setShowDrawingModal(true) }}>Not sure what to upload?</div>
+      )}
       <div className="flex-1 flex items-end justify-center">
         <Button
           className="mt-4 mb-4 custom-primary-btn"
@@ -266,6 +331,12 @@ const TakeoffUpload = ({
           Create
         </Button>
       </div>
+      {showDrawingModal && (
+        <ArchitecturalDrawingModal
+          isOpen={showDrawingModal}
+          setIsOpen={setShowDrawingModal}
+        />
+      )}
     </div>
   );
 };
