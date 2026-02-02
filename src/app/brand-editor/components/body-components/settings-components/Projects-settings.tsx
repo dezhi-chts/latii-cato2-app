@@ -75,7 +75,7 @@ const ProjectsSettings = () => {
   };
 
   return (
-    <div className="flex gap-20 mb-10">
+    <div className="flex gap-20 mb-10 mt-[-20px]">
       <div className="w-5/12 flex flex-col gap-8">
         <div className="flex justify-between items-end">
           <div className="flex flex-col gap-1">

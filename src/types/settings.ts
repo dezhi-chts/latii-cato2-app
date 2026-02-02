@@ -20,6 +20,8 @@ export type ProjectField = {
   hint_text?: string;
   options?: String[];
   is_multiselect?: boolean;
+  text?: string;
+  is_ranged_date?: boolean;
 };
 
 export type ProjectFieldBoxProps = ProjectField & {
