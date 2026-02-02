@@ -47,10 +47,15 @@ const ProductEditor = () => {
 					<div className="text-xs text-[#a3a3a3]">
 						Select the product specifications to see Sections and Constrains.
 					</div>
+					{/* <div>
+
+					</div> */}
 				</div>
 			</div>
-			<div className="flex-1 border border-[#E8E8E8] rounded-md ml-4 h-full overflow-y-auto">
-
+			<div className="flex-1 border border-[#E8E8E8] rounded-md ml-4 h-full overflow-y-auto p-6">
+				<div className="text-xs text-[#a3a3a3]">
+					Select the product specifications to see Sections and Constrains.
+				</div>
 			</div>
 			<style global jsx>
 				{`
