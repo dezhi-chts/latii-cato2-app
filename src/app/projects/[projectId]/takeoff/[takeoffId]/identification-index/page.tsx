@@ -49,7 +49,7 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
-import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
+import { getDrawingIndexInfoById, getDrawingIndexTypeList, getPdfMatchPages, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
 
 enum BuildLoadingStep {
@@ -86,6 +86,7 @@ const IdentificationIndex = () => {
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
+  const [matchPages, setMatchPages] = useState<any>([]);
 
   const skipType = useRef<any>(null);
 
@@ -115,7 +116,18 @@ const IdentificationIndex = () => {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
-        setFileList(project_files);
+        // 临时测试数据
+        let tempFileList = project_files.map((item: any, index: number) => {
+          if (index === 0) {
+            return {
+              ...item,
+              status: FileStatus.Completed,
+            }
+          }
+          return item;
+        })
+        //setFileList(project_files);
+        setFileList(tempFileList);
         setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
       } else {
         notification.error({
@@ -135,26 +147,16 @@ const IdentificationIndex = () => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1 || !takeOff) return;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId);
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.DrawingIndex });
     if (response.status === "success") {
       const evidenceList = response?.data ?? [];
       setFileEvidence(evidenceList);
       // 进行分类
       setIndexBoxList(evidenceList.filter((item: any) => {
-        try {
-          let type = JSON.parse(item.type).name;
-          return type === GroupType.DrawingIndex;
-        } catch (e) {
-        }
-        return false;
+        return item.type === GroupType.DrawingIndex;
       }));
       setLabelList(evidenceList.filter((item: any) => {
-        try {
-          let type = JSON.parse(item.type).name;
-          return type === GroupType.TitleInfo;
-        } catch (e) {
-        }
-        return false;
+        return item.type === GroupType.TitleInfo
       }));
 
     } else {
@@ -262,6 +264,9 @@ const IdentificationIndex = () => {
       if (drawingTypeList.length === 0) {
         getTypeList();
       }
+
+      //获取pdf match pages信息
+      getPdfMatchPagesInfo();
     } else {
       notification.error({
         message: "Error",
@@ -269,6 +274,14 @@ const IdentificationIndex = () => {
       });
     }
   };
+
+  const getPdfMatchPagesInfo = async () => {
+    setMatchPages([]);
+    let res: any = await getPdfMatchPages(selectedFileId as any);
+    if (res.status === 'success') {
+      setMatchPages(res?.data?.data?.drawings ?? []);
+    }
+  }
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -382,16 +395,17 @@ const IdentificationIndex = () => {
       }
     } else if (btnText === 'Complete') {
       // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
-      confirm({
-        title: null,
-        content: `All files have been processed. Do you want to continue to the analysis step?`,
-        okText: "OK",
-        cancelText: "Cancel",
-        onOk: () => {
-          // 进行分析请求，请求成功，则跳转
-          handleAnalysis();
-        }
-      })
+      // confirm({
+      //   title: null,
+      //   content: `All files have been processed. Do you want to continue to the analysis step?`,
+      //   okText: "OK",
+      //   cancelText: "Cancel",
+      //   onOk: () => {
+      //     // 进行分析请求，请求成功，则跳转
+      //     handleAnalysis();
+      //   }
+      // })
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
     }
   }
 
@@ -445,6 +459,9 @@ const IdentificationIndex = () => {
                 contentData={contentData}
                 setContentData={setContentData}
                 drawingTypeList={drawingTypeList}
+                matchPages={matchPages}
+                pdfTotalPages={totalPage}
+                handlePageChange={handlePageChange}
               />
             ) : (
               <IndexRectView

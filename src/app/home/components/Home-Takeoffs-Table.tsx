@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTitleFromPropertyName } from "@/lib/functions";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 20;
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";

@@ -85,3 +85,14 @@ export const getPdfAnalyseSummary = async (fileId: string) => {
     return { data: null, status: "error" };
   }
 };
+
+export const getPdfMatchPages = async (fileId: string) => {
+  try {
+    const url = `/pdf/pdf-analysis/${fileId}/match-drawing-pages`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting pdf match pages:", error);
+    return { data: null, status: "error" };
+  }
+};

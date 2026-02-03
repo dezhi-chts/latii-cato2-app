@@ -392,7 +392,7 @@ const PdfWrapper = forwardRef(
             project_file_page_number: page,
             polygon: JSON.stringify(section.pdfPolygons),
             device_pixel_ratio: window.devicePixelRatio || 1,
-            type: JSON.stringify({ name: section.type }),
+            type: section.type,
             scale: viewport.scale,
             page_width_pdf: viewport.width,
             page_height_pdf: viewport.height,
@@ -531,7 +531,7 @@ const PdfWrapper = forwardRef(
         id: evid.id,
         polygon: polygonStr,
         device_pixel_ratio: window.devicePixelRatio || 1,
-        type: JSON.stringify({ name: evid.type }),
+        type: evid.type,
         scale: viewport.scale,
         page_width_pdf: viewport.width,
         page_height_pdf: viewport.height,
@@ -2160,11 +2160,7 @@ const PdfWrapper = forwardRef(
                     item.viewportPolygons,
                   );
 
-                  let type = "";
-                  try {
-                    const typeParams = JSON.parse(item.type);
-                    type = typeParams.name;
-                  } catch (error) { }
+                  let type = item.type ?? '';
 
                   return (
                     <div
@@ -2466,8 +2462,7 @@ const ShapeWrapper = ({
 
   if (type === "evidence") {
     try {
-      const typeParams = JSON.parse(shape.type);
-      let evidType = typeParams.name;
+      let evidType = shape.type ?? '';
       if (typeList && typeList?.length > 0) {
         let typeColor = typeList.find((item) => item.type === evidType)?.color;
         if (typeColor) {

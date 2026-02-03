@@ -163,7 +163,7 @@ const Identification = () => {
     if (selectedFileId === -1) return;
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId);
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.Label });
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
