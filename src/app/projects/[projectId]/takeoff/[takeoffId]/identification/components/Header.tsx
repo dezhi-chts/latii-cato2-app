@@ -83,7 +83,7 @@ const Header = ({
           <PageAnalysisStepInActive />
         </div>
         <Button
-          className="custom-primary-btn w-[102px] h-[26px]"
+          className="custom-primary-btn w-[102px] h-[26px] cursor-pointer"
           onClick={() => handleNext()}
         >
           Next Step

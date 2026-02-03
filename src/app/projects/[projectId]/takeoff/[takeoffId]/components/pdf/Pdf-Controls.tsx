@@ -217,23 +217,19 @@ export const ClearAllControls = ({
   )
 }
 
-import React, { forwardRef } from "react";
-
-export const ThumbnailControls = forwardRef<HTMLDivElement, {
-  showThumbnail: boolean;
-  setShowThumbnail: (showThumbnail: boolean) => void;
-  onClick: () => void;
-}>(({
+export const ThumbnailControls = ({
   showThumbnail,
   setShowThumbnail,
   onClick,
-}, ref) => {
+}: {
+  showThumbnail: boolean;
+  setShowThumbnail: (showThumbnail: boolean) => void;
+  onClick: () => void;
+}) => {
   return (
-    <div ref={ref} className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer" onClick={onClick}>
+    <div className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer" onClick={onClick}>
       <Image src={`/assets/icons/thumbnail.svg`} alt="thumbnail icon" width={16} height={16}></Image>
     </div>
   )
-});
-
-ThumbnailControls.displayName = 'ThumbnailControls';
+}
 

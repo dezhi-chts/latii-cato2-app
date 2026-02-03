@@ -42,7 +42,7 @@ import {
   ClearAllControls,
 } from "../components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
-import { list } from "postcss";
+import BuildingBackground from "../identification-index/components/BuildingBackground";
 
 const { confirm } = Modal;
 
@@ -84,6 +84,11 @@ const defaultPageCategory = [
   },
 ];
 
+enum BuildLoadingStep {
+  PageAnalysis = 'page-analyze',
+  PageLabel = 'page-label',
+  PageIndex = 'page-index',
+}
 
 const fixed_page_type = [
   {
@@ -113,6 +118,7 @@ const Identification = () => {
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(true);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
+  const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
@@ -473,9 +479,25 @@ const Identification = () => {
     let filterFiles = fileList.filter((file: any) => file.id !== selectedFileId);
     let nextFile = filterFiles.find((file: any) => file.status !== FileStatus.Completed);
     if (nextFile) {
+      // 设置当前文件为完成状态
+      setFileList((prev: any) => {
+        return prev.map((file: any) => {
+          if (file.id === selectedFileId) {
+            return {
+              ...file,
+              status: FileStatus.Completed,
+            }
+          }
+          return file;
+        })
+      });
       setSelectedFileId(nextFile.id);
     } else {
       // 没有其他文件需要处理，则进行下一步
+      setBuildLoading(true);
+      setTimeout(() => {
+        setBuildLoading(false);
+      }, 5000);
     }
   }
 
@@ -520,7 +542,7 @@ const Identification = () => {
             page={page}
             setPage={setPage}
             showCategory={true}
-            categoryList={pageTypeList}
+            categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -565,9 +587,11 @@ const Identification = () => {
         </div>
       </div>
       {fullLoading && <Spin fullscreen />}
+      {buildLoading && <BuildingBackground
+        step={BuildLoadingStep.PageAnalysis}
+      />}
     </div>
   );
 };
 
-// 为自定义 Select 选项添加必要的全局样式
 export default Identification;

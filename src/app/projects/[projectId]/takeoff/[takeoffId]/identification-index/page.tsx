@@ -53,7 +53,7 @@ import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex
 
 
 enum BuildLoadingStep {
-  PageAnalysis = 'page-analysis',
+  PageAnalysis = 'page-analyze',
   PageLabel = 'page-label',
   PageIndex = 'page-index',
 }
@@ -86,6 +86,8 @@ const IdentificationIndex = () => {
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
+
+  const skipType = useRef<any>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -206,7 +208,7 @@ const IdentificationIndex = () => {
           getFileEvidences();
 
           // 判断当前文件的状态，如果状态为complete，则显示contentView
-          if (file.status === FileStatus.Completed || file.status === FileStatus.Uploaded) {
+          if (file.status === FileStatus.Completed) {
             setShowContentView(true);
             getDrawingIndexData();
           } else {
@@ -362,6 +364,11 @@ const IdentificationIndex = () => {
       if (indexBoxList.length > 0 && labelList.length > 0) {
         recognizeDrawingIndexData();
       } else {
+        if (indexBoxList.length === 0) {
+          skipType.current = 'index';
+        } else {
+          skipType.current = 'label';
+        }
         setShowSkipModal(true);
       }
     } else if (btnText === 'Next File') {
@@ -514,6 +521,7 @@ const IdentificationIndex = () => {
       {showSkipModal && <SkipTipModal
         isOpen={showSkipModal}
         closeModal={() => { setShowSkipModal(false) }}
+        skipType={skipType.current}
         handleSkip={() => {
           setShowSkipModal(false);
           recognizeDrawingIndexData();
