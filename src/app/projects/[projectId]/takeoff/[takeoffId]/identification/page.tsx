@@ -456,7 +456,7 @@ const Identification = () => {
     <div className="w-full h-[100vh] flex flex-col">
       <Header
         pdfRef={pdfRef}
-        takeOff={takeOff}
+        fileList={fileList}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
       />
