@@ -40,8 +40,11 @@ import {
 	copyItem,
 	generateProfileScriptFromProfileOptionMsg,
 	findProductTypeWithParent,
-	pickProductProductTypeOpen
+	pickProductProductTypeOpen,
+	findTopLevelBySection,
+	deepCopyWithNewId
 } from "@/app/brand-editor/components/body-components/logics";
+import OptionTreeNodeCom from "@/app/brand-editor/components/body-components/option-tree-node";
 
 const ProductEditor = () => {
 
@@ -87,6 +90,7 @@ const ProductEditor = () => {
 		_collapsed: false,
 		_isTopLevel: true
 	});
+	const [sectionTreeData, setSectionTreeData] = useState<OptionMsgVO[]>([]);
 
 	useEffect(() => {
 		initAllData()
@@ -105,7 +109,7 @@ const ProductEditor = () => {
 		}
 	};
 
-	const getAttribute = async (selectedProfile:any) => {
+	const getAttribute = async (selectedProfile: any) => {
 		setFullLoading(false)
 		const [
 			projectAttributesWithOptions,
@@ -156,7 +160,7 @@ const ProductEditor = () => {
 				(newNode.code && newNode.code == "unit$product") ||
 				(newNode.code && newNode.code == "unit$product_type") ||
 				(newNode.code && newNode.code == "unit$operability") ||
-				(newNode.valueType != "STRUCT") 
+				(newNode.valueType != "STRUCT")
 			) {
 				newNode.disabled = true;
 			}
@@ -184,7 +188,7 @@ const ProductEditor = () => {
 		setSelectedSection({})
 		setSelectedProfile(targetProfile);
 		getAttribute(targetProfile)
-		
+
 	};
 
 	const onChangeProductType = (value: string) => {
@@ -213,7 +217,6 @@ const ProductEditor = () => {
 				let attributeMsg = getAttributeMsgByAttribute(item, unitMsg?.attribute_tree)
 				tempArr.push(attributeMsg)
 			})
-			console.log(tempArr,'tempArrtempArr')
 			setAllSection(tempArr)
 		} else {
 			setAllSection([])
@@ -229,15 +232,15 @@ const ProductEditor = () => {
 		setAllSection([...allSection])
 	};
 
-	const onChangeSection = (value: any, index: number, sectionMsg:any) => {
+	const onChangeSection = (value: any, index: number, sectionMsg: any) => {
 		let attributeMsg = getAttributeMsgByAttribute(value, unitMsg?.attribute_tree)
 		allSection[index] = attributeMsg
 		setAllSection([...allSection])
-		
+
 		let tempSelectedOpen: any = JSON.parse(JSON.stringify(selectedOpen))
 		tempSelectedOpen.have_sections = []
-		allSection.forEach((item:any)=>{
-			if(item.code){
+		allSection.forEach((item: any) => {
+			if (item.code) {
 				tempSelectedOpen.have_sections.push(item.code)
 			}
 		})
@@ -245,22 +248,22 @@ const ProductEditor = () => {
 		onSaveScript(newProfileOptionMsg)
 	};
 
-	const onDeleteSection = (sectionMsg:any, index: number) => {
-		if (sectionMsg.isAdd){
-			allSection.splice(index,1)
+	const onDeleteSection = (sectionMsg: any, index: number) => {
+		if (sectionMsg.isAdd) {
+			allSection.splice(index, 1)
 			setAllSection([...allSection])
-		}else{
-			allSection.splice(index,1)
+		} else {
+			allSection.splice(index, 1)
 			setAllSection([...allSection])
 
-			if (sectionMsg.code == selectedSection.code){
+			if (sectionMsg.code == selectedSection.code) {
 				setSelectedSection({})
 			}
 
 			let tempSelectedOpen: any = JSON.parse(JSON.stringify(selectedOpen))
 			tempSelectedOpen.have_sections = []
-			allSection.forEach((item:any)=>{
-				if(item.code){
+			allSection.forEach((item: any) => {
+				if (item.code) {
 					tempSelectedOpen.have_sections.push(item.code)
 				}
 			})
@@ -292,20 +295,20 @@ const ProductEditor = () => {
 				}
 			})
 			setAllProfile([...allProfile])
-			setSelectedProfile({...saveReturnMsg?.data})
+			setSelectedProfile({ ...saveReturnMsg?.data })
 			let profileOptionMsg = generateOptionMsgFromProfileScript(saveReturnMsg?.data, unitMsg?.attribute_tree);
 			setProfileOptionMsg(profileOptionMsg)
 			const allProductType = findProductTypeWithParent(profileOptionMsg)
 			setAllProductType([...allProductType])
 			if (selectedProductType?.option) {
-				allProductType && allProductType.length!=0 && allProductType.forEach((item:any)=>{
-					if(item.option == selectedProductType.option){
-						setSelectedProductType({...item})
+				allProductType && allProductType.length != 0 && allProductType.forEach((item: any) => {
+					if (item.option == selectedProductType.option) {
+						setSelectedProductType({ ...item })
 						setAllOpen([...item.children])
-						if (selectedOpen?.option){
-							item.children.forEach((item2:any)=>{
-								if(item2?.option == selectedOpen?.option){
-									setSelectedOpen({...item2})
+						if (selectedOpen?.option) {
+							item.children.forEach((item2: any) => {
+								if (item2?.option == selectedOpen?.option) {
+									setSelectedOpen({ ...item2 })
 								}
 							})
 						}
@@ -321,12 +324,141 @@ const ProductEditor = () => {
 		}
 	};
 
-	const onSelectSection = (sectionMsg:any) => {
-		if (sectionMsg?.isAdd){
+	const onSelectSection = (sectionMsg: any) => {
+		if (sectionMsg?.isAdd) {
 			return
 		}
-		console.log(sectionMsg,'sectionMsg')
-		setSelectedSection({...sectionMsg})
+		console.log(sectionMsg, 'sectionMsg')
+		setSelectedSection({ ...sectionMsg })
+		let sectionTreeData = findTopLevelBySection(sectionMsg.code, selectedOpen.children)
+		console.log(sectionTreeData, sectionMsg.code, selectedOpen.children, 'selectedOpen.childrenselectedOpen.children')
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	const onAddSectionTreeData = () => {
+		let subOptionMsgVO = {
+			id: crypto.randomUUID(),
+			attribute: null,
+			attributeMsg: {},
+			attributeIsDisabled: false,
+			option: null,
+			optionMsg: {},
+			options: [],
+			have_sections: [],
+			belong_section: selectedSection.code,
+			optionIsDisabled: false,
+			children: [],
+			_collapsed: false,
+			_isTopLevel: true
+		};
+		sectionTreeData.push(subOptionMsgVO)
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 增加子节点
+	const addSubOptionHandler = (optionItemMsg: OptionMsgVO, $index:number) => {
+		let newOptionItemMsg = addSubOption(optionItemMsg)
+		let newProfileOptionMsg = updateOption(newOptionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 增加兄弟节点
+	const addSiblingOptionHandler = (optionItemMsg: OptionMsgVO, $index:number) => {
+		if (optionItemMsg._isTopLevel){
+			let subOptionMsgVO = {
+				id: crypto.randomUUID(),
+				attribute: optionItemMsg.attribute,
+				attributeMsg: optionItemMsg.attributeMsg,
+				attributeIsDisabled: false,
+				option: null,
+				optionMsg: {},
+				options: optionItemMsg.options,
+				have_sections: [],
+				belong_section: selectedSection.code,
+				optionIsDisabled: false,
+				children: [],
+				_collapsed: false,
+				_isTopLevel: true
+			};
+			const newSectionTreeData = [
+				...sectionTreeData.slice(0, $index + 1),
+				subOptionMsgVO,
+				...sectionTreeData.slice($index + 1)
+			];
+			setSectionTreeData([...newSectionTreeData])
+			return
+		}
+		let newOptionItemMsg = addSiblingOption(optionItemMsg, sectionTreeData[$index])
+		let newProfileOptionMsg = updateOption(newOptionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 删除节点
+	const deleteNode = (optionItemMsg: OptionMsgVO, $index:number) => {
+		if (optionItemMsg._isTopLevel){
+			sectionTreeData.splice($index,1)
+			setSectionTreeData([...sectionTreeData])
+			return
+		}
+		let newProfileOptionMsg = deleteItem(optionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 复制节点
+	const copyNode = (optionItemMsg: OptionMsgVO, $index:number) => {
+		if (optionItemMsg._isTopLevel){
+			const newNode = deepCopyWithNewId(optionItemMsg);
+			const newSectionTreeData = [
+				...sectionTreeData.slice(0, $index + 1),
+				newNode,
+				...sectionTreeData.slice($index + 1)
+			];
+			setSectionTreeData([...newSectionTreeData])
+			return
+		}
+		let newProfileOptionMsg = copyItem(optionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 修改attribute
+	const onChangeAttribute = (attributeCode: string, optionItemMsg: OptionMsgVO, $index:number) => {
+		let attributeMsg = getAttributeMsgByAttribute(attributeCode, unitAttributesTree[0]);
+		let options = getOptionsByAttributeCode(attributeCode, unitAttributesTree[0]);
+		optionItemMsg.attribute = attributeCode
+		optionItemMsg.attributeMsg = attributeMsg
+		optionItemMsg.options = options
+		let newProfileOptionMsg = updateOption(optionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 修改option
+	const onChangeOption = (optionCode: string, optionItemMsg: OptionMsgVO, $index:number) => {
+		let optionMsg = getOptionMsgByOption(optionCode, optionItemMsg.options)
+		optionItemMsg.option = optionCode
+		optionItemMsg.optionMsg = optionMsg
+		let newProfileOptionMsg = updateOption(optionItemMsg, sectionTreeData[$index])
+		sectionTreeData[$index] = newProfileOptionMsg
+		setSectionTreeData([...sectionTreeData])
+	};
+
+	// 展开收起
+	const onToggleHandler = (id: string, $index:number) => {
+		const dfs = (node: OptionMsgVO): OptionMsgVO => {
+			if (node.id === id) {
+				return { ...node, _collapsed: !node._collapsed };
+			}
+			return {
+				...node,
+				children: node.children.map(dfs),
+			};
+		};
+		sectionTreeData[$index] = dfs(sectionTreeData[$index])
+		setSectionTreeData([...sectionTreeData])
 	};
 
 
@@ -453,14 +585,14 @@ const ProductEditor = () => {
 										allSection.map((item: any, index: any) => {
 											let isSelected = item.code === selectedSection.code && item.code;
 											const selectedStyle = isSelected
-											? {
-												background: "#E3EBF8"
-											}
-											: {
+												? {
+													background: "#E3EBF8"
+												}
+												: {
 
-											}
+												}
 											return (
-												<div 
+												<div
 													key={index}
 													className="
 														group
@@ -479,7 +611,7 @@ const ProductEditor = () => {
 														cursor-pointer
 													"
 													style={selectedStyle}
-													onClick={()=>{onSelectSection(item)}}
+													onClick={() => { onSelectSection(item) }}
 												>
 													{
 														<TreeSelect
@@ -493,12 +625,12 @@ const ProductEditor = () => {
 															treeLine={true}
 															treeIcon={true}
 															value={item?.code}
-															onClick={(e:any) => {e.stopPropagation()}}
+															onClick={(e: any) => { e.stopPropagation() }}
 															onChange={(value) => { onChangeSection(value, index, item) }}
 														/>
 													}
 													<div className='ml-6 mr-2'>
-														<DeleteOutlined onClick={(e:any) => {e.stopPropagation(); onDeleteSection(item, index)}} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+														<DeleteOutlined onClick={(e: any) => { e.stopPropagation(); onDeleteSection(item, index) }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
 													</div>
 												</div>
 											)
@@ -583,7 +715,38 @@ const ProductEditor = () => {
 							</div>
 						</div>
 						<div className="p-6">
-							11
+							{
+								(sectionTreeData && sectionTreeData.length == 0) && <div className="flex items-center justify-center">
+									<Button
+										onClick={onAddSectionTreeData}
+										type="primary"
+										size="small"
+										icon={<PlusOutlined />}
+									>
+										Add
+									</Button>
+								</div>
+							}
+							{
+								(sectionTreeData && sectionTreeData.length != 0) && <div>
+									{
+										sectionTreeData.map((item: any, index: any) => {
+											return <OptionTreeNodeCom
+												key={index}
+												optionItemMsg={item}
+												attributesTree={unitAttributesTree}
+												addSubOptionHandler={(node: OptionMsgVO) => { addSubOptionHandler(node, index) }}
+												addSiblingOptionHandler={(node: OptionMsgVO) => { addSiblingOptionHandler(node, index) }}
+												deleteNode={(node: OptionMsgVO) => { deleteNode(node, index) }}
+												copyNode={(node: OptionMsgVO) => { copyNode(node, index) }}
+												onChangeAttribute={(attributeCode: string, node: OptionMsgVO) => { onChangeAttribute(attributeCode, node, index) }}
+												onChangeOption={(optionCode: string, node: OptionMsgVO) => { onChangeOption(optionCode, node, index) }}
+												onToggleHandler={(id: string) => { onToggleHandler(id, index) }}
+											/>
+										})
+									}
+								</div>
+							}
 						</div>
 					</div>
 				}
