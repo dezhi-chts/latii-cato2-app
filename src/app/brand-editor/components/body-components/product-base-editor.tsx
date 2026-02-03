@@ -67,6 +67,8 @@ const ParameterBaseEditor = () => {
 		option: null,
 		optionMsg: {},
 		options: [],
+		have_sections: [],
+		belong_section: "",
 		optionIsDisabled: false,
 		children: [],
 		_collapsed: false,
@@ -451,6 +453,7 @@ const ParameterBaseEditor = () => {
 
 			if (optionItemMsg?.id) {
 				let newOptionItemMsgForProductType = addSubOption(optionItemMsg)
+				
 				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attribute = "unit$product_type"
 				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].attributeMsg = productTypeAttributeMsg
 				newOptionItemMsgForProductType.children[newOptionItemMsgForProductType.children.length - 1].option = productTypeOptionMsg.code
@@ -589,6 +592,7 @@ const ParameterBaseEditor = () => {
 			unitAttributesWithOptions?.data?.attribute_tree,
 			profileOptionMsg
 		);
+		// let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
 		setFullLoading(false)
 		let saveReturnMsg: Record<string, any> = await saveProfileScript(selectedProfile.id, scriptMsg);
 
@@ -918,8 +922,16 @@ const ParameterBaseEditor = () => {
 		}
 		const createProfileRes = await createProfile(params)
 		if (createProfileRes?.status == "success") {
-			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+
+			const [
+				unitAttributesWithOptions
+			] = await Promise.all([
+				fetchUnitAttributesWithOptionsByVersionId(selectedProfile?.unit_version_id)
+			]);
+			
 			let addProfileData = createProfileRes?.data;
+			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+			copyProfileOptionMsg.option = addProfileData?.profile_code
 
 			const addProfileOptionMsg: any = pickProductProductTypeOpen(copyProfileOptionMsg)
 
@@ -935,10 +947,10 @@ const ParameterBaseEditor = () => {
 				projectMsg?.attribute_tree,
 				quoteMsg?.attribute_tree,
 				itemMsg?.attribute_tree,
-				unitMsg?.attribute_tree,
+				unitAttributesWithOptions?.data?.attribute_tree,
 				addProfileOptionMsg
 			);
-			console.log(addProfileOptionMsg, 'addProfileOptionMsgaddProfileOptionMsg')
+
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(addProfileData.id, scriptMsg);
 
 			if (saveReturnMsg.status == "success") {
@@ -1113,8 +1125,8 @@ const ParameterBaseEditor = () => {
 													<Popconfirm
 														title="Delete the profile"
 														description="Are you sure to delete this profile?"
-														onConfirm={() => deleteProfileFromDB(item, index)}
-														onCancel={() => { }}
+														onConfirm={(e:any) => {e.stopPropagation();deleteProfileFromDB(item, index)}}
+														onCancel={(e:any) => { e.stopPropagation()}}
 														okText="Yes"
 														cancelText="No"
 													>
@@ -1263,8 +1275,8 @@ const ParameterBaseEditor = () => {
 													<Popconfirm
 														title="Delete the product type"
 														description="Are you sure to delete this product type?"
-														onConfirm={() => onDeleteProductType(item)}
-														onCancel={() => { }}
+														onConfirm={(e:any) => {e.stopPropagation();onDeleteProductType(item)}}
+														onCancel={(e:any) => { e.stopPropagation()  }}
 														okText="Yes"
 														cancelText="No"
 													>
@@ -1410,8 +1422,8 @@ const ParameterBaseEditor = () => {
 													<Popconfirm
 														title="Delete the operability"
 														description="Are you sure to delete this operability?"
-														onConfirm={() => onDeleteOpen(item)}
-														onCancel={() => { }}
+														onConfirm={(e:any) => {e.stopPropagation(); onDeleteOpen(item)}}
+														onCancel={(e:any) => {e.stopPropagation()  }}
 														okText="Yes"
 														cancelText="No"
 													>

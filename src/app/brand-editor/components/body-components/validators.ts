@@ -4,6 +4,8 @@
 export interface OptionMsgDTO {
 	attribute: string;
 	option: string;
+	have_sections: any[];
+	belong_section: string | null;
 	children: OptionMsgDTO[];
 }
 
@@ -17,8 +19,10 @@ export interface OptionMsgVO {
 	attributeMsg: Record<string, any>;
 	attributeIsDisabled: boolean;
 	option: string | null;
-	optionMsg: Record<string, any>
+	optionMsg: Record<string, any>;
 	options: any[];
+	have_sections: any[];
+	belong_section: string | null;
 	optionIsDisabled: boolean;
 	children: OptionMsgVO[];
 	_collapsed: boolean;
