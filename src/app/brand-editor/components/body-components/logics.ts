@@ -10,17 +10,29 @@ export const collectCodes = (tree: any, result: any = [], parentCode: string = "
 
 		// 计算当前节点的 classCode 原始部分
 		let rawCode = node.code.includes("$") ? node.code.split("$")[1] : node.code;
-		if (node.valueType !== "STRUCT") {
-			// 给非 STRUCT 节点构建 classCode
-			const tempObj = JSON.parse(JSON.stringify(node));
 
-			// classCode = 父级code + 自己的 rawCode
-			tempObj.classCode = parentCode
-				? `${parentCode}_${rawCode}`   // 可按需求换成 "_" 或直接拼接
-				: rawCode;
+		const tempObj = JSON.parse(JSON.stringify(node));
 
+		// classCode = 父级code + 自己的 rawCode
+		tempObj.classCode = parentCode
+			? `${parentCode}_${rawCode}`   // 可按需求换成 "_" 或直接拼接
+			: rawCode;
+
+		if (node.version_id != "0") {
 			result.push(tempObj);
 		}
+
+		// if (node.valueType !== "STRUCT") {
+		// 	// 给非 STRUCT 节点构建 classCode
+		// 	const tempObj = JSON.parse(JSON.stringify(node));
+
+		// 	// classCode = 父级code + 自己的 rawCode
+		// 	tempObj.classCode = parentCode
+		// 		? `${parentCode}_${rawCode}`   // 可按需求换成 "_" 或直接拼接
+		// 		: rawCode;
+
+		// 	result.push(tempObj);
+		// }
 
 		// 递归遍历 children
 		if (node.children && node.children.length > 0) {
@@ -110,6 +122,7 @@ export const generateKeyWordsClassScript = (): string => {
 	keyWords.forEach((k: string) => {
 		lines.push(`	${k} = "${k}"`);
 	});
+	lines.push(`	empty = ""`);
 	return "\n" + lines.join("\n");
 }
 
@@ -344,16 +357,29 @@ export const getOptionMsgByOption = (optionCode: string, options: any[]): Record
 export const buildProfileMsgJsonNode = (
 	profileScriptMsg: string
 ): Record<string, any> => {
-	// 1. 只给 attribute / option / children 的 key 加引号
+	// 1. 只给 attribute / option / children / have_sections /belong_section 的 key 加引号
 	let jsonStr = profileScriptMsg.replace(
-		/([,{]\s*)(attribute|option|children)\s*:/g,
+		/([,{]\s*)(attribute|option|children|have_sections|belong_section)\s*:/g,
 		'$1"$2":'
 	);
 
 	// 2. 只给 attribute / option 的 value 加引号
 	jsonStr = jsonStr.replace(
-		/"(attribute|option)"\s*:\s*([a-zA-Z_$][\w$.]*)/g,
+		/"(attribute|option|belong_section)"\s*:\s*([a-zA-Z_$][\w$.]*)/g,
 		'"$1":"$2"'
+	);
+
+	// 3. 遍历 have_sections 的 value，给每一项加引号
+	jsonStr = jsonStr.replace(
+		/"have_sections"\s*:\s*\[([^\]]*)\]/g,
+		(_, content) => {
+			if (!content.trim()) return '"have_sections":[]';
+			const items = content
+				.split(',')
+				.map((v:any) => `"${v.trim()}"`)
+				.join(',');
+			return `"have_sections":[${items}]`;
+		}
 	);
 
 	return JSON.parse(jsonStr);
@@ -377,6 +403,8 @@ export const generateOptionMsgFromProfileJson = (
 
 		let attribute: string | null = null;
 		let option: string | null = null;
+		let have_sections: any[] = [];
+		let belong_section: string | null = null;
 
 		if (node.attribute) {
 			const matchedAttr = attrs.find((a: Record<string, any>) =>
@@ -390,6 +418,27 @@ export const generateOptionMsgFromProfileJson = (
 				o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === node.option.split(".")[1]
 			);
 			option = matchedOption ? matchedOption.option.code : null;
+		}
+
+		if (node.have_sections && node.have_sections.length!=0) {
+			have_sections = JSON.parse(JSON.stringify(node.have_sections))
+			have_sections.forEach((item:any,index:any)=>{
+				if (item){
+					const matchedAttr = attrs.find((a: Record<string, any>) =>
+						a.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === item.split(".")[1]
+					);
+					have_sections[index] = matchedAttr ? matchedAttr.code : null;
+				}else{
+					have_sections[index] = null;
+				}
+			})
+		}
+
+		if (node.belong_section){
+			const matchedAttr = attrs.find((a: Record<string, any>) =>
+				a.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === node.belong_section.split(".")[1]
+			);
+			belong_section = matchedAttr ? matchedAttr.code : null;
 		}
 
 		// 获取 attributeMsg
@@ -423,6 +472,8 @@ export const generateOptionMsgFromProfileJson = (
 			option,
 			optionMsg,
 			options,
+			have_sections,
+			belong_section,
 			optionIsDisabled: isTopLevel ? true : false,
 			children,
 			_collapsed: false,
@@ -449,6 +500,8 @@ export const generateOptionMsgFromProfileScript = (
 		option: "",
 		optionMsg: {},
 		options: [],
+		have_sections: [],
+		belong_section: "",
 		optionIsDisabled: true,
 		children: [],
 		_collapsed: false,
@@ -476,6 +529,8 @@ export const generateOptionMsgFromProfileScript = (
 			option: profileMsg?.profile_code || "",
 			optionMsg: optionMsg,
 			options: options,
+			have_sections:[],
+			belong_section:"",
 			optionIsDisabled: true,
 			children: [],
 			_collapsed: false,
@@ -500,6 +555,8 @@ export const generateProfileScriptFromProfileOptionMsg = (
 		return {
 			attribute: node.attribute || "", // VO 里可能是 null，这里用空字符串代替
 			option: node.option || "",       // 同上
+			have_sections: node.have_sections || [],
+			belong_section: node.belong_section || "",
 			children: (node.children || []).map(transform)
 		};
 	};
@@ -538,6 +595,38 @@ export const generateProfileScriptFromProfileOptionMsg = (
 	};
 	replaceOptions(newProfileOptionMsg)
 
+	// 四次处理树，把haveSections和belongSection替换成unit_attributes.classCode 格式
+	const replaceSections = (node: OptionMsgDTO) => {
+		if (node.belong_section) {
+			const matchAttr = attrs.find((a: Record<string, any>) => a.code === node.belong_section);
+			if (matchAttr) {
+				// 替换 attribute 为 unit_attributes.a.classCode 格式，不加引号
+				node.belong_section = `unit_attributes.${matchAttr.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`;
+			}
+		} else {
+			node.belong_section = `key_words.empty`;
+		}
+		if (node.have_sections && node.have_sections.length != 0) {
+			node.have_sections.forEach((item, index) => {
+				if (item) {
+					const matchAttr = attrs.find((a: Record<string, any>) => a.code === item);
+					if (matchAttr) {
+						// 替换 attribute 为 unit_attributes.a.classCode 格式，不加引号
+						node.have_sections[index] = `unit_attributes.${matchAttr.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`;
+					}
+				} else {
+					node.have_sections[index] = `key_words.empty`;
+				}
+			})
+		} else {
+			node.have_sections = [];
+		}
+		if (node.children && node.children.length > 0) {
+			node.children.forEach(replaceSections);
+		}
+	};
+	replaceSections(newProfileOptionMsg)
+
 	// 递归生成 Python 样式字符串
 	const buildPythonCode = (node: OptionMsgDTO, level = 0): string => {
 		const indent = "  ".repeat(level); // 当前层缩进
@@ -546,6 +635,13 @@ export const generateProfileScriptFromProfileOptionMsg = (
 		// 如果为空字符串就加双引号，否则直接引用变量
 		const attributeStr = node.attribute ? node.attribute : '""';
 		const optionStr = node.option ? node.option : '""';
+		const belongSectionStr = node.belong_section ? node.belong_section : '""';
+		let haveSectionsStr:any = "[]"
+		if (node.have_sections && node.have_sections.length!=0){
+			haveSectionsStr = `[${node.have_sections.join(",\n")}]`
+		}else{
+			haveSectionsStr = "[]"
+		}
 
 		let childrenCode = "";
 		if (node.children && node.children.length > 0) {
@@ -555,7 +651,7 @@ export const generateProfileScriptFromProfileOptionMsg = (
 			childrenCode = `\n${childrenCode}\n${childIndent}`; // children 的 [] 包裹 +缩进
 		}
 
-		return `${indent}{\n${childIndent}attribute: ${attributeStr},\n${childIndent}option: ${optionStr},\n${childIndent}children: [${childrenCode}]\n${indent}}`;
+		return `${indent}{\n${childIndent}attribute: ${attributeStr},\n${childIndent}option: ${optionStr},\n${childIndent}have_sections: ${haveSectionsStr},\n${childIndent}belong_section: ${belongSectionStr},\n${childIndent}children: [${childrenCode}]\n${indent}}`;
 	};
 
 	let profileMsgScript: string = "profile_msg = " + buildPythonCode(newProfileOptionMsg);
@@ -610,6 +706,8 @@ export const addSubOption = (optionItemMsg: OptionMsgVO): OptionMsgVO => {
 		option: null,
 		optionMsg: {},
 		options: [],
+		have_sections: [],
+		belong_section: "",
 		optionIsDisabled: false,
 		children: [],
 		_collapsed: false,
@@ -642,6 +740,8 @@ export const addSiblingOption = (
 				option: null,
 				optionMsg: {},
 				options: optionItemMsg.options,
+				have_sections: [],
+				belong_section: "",
 				optionIsDisabled: false,
 				children: [],
 				_collapsed: false,
@@ -812,44 +912,44 @@ export const findProductTypeWithParent = (treeObj: OptionMsgVO) => {
 };
 
 export const pickProductProductTypeOpen = (root: OptionMsgVO): OptionMsgVO => {
-  // 复制顶级节点，保证不破坏原数据
-  const newRoot: OptionMsgVO = { ...root };
+	// 复制顶级节点，保证不破坏原数据
+	const newRoot: OptionMsgVO = { ...root };
 
-  // 第一层：找到所有 product 节点
-  const productNodes =
-    newRoot.children
-      ?.filter(child => child.attribute === "unit$product")
-      .map(productNode => {
-        // 第二层：找到所有 product_type 节点
-        const productTypeNodes =
-          productNode.children
-            ?.filter(child => child.attribute === "unit$product_type")
-            .map(productTypeNode => {
-              // 第三层：找到所有 unit$operability 节点
-              const openNodes =
-                productTypeNode.children
-                  ?.filter(child => child.attribute === "unit$operability")
-                  .map(openNode => ({
-                    ...openNode,
-                    children: [], // 截断
-                  })) ?? [];
+	// 第一层：找到所有 product 节点
+	const productNodes =
+		newRoot.children
+			?.filter(child => child.attribute === "unit$product")
+			.map(productNode => {
+				// 第二层：找到所有 product_type 节点
+				const productTypeNodes =
+					productNode.children
+						?.filter(child => child.attribute === "unit$product_type")
+						.map(productTypeNode => {
+							// 第三层：找到所有 unit$operability 节点
+							const openNodes =
+								productTypeNode.children
+									?.filter(child => child.attribute === "unit$operability")
+									.map(openNode => ({
+										...openNode,
+										children: [], // 截断
+									})) ?? [];
 
-              return {
-                ...productTypeNode,
-                children: openNodes,
-              };
-            }) ?? [];
+							return {
+								...productTypeNode,
+								children: openNodes,
+							};
+						}) ?? [];
 
-        return {
-          ...productNode,
-          children: productTypeNodes,
-        };
-      }) ?? [];
+				return {
+					...productNode,
+					children: productTypeNodes,
+				};
+			}) ?? [];
 
-  // 如果第一层都没找到，children = []
-  return {
-    ...newRoot,
-    children: productNodes.length > 0 ? productNodes : [],
-  };
+	// 如果第一层都没找到，children = []
+	return {
+		...newRoot,
+		children: productNodes.length > 0 ? productNodes : [],
+	};
 };
 
