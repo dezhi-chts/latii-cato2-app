@@ -89,6 +89,7 @@ const IdentificationIndex = () => {
   const [matchPages, setMatchPages] = useState<any>([]);
 
   const skipType = useRef<any>(null);
+  const evidenceIsLoaded = useRef<boolean>(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -147,19 +148,15 @@ const IdentificationIndex = () => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1 || !takeOff) return;
+
+    evidenceIsLoaded.current = false;
     const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.DrawingIndex });
     if (response.status === "success") {
+      evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
       setFileEvidence(evidenceList);
-      // 进行分类
-      setIndexBoxList(evidenceList.filter((item: any) => {
-        return item.type === GroupType.DrawingIndex;
-      }));
-      setLabelList(evidenceList.filter((item: any) => {
-        return item.type === GroupType.TitleInfo
-      }));
-
     } else {
+      evidenceIsLoaded.current = false;
       notification.error({
         message: "Error",
         description: "Failed to get file evidence",
@@ -222,6 +219,17 @@ const IdentificationIndex = () => {
       }
     });
   }, [selectedFileId]);
+
+  useEffect(() => {
+    // 进行分类
+    setIndexBoxList(fileEvidence.filter((item: any) => {
+      return item.type === GroupType.DrawingIndex;
+    }));
+    setLabelList(fileEvidence.filter((item: any) => {
+      return item.type === GroupType.TitleInfo
+    }));
+  }, [fileEvidence]);
+
 
   const recognizeDrawingIndexData = async () => {
     setBuildLoadingStep(BuildLoadingStep.PageIndex);
@@ -327,24 +335,40 @@ const IdentificationIndex = () => {
   };
 
 
-  const handleAppendEvidence = (uploadData: any) => {
-    let newUploadData = uploadData.map((item: any) => ({
-      ...item,
-      viewportPolygons: item.polygons || [],
-    }));
+  const handleAppendEvidence = (
+    (evidenceList: EvidenceType[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!evidenceList?.length) return;
+      setFileEvidence([...fileEvidence, ...evidenceList]);
+    }
+  );
 
-    getFileEvidences();
+  const handleDeleteEvidence = (
+    (deleteIds: number[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!deleteIds?.length) return;
+      setFileEvidence((prev: any) => {
+        return prev.filter(
+          (item: EvidenceType) => !deleteIds.includes(item.id)
+        )
+      });
+    }
+  );
 
-    // 获取当前文件的evidence，并按照type进行分类
-    pdfRef?.current?.clearCropSections?.();
-  };
-
-  const handleDeleteEvidence = async (deleteIds: number[]) => {
+  const deleteEvidence = async (deleteIds: number[]) => {
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
+    console.log('######### res', res);
     if (res.status === 'success') {
-      // 重新获取evidence
-      getFileEvidences();
+      handleDeleteEvidence(deleteIds);
     } else {
       notification.error({
         message: "Error",
@@ -354,10 +378,28 @@ const IdentificationIndex = () => {
     setFullLoading(false);
   }
 
-  const handleUpdateEvidence = (updateData: any) => {
-    // 刷新当前文件的evidence
-    getFileEvidences();
-  };
+  const handleUpdateEvidence = (
+    (evidenceList: EvidenceType[]) => {
+      // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+      if (!evidenceIsLoaded.current) {
+        getFileEvidences();
+        return;
+      }
+      if (!evidenceList?.length) return;
+      setFileEvidence(
+        fileEvidence.map((item: EvidenceType) => {
+          // 找到需要更新的item
+          let updateItem = evidenceList.find(
+            (evid: EvidenceType) => evid.id === item.id
+          );
+          if (updateItem) {
+            return { ...updateItem };
+          }
+          return item;
+        })
+      );
+    }
+  );
 
   const handleAddRectBox = (type: string) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
@@ -469,7 +511,7 @@ const IdentificationIndex = () => {
                 labelList={labelList}
                 cropsCount={cropsCount}
                 handleAddRectBox={handleAddRectBox}
-                handleDeleteEvidence={handleDeleteEvidence}
+                handleDeleteEvidence={deleteEvidence}
               ></IndexRectView>
             )
           }
