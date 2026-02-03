@@ -25,7 +25,7 @@ const Numbers = ({
       </p>
       <InputNumber
         placeholder={hint_text}
-        className="min-w-80 max-w-80"
+        className="w-full max-w-80"
         value={value}
         onBlur={onBlur}
         controls={false}
