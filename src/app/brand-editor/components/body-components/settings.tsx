@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ProjectsSettings from "./settings-components/Projects-settings";
+import QuoteSettings from "./settings-components/Quote-settings";
 
 const Settings = () => {
   const tabs = [
@@ -48,6 +49,7 @@ const Settings = () => {
       </div>
       <div className="pl-6 pt-10">
         {selectedTab.id === 1 && <ProjectsSettings />}
+        {selectedTab.id === 2 && <QuoteSettings />}
       </div>
     </div>
   );

@@ -122,10 +122,9 @@ const ProjectsSettings = () => {
     fieldsCount <= 7
       ? { cols: 1, rows: fieldsCount }
       : fieldsCount <= 10
-        ? { cols: 2, rows: 5 }
-        : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
+      ? { cols: 2, rows: 5 }
+      : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
 
-  // ✅ ancho SOLO cuando corresponde por regla (más de 7)
   const isWide = fieldsCount > 7;
 
   const FIELD_COMPONENTS: Record<
