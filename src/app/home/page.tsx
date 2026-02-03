@@ -15,6 +15,10 @@ import type { UploadFile } from "antd/es/upload/interface";
 import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
 import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
 import { useRouter } from 'next/navigation'
+import { fetchProjects } from "@/services/projectService";
+import { getAllTakeoffList } from "@/services/takeOffService";
+
+import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
 
 
 export const projects: ProjectRow[] = [
@@ -22,6 +26,7 @@ export const projects: ProjectRow[] = [
     key: "1",
     project_name: "Project Name 1",
     last_edit: "2026-01-20",
+    update_time: "2026-01-20",
     budget_price: 900000,
     end_customer: "End Customer",
     status: "Take Off",
@@ -33,6 +38,7 @@ export const projects: ProjectRow[] = [
     key: "2",
     project_name: "Bogota Street 123",
     last_edit: "2025-11-17",
+    update_time: "2025-11-17",
     end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
@@ -42,6 +48,7 @@ export const projects: ProjectRow[] = [
     key: "3",
     project_name: "Bogota Street 123",
     last_edit: "2026-01-04",
+    update_time: "2026-01-04",
     end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
@@ -51,7 +58,9 @@ export const projects: ProjectRow[] = [
     key: "4",
     project_name: "Bogota Street 123",
     last_edit: "2025-12-20",
+    update_time: "2025-12-20",
     budget_price: 900000,
+    end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
     is_favorite: false,
@@ -60,7 +69,9 @@ export const projects: ProjectRow[] = [
     key: "5",
     project_name: "Amazing House Ranch",
     last_edit: "2026-03-06",
+    update_time: "2026-03-06",
     budget_price: 900000,
+    end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
     is_favorite: false,
@@ -69,6 +80,9 @@ export const projects: ProjectRow[] = [
     key: "6",
     project_name: "Building Street Happy",
     last_edit: "2026-04-10",
+    update_time: "2026-04-10",
+    budget_price: 900000,
+    end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
     is_favorite: false,
@@ -77,6 +91,8 @@ export const projects: ProjectRow[] = [
     key: "7",
     project_name: "Project Name 1",
     last_edit: "2026-01-20",
+    update_time: "2026-01-20",
+    budget_price: 900000,
     end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
@@ -86,6 +102,8 @@ export const projects: ProjectRow[] = [
     key: "8",
     project_name: "Bogota Street 123",
     last_edit: "2025-11-17",
+    update_time: "2025-11-17",
+    end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
     is_favorite: false,
@@ -94,7 +112,9 @@ export const projects: ProjectRow[] = [
     key: "9",
     project_name: "Project Amazing",
     last_edit: "2026-01-04",
+    update_time: "2026-01-04",
     budget_price: 900000,
+    end_customer: "End Customer",
     status: "Uploaded",
     notes: "End Customer",
     is_favorite: false,
@@ -103,6 +123,7 @@ export const projects: ProjectRow[] = [
     key: "10",
     project_name: "New Rehau Office's",
     last_edit: "2025-12-20",
+    update_time: "2025-12-20",
     budget_price: 900000,
     end_customer: "End Customer",
     status: "Uploaded",
@@ -113,6 +134,7 @@ export const projects: ProjectRow[] = [
     key: "11",
     project_name: "Latii Canada Office's",
     last_edit: "2026-03-06",
+    update_time: "2026-03-06",
     budget_price: 900000,
     end_customer: "End Customer",
     status: "Uploaded",
@@ -123,6 +145,7 @@ export const projects: ProjectRow[] = [
     key: "12",
     project_name: "Latii Canada Office's",
     last_edit: "2026-04-10",
+    update_time: "2026-04-10",
     budget_price: 900000,
     end_customer: "End Customer",
     status: "Uploaded",
@@ -135,23 +158,21 @@ const defaultFields: { field_name: string, Hint_text: string }[] = [{
   field_name: "project_name",
   Hint_text: "Project Name",
 }, {
-  field_name: "last_edit",
+  field_name: "update_time",
   Hint_text: "Last Edit",
-}, {
-  field_name: "status",
-  Hint_text: "Status",
-}, {
-  field_name: "notes",
-  Hint_text: "Notes",
-}, {
-  field_name: "is_favorite",
-  Hint_text: "Favorite",
-}]
+},
+  /*{
+    field_name: "status",
+    Hint_text: "Status",
+  }, {
+    field_name: "notes",
+    Hint_text: "Notes",
+  }, {
+    field_name: "is_favorite",
+    Hint_text: "Favorite",
+  }*/
+]
 
-type Filter = {
-  value: string;
-  category: Category;
-};
 type Category = "Projects" | "Take Offs";
 
 const Home = () => {
@@ -161,29 +182,33 @@ const Home = () => {
   const [showCreateProjectModal, setShowCreateProjectModal] = useState<boolean>(false);
   const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] = useState<boolean>(false);
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
-  const [filter, setFilter] = useState<Filter>({
-    value: "",
-    category: "Projects",
-  });
-  const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([
-    ...projects,
-  ]);
+  const [category, setCategory] = useState<Category>("Projects");
+  const [filterValue, setFilterValue] = useState<string>('');
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [takeoffs, setTakeoffs] = useState<any>([])
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     return defaultFields.map((field) => field.field_name)
   });
 
   const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
   const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
+  const [projectLoading, setProjectLoading] = useState<boolean>(false);
+  const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
 
   const uploadFiles = useRef<any>(null);
   const projectInfo = useRef<any>(null);
 
   function handleValueChange(value: string) {
-    setFilter((prev) => ({ ...prev, value }));
+    setFilterValue(value);
   }
 
   function handleSegmentChange(category: Category) {
-    setFilter((prev) => ({ ...prev, category }));
+    setCategory(category);
+    if (category === "Projects") {
+      fetchProjects();
+    } else if (category === "Take Offs") {
+      getTakeoffs();
+    }
   }
 
   function emptyFilterValue() {
@@ -202,19 +227,33 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  useEffect(() => {
-    if (filter.value === "") {
-      setFilteredProjects([...projects]);
+
+  const getProjects = async () => {
+    setProjectLoading(true);
+    const projects = await fetchProjects();
+    setProjectLoading(false);
+    if (projects?.length > 0) {
+      setProjects(projects);
     } else {
-      setFilteredProjects(
-        projects.filter((project) =>
-          project.project_name
-            .toLowerCase()
-            .includes(filter.value.toLowerCase())
-        )
-      );
+      setProjects([]);
     }
-  }, [filter.value, projects]);
+  }
+
+  const getTakeoffs = async () => {
+    setTakeOffLoading(true);
+    const res = await getAllTakeoffList();
+    setTakeOffLoading(false);
+    if (res?.status === "success") {
+      let takeoffs = res?.data?.items ?? [];
+      setTakeoffs(takeoffs);
+    } else {
+      setTakeoffs([]);
+    }
+  }
+
+  useEffect(() => {
+    getProjects();
+  }, []);
 
   return (
     <div className="flex items-start gap-8 pt-24 pl-32 zoomed-container flex-col w-9/12">
@@ -230,7 +269,7 @@ const Home = () => {
             <Input
               className="min-w-[400px] w-[20vw] rounded-2xl"
               allowClear
-              value={filter.value}
+              value={filterValue}
               onChange={(e) => handleValueChange(e.target.value)}
               prefix={
                 <Image
@@ -268,10 +307,21 @@ const Home = () => {
             </Button>
           </div>
         </div>
-        <HomeProjectsTable
-          projects={filteredProjects}
-          selectedColumns={selectedColumns}
-        />
+        {
+          category === "Projects" ? (
+            <HomeProjectsTable
+              projects={projects}
+              selectedColumns={selectedColumns}
+              tableLoading={projectLoading}
+            />
+          ) : (
+            <HomeTakeoffsTable
+              tableLoading={takeOffLoading}
+              takeoffs={takeoffs}
+              selectedColumns={[]}
+            />
+          )
+        }
       </div>
 
       {
@@ -279,7 +329,7 @@ const Home = () => {
           <CreateProjectModal
             isOpen={showCreateProjectModal}
             closeModal={closeModal}
-            onOpenTakeoffModal={(data: any) => {
+            onHandleUpload={(data: any) => {
               // 关闭Create-Project-Modal弹窗
               //closeModal();
               uploadFiles.current = data;

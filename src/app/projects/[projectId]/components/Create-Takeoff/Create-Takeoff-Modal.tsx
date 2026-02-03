@@ -7,38 +7,41 @@ import TakeoffUpload from "./Takeoff-Upload";
 type CreateTakeOffModalProps = {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  handleCreateTakeOff: (
-    files: UploadFile[],
-    filesInfo: CatoUploadFile[],
-  ) => Promise<void>;
+  onHandleUpload?: (data: {
+    archFiles: UploadFile[];
+    quoteFiles: UploadFile[];
+    arcHingeMode?: "1" | "2";
+    quoteHingeMode?: "1" | "2";
+  }) => void;
 };
 
 export type TakeOffType = "base" | "deep";
 const CreateTakeOffModal = ({
   isOpen,
   setIsOpen,
-  handleCreateTakeOff,
+  onHandleUpload,
 }: CreateTakeOffModalProps) => {
   const [takeOffFiles, setTakeOffFiles] = useState<UploadFile[]>([]);
   const [filesInfo, setFilesInfo] = useState<CatoUploadFile[]>([]);
 
-  const handleStartClick = () => {
-    setIsOpen(false);
-    handleCreateTakeOff(takeOffFiles, filesInfo);
-  };
+  const handleUpload = (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
+    console.log('######### handleUpload', data);
+    //打开Create-Project-Takeoff-Modal弹窗
+    onHandleUpload?.(data);
+  }
 
   return (
     <Modal
       open={isOpen}
       onCancel={() => setIsOpen(false)}
       title={
-        <div className="py-4 flex flex-col gap-2">
+        <div className="py-4 flex flex-col gap-2 font-nunito">
           <div className="text-forumBlue text-lg">Create a Quotii</div>
           <div className="text-sm text-basicGray">
             Use our AI Agent to create your quote, save time and prevent errors.
           </div>
           <div className="mt-4 text-xs">
-            Name <span>工程名</span>
+            Name <span>project name</span>
           </div>
         </div>
       }
@@ -47,7 +50,7 @@ const CreateTakeOffModal = ({
       footer={null}
       centered
     >
-      <div className="mt-8 p-2 flex flex-row justify-between">
+      <div className="mt-8 p-2 flex flex-row justify-between font-nunito">
         <div className="p-4 w-[300px] flex flex-col border-2 border-baseLightHover rounded-lg">
           <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
             <Image
@@ -67,7 +70,7 @@ const CreateTakeOffModal = ({
           </div>
           <div className="flex-1 flex items-end justify-center">
             <Button
-              onClick={() => {}}
+              onClick={() => { }}
               className="w-full mt-4 mb-4 bg-[#ECF2FA]"
             >
               Create
@@ -78,9 +81,7 @@ const CreateTakeOffModal = ({
         <div className="p-4 w-[720px] flex flex-col border-2 border-baseLightHover rounded-lg">
           <TakeoffUpload
             showUploadTipLink={false}
-            onHandleUpload={({ archFiles, quoteFiles }) => {
-              setTakeOffFiles([...archFiles, ...quoteFiles]);
-            }}
+            onHandleUpload={handleUpload}
           />
         </div>
       </div>

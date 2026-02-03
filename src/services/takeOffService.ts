@@ -1,5 +1,15 @@
 import { http } from "@/lib/http";
 
+export const getAllTakeoffList = async () => {
+  try {
+    const url = `/project/take_off/list`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting take off:", error);
+    return { data: null, status: "error" };
+  }
+};
 export const getTakeOffById = async (takeOffId: string) => {
   try {
     const url = `/project/take_off/take_off_id?take_off_id=${takeOffId}`;
