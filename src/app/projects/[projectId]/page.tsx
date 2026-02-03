@@ -4,22 +4,25 @@ import Header from "./components/Header";
 import { Input, Spin, Button } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import EmptyProject from "./components/Empty-Project";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal";
+import { getTakeOffsByProjectId } from "@/services/takeOffService";
+import { useParams, useRouter } from "next/navigation";
 
 
 const Project = () => {
-  const takeOffs = undefined;
+  const router = useRouter();
+  const projectId = useParams().projectId;
   const [filter, setFilter] = useState<string>("");
   const [showCreateTakeOffModal, setShowCreateTakeOffModal] = useState(false);
-  const [takeoffsList, setTakeoffsList] = useState<any[]>([
-    // {
-    //   id: '1',
-    //   status: 1,
-    //   name: '123'
-    // }
-  ]);
+  const [takeoffsList, setTakeoffsList] = useState<any[]>([]);
+  const [fullLoading, setFullLoading] = useState(false);
+
+  useEffect(() => {
+    getProjectTakeoffs();
+  }, [projectId]);
+
   const createQuotiiButton = (
     <Button
       type="primary"
@@ -29,8 +32,24 @@ const Project = () => {
     </Button>
   );
 
+  const getProjectTakeoffs = async () => {
+    setFullLoading(true);
+    let res = await getTakeOffsByProjectId(projectId as string);
+    setFullLoading(false);
+    if (res.status === 'success') {
+      setTakeoffsList(res.data ?? []);
+    } else {
+      setTakeoffsList([]);
+    }
+  }
+
+
   const handleUploadFiles = async (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
   };
+
+  const onClickTakeOff = (takeOff: any) => {
+    router.push(`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`);
+  }
 
   return (
     <div>
@@ -98,14 +117,14 @@ const Project = () => {
                 //     fetchTakeOffs={() => { }}
                 //   />
                 // );
-                return <div key={index} className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30">
+                return <div key={index} className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30" onClick={() => onClickTakeOff(takeOff)}>
                   <div>
                     <Image src="/assets/cato-images/schedules-tables.png" alt="info icon" width={156} height={100} />
                   </div>
                   <div className="ml-[50px] flex flex-col gap-2">
-                    <div className="text-base">Quote Name</div>
+                    <div className="text-base">{takeOff?.take_off_result?.name || ''}</div>
                     <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">takeoff</div>
-                    <div className="text-xs text-basicGray">Last edit | October 21, 2025</div>
+                    <div className="text-xs text-basicGray">Last edit | {takeOff?.take_off_result?.update_time || ''}</div>
                   </div>
                 </div>
               })
@@ -119,10 +138,11 @@ const Project = () => {
           <CreateTakeOffModal
             isOpen={showCreateTakeOffModal}
             setIsOpen={setShowCreateTakeOffModal}
-            handleCreateTakeOff={handleUploadFiles}
+            onHandleUpload={handleUploadFiles}
           />
         )}
       </div>
+      {fullLoading && <Spin fullscreen />}
       {/* {loadingCato && (
         <BuildingBackground
           isDone={isCreateTakeOffDone}

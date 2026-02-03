@@ -95,7 +95,6 @@ const Thumbnail = ({
   onChangePageType, // 切换页面类型回调
 }: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     if (showThumbnail) {
@@ -146,7 +145,7 @@ const Thumbnail = ({
 
   return (
     <div
-      className={`${fixed ? "absolute" : ""} top-0 left-0 transition-all duration-200 bg-white z-9999`}
+      className={`${fixed ? "absolute" : ""} top-0 right-0 transition-all duration-200 bg-white z-9999`}
       style={{
         width: showThumbnail ? "250px" : "0px",
         height: "100%",

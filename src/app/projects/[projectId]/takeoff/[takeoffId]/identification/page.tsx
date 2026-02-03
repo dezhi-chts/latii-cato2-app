@@ -17,6 +17,7 @@ import {
   DownOutlined,
   CloseOutlined,
   LoadingOutlined,
+  FieldBinaryOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -32,7 +33,7 @@ import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary } fro
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 import debounce from "lodash/debounce";
 import {
   AddRectBoxControls,
@@ -41,7 +42,7 @@ import {
   ClearAllControls,
 } from "../components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
-import { list } from "postcss";
+import BuildingBackground from "../identification-index/components/BuildingBackground";
 
 const { confirm } = Modal;
 
@@ -83,6 +84,23 @@ const defaultPageCategory = [
   },
 ];
 
+enum BuildLoadingStep {
+  PageAnalysis = 'page-analyze',
+  PageLabel = 'page-label',
+  PageIndex = 'page-index',
+}
+
+const fixed_page_type = [
+  {
+    type: "Active Pages",
+    color: "#717171",
+    count: 0,
+  }, {
+    type: "All",
+    color: "#717171",
+    count: 0,
+  }]
+
 const Identification = () => {
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
@@ -100,10 +118,12 @@ const Identification = () => {
   const [thumbnailList, setThumbnailList] = useState<any>([]);
   const [showThumbnail, setShowThumbnail] = useState<boolean>(true);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
+  const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
-  const [currentType, setCurrentType] = useState<string>("All");
+  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
+  const [labelTypeList, setLabelTypeList] = useState<any>([]);
+  const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
 
   const thumbnailListRef = useRef<any>([]);
@@ -143,7 +163,7 @@ const Identification = () => {
     if (selectedFileId === -1) return;
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId);
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.Label });
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
@@ -172,8 +192,14 @@ const Identification = () => {
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
     if (res.status === 'success') {
-      let list = res?.data?.fixed_types ?? [];
-      setDrawingTypeList(list);
+      let pageList = res?.data?.fixed_page_types ?? [];
+      let labelList = res?.data?.fixed_label_types ?? [];
+      let first = pageTypeList[0];
+      if (pageList.length > 0) {
+        pageList.push(fixed_page_type[1]);
+      }
+      setPageTypeList([first, ...pageList]);
+      setLabelTypeList(labelList);
     } else {
       notification.error({
         message: "Error",
@@ -208,6 +234,17 @@ const Identification = () => {
           thumbnailListRef.current = list;
           // 设置新的缩略图数据
           setThumbnailList(() => [...list]);
+
+          setPageTypeList((prev: any) => {
+            return prev.map((item: any) => {
+              if (item.type === "All") return {
+                ...item,
+                count: list.length
+              };
+              return item;
+            })
+          })
+
           //获取file evidence
           getFileEvidences();
           //获取pdf analyse summary
@@ -220,22 +257,8 @@ const Identification = () => {
 
   useEffect(() => {
     // 获取总页数，从ref中获取完整列表的长度
-    if (drawingTypeList?.length >= 0 && summaryData) {
-      let list = [...drawingTypeList];
-      const totalPages = thumbnailListRef.current.length;
-      if (list?.length > 0) {
-        if (list[0].type !== 'All') {
-          list.unshift({
-            type: "All",
-            color: "#717171",
-            icon: 'A',
-            count: totalPages,
-          });
-        } else {
-          // 如果已经有"All"类型，更新其count为总页数
-          list[0].count = totalPages;
-        }
-      }
+    if (pageTypeList?.length >= 0 && summaryData) {
+      let list = [...pageTypeList];
       const page_classification = summaryData.page_classification ?? {};
       let typeList = list.map((item: any) => {
         if (item.type === "All") return item;
@@ -244,7 +267,7 @@ const Identification = () => {
           count: page_classification[item.type] ?? 0
         }
       });
-      setDrawingTypeList(() => [...typeList]);
+      setPageTypeList(() => [...typeList]);
     }
 
     if (thumbnailListRef.current.length > 0 && summaryData) {
@@ -308,7 +331,7 @@ const Identification = () => {
     let res = { status: 'success' }
     if (res.status === 'success') {
       // 更改tags的数量
-      setDrawingTypeList((prev: any) => {
+      setPageTypeList((prev: any) => {
         return prev.map((item: any) => {
           if (item.type === type) {
             return {
@@ -451,6 +474,32 @@ const Identification = () => {
     }
   };
 
+  const handleNext = () => {
+    //判断除当前文件外还有别的文件未处理
+    let filterFiles = fileList.filter((file: any) => file.id !== selectedFileId);
+    let nextFile = filterFiles.find((file: any) => file.status !== FileStatus.Completed);
+    if (nextFile) {
+      // 设置当前文件为完成状态
+      setFileList((prev: any) => {
+        return prev.map((file: any) => {
+          if (file.id === selectedFileId) {
+            return {
+              ...file,
+              status: FileStatus.Completed,
+            }
+          }
+          return file;
+        })
+      });
+      setSelectedFileId(nextFile.id);
+    } else {
+      // 没有其他文件需要处理，则进行下一步
+      setBuildLoading(true);
+      setTimeout(() => {
+        setBuildLoading(false);
+      }, 5000);
+    }
+  }
 
   return (
     <div className="w-full h-[100vh] flex flex-col">
@@ -459,9 +508,10 @@ const Identification = () => {
         fileList={fileList}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
+        handleNext={handleNext}
       />
       <DrawingTagsView
-        pageTypeTags={drawingTypeList}
+        pageTypeTags={pageTypeList}
         currentType={currentType}
         setCurrentType={setCurrentType}
       ></DrawingTagsView>
@@ -492,7 +542,7 @@ const Identification = () => {
             page={page}
             setPage={setPage}
             showCategory={true}
-            categoryList={drawingTypeList}
+            categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -516,7 +566,7 @@ const Identification = () => {
               ref={pdfRef}
               operationMode={"edit"}
               mode="edit"
-              typeList={drawingTypeList}
+              typeList={labelTypeList}
               pdfUrl={pdfUrl as string}
               project_id={projectId as any}
               project_file_id={selectedFileId}
@@ -537,9 +587,11 @@ const Identification = () => {
         </div>
       </div>
       {fullLoading && <Spin fullscreen />}
+      {buildLoading && <BuildingBackground
+        step={BuildLoadingStep.PageAnalysis}
+      />}
     </div>
   );
 };
 
-// 为自定义 Select 选项添加必要的全局样式
 export default Identification;

@@ -25,10 +25,12 @@ export const getEvidencesByProjectId = async (projectId: string) => {
 export const getEvidenceByFileId = async (
   projectId: string,
   fileId: number,
+  params?: any,
 ) => {
+  let newParams = params ? { ...params } : {};
   try {
     const url = `/evidence/all/project_file?project_id=${projectId}&project_file_id=${fileId}`;
-    const response = await http.get(url);
+    const response = await http.get(url, newParams);
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error getting evidence by file id:", error);

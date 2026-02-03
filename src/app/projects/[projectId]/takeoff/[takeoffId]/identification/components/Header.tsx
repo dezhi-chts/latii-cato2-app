@@ -17,6 +17,7 @@ import { Button } from "antd";
 import { useParams } from "next/navigation";
 import { FileItem } from '../../identification-index/components/FileList';
 import { PageIndexStepInActive, PageLabelingStepActive, PageAnalysisStepInActive } from '../../identification-index/components/HeaderStepProgress';
+import { FileStatus } from "../../types/evidence";
 
 const Header = ({
   pdfRef,
@@ -82,7 +83,7 @@ const Header = ({
           <PageAnalysisStepInActive />
         </div>
         <Button
-          className="custom-primary-btn w-[102px] h-[26px]"
+          className="custom-primary-btn w-[102px] h-[26px] cursor-pointer"
           onClick={() => handleNext()}
         >
           Next Step

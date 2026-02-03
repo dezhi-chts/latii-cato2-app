@@ -1,5 +1,6 @@
 import { updateDrawingIndexType } from "@/services/drawingIndexService";
 import { Checkbox, Select, notification } from "antd";
+import { useEffect, useState } from "react";
 
 
 // const LabelTypeList = [
@@ -24,23 +25,18 @@ import { Checkbox, Select, notification } from "antd";
 //     value: "Mix",
 //   },
 // ];
+
+// 无效的类型
+const invalidTypes = ['UNKNOWN', 'OTHER'];
+
 const ContentView = ({
   contentData,
   setContentData,
-  drawingTypeList
+  drawingTypeList,
+  matchPages,
+  pdfTotalPages,
+  handlePageChange
 }: any) => {
-  const handleChecked = async (item: any, value: boolean) => {
-    if (item.type === value) return;
-
-    setContentData((prev: any) =>
-      prev.map((i: any) => ({
-        ...i,
-        checked: i.id === item.id ? value : i.checked,
-      })),
-    );
-
-  };
-
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
     setContentData((prev: any) =>
@@ -59,21 +55,38 @@ const ContentView = ({
     }
   };
 
+  const handleMatchPage = (item: any) => {
+    if (matchPages.length === 0) return;
+    if (item.sheet_id) {
+      let findItem = matchPages.find((i: any) => i.sheet_id === item.sheet_id);
+      if (findItem) {
+        let page = findItem.page_number;
+        if (page && page > 0 && page <= pdfTotalPages) {
+          handlePageChange && handlePageChange(page);
+        }
+      }
+    }
+  };
+
   const contentItem = (item: any) => {
+    let checked = true;
+    if (invalidTypes.includes(item.type)) {
+      checked = false;
+    }
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
-          <div className={`w-[15px] h-[15px] rounded-full cursor-pointer flex items-center justify-center ${item.checked ? 'bg-forumBlue' : 'border border-primaryN30'}`}
-            onClick={() => handleChecked(item, !item.checked)}
+          <div className={`w-[15px] h-[15px] rounded-full flex items-center justify-center ${checked ? 'bg-forumBlue' : 'border border-primaryN30'}`}
           >
-            {item.checked && <div className=" text-white text-xxs font-sans">{'✓'}</div>}
+            {checked && <div className=" text-white text-xxs font-sans">{'✓'}</div>}
           </div>
         </div>
         <div
-          className={`mx-1 w-[60%] text-xs ${item.checked ? "text-forumBlue" : ""}`}
+          className={`mx-1 w-[60%] text-xs cursor-pointer ${checked ? "text-forumBlue" : ""}`}
+          onClick={() => handleMatchPage(item)}
         >
           {item.sheet_id ?? ''}
-          {item.title ?? ''}
+          <span className="ml-2">{item.title ?? ''}</span>
         </div>
         <div className="w-[40%] text-center">
           <Select
@@ -92,7 +105,6 @@ const ContentView = ({
       </div>
     );
   };
-  console.log('######### contentData', contentData);
   return (
     <div className="pl-14 pr-6 w-full h-full flex flex-col">
       <div className="mt-8 mb-2 text-xs text-basicGray">

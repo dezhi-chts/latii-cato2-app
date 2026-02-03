@@ -15,8 +15,7 @@ import ProjectForm from "./Project-Form";
 const CreateProjectModal = ({
   isOpen,
   closeModal,
-  onSuccess,
-  onOpenTakeoffModal
+  onHandleUpload
 }: any) => {
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     ...defaultProjectSettings,
@@ -37,7 +36,7 @@ const CreateProjectModal = ({
   const handleUpload = (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
     console.log('######### handleUpload', data);
     //打开Create-Project-Takeoff-Modal弹窗
-    onOpenTakeoffModal?.(data);
+    onHandleUpload?.(data);
   }
 
   return (

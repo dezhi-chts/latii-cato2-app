@@ -2,11 +2,13 @@ import { Action } from "@/app/projects/[projectId]/takeoff/[takeoffId]/component
 import { http } from "@/lib/http";
 import { ProjectSettings, QuickActionsForm } from "@/types/project";
 
-export const fetchProjects = async (): Promise<ProjectSettings[]> => {
+export const fetchProjects = async (filterParams?: {
+  project_name?: string;
+}): Promise<ProjectSettings[]> => {
   const url = "/project/all?order_by=update_time&order=desc";
 
   try {
-    const response = await http.get(url);
+    const response = await http.get(url, { params: filterParams });
     return response as unknown as ProjectSettings[];
   } catch (error) {
     console.error("Error getting projects:", error);
@@ -27,7 +29,7 @@ export const createProject = async (project: ProjectSettings) => {
 
 export const togglePinProject = async (
   projectId: number | string,
-  is_pin: boolean
+  is_pin: boolean,
 ) => {
   const url = `/project/${projectId}/pin?is_pin=${is_pin}`;
 
@@ -91,16 +93,20 @@ export const fetchProject = async (id: string) => {
   }
 };
 
-export const rotateChange = async (project_file_id: number, isRotate: boolean, rotation_angle: number) => {
+export const rotateChange = async (
+  project_file_id: number,
+  isRotate: boolean,
+  rotation_angle: number,
+) => {
   const url = `/project/file/rotate/update?project_file_id=${project_file_id}&is_rotate=${isRotate}&rotation_angle=${rotation_angle}`;
   try {
     await http.put(url);
-    return 'success';
+    return "success";
   } catch (error) {
     console.error("Error rotating change:", error);
     return "error";
-  }  
-}
+  }
+};
 
 export const toggleQuotePin = async (quoteId: string, is_pinned: boolean) => {
   try {
@@ -116,7 +122,7 @@ export const toggleQuotePin = async (quoteId: string, is_pinned: boolean) => {
 
 export const updateQuotePersonalNotes = async (
   quoteId: string,
-  personal_notes: string
+  personal_notes: string,
 ) => {
   try {
     await http.put(`/dealer/quote/${quoteId}/personal_notes`, {
@@ -161,7 +167,7 @@ export const sendToLatii = async (
   platform: "internal" | "dealer",
   files?: any[] | null,
   description?: string | null,
-  title?: string | null
+  title?: string | null,
 ) => {
   try {
     const formData = new FormData();
@@ -190,12 +196,12 @@ export const sendToLatii = async (
 
 export const sendQuickActions = async (
   form: QuickActionsForm,
-  quote_id: string
+  quote_id: string,
 ) => {
   try {
     const response = await http.post(
       `/dealer/quote/edit/quote/${quote_id}`,
-      form
+      form,
     );
     return { data: response, status: "success" };
   } catch (error) {
@@ -217,7 +223,7 @@ export const archiveQuote = async (quote_id: string) => {
 export const duplicateQuote = async (quote_id: string) => {
   try {
     const response = await http.post(
-      `/quote/duplicate/${quote_id}?is_swap=false`
+      `/quote/duplicate/${quote_id}?is_swap=false`,
     );
     return { data: response, status: "success" };
   } catch (error) {
@@ -239,7 +245,7 @@ export const checkChanges = async (quoteId: string) => {
 export const fetchPdfDownloadUrl = async (quoteId: string) => {
   try {
     const response: any = await http.post(
-      `/dealer/quote/generate_pdf/${quoteId}`
+      `/dealer/quote/generate_pdf/${quoteId}`,
     );
     return response as string;
   } catch (error) {
@@ -260,11 +266,11 @@ export const duplicateItemOfQuote = async (itemId: string, quoteId: string) => {
 
 export const markChangesAsReadOfQuote = async (
   quoteId: string,
-  itemId: string
+  itemId: string,
 ) => {
   try {
     await http.post(
-      `/dealer/quote/quote_changes/mark_read/${quoteId}/${itemId}`
+      `/dealer/quote/quote_changes/mark_read/${quoteId}/${itemId}`,
     );
     return "success";
   } catch (error) {
@@ -276,14 +282,14 @@ export const markChangesAsReadOfQuote = async (
 export const processPdfWithAi = async (
   projectId: string,
   name: string,
-  file: File
+  file: File,
 ) => {
   try {
     const formData = new FormData();
     formData.append("file", file);
     const response = await http.post(
       `/dealer/quote/pdf_process/${projectId}/${name}`,
-      formData
+      formData,
     );
     return response;
   } catch (error) {
@@ -323,10 +329,7 @@ export const markFileAsRead = async (requisitionIds: number[]) => {
     console.error("Error marking files as read:", error);
   }
 };
-export const changeCheckedItem = async (
-  itemId: string,
-  checked: boolean
-) => {
+export const changeCheckedItem = async (itemId: string, checked: boolean) => {
   try {
     const url = `/project/take_off_result_item/check/result_id`;
     const body = {
@@ -340,10 +343,7 @@ export const changeCheckedItem = async (
   }
 };
 
-export const updateField = async (
-  itemId: number,
-  result: string,
-) => {
+export const updateField = async (itemId: number, result: string) => {
   try {
     const url = `/project/take_off_result_item/edit/result_id`;
     const body = {
@@ -356,6 +356,3 @@ export const updateField = async (
     console.error("Error editing field:", error);
   }
 };
-
-
- 

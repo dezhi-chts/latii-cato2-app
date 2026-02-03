@@ -35,20 +35,28 @@ const TextCell = ({ value }: { value: unknown }) => {
   );
 };
 
-const HomeProjectsTable = ({
+const HomeTakeoffsTable = ({
   tableLoading,
-  projects,
+  takeoffs,
   selectedColumns
 }: any) => {
   const [page, setPage] = useState(1);
   const router = useRouter();
 
-  const dynamicProperties = useMemo(() => {
-    return [];
-  }, [projects])
-
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">
+            Take Off Name
+          </span>
+        ),
+        dataIndex: "name",
+        key: "name",
+        align: "center",
+        sorter: (a, b) => a.name.localeCompare(b.name),
+        render: (value) => <TextCell value={value} />,
+      },
       {
         title: (
           <span className="text-xs font-semibold text-basicGray">
@@ -72,77 +80,13 @@ const HomeProjectsTable = ({
         align: "center",
         render: (value) => <TextCell value={value} />,
       },
-      // {
-      //   title: (
-      //     <span className="text-xs font-semibold text-basicGray">Status</span>
-      //   ),
-      //   dataIndex: "status",
-      //   key: "status",
-      //   align: "center",
-      //   render: (status: ProjectStatus) => {
-      //     const isTakeOff = status === "Take Off";
-      //     return (
-      //       <span
-      //         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${isTakeOff
-      //           ? "bg-green-100 text-green-700"
-      //           : "bg-blue-100 text-blue-600"
-      //           }`}
-      //       >
-      //         {status}
-      //       </span>
-      //     );
-      //   },
-      // },
-      // {
-      //   title: (
-      //     <span className="text-xs font-semibold text-basicGray">Notes</span>
-      //   ),
-      //   dataIndex: "notes",
-      //   key: "notes",
-      //   align: "center",
-      //   fixed: "right",
-      //   render: (value) => <TextCell value={value} />,
-      // },
-      // {
-      //   title: "",
-      //   dataIndex: "is_favorite",
-      //   key: "is_favorite",
-      //   align: "center",
-      //   fixed: "right",
-      //   width: 60,
-      //   render: (isFavorite: boolean) => {
-      //     return <div className="" onClick={() => { }}>
-      //       {isFavorite ? (
-      //         <StarFilled className="text-gray-900 text-sm" />
-      //       ) : (
-      //         <StarOutlined className="text-gray-300 text-sm" />
-      //       )
-      //       }</div>
-      //   }
-      // },
     ],
     []
   );
 
-  const dynamicColumns: ColumnsType<ProjectRow> = useMemo(
-    () =>
-      dynamicProperties.map((property) => ({
-        title: (
-          <span className="text-xs font-semibold text-basicGray">
-            {getTitleFromPropertyName(property)}
-          </span>
-        ),
-        dataIndex: property,
-        key: property,
-        align: "center" as const,
-        render: (value) => <TextCell value={value} />,
-      })),
-    [dynamicProperties]
-  );
-
   const allColumns = useMemo(
-    () => [...defaultColumns, ...dynamicColumns],
-    [defaultColumns, dynamicColumns]
+    () => [...defaultColumns],
+    [defaultColumns]
   );
 
   const columns = useMemo(() => {
@@ -155,7 +99,7 @@ const HomeProjectsTable = ({
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
-      onClick: () => router.push(`/projects/${record.project_id}`),
+      onClick: () => router.push(`/projects/${record.project_id}/takeoff/${record.id}/identification-index`),
       className: "cursor-pointer hover:bg-gray-50",
     }),
     [router]
@@ -174,7 +118,7 @@ const HomeProjectsTable = ({
       <Table<ProjectRow>
         rowKey={(r: any) => r.id}
         columns={columns}
-        dataSource={projects}
+        dataSource={takeoffs}
         onRow={handleRowClick}
         loading={tableLoading}
         pagination={{
@@ -214,4 +158,4 @@ const HomeProjectsTable = ({
   );
 };
 
-export default HomeProjectsTable;
+export default HomeTakeoffsTable;

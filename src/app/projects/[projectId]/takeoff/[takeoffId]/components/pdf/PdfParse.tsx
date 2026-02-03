@@ -28,7 +28,7 @@ const PdfParse = ({
   const [selectedFileId, setSelectedFileId] = useState<number>(-1);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.READY);
   const [processingProgress, setProcessingProgress] = useState<number>(0);
-  const [logs, setLogs] = useState<Array<{ message: string; type: 'info' | 'success' | 'error' }>>([]);
+  const [logs, setLogs] = useState<Array<{ time: string, message: string; type: 'info' | 'success' | 'error' }>>([]);
   const [taskInfo, setTaskInfo] = useState<{ requestId: string; sseUrl: string } | null>(null);
   const [results, setResults] = useState<Record<string, number>>({});
 
@@ -137,7 +137,8 @@ const PdfParse = ({
 
   // ===== 添加日志 =====
   const addLog = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
-    setLogs(prev => [...prev, { message, type }]);
+    let time = `[${new Date().toLocaleTimeString()}]`;
+    setLogs(prev => [...prev, { time, message, type }]);
     // 在下一次渲染后滚动到日志列表底部
     setTimeout(() => {
       if (logsRef.current) {
@@ -206,6 +207,7 @@ const PdfParse = ({
         break;
 
       case 'COMPLETED': {
+        updateProgress(data.progress, '✅ Classification completed!');
         addLog('✅ Classification completed!', 'success');
         updateConnectionStatus(ConnectionStatus.DISCONNECTED);
         if (eventSourceRef.current) {
@@ -543,7 +545,7 @@ const PdfParse = ({
                   key={index}
                   className={`px-3 py-1 mb-1 rounded ${log.type === 'error' ? 'bg-red-50 border-l-3 border-red-500 text-red-600' : log.type === 'success' ? 'bg-green-50 border-l-3 border-green-500 text-green-600' : 'bg-gray-50 border-l-3 border-indigo-500 text-gray-700'}`}
                 >
-                  <span className="text-xs font-mono">{log.message}</span>
+                  <span className="text-xs font-mono">{log.time} <span className='ml-2'>{log.message}</span></span>
                 </div>
               ))}
             </div>
