@@ -1,5 +1,6 @@
 import { updateDrawingIndexType } from "@/services/drawingIndexService";
 import { Checkbox, Select, notification } from "antd";
+import { useEffect } from "react";
 
 
 // const LabelTypeList = [
@@ -24,23 +25,30 @@ import { Checkbox, Select, notification } from "antd";
 //     value: "Mix",
 //   },
 // ];
+
+// 无效的类型
+const invalidTypes = ['UNKNOWN', 'OTHER'];
+
 const ContentView = ({
   contentData,
   setContentData,
   drawingTypeList
 }: any) => {
-  const handleChecked = async (item: any, value: boolean) => {
-    if (item.type === value) return;
-
-    setContentData((prev: any) =>
-      prev.map((i: any) => ({
-        ...i,
-        checked: i.id === item.id ? value : i.checked,
-      })),
-    );
-
-  };
-
+  useEffect(() => {
+    setContentData((prev: any) => {
+      return prev.map((i: any) => {
+        let checked = true;
+        let type = i.type;
+        if (invalidTypes.includes(type)) {
+          checked = false;
+        }
+        return {
+          ...i,
+          checked,
+        }
+      })
+    })
+  }, [contentData]);
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
     setContentData((prev: any) =>
@@ -63,8 +71,7 @@ const ContentView = ({
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
-          <div className={`w-[15px] h-[15px] rounded-full cursor-pointer flex items-center justify-center ${item.checked ? 'bg-forumBlue' : 'border border-primaryN30'}`}
-            onClick={() => handleChecked(item, !item.checked)}
+          <div className={`w-[15px] h-[15px] rounded-full flex items-center justify-center ${item.checked ? 'bg-forumBlue' : 'border border-primaryN30'}`}
           >
             {item.checked && <div className=" text-white text-xxs font-sans">{'✓'}</div>}
           </div>
@@ -92,7 +99,6 @@ const ContentView = ({
       </div>
     );
   };
-  console.log('######### contentData', contentData);
   return (
     <div className="pl-14 pr-6 w-full h-full flex flex-col">
       <div className="mt-8 mb-2 text-xs text-basicGray">

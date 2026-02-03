@@ -63,6 +63,7 @@ const IdentificationIndex = () => {
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
+  const thumbnailRef = useRef<any>(null);
 
   const [selectedFileId, setSelectedFileId] = useState<number>(-1);
   const [takeOff, setTakeOff] = useState<any>(null);
@@ -86,6 +87,18 @@ const IdentificationIndex = () => {
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (thumbnailRef.current && thumbnailRef.current.contains(target)) return;
+      setShowThumbnail(false);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     // 获取takeOff详情
@@ -153,7 +166,7 @@ const IdentificationIndex = () => {
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
     if (res.status === 'success') {
-      let list = res?.data?.fixed_types ?? [];
+      let list = res?.data?.fixed_page_types ?? [];
       setDrawingTypeList(list);
     } else {
       notification.error({
@@ -193,7 +206,7 @@ const IdentificationIndex = () => {
           getFileEvidences();
 
           // 判断当前文件的状态，如果状态为complete，则显示contentView
-          if (file.status === FileStatus.Completed) {
+          if (file.status === FileStatus.Completed || file.status === FileStatus.Uploaded) {
             setShowContentView(true);
             getDrawingIndexData();
           } else {
@@ -414,7 +427,7 @@ const IdentificationIndex = () => {
         handleNext={handleNext}
       />
 
-      <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
+      <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
           style={{ width: showContentView ? "500px" : "340px" }}
@@ -484,18 +497,18 @@ const IdentificationIndex = () => {
               onUpdateSafeZoom={handleSafeZoomChange}
               onCropSectionsCount={handleCropsCount}
             ></PdfWrapper>
-            {
-              <Thumbnail
-                pdfRef={pdfRef}
-                showThumbnail={showThumbnail}
-                setShowThumbnail={setShowThumbnail}
-                data={thumbnailList}
-                page={page}
-                fixed={true}
-                setPage={setPage}
-              ></Thumbnail>
-            }
           </div>
+        </div>
+        <div ref={thumbnailRef} className="absolute right-0 top-0 z-9999">
+          <Thumbnail
+            pdfRef={pdfRef}
+            showThumbnail={showThumbnail}
+            setShowThumbnail={setShowThumbnail}
+            data={thumbnailList}
+            page={page}
+            fixed={false}
+            setPage={setPage}
+          ></Thumbnail>
         </div>
       </div>
       {showSkipModal && <SkipTipModal

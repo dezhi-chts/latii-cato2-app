@@ -115,7 +115,8 @@ const Identification = () => {
   const [fullLoading, setFullLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [drawingTypeList, setDrawingTypeList] = useState<any>([fixed_page_type[0]]);
+  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
+  const [labelTypeList, setLabelTypeList] = useState<any>([]);
   const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
 
@@ -185,12 +186,14 @@ const Identification = () => {
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
     if (res.status === 'success') {
-      let list = res?.data?.fixed_types ?? [];
-      let first = drawingTypeList[0];
-      if (list.length > 0) {
-        list.push(fixed_page_type[1]);
+      let pageList = res?.data?.fixed_page_types ?? [];
+      let labelList = res?.data?.fixed_label_types ?? [];
+      let first = pageTypeList[0];
+      if (pageList.length > 0) {
+        pageList.push(fixed_page_type[1]);
       }
-      setDrawingTypeList([first, ...list]);
+      setPageTypeList([first, ...pageList]);
+      setLabelTypeList(labelList);
     } else {
       notification.error({
         message: "Error",
@@ -226,7 +229,7 @@ const Identification = () => {
           // 设置新的缩略图数据
           setThumbnailList(() => [...list]);
 
-          setDrawingTypeList((prev: any) => {
+          setPageTypeList((prev: any) => {
             return prev.map((item: any) => {
               if (item.type === "All") return {
                 ...item,
@@ -248,8 +251,8 @@ const Identification = () => {
 
   useEffect(() => {
     // 获取总页数，从ref中获取完整列表的长度
-    if (drawingTypeList?.length >= 0 && summaryData) {
-      let list = [...drawingTypeList];
+    if (pageTypeList?.length >= 0 && summaryData) {
+      let list = [...pageTypeList];
       const page_classification = summaryData.page_classification ?? {};
       let typeList = list.map((item: any) => {
         if (item.type === "All") return item;
@@ -258,7 +261,7 @@ const Identification = () => {
           count: page_classification[item.type] ?? 0
         }
       });
-      setDrawingTypeList(() => [...typeList]);
+      setPageTypeList(() => [...typeList]);
     }
 
     if (thumbnailListRef.current.length > 0 && summaryData) {
@@ -322,7 +325,7 @@ const Identification = () => {
     let res = { status: 'success' }
     if (res.status === 'success') {
       // 更改tags的数量
-      setDrawingTypeList((prev: any) => {
+      setPageTypeList((prev: any) => {
         return prev.map((item: any) => {
           if (item.type === type) {
             return {
@@ -486,7 +489,7 @@ const Identification = () => {
         handleNext={handleNext}
       />
       <DrawingTagsView
-        pageTypeTags={drawingTypeList}
+        pageTypeTags={pageTypeList}
         currentType={currentType}
         setCurrentType={setCurrentType}
       ></DrawingTagsView>
@@ -517,7 +520,7 @@ const Identification = () => {
             page={page}
             setPage={setPage}
             showCategory={true}
-            categoryList={drawingTypeList}
+            categoryList={pageTypeList}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -541,7 +544,7 @@ const Identification = () => {
               ref={pdfRef}
               operationMode={"edit"}
               mode="edit"
-              typeList={drawingTypeList}
+              typeList={labelTypeList}
               pdfUrl={pdfUrl as string}
               project_id={projectId as any}
               project_file_id={selectedFileId}
