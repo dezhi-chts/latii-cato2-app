@@ -770,7 +770,7 @@ export const addSiblingOption = (
 /**
  * 递归复制节点及子孙，并重新生成 id
  */
-const deepCopyWithNewId = (node: OptionMsgVO): OptionMsgVO => {
+export const deepCopyWithNewId = (node: OptionMsgVO): OptionMsgVO => {
 	return {
 		...node,
 		id: crypto.randomUUID(),
@@ -953,3 +953,42 @@ export const pickProductProductTypeOpen = (root: OptionMsgVO): OptionMsgVO => {
 	};
 };
 
+/**
+ * 从树里找到 belong_section="section"的数据
+ */
+export const findTopLevelBySection = (
+	section: string,
+	tree: OptionMsgVO[]
+): OptionMsgVO[] => {
+	const result: OptionMsgVO[] = [];
+
+	const dfs = (nodes: OptionMsgVO[]): boolean => {
+		let foundAtThisLevel = false;
+
+		for (const node of nodes) {
+			if (node.belong_section === section) {
+				foundAtThisLevel = true;
+				result.push(JSON.parse(JSON.stringify(node)));
+			}
+		}
+
+		// 如果这一层已经找到了，就不再向下递归
+		if (foundAtThisLevel) {
+			return true;
+		}
+
+		// 否则继续往下一层找
+		for (const node of nodes) {
+			if (node.children && node.children.length > 0) {
+				if (dfs(node.children)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	};
+
+	dfs(tree);
+	return result;
+};
