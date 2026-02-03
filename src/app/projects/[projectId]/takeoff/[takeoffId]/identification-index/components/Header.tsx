@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "antd";
 
-import { BuildingBackground } from "@/app/projects/[projectId]/components/Create-Takeoff/Building-Background";
 import { useParams } from "next/navigation";
 import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
@@ -57,7 +56,7 @@ const Header = ({
         };
       } else {
         return {
-          text: 'Next',
+          text: 'Complete',
         };
       }
     }

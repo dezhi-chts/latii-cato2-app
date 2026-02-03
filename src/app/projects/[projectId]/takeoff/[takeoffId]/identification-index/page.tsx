@@ -86,6 +86,7 @@ const IdentificationIndex = () => {
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
 
+
   useEffect(() => {
     // 获取takeOff详情
     getTakeOffDetails();
@@ -152,7 +153,8 @@ const IdentificationIndex = () => {
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
     if (res.status === 'success') {
-      setDrawingTypeList(res?.data?.fixed_types ?? []);
+      let list = res?.data?.fixed_types ?? [];
+      setDrawingTypeList(list);
     } else {
       notification.error({
         message: "Error",
@@ -340,7 +342,7 @@ const IdentificationIndex = () => {
     setCropsCount(count);
   }
 
-  const handleNext = (btnText: 'Next Step' | 'Next File' | 'Next') => {
+  const handleNext = (btnText: 'Next Step' | 'Next File' | 'Complete') => {
     // 处理右上角的next按钮
     if (btnText === 'Next Step') {
       // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
@@ -358,7 +360,7 @@ const IdentificationIndex = () => {
         // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
         setSelectedFileId(findNextFile.id);
       }
-    } else if (btnText === 'Next') {
+    } else if (btnText === 'Complete') {
       // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
       confirm({
         title: null,

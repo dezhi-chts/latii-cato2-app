@@ -17,6 +17,7 @@ import { Button } from "antd";
 import { useParams } from "next/navigation";
 import { FileItem } from '../../identification-index/components/FileList';
 import { PageIndexStepInActive, PageLabelingStepActive, PageAnalysisStepInActive } from '../../identification-index/components/HeaderStepProgress';
+import { FileStatus } from "../../types/evidence";
 
 const Header = ({
   pdfRef,

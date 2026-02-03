@@ -28,7 +28,7 @@ const DrawingTagsView = ({
               setCurrentType(item.type);
             }}
           >
-            {item.type !== "All" && (
+            {item.icon && (
               <span
                 className="px-[5px] py-[1px] rounded-md text-xxs text-white"
                 style={{ backgroundColor: miniBtnColor }}
