@@ -28,6 +28,9 @@ const LongText = ({
           placeholder={hint_text}
           value={value}
           onBlur={onBlur}
+          style={{
+            resize: "none",
+          }}
         />
       </div>
     </div>
