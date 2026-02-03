@@ -47,6 +47,12 @@ const ProductEditor = () => {
 					<div className="text-xs text-[#a3a3a3]">
 						Select the product specifications to see Sections and Constrains.
 					</div>
+					<div>
+						<div>Constrains</div>
+						<div>
+							<div></div>
+						</div>
+					</div>
 					{/* <div>
 
 					</div> */}
