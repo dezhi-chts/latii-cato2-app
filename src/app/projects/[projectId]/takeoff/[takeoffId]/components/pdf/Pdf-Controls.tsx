@@ -205,11 +205,13 @@ export const SelectPagesControls = ({
   )
 }
 
-export const ClearAllControls = () => {
+export const ClearAllControls = ({
+  handleClearAll
+}: any) => {
   return (
     <div className="w-[96px] h-[28px] flex flex-row justify-center items-center border border-primaryN30 rounded-md cursor-pointer">
       <Image src={`/assets/icons/tag-left.svg`} alt="clear all icon" width={16} height={16}></Image>
-      <span className="ml-2 text-basicGray text-xs">Clear All</span>
+      <span className="ml-2 text-basicGray text-xs" onClick={() => handleClearAll()}>Clear All</span>
     </div>
 
   )

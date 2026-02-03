@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import http from '@/lib/http';
 import Image from 'next/image';
 import { Button, notification } from 'antd';
+import { useRouter } from "next/navigation";
 
 enum ConnectionStatus {
   READY = 'ready',
@@ -18,9 +19,10 @@ const PdfParse = ({
   handleCancel
 }: {
   data: any,
-  handleNext: () => void,
+  handleNext: (type: 'takeoffModal' | 'pageIndex') => void,
   handleCancel: () => void
 }) => {
+  const router = useRouter();
   // ===== 状态管理 =====
   const [fileList, setFileList] = useState<any>([]);
   const [selectedFileId, setSelectedFileId] = useState<number>(-1);
@@ -29,7 +31,6 @@ const PdfParse = ({
   const [logs, setLogs] = useState<Array<{ message: string; type: 'info' | 'success' | 'error' }>>([]);
   const [taskInfo, setTaskInfo] = useState<{ requestId: string; sseUrl: string } | null>(null);
   const [results, setResults] = useState<Record<string, number>>({});
-  const [isResultsReady, setIsResultsReady] = useState<boolean>(false);
 
   // 用 useRef 保存 EventSource 实例
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -435,6 +436,11 @@ const PdfParse = ({
 
     let existFailedFile = fileList.some((file: any) => file.status === FileStatus.FAILED);
     if (existFailedFile) {
+      // 存在失败的文件，则判断是否存在已完成的文件，只要有一个已完成的文件，则返回已完成
+      let existCompletedFile = fileList.some((file: any) => file.status === FileStatus.COMPLETED);
+      if (existCompletedFile) {
+        return FileStatus.COMPLETED;
+      }
       return FileStatus.FAILED;
     }
 
@@ -451,7 +457,7 @@ const PdfParse = ({
     if (totalFileStatus === FileStatus.FAILED) {
       notification.error({
         message: 'Error',
-        description: 'One or more files failed to process. Please try again.',
+        description: 'One or more files failed to process.',
       });
     }
   }, [totalFileStatus]);
@@ -548,30 +554,15 @@ const PdfParse = ({
           {/** 所有文件都已经解析完成 */}
           {totalFileStatus === FileStatus.COMPLETED && (
             <div>
-              <Button className='custom-primary-btn' onClick={handleNext}>Next</Button>
+              <Button className='custom-primary-btn' onClick={() => handleNext('takeoffModal')}>Next</Button>
             </div>
           )}
           {totalFileStatus === FileStatus.FAILED && (
             <div>
-              <Button className='custom-default-btn' onClick={handleCancel}>Cancel</Button>
+              <Button className='custom-primary-btn' onClick={() => handleNext('pageIndex')}>Next</Button>
             </div>
           )}
         </div>
-
-        {/* Result Section */}
-        {isResultsReady && (
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">📊 Classification Results</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
-              {Object.entries(results).map(([key, value]) => (
-                <div key={key} className="bg-white p-4 rounded-lg text-center">
-                  <div className="text-sm text-gray-600 mb-2 capitalize">{key.replace('_', ' ')}</div>
-                  <div className="text-2xl font-bold text-gray-800">{value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

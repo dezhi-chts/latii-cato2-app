@@ -14,6 +14,7 @@ import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create
 import type { UploadFile } from "antd/es/upload/interface";
 import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
 import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
+import { useRouter } from 'next/navigation'
 
 
 export const projects: ProjectRow[] = [
@@ -154,6 +155,8 @@ type Filter = {
 type Category = "Projects" | "Take Offs";
 
 const Home = () => {
+  const router = useRouter();
+
   const { first_name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] = useState<boolean>(false);
   const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] = useState<boolean>(false);
@@ -283,6 +286,7 @@ const Home = () => {
               // 打开Upload-Files-Progress弹窗
               setShowUploadProgess(true);
               //setShowCreateProjectTakeOffModal(true);
+              //setShowPdfParseModal(true);
             }}
           />
         )
@@ -321,11 +325,17 @@ const Home = () => {
             isOpen={showPdfParseModal}
             closeModal={() => setShowPdfParseModal(false)}
             data={projectInfo.current}
-            handleNext={() => {
+            handleNext={(type: 'takeoffModal' | 'pageIndex') => {
               // 关闭Pdf-Parse-Modal弹窗
               setShowPdfParseModal(false);
-              // 打开Create-Project-Takeoff-Modal弹窗
-              setShowCreateProjectTakeOffModal(true);
+              if (type === 'takeoffModal') {
+                // 打开Create-Project-Takeoff-Modal弹窗
+                setShowCreateProjectTakeOffModal(true);
+              } else if (type === 'pageIndex') {
+                // 跳转到Page-Index页面
+                //router.push(`/projects/38/takeoff/15/identification-index`);
+                router.push(`/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification-index`);
+              }
             }}
             handleCancel={() => {
               // 关闭Pdf-Parse-Modal弹窗

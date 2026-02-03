@@ -63,3 +63,25 @@ export const getPdfAnalyseProjectInfo = async (projectId: string) => {
     return { data: null, status: "error" };
   }
 };
+
+export const getPdfAnalysePages = async (fileId: string) => {
+  try {
+    const url = `/pdf/pdf-analysis/${fileId}/pages`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting pdf analyse pages:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const getPdfAnalyseSummary = async (fileId: string) => {
+  try {
+    const url = `/pdf/pdf-analysis/${fileId}/summary`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting pdf analyse summary:", error);
+    return { data: null, status: "error" };
+  }
+};

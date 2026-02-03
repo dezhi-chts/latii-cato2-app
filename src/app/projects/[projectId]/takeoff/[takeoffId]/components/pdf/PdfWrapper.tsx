@@ -60,7 +60,6 @@ import {
   GroupType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
-import { ShapeType } from "../drawing/datas";
 
 const { confirm } = Modal;
 
@@ -125,6 +124,7 @@ const PdfWrapper = forwardRef(
       allEvidence,
       selectedEvidenceIds,
       typeList,
+      showEvidenceType = false,
       onRefreshEvidence,
       resetAdding,
       onTotalPages,
@@ -319,7 +319,7 @@ const PdfWrapper = forwardRef(
           loading: false,
         },
         onOk: () => {
-          batchSubmit();
+          batchSubmit({ showAlert: true });
         },
       });
     };
@@ -344,7 +344,17 @@ const PdfWrapper = forwardRef(
       });
     };
 
-    const batchSubmit = (showAlert = true, groupId?: string): Promise<string> => {
+    const batchSubmit = ({
+      showAlert = true,
+      groupId = null, //根据id查找查找并保存group
+      groupInfo = null, // 根据group信息直接保存group
+      showLoading = true,
+    }: {
+      showAlert?: boolean;
+      groupId?: string | null;
+      groupInfo?: GroupFrame | null;
+      showLoading?: boolean;
+    }): Promise<string> => {
       return new Promise((resolve, reject) => {
         if (!currentViewportRef.current) {
           reject(new Error("Viewport not found"));
@@ -353,7 +363,9 @@ const PdfWrapper = forwardRef(
 
         const viewport = currentViewportRef.current;
 
-        setFullLoading(true);
+        if (showLoading) {
+          setFullLoading(true);
+        }
 
         let filteredCropSections = cropSections.filter(
           (section) =>
@@ -361,13 +373,15 @@ const PdfWrapper = forwardRef(
         );
 
         // 如果存在groupId，则单独提交该group，不存在则提交所有group
-        if (groupId !== undefined) {
+        if (groupId) {
           let section = filteredCropSections.find((item) => item.id === groupId);
           if (!section) {
             reject(new Error("Group not found"));
             return;
           }
           filteredCropSections = [section];
+        } else if (groupInfo) {
+          filteredCropSections = [groupInfo];
         }
 
         const uploadData = filteredCropSections.map((section: GroupFrame) => {
@@ -390,7 +404,9 @@ const PdfWrapper = forwardRef(
 
         evidenceBatchSubmit(uploadData)
           .then((res) => {
-            setFullLoading(false);
+            if (showLoading) {
+              setFullLoading(false);
+            }
             if (res.status === "success") {
               setCropSections(() => []);
               if (showAlert) {
@@ -403,15 +419,13 @@ const PdfWrapper = forwardRef(
               onAppendEvidence && onAppendEvidence(res.data ?? []);
               resolve("success");
             } else {
-              notification.error({
-                message: "Error",
-                description: "Evidence submit failed.",
-              });
               reject(new Error("Evidence submit failed"));
             }
           })
           .catch((error) => {
-            setFullLoading(false);
+            if (showLoading) {
+              setFullLoading(false);
+            }
             console.error("Error submitting evidence:", error);
             notification.error({
               message: "Error",
@@ -423,7 +437,7 @@ const PdfWrapper = forwardRef(
     };
 
     const evidencSubmit = (groupId: string) => {
-      batchSubmit(false, groupId);
+      batchSubmit({ showAlert: false, groupId });
     };
 
     const batchDelete = async (deleteIds?: number[]) => {
@@ -458,7 +472,7 @@ const PdfWrapper = forwardRef(
 
         return new Promise<boolean>((resolve) => {
           if (proceedWithoutConfirmation) {
-            batchSubmit(false)
+            batchSubmit({ showAlert: false })
               .then(() => resolve(true))
               .catch(() => resolve(false));
             return;
@@ -482,7 +496,7 @@ const PdfWrapper = forwardRef(
             },
             icon: null,
             onOk() {
-              batchSubmit()
+              batchSubmit({ showAlert: true })
                 .then(() => resolve(true))
                 .catch(() => resolve(false));
             },
@@ -517,7 +531,7 @@ const PdfWrapper = forwardRef(
         id: evid.id,
         polygon: polygonStr,
         device_pixel_ratio: window.devicePixelRatio || 1,
-        type: evid.type,
+        type: JSON.stringify({ name: evid.type }),
         scale: viewport.scale,
         page_width_pdf: viewport.width,
         page_height_pdf: viewport.height,
@@ -1004,8 +1018,6 @@ const PdfWrapper = forwardRef(
       const viewPort = currentViewportRef.current;
       if (!viewPort) return;
 
-      setCropMode(addingOption.type ?? GroupType.Item);
-
       let container = scrollRef.current;
       if (!container) return;
 
@@ -1054,6 +1066,13 @@ const PdfWrapper = forwardRef(
         bounds: getZoneBounds([p1, p2, p3, p4]),
       };
 
+      if (addingOption?.isSaveEvidence) {
+        // 如果有保存参数，则直接保存成evidence
+        batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false });
+        return;
+      }
+
+      setCropMode(addingOption.type ?? GroupType.Item);
       insertGroup(groupFrame);
 
       setCropMode(null);
@@ -1061,6 +1080,8 @@ const PdfWrapper = forwardRef(
       if (operationMode !== "view") {
         setSelectedShapeId(groupFrame.id);
       }
+
+
     };
 
     //生成截图
@@ -2021,6 +2042,7 @@ const PdfWrapper = forwardRef(
                           selectedShapeId={selectedShapeId}
                           draggingShapeId={draggingShapeId}
                           itemEvidences={itemEvidences}
+                          typeList={typeList}
                           onDragStart={() => {
                             setDraggingShapeId(evid.id);
                           }}
@@ -2138,11 +2160,9 @@ const PdfWrapper = forwardRef(
                     item.viewportPolygons,
                   );
 
-                  let color: string = colorList.forumBlue;
                   let type = "";
                   try {
                     const typeParams = JSON.parse(item.type);
-                    color = colorList.accentIndigo;
                     type = typeParams.name;
                   } catch (error) { }
 
@@ -2158,11 +2178,20 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center gap-2"
                         style={{
-                          left: width - 30,
+                          left: showEvidenceType ? (width - 75) : width - 30,
                           top: "10px",
                         }}
                       >
                         <div className="w-[170px] flex items-center gap-2">
+                          {
+                            showEvidenceType && <LabelTypesSelect
+                              typeList={typeList as any}
+                              selectedType={type}
+                              onChangeType={(type) => {
+                                updateEvidence({ ...item, type });
+                              }}
+                            />
+                          }
                           <Popconfirm
                             title="Are you sure you want to delete this evidence?"
                             onConfirm={() => batchDelete([item.id])}
@@ -2373,6 +2402,7 @@ const ShapeWrapper = ({
   selectedShapeId,
   draggingShapeId,
   itemEvidences,
+  typeList,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -2387,6 +2417,7 @@ const ShapeWrapper = ({
   selectedShapeId: string | null;
   draggingShapeId: string | null;
   itemEvidences: EvidenceType[] | null;
+  typeList?: any[];
   onDragStart: () => void;
   onDragMove: (x: number, y: number) => void;
   onDragEnd: () => void;
@@ -2395,7 +2426,6 @@ const ShapeWrapper = ({
   onCircleDragMove: (e: any, info: any) => void;
   onCircleDragEnd: (e: any, info: any) => void;
 }) => {
-  let shapeTypeAttr: string = "";
   let color: string = colorList.forumBlue || "";
   let borderColor: string = colorList.forumBlue || "";
   let polygons: Point[] = [];
@@ -2428,22 +2458,27 @@ const ShapeWrapper = ({
   let pathData = [
     `M ${relativePolygons[0].x} ${relativePolygons[0].y}`,
     ...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
-  ].join(" ");
+  ].join(" ") + 'Z';
 
-  if (type === "crop") {
-    shapeTypeAttr = shape.type;
-    let completed = (shape as GroupFrame).completed;
-    pathData += "Z";
-  } else if (type === "evidence") {
-    pathData += "Z";
-    try {
-      const typeParams = JSON.parse(shape.type);
-      shapeTypeAttr = typeParams.name;
-    } catch (error) { }
-  }
-
+  // 默认颜色
   color = colorList.accentIndigo;
   borderColor = color;
+
+  if (type === "evidence") {
+    try {
+      const typeParams = JSON.parse(shape.type);
+      let evidType = typeParams.name;
+      if (typeList && typeList?.length > 0) {
+        let typeColor = typeList.find((item) => item.type === evidType)?.color;
+        if (typeColor) {
+          color = typeColor;
+          borderColor = typeColor;
+        }
+      }
+    } catch (error) {
+
+    }
+  }
 
   if (draggingShapeId === shape.id) {
     color = "#FF4500";
@@ -2451,12 +2486,6 @@ const ShapeWrapper = ({
 
   if (selectedShapeId === shape.id) {
     circlePoints = getCriclePoints(width, height);
-  }
-
-  if (type === "evidence") {
-    if (itemEvidences?.map((evid) => evid.id)?.includes(shape.id as number)) {
-      color = "#FF0000";
-    }
   }
 
   return (
