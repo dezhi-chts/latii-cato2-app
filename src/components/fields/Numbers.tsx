@@ -28,6 +28,7 @@ const Numbers = ({
         className="min-w-80 max-w-80"
         value={value}
         onBlur={onBlur}
+        controls={false}
       />
     </div>
   );

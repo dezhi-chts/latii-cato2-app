@@ -60,22 +60,23 @@ export type CreateProjectModalProps = {
 };
 
 export type LocationSelectorProps = {
-  onClose: () => void;
-  handleInputChange: <K extends keyof ProjectSettings>(
+  onClose?: () => void;
+  handleInputChange?: <K extends keyof ProjectSettings>(
     field: K,
   ) => (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
-  handleDropdownChange: <K extends keyof ProjectSettings>(
+  handleDropdownChange?: <K extends keyof ProjectSettings>(
     field: K,
   ) => (value: ProjectSettings[K]) => void;
-  projectSettings: any;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  projectSettings?: any;
+  isOpen?: boolean;
+  setIsOpen?: (isOpen: boolean) => void;
   selectorClassName?: string;
+  inputClassName?: string;
   updateProject?: () => void;
   height?: "small" | "medium";
-  style: any;
+  style?: any;
 };
 
 export type QuickActionsForm = {

@@ -4,7 +4,6 @@ import { formatLabel } from "@/lib/functions";
 import {
   PROJECT_INPUT_TYPES_OPTIONS,
   ProjectFieldBoxProps,
-  ProjectInputTypesOptions,
 } from "@/types/settings";
 import { Checkbox, Input, Select, Switch } from "antd";
 import Image from "next/image";
@@ -17,6 +16,9 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
     required,
     has_hint_text,
     hint_text,
+    text,
+    is_ranged_date,
+    is_multiselect,
     onChange,
     onDuplicate,
     onDelete,
@@ -53,9 +55,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
         <Select
           value={type}
-          onChange={(value: ProjectInputTypesOptions) =>
-            onChange?.({ type: value })
-          }
+          onChange={(value) => onChange?.({ type: value })}
           options={inputTypeOptions}
           className="w-52 rounded-md h-8 font-normal"
           placeholder="Select Type"
@@ -105,7 +105,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
             <Switch
               checked={!!required}
               onChange={(checked) => onChange?.({ required: checked })}
-              className="!bg-accentGreen"
             />
           </div>
         </div>
