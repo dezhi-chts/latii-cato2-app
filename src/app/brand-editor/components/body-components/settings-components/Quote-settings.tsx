@@ -1,10 +1,13 @@
 "use client";
 
 import { div } from "framer-motion/m";
+import FormulasBox from "./Formulas-Box";
 
 const QuoteSettings = () => {
   return (
     <div className="flex gap-20 mb-10 mt-[-20px] text-xs">
+      {/* Primera Mitad */}
+
       <div className="w-7/12">
         <p className="text-base text-baseDark">Quote Information</p>
         <p className="text-baseGray">
@@ -19,6 +22,9 @@ const QuoteSettings = () => {
               Customize these formulas to your needs. Note that you can still
               edit the final totals on each quote. Max create 6 fields.
             </p>
+            <div>
+              <FormulasBox label="prueba" />
+            </div>
           </div>
 
           {/* Quote PDF Information */}
@@ -33,8 +39,8 @@ const QuoteSettings = () => {
       {/* Segunda Mitad */}
 
       <div className="w-5/12">
-        <p>Quote PDF Review</p>
-        <p>
+        <p className="text-base text-baseDark">Quote PDF Review</p>
+        <p className="text-baseGray">
           Edits reflect immediately in the preview and sync across all PDF
           output formats
         </p>

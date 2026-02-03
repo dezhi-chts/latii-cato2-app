@@ -24,6 +24,18 @@ export type ProjectField = {
   is_ranged_date?: boolean;
 };
 
+export type FormulasBox = {
+  label: string;
+  on_quote?: boolean;
+  formula?: any;
+};
+
+export type FormulasBoxProps = FormulasBox & {
+  onChange?: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
+};
+
 export type ProjectFieldBoxProps = ProjectField & {
   onChange?: (patch: Partial<ProjectField>) => void;
   onDuplicate?: () => void;
