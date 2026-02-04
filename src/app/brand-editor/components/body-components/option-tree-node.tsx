@@ -13,15 +13,15 @@ import OptionItemCom from "@/app/brand-editor/components/body-components/option-
 const OptionTreeNodeCom = (props: any) => {
 
 	const [optionItemMsg, setOptionItemMsg] = useState<OptionMsgVO>(props.optionItemMsg);
-	const [attributesTree, setAttributesTree] = useState<any[]>(props.attributesTree);
+	const [setedOptionLibraryList, setSetedOptionLibraryList] = useState<any[]>(props.setedOptionLibraryList);
 
 	useEffect(() => {
 		setOptionItemMsg(props.optionItemMsg)
 	}, [props.optionItemMsg]);
 
 	useEffect(() => {
-		setAttributesTree(props.attributesTree)
-	}, [props.attributesTree]);
+		setSetedOptionLibraryList(props.setedOptionLibraryList)
+	}, [props.setedOptionLibraryList]);
 
 	const addSubOptionHandler = (node: OptionMsgVO) => {
 		props.addSubOptionHandler(node)
@@ -43,7 +43,7 @@ const OptionTreeNodeCom = (props: any) => {
 		props.onChangeAttribute(attributeCode, node)
 	};
 
-	const onChangeOption = (optionCode: string, node: OptionMsgVO) => {
+	const onChangeOption = (optionCode: string[], node: OptionMsgVO) => {
 		props.onChangeOption(optionCode, node)
 	};
 
@@ -56,7 +56,7 @@ const OptionTreeNodeCom = (props: any) => {
 			{/* 当前节点 */}
 			<OptionItemCom
 				optionItemMsg={optionItemMsg}
-				attributesTree={attributesTree}
+				setedOptionLibraryList={setedOptionLibraryList}
 				addSubOptionHandler={addSubOptionHandler}
 				addSiblingOptionHandler={addSiblingOptionHandler}
 				deleteNode={deleteNode}
@@ -68,12 +68,12 @@ const OptionTreeNodeCom = (props: any) => {
 
 			{/* 子节点 */}
 			{optionItemMsg.children?.length > 0 && !optionItemMsg._collapsed && (
-				<div className="flex flex-col ml-8 relative">
+				<div className="flex flex-col relative">
 					{optionItemMsg.children.map((child) => (
 						<OptionTreeNodeCom
 							key={child.id}
 							optionItemMsg={child}
-							attributesTree={attributesTree}
+							setedOptionLibraryList={setedOptionLibraryList}
 							addSubOptionHandler={addSubOptionHandler}
 							addSiblingOptionHandler={addSiblingOptionHandler}
 							deleteNode={deleteNode}

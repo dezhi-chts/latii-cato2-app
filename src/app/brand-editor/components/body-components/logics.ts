@@ -61,9 +61,9 @@ export const collectOptionCodes = (tree: any, result: any = []) => {
 						option: i
 					}))
 					let tempOptionUseKey = tempObj.option.code
-					if (node.valueType === "IMAGE") {
-						tempOptionUseKey = tempObj.option.name
-					}
+					// if (node.valueType === "IMAGE") {
+					// 	tempOptionUseKey = tempObj.option.name
+					// }
 					tempObj.classCode = `${tempObj.attr.code.includes("$") ? tempObj.attr.code.split("$")[1] : tempObj.attr.code}/${tempOptionUseKey}`
 					result.push(tempObj)
 				})
@@ -357,15 +357,28 @@ export const getOptionMsgByOption = (optionCode: string, options: any[]): Record
 export const buildProfileMsgJsonNode = (
 	profileScriptMsg: string
 ): Record<string, any> => {
-	// 1. 只给 attribute / option / children / have_sections /belong_section 的 key 加引号
+	// 1. 只给 attribute / option / children / have_sections / belong_section 的 key 加引号
 	let jsonStr = profileScriptMsg.replace(
 		/([,{]\s*)(attribute|option|children|have_sections|belong_section)\s*:/g,
 		'$1"$2":'
 	);
 
-	// 2. 只给 attribute / option 的 value 加引号
+	// 2.1 option 为「数组」时，遍历每一项加引号（先处理）
 	jsonStr = jsonStr.replace(
-		/"(attribute|option|belong_section)"\s*:\s*([a-zA-Z_$][\w$.]*)/g,
+		/"option"\s*:\s*\[([^\]]*)\]/g,
+		(_, content) => {
+			if (!content.trim()) return '"option":[]';
+			const items = content
+				.split(',')
+				.map((v: string) => `"${v.trim()}"`)
+				.join(',');
+			return `"option":[${items}]`;
+		}
+	);
+
+	// 2.2 attribute / option / belong_section 为「单值」时加引号（明确排除数组）
+	jsonStr = jsonStr.replace(
+		/"(attribute|option|belong_section)"\s*:\s*(?!\[)([a-zA-Z_$][\w$.]*)/g,
 		'"$1":"$2"'
 	);
 
@@ -376,7 +389,7 @@ export const buildProfileMsgJsonNode = (
 			if (!content.trim()) return '"have_sections":[]';
 			const items = content
 				.split(',')
-				.map((v:any) => `"${v.trim()}"`)
+				.map((v: string) => `"${v.trim()}"`)
 				.join(',');
 			return `"have_sections":[${items}]`;
 		}
@@ -402,7 +415,7 @@ export const generateOptionMsgFromProfileJson = (
 	): OptionMsgVO => {
 
 		let attribute: string | null = null;
-		let option: string | null = null;
+		let option: string | null | string[] = null;
 		let have_sections: any[] = [];
 		let belong_section: string | null = null;
 
@@ -413,28 +426,54 @@ export const generateOptionMsgFromProfileJson = (
 			attribute = matchedAttr ? matchedAttr.code : null;
 		}
 
+		// if (node.option) {
+		// 	const matchedOption = optionsList.find((o: Record<string, any>) =>
+		// 		o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === node.option.split(".")[1]
+		// 	);
+		// 	option = matchedOption ? matchedOption.option.code : null;
+		// }
 		if (node.option) {
-			const matchedOption = optionsList.find((o: Record<string, any>) =>
-				o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === node.option.split(".")[1]
-			);
-			option = matchedOption ? matchedOption.option.code : null;
+			if (Array.isArray(node.option)) {
+				// node.option 是数组
+				const matchedOptions = node.option
+					.map((opt: string) =>
+						optionsList.find(
+							(o: Record<string, any>) =>
+								o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+								opt.split(".")[1]
+						)
+					)
+					.filter(Boolean);
+
+				option = matchedOptions.length
+					? matchedOptions.map(o => o.option.code)
+					: null;
+			} else {
+				// node.option 是单值
+				const matchedOption = optionsList.find(
+					(o: Record<string, any>) =>
+						o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+						node.option.split(".")[1]
+				);
+				option = matchedOption ? matchedOption.option.code : null;
+			}
 		}
 
-		if (node.have_sections && node.have_sections.length!=0) {
+		if (node.have_sections && node.have_sections.length != 0) {
 			have_sections = JSON.parse(JSON.stringify(node.have_sections))
-			have_sections.forEach((item:any,index:any)=>{
-				if (item){
+			have_sections.forEach((item: any, index: any) => {
+				if (item) {
 					const matchedAttr = attrs.find((a: Record<string, any>) =>
 						a.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === item.split(".")[1]
 					);
 					have_sections[index] = matchedAttr ? matchedAttr.code : null;
-				}else{
+				} else {
 					have_sections[index] = null;
 				}
 			})
 		}
 
-		if (node.belong_section){
+		if (node.belong_section) {
 			const matchedAttr = attrs.find((a: Record<string, any>) =>
 				a.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() === node.belong_section.split(".")[1]
 			);
@@ -454,10 +493,22 @@ export const generateOptionMsgFromProfileJson = (
 				: [];
 
 		// 获取 optionMsg
-		const optionMsg =
-			option
-				? getOptionMsgByOption(option, options)
-				: {};
+		// const optionMsg =
+		// 	option
+		// 		? getOptionMsgByOption(option, options)
+		// 		: {};
+		let optionMsg = {};
+		if (option) {
+			if (Array.isArray(option)) {
+				// option 是数组
+				optionMsg = option.map(opt => getOptionMsgByOption(opt, options));
+			} else {
+				// option 是单值
+				optionMsg = getOptionMsgByOption(option, options);
+			}
+		} else {
+			optionMsg = Array.isArray(option) ? [] : {};
+		}
 
 		// 递归 children
 		const children: OptionMsgVO[] = Array.isArray(node.children)
@@ -529,8 +580,8 @@ export const generateOptionMsgFromProfileScript = (
 			option: profileMsg?.profile_code || "",
 			optionMsg: optionMsg,
 			options: options,
-			have_sections:[],
-			belong_section:"",
+			have_sections: [],
+			belong_section: "",
 			optionIsDisabled: true,
 			children: [],
 			_collapsed: false,
@@ -582,18 +633,44 @@ export const generateProfileScriptFromProfileOptionMsg = (
 	replaceAttributes(newProfileOptionMsg)
 
 	// 三次处理树，把option替换成unit_options.classCode 格式
+	// const replaceOptions = (node: OptionMsgDTO) => {
+	// 	if (node.option) {
+	// 		const matchOpt = options.find((o: Record<string, any>) => o.option.code === node.option);
+	// 		if (matchOpt) {
+	// 			node.option = `unit_options.${matchOpt.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`;
+	// 		}
+	// 	}
+	// 	if (node.children && node.children.length > 0) {
+	// 		node.children.forEach(replaceOptions);
+	// 	}
+	// };
+	// replaceOptions(newProfileOptionMsg)
+
+	// 三次处理树，把 option 替换成 unit_options.classCode 格式
 	const replaceOptions = (node: OptionMsgDTO) => {
 		if (node.option) {
-			const matchOpt = options.find((o: Record<string, any>) => o.option.code === node.option);
-			if (matchOpt) {
-				node.option = `unit_options.${matchOpt.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`;
+			if (Array.isArray(node.option)) {
+				// option 是数组
+				node.option = node.option.map((opt: string) => {
+					const matchOpt = options.find((o: Record<string, any>) => o.option.code === opt);
+					return matchOpt
+						? `unit_options.${matchOpt.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`
+						: opt;
+				});
+			} else {
+				// option 是单值
+				const matchOpt = options.find((o: Record<string, any>) => o.option.code === node.option);
+				if (matchOpt) {
+					node.option = `unit_options.${matchOpt.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase()}`;
+				}
 			}
 		}
+
 		if (node.children && node.children.length > 0) {
 			node.children.forEach(replaceOptions);
 		}
 	};
-	replaceOptions(newProfileOptionMsg)
+	replaceOptions(newProfileOptionMsg);
 
 	// 四次处理树，把haveSections和belongSection替换成unit_attributes.classCode 格式
 	const replaceSections = (node: OptionMsgDTO) => {
@@ -634,12 +711,21 @@ export const generateProfileScriptFromProfileOptionMsg = (
 
 		// 如果为空字符串就加双引号，否则直接引用变量
 		const attributeStr = node.attribute ? node.attribute : '""';
-		const optionStr = node.option ? node.option : '""';
+		let optionStr: string;
+		if (!node.option) {
+			optionStr = '""';
+		} else if (Array.isArray(node.option)) {
+			// option 是数组，拼成字符串形式
+			optionStr = `[${node.option.join(",\n")}]`;
+		} else {
+			// option 是单值
+			optionStr = node.option;
+		}
 		const belongSectionStr = node.belong_section ? node.belong_section : '""';
-		let haveSectionsStr:any = "[]"
-		if (node.have_sections && node.have_sections.length!=0){
+		let haveSectionsStr: any = "[]"
+		if (node.have_sections && node.have_sections.length != 0) {
 			haveSectionsStr = `[${node.have_sections.join(",\n")}]`
-		}else{
+		} else {
 			haveSectionsStr = "[]"
 		}
 
@@ -991,4 +1077,52 @@ export const findTopLevelBySection = (
 
 	dfs(tree);
 	return result;
+};
+
+
+/**
+ * 递归遍历unit attribute tree data, 找到is_set_option_library==true的数据并组装成list返回
+ */
+export const collectOptionLibraryNodes = (tree: Record<string, any>) => {
+	const result: any[] = [];
+
+	const traverse = (node: Record<string, any>) => {
+		if (!node) return;
+
+		// 如果是数组，逐个处理
+		if (Array.isArray(node)) {
+			node.forEach(traverse);
+			return;
+		}
+
+		// 命中条件就 push
+		if (node.is_set_option_library === true) {
+			result.push(node);
+		}
+
+		// 递归 children
+		if (Array.isArray(node.children)) {
+			node.children.forEach(traverse);
+		}
+	};
+
+	traverse(tree);
+	return result;
+};
+
+/**
+ * 递归遍历树形数据，判断每条数据是否是本层级的最后一个
+ */
+export const markLastNodeAtEachLevel = (tree: OptionMsgVO[]) => {
+	if (!Array.isArray(tree) || tree.length === 0) return tree;
+
+	tree.forEach((item, index) => {
+		item._isLastOneAtThisLevel = index === tree.length - 1;
+
+		if (Array.isArray(item.children) && item.children.length > 0) {
+			markLastNodeAtEachLevel(item.children);
+		}
+	});
+
+	return tree;
 };
