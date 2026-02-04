@@ -582,6 +582,7 @@ const PdfWrapper = forwardRef(
         };
 
         const viewport: ViewPort = page.getViewport(viewPointsOptions);
+        console.log('######### viewport', viewport);
         // Limit the canvas size to avoid performance issues
         // if (
         //   viewport.width > MAX_CANVAS_SIZE ||

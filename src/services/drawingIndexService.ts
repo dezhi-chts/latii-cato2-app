@@ -86,13 +86,21 @@ export const getPdfAnalyseSummary = async (fileId: string) => {
   }
 };
 
-export const getPdfMatchPages = async (fileId: string) => {
+export const updatePageType = async ({
+  fileId,
+  pageNum,
+  newType,
+}: {
+  fileId: string;
+  pageNum: number;
+  newType: string;
+}) => {
   try {
-    const url = `/pdf/pdf-analysis/${fileId}/match-drawing-pages`;
-    const response = await http.post(url);
+    const url = `/pdf/project/page/type?project_file_id=${fileId}&page_number=${pageNum}&new_page_type=${newType}`;
+    const response = await http.put(url);
     return { data: response as any, status: "success" };
   } catch (error) {
-    console.error("Error getting pdf match pages:", error);
+    console.error("Error updating page type:", error);
     return { data: null, status: "error" };
   }
 };

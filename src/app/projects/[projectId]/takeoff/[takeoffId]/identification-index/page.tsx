@@ -49,7 +49,7 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
-import { getDrawingIndexInfoById, getDrawingIndexTypeList, getPdfMatchPages, recognizeDrawingIndex } from "@/services/drawingIndexService";
+import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
 
 enum BuildLoadingStep {
@@ -86,7 +86,6 @@ const IdentificationIndex = () => {
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [matchPages, setMatchPages] = useState<any>([]);
   const [isEmptyContent, setIsEmptyContent] = useState<boolean>(false);
 
   const skipType = useRef<any>(null);
@@ -157,7 +156,7 @@ const IdentificationIndex = () => {
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
     if (res.status === 'success') {
-      let list = res?.data?.fixed_page_types ?? [];
+      let list = res?.data?.fixed_index_types ?? [];
       setDrawingTypeList(list);
     } else {
       notification.error({
@@ -264,9 +263,6 @@ const IdentificationIndex = () => {
       if (drawingTypeList.length === 0) {
         getTypeList();
       }
-
-      //获取pdf match pages信息
-      getPdfMatchPagesInfo();
     } else {
       notification.error({
         message: "Error",
@@ -275,13 +271,6 @@ const IdentificationIndex = () => {
     }
   };
 
-  const getPdfMatchPagesInfo = async () => {
-    setMatchPages([]);
-    let res: any = await getPdfMatchPages(selectedFileId as any);
-    if (res.status === 'success') {
-      setMatchPages(res?.data?.data?.drawings ?? []);
-    }
-  }
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -498,7 +487,6 @@ const IdentificationIndex = () => {
                 setContentData={setContentData}
                 drawingTypeList={drawingTypeList}
                 isEmptyContent={isEmptyContent}
-                matchPages={matchPages}
                 pdfTotalPages={totalPage}
                 handlePageChange={handlePageChange}
               />
@@ -562,7 +550,7 @@ const IdentificationIndex = () => {
             ></PdfWrapper>
           </div>
         </div>
-        <div ref={thumbnailRef} className="absolute right-0 top-0 z-9999">
+        <div ref={thumbnailRef} className="h-full absolute right-0 top-0 z-9999">
           <Thumbnail
             pdfRef={pdfRef}
             showThumbnail={showThumbnail}

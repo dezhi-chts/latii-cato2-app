@@ -143,6 +143,14 @@ const Thumbnail = ({
     setPage(page);
   }
 
+  const getItemPage = (item: any, index: number) => {
+    if (typeof item.file_name === 'string') {
+      let pageArr = item.file_name?.split(".")[0];
+      return parseInt(pageArr) + 1;
+    }
+    return index + 1;
+  }
+
   return (
     <div
       className={`${fixed ? "absolute" : ""} top-0 right-0 transition-all duration-200 bg-white z-9999`}
@@ -165,12 +173,7 @@ const Thumbnail = ({
       >
         <div className="px-[35px] py-6 flex flex-col gap-4 min-h-full">
           {data.map((info, index) => {
-            let itemPageNum: number = 0;
-            if (typeof info.file_name === 'string') {
-              let pageArr = info.file_name?.split(".")[0];
-              itemPageNum = parseInt(pageArr) + 1;
-            }
-
+            let itemPageNum = getItemPage(info, index);
             return (
               <div
                 id={`thumbnail-page-${itemPageNum}`}

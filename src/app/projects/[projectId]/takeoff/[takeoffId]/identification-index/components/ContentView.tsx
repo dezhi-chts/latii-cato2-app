@@ -26,14 +26,10 @@ import { useEffect, useState } from "react";
 //   },
 // ];
 
-// 无效的类型
-const invalidTypes = ['UNKNOWN', 'OTHER'];
-
 const ContentView = ({
   contentData,
   setContentData,
   drawingTypeList,
-  matchPages,
   pdfTotalPages,
   isEmptyContent, // 是否数据为空
   handlePageChange
@@ -57,23 +53,14 @@ const ContentView = ({
   };
 
   const handleMatchPage = (item: any) => {
-    if (matchPages.length === 0) return;
-    if (item.sheet_id) {
-      let findItem = matchPages.find((i: any) => i.sheet_id === item.sheet_id);
-      if (findItem) {
-        let page = findItem.page_number;
-        if (page && page > 0 && page <= pdfTotalPages) {
-          handlePageChange && handlePageChange(page);
-        }
-      }
+    let pageNum = item.page_number;
+    if (pageNum && pageNum > 0 && pageNum <= pdfTotalPages) {
+      handlePageChange && handlePageChange(pageNum);
     }
   };
 
   const contentItem = (item: any) => {
-    let checked = true;
-    if (invalidTypes.includes(item.type)) {
-      checked = false;
-    }
+    let checked = item.type;
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
@@ -93,12 +80,12 @@ const ContentView = ({
           <Select
             className="w-[150px] h-[28px] text-xs"
             placeholder="Floor Plan,etc."
-            value={item.type}
+            value={item.type === 'Unknown' ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
             {drawingTypeList.map((item: any) => (
-              <Select.Option key={item.type} value={item.type}>
-                {item.type}
+              <Select.Option key={item} value={item}>
+                {item}
               </Select.Option>
             ))}
           </Select>
