@@ -26,15 +26,12 @@ import { useEffect, useState } from "react";
 //   },
 // ];
 
-// 无效的类型
-const invalidTypes = ['UNKNOWN', 'OTHER'];
-
 const ContentView = ({
   contentData,
   setContentData,
   drawingTypeList,
-  matchPages,
   pdfTotalPages,
+  isEmptyContent, // 是否数据为空
   handlePageChange
 }: any) => {
   const handleChangeType = async (item: any, value: string) => {
@@ -56,23 +53,14 @@ const ContentView = ({
   };
 
   const handleMatchPage = (item: any) => {
-    if (matchPages.length === 0) return;
-    if (item.sheet_id) {
-      let findItem = matchPages.find((i: any) => i.sheet_id === item.sheet_id);
-      if (findItem) {
-        let page = findItem.page_number;
-        if (page && page > 0 && page <= pdfTotalPages) {
-          handlePageChange && handlePageChange(page);
-        }
-      }
+    let pageNum = item.page_number;
+    if (pageNum && pageNum > 0 && pageNum <= pdfTotalPages) {
+      handlePageChange && handlePageChange(pageNum);
     }
   };
 
   const contentItem = (item: any) => {
-    let checked = true;
-    if (invalidTypes.includes(item.type)) {
-      checked = false;
-    }
+    let checked = item.type;
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
@@ -92,12 +80,12 @@ const ContentView = ({
           <Select
             className="w-[150px] h-[28px] text-xs"
             placeholder="Floor Plan,etc."
-            value={item.type}
+            value={item.type === 'Unknown' ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
             {drawingTypeList.map((item: any) => (
-              <Select.Option key={item.type} value={item.type}>
-                {item.type}
+              <Select.Option key={item} value={item}>
+                {item}
               </Select.Option>
             ))}
           </Select>
@@ -110,13 +98,21 @@ const ContentView = ({
       <div className="mt-8 mb-2 text-xs text-basicGray">
         Select Pages and respective type of content.
       </div>
-      <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
-        <div className="w-[50%] text-center">Index</div>
-        <div className="w-[50%] text-center">Type</div>
-      </div>
-      <div className="pr-2 flex-1 overflow-y-auto">
-        {contentData?.map((item: any) => contentItem(item))}
-      </div>
+      {
+        !isEmptyContent ?
+          <>
+            <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
+              <div className="w-[50%] text-center">Index</div>
+              <div className="w-[50%] text-center">Type</div>
+            </div>
+            <div className="pr-2 flex-1 overflow-y-auto">
+              {contentData?.map((item: any) => contentItem(item))}
+            </div>
+          </> :
+          <div className="mt-8 text-xs">
+            Sorry, we were unable to categorize the pages automatically, please click “Next Step” button to manually label the content for AI to analyze
+          </div>
+      }
     </div>
   );
 };

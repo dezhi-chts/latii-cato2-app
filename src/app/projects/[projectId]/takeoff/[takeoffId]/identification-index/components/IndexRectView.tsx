@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { AddRectBoxControls } from '../../components/pdf/Pdf-Controls';
 import DrawingIndexModal from './DrawingIndexModal';
 import TitleInfoModal from './TitleInfoModal';
+import { GroupType } from '../../types/evidence';
 const IndexRectView = ({
   indexBoxList = [],
   labelList = [],
@@ -110,7 +111,7 @@ const IndexRectView = ({
             theme={cropsCount > 0 ? "primary-light" : "primary"}
             fullWidth={true}
             handleAddRectBox={() => {
-              cropsCount === 0 && handleAddRectBox('Drawing Index')
+              cropsCount === 0 && handleAddRectBox(GroupType.DrawingIndex)
             }}
           />
         </div>
@@ -174,7 +175,7 @@ const IndexRectView = ({
                 text="Label"
                 fullWidth={true}
                 handleAddRectBox={() => {
-                  cropsCount === 0 && handleAddRectBox('Title Info')
+                  cropsCount === 0 && handleAddRectBox(GroupType.TitleInfo)
                 }}
               />
             </div>

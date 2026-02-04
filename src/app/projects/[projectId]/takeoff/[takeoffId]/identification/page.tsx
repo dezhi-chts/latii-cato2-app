@@ -28,7 +28,7 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary } from "@/services/drawingIndexService";
+import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -99,7 +99,9 @@ const fixed_page_type = [
     type: "All",
     color: "#717171",
     count: 0,
-  }]
+  }];
+
+const invalidPageType = ['Not Used', 'All', 'Active Pages'];
 
 const Identification = () => {
   const projectId = useParams().projectId;
@@ -125,8 +127,9 @@ const Identification = () => {
   const [labelTypeList, setLabelTypeList] = useState<any>([]);
   const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
+  const [isThumbnailInitialized, setIsThumbnailInitialized] = useState<boolean>(false);
+  const [isPageTypeInitialized, setIsPageTypeInitialized] = useState<boolean>(false);
 
-  const thumbnailListRef = useRef<any>([]);
   const evidenceIsLoaded = useRef<boolean>(false);
 
 
@@ -228,27 +231,17 @@ const Identification = () => {
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
           let newPdfUrl = file?.parse_detail?.uploaded_file_url;
-
           setPdfUrl(newPdfUrl);
           let list = file?.parse_detail?.image_page_infos ?? [];
-          thumbnailListRef.current = list;
+
           // 设置新的缩略图数据
           setThumbnailList(() => [...list]);
 
-          setPageTypeList((prev: any) => {
-            return prev.map((item: any) => {
-              if (item.type === "All") return {
-                ...item,
-                count: list.length
-              };
-              return item;
-            })
-          })
+          //获取pdf analyse summary
+          getPdfSummary();
 
           //获取file evidence
           getFileEvidences();
-          //获取pdf analyse summary
-          getPdfSummary();
         }
         return;
       }
@@ -256,23 +249,45 @@ const Identification = () => {
   }, [selectedFileId, fileList]);
 
   useEffect(() => {
-    // 获取总页数，从ref中获取完整列表的长度
-    if (pageTypeList?.length >= 0 && summaryData) {
+    // 确保pageTypeList和summaryData都有数据时，才初始化pageTypeList，且只初始化一次
+    if (pageTypeList?.length > 0 && summaryData && !isPageTypeInitialized) {
       let list = [...pageTypeList];
       const page_classification = summaryData.page_classification ?? {};
       let typeList = list.map((item: any) => {
-        if (item.type === "All") return item;
+        if (item.type === "All") {
+          return {
+            ...item,
+            count: thumbnailList.length
+          }
+        } else if (item.type === "Active Pages") {
+          // 把page_classification中所有不是invalidPageType的type的count加起来
+          let totalCount: any = [];
+          for (let key in page_classification) {
+            if (!invalidPageType.includes(key)) {
+              totalCount.push(page_classification[key] ?? 0);
+            }
+          }
+          let count = totalCount.reduce((a: any, b: any) => a + b, 0);
+          return {
+            ...item,
+            count: count
+          }
+        };
         return {
           ...item,
           count: page_classification[item.type] ?? 0
         }
       });
       setPageTypeList(() => [...typeList]);
+      setIsPageTypeInitialized(true);
     }
+  }, [summaryData, pageTypeList, isPageTypeInitialized])
 
-    if (thumbnailListRef.current.length > 0 && summaryData) {
+  useEffect(() => {
+    // 确保thumbnailList和summaryData都有数据时，才初始化thumbnailList，且只初始化一次
+    if (thumbnailList.length > 0 && summaryData && !isThumbnailInitialized) {
       // 初始化数据
-      const list = thumbnailListRef.current.map((item: any) => {
+      const list = thumbnailList.map((item: any) => {
         let itemPageNum: number = 0;
         if (typeof item.file_name === 'string') {
           let pageArr = item.file_name?.split(".")[0];
@@ -288,75 +303,83 @@ const Identification = () => {
         }
       });
 
-      thumbnailListRef.current = list;
       // 更新 thumbnailList 状态
       setThumbnailList(() => [...list]);
+      setIsThumbnailInitialized(true);
     }
-  }, [summaryData])
+  }, [summaryData, thumbnailList, isThumbnailInitialized])
 
+  const filterThumbnailList = useMemo(() => {
+    if (currentType === "All") return [...thumbnailList];
+    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => !invalidPageType.includes(item.type));
+    return [...thumbnailList].filter((item: any) => item.type === currentType);
+  }, [currentType, thumbnailList]);
 
-  useEffect(() => {
-    // 当 currentType 变化时，更新 thumbnailList
-    if (thumbnailListRef.current.length > 0) {
-      // 根据 currentType 过滤
-      let list = thumbnailListRef.current.filter((item: any) => item.type === currentType);
-      // 更新 thumbnailList 状态
-      setThumbnailList(() => {
-        if (currentType === "All") return [...thumbnailListRef.current];
-        return [...list];
-      });
+  const getItemPage = (item: any, index: number) => {
+    if (typeof item.file_name === 'string') {
+      let pageArr = item.file_name?.split(".")[0];
+      return parseInt(pageArr) + 1;
     }
-  }, [currentType]);
+    return index + 1;
+  }
 
-  const handlePageTypeChange = async (page: number, type: string) => {
-    let oldType = '';
-    const newThumbnailList = thumbnailList.map((item: any) => {
-      let itemPageNum: number = 0;
-      if (typeof item.file_name === 'string') {
-        let pageArr = item.file_name?.split(".")[0];
-        itemPageNum = parseInt(pageArr) + 1;
-      }
-      if (itemPageNum === page) {
-        oldType = item.type;
-        return {
-          ...item,
-          type: type,
-        };
-      }
-      return item;
-    });
-    setThumbnailList((prev: any) => [...newThumbnailList]);
-
-    // 调用API更改page页的type，如果更新成功，则更改tags的数量，如果更新失败，则回滚到旧的type
-    let res = { status: 'success' }
-    if (res.status === 'success') {
-      // 更改tags的数量
-      setPageTypeList((prev: any) => {
-        return prev.map((item: any) => {
-          if (item.type === type) {
-            return {
-              ...item,
-              count: item.count + 1,
-            }
-          }
-          if (item.type === oldType) {
-            return {
-              ...item,
-              count: item.count - 1,
-            }
-          }
-          return item;
-        })
+  const setThumbnailPageType = (page: number, type: string) => {
+    setThumbnailList((prev: any) => {
+      return prev.map((item: any, index: number) => {
+        let itemPageNum = getItemPage(item, index);
+        if (itemPageNum === page) {
+          return {
+            ...item,
+            type: type,
+          };
+        }
+        return item;
       })
-      thumbnailListRef.current = newThumbnailList;
+    });
+  }
+
+  const handlePageType = async (page: number, newType: string, oldType: string) => {
+    let res = await updatePageType({
+      fileId: selectedFileId as any,
+      pageNum: page,
+      newType: newType,
+    });
+    if (res.status === 'success') {
+      // 更新成功，更新tags中的数据
+      setPageTypeList((prev: any) => {
+        let list = [...prev];
+        let oldTypeItem = list.find((item: any) => item.type === oldType);
+        let newTypeItem = list.find((item: any) => item.type === newType);
+        let activePagesItem = list.find((item: any) => item.type === 'Active Pages');
+        oldTypeItem.count = (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
+        newTypeItem.count = (newTypeItem?.count || 0) + 1;
+
+        let activePages = list.filter((item: any) => !invalidPageType.includes(item.type));
+        // 计算所有非无效类型的计数之和
+        activePagesItem.count = activePages.reduce((total: number, item: any) => total + (item.count || 0), 0);
+
+        return [...list];
+      })
     } else {
-      // 回滚到旧的type
-      setThumbnailList((prev: any) => [...thumbnailListRef.current]);
       notification.error({
         message: "Error",
-        description: "Failed to change page type",
+        description: "Failed to update page type",
       });
+      // 回滚到上次的类型设置
+      setThumbnailPageType(page, oldType);
     }
+  }
+
+  const handlePageTypeChange = async (page: number, type: string) => {
+    let oldType = thumbnailList.find((item: any, index: number) => {
+      let itemPageNum = getItemPage(item, index);
+      return itemPageNum === page;
+    })?.type || '';
+
+    // 设置新的type
+    setThumbnailPageType(page, type);
+    // 调用type更新接口
+    handlePageType(page, type, oldType);
   };
 
 
@@ -538,7 +561,7 @@ const Identification = () => {
             pdfRef={pdfRef}
             showThumbnail={showThumbnail}
             setShowThumbnail={setShowThumbnail}
-            data={thumbnailList}
+            data={filterThumbnailList}
             page={page}
             setPage={setPage}
             showCategory={true}

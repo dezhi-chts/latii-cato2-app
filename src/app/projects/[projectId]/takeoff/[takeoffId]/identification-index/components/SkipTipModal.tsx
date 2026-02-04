@@ -1,10 +1,13 @@
 import { Modal, Button } from 'antd';
 import Image from 'next/image';
+import { Group } from 'react-konva';
+import { GroupType } from '../../types/evidence';
 const SkipTipModal = ({
   isOpen,
   closeModal,
   skipType,
   handleSkip,
+  handleAddRectBox,
 }: any) => {
   const skipList = [{
     type: 'index',
@@ -13,7 +16,10 @@ const SkipTipModal = ({
       'Index identification improves CATO recognition of your Architectural Drawing.',
       'Are you sure you want to skip this step and go to Page labeling?'
     ],
-    buttonText: 'Index Box'
+    buttonText: 'Index Box',
+    buttonPress: () => {
+      handleAddRectBox(GroupType.DrawingIndex)
+    }
   }, {
     type: 'label',
     title: 'Identify Label Format',
@@ -21,7 +27,10 @@ const SkipTipModal = ({
       'Label format improves CATO recognition of your Index Page, improving its accuracy.',
       'Are you sure you want to skip this step and go to Index creation?'
     ],
-    buttonText: 'Label'
+    buttonText: 'Label',
+    buttonPress: () => {
+      handleAddRectBox(GroupType.TitleInfo)
+    }
   }];
 
   const skipInfo = skipList.find((item) => item.type === skipType) ?? skipList[0];
@@ -44,7 +53,7 @@ const SkipTipModal = ({
           ))
         }</div>
         <div className='flex justify-between'>
-          <Button className='custom-primary-btn !w-[228px]' onClick={closeModal}>
+          <Button className='custom-primary-btn !w-[228px]' onClick={skipInfo.buttonPress}>
             {skipInfo.buttonText}
             <Image
               src="/assets/icons/add-table-white.svg"
