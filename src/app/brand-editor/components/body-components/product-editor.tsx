@@ -42,7 +42,9 @@ import {
 	findProductTypeWithParent,
 	pickProductProductTypeOpen,
 	findTopLevelBySection,
-	deepCopyWithNewId
+	deepCopyWithNewId,
+	collectOptionLibraryNodes,
+	markLastNodeAtEachLevel
 } from "@/app/brand-editor/components/body-components/logics";
 import OptionTreeNodeCom from "@/app/brand-editor/components/body-components/option-tree-node";
 
@@ -91,6 +93,7 @@ const ProductEditor = () => {
 		_isTopLevel: true
 	});
 	const [sectionTreeData, setSectionTreeData] = useState<OptionMsgVO[]>([]);
+	const [setedOptionLibraryList, setSetedOptionLibraryList] = useState<any[]>([]);
 
 	useEffect(() => {
 		initAllData()
@@ -134,6 +137,10 @@ const ProductEditor = () => {
 	const generateOptionMsg = (profileMsg: Record<string, any>, unitMsg: Record<string, any>) => {
 		let unitAttributesTreeMsg = processUnitAttributeTree(unitMsg?.attribute_tree)
 		setUnitAttributesTree([unitAttributesTreeMsg])
+
+		let setedOptionLibraryList = collectOptionLibraryNodes(unitMsg?.attribute_tree);
+		setSetedOptionLibraryList([...setedOptionLibraryList])
+
 		let profileOptionMsg = generateOptionMsgFromProfileScript(profileMsg, unitMsg?.attribute_tree);
 		setProfileOptionMsg(profileOptionMsg)
 		const allProductType = findProductTypeWithParent(profileOptionMsg)
@@ -249,6 +256,7 @@ const ProductEditor = () => {
 	};
 
 	const onDeleteSection = (sectionMsg: any, index: number) => {
+		
 		if (sectionMsg.isAdd) {
 			allSection.splice(index, 1)
 			setAllSection([...allSection])
@@ -267,12 +275,21 @@ const ProductEditor = () => {
 					tempSelectedOpen.have_sections.push(item.code)
 				}
 			})
+
+			let selectedOpenChildren:any = []
+			tempSelectedOpen.children.forEach((item:any)=>{
+				if(tempSelectedOpen.have_sections.includes(item.belong_section)){
+					selectedOpenChildren.push(item)
+				}
+			})
+			tempSelectedOpen.children = selectedOpenChildren
+
 			let newProfileOptionMsg = updateOption(tempSelectedOpen, profileOptionMsg)
 			onSaveScript(newProfileOptionMsg)
 		}
 	};
 
-	const onSaveScript = async (profileOptionMsg: OptionMsgVO) => {
+	const onSaveScript = async (profileOptionMsg: OptionMsgVO, isBaseCheck:boolean=false) => {
 		let scriptMsg: string = generateProfileScriptFromProfileOptionMsg(
 			projectMsg?.attribute_tree,
 			quoteMsg?.attribute_tree,
@@ -281,6 +298,18 @@ const ProductEditor = () => {
 			profileOptionMsg
 		);
 		setFullLoading(false)
+		if(isBaseCheck){
+			let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
+			if (checkReturnMsg.status != "success"){
+				setFullLoading(false)
+				notification.error({
+					message: "Error",
+					description: checkReturnMsg?.data?.response?.data?.detail || "Base check failed."
+				});
+				return
+			}
+		}
+		
 		let saveReturnMsg: Record<string, any> = await saveProfileScript(selectedProfile.id, scriptMsg);
 
 		if (saveReturnMsg.status == "success") {
@@ -328,10 +357,13 @@ const ProductEditor = () => {
 		if (sectionMsg?.isAdd) {
 			return
 		}
-		console.log(sectionMsg, 'sectionMsg')
 		setSelectedSection({ ...sectionMsg })
 		let sectionTreeData = findTopLevelBySection(sectionMsg.code, selectedOpen.children)
-		console.log(sectionTreeData, sectionMsg.code, selectedOpen.children, 'selectedOpen.childrenselectedOpen.children')
+		sectionTreeData.forEach((item)=>{
+			item._isTopLevel = true
+		})
+		sectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+
 		setSectionTreeData([...sectionTreeData])
 	};
 
@@ -352,7 +384,8 @@ const ProductEditor = () => {
 			_isTopLevel: true
 		};
 		sectionTreeData.push(subOptionMsgVO)
-		setSectionTreeData([...sectionTreeData])
+		let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+		setSectionTreeData([...tempSectionTreeData])
 	};
 
 	// 增加子节点
@@ -360,12 +393,15 @@ const ProductEditor = () => {
 		let newOptionItemMsg = addSubOption(optionItemMsg)
 		let newProfileOptionMsg = updateOption(newOptionItemMsg, sectionTreeData[$index])
 		sectionTreeData[$index] = newProfileOptionMsg
-		setSectionTreeData([...sectionTreeData])
+
+		let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+		setSectionTreeData([...tempSectionTreeData])
 	};
 
 	// 增加兄弟节点
 	const addSiblingOptionHandler = (optionItemMsg: OptionMsgVO, $index:number) => {
 		if (optionItemMsg._isTopLevel){
+			
 			let subOptionMsgVO = {
 				id: crypto.randomUUID(),
 				attribute: optionItemMsg.attribute,
@@ -386,25 +422,32 @@ const ProductEditor = () => {
 				subOptionMsgVO,
 				...sectionTreeData.slice($index + 1)
 			];
-			setSectionTreeData([...newSectionTreeData])
+			let tempSectionTreeData = markLastNodeAtEachLevel(newSectionTreeData)
+		
+			setSectionTreeData([...tempSectionTreeData])
 			return
 		}
 		let newOptionItemMsg = addSiblingOption(optionItemMsg, sectionTreeData[$index])
 		let newProfileOptionMsg = updateOption(newOptionItemMsg, sectionTreeData[$index])
 		sectionTreeData[$index] = newProfileOptionMsg
-		setSectionTreeData([...sectionTreeData])
+
+		let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+		setSectionTreeData([...tempSectionTreeData])
 	};
 
 	// 删除节点
 	const deleteNode = (optionItemMsg: OptionMsgVO, $index:number) => {
 		if (optionItemMsg._isTopLevel){
 			sectionTreeData.splice($index,1)
-			setSectionTreeData([...sectionTreeData])
+			let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+			setSectionTreeData([...tempSectionTreeData])
 			return
 		}
 		let newProfileOptionMsg = deleteItem(optionItemMsg, sectionTreeData[$index])
 		sectionTreeData[$index] = newProfileOptionMsg
-		setSectionTreeData([...sectionTreeData])
+
+		let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+		setSectionTreeData([...tempSectionTreeData])
 	};
 
 	// 复制节点
@@ -416,12 +459,15 @@ const ProductEditor = () => {
 				newNode,
 				...sectionTreeData.slice($index + 1)
 			];
-			setSectionTreeData([...newSectionTreeData])
+			let tempSectionTreeData = markLastNodeAtEachLevel(newSectionTreeData)
+			setSectionTreeData([...tempSectionTreeData])
 			return
 		}
 		let newProfileOptionMsg = copyItem(optionItemMsg, sectionTreeData[$index])
 		sectionTreeData[$index] = newProfileOptionMsg
-		setSectionTreeData([...sectionTreeData])
+
+		let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
+		setSectionTreeData([...tempSectionTreeData])
 	};
 
 	// 修改attribute
@@ -437,8 +483,12 @@ const ProductEditor = () => {
 	};
 
 	// 修改option
-	const onChangeOption = (optionCode: string, optionItemMsg: OptionMsgVO, $index:number) => {
-		let optionMsg = getOptionMsgByOption(optionCode, optionItemMsg.options)
+	const onChangeOption = (optionCode: string[], optionItemMsg: OptionMsgVO, $index:number) => {
+		let optionMsg:Record<string, any>[] = []
+		optionCode.forEach((item:any)=>{
+			let msg = getOptionMsgByOption(item, optionItemMsg.options)
+			optionMsg.push(msg)
+		})
 		optionItemMsg.option = optionCode
 		optionItemMsg.optionMsg = optionMsg
 		let newProfileOptionMsg = updateOption(optionItemMsg, sectionTreeData[$index])
@@ -461,6 +511,23 @@ const ProductEditor = () => {
 		setSectionTreeData([...sectionTreeData])
 	};
 
+	const onSaveChange = () => {
+		// let oldSectionTreeData = findTopLevelBySection(selectedSection.code, selectedOpen.children)
+		let tempSelectedOpen = JSON.parse(JSON.stringify(selectedOpen))
+		let selectedOpenChildren:any = []
+		tempSelectedOpen.children.forEach((item:any)=>{
+			if(item.belong_section != selectedSection.code){
+				selectedOpenChildren.push(item)
+			}
+		})
+		tempSelectedOpen.children = selectedOpenChildren
+		sectionTreeData.forEach((item:any)=>{
+			tempSelectedOpen.children.push(item)
+		})
+		let newProfileOptionMsg = updateOption(tempSelectedOpen, profileOptionMsg)
+		
+		onSaveScript(newProfileOptionMsg, true)
+	};
 
 	return (
 		<div className="mt-[-20px] pr-6 h-[calc(100vh-160px)] flex text-[14px]">
@@ -521,7 +588,7 @@ const ProductEditor = () => {
 					</div>
 				</div>
 				<div className="h-[calc(100%-180px)]">
-					{/* {
+					{
 						(
 							!selectedProfile?.profile_code ||
 							!selectedProductType?.option ||
@@ -529,7 +596,7 @@ const ProductEditor = () => {
 						) && <div className="text-xs p-6 text-[#a3a3a3]">
 							Select the product specifications to see Sections and Constrains.
 						</div>
-					} */}
+					}
 					{/* {
 						(
 							selectedProfile?.profile_code &&
@@ -544,158 +611,165 @@ const ProductEditor = () => {
 							</div>
 						</div>
 					} */}
-					<div className="h-full text-xs text-[#717171]">
-						<div className="p-6 h-[50%] border-b border-[#EBEDF0] overflow-y-auto">
-							<div className="flex justify-between items-center">
-								<div className="flex items-center">
-									<span>Sections</span>
-									<Tooltip
-										placement="rightTop"
-										title={sectionsTooltipDom}
-										color="#fff"
-										styles={{
-											root: {
-												minWidth: 300,
-												maxWidth: 300,
-												fontSize: 10
-											}
-										}}
-									>
-										<InfoCircleOutlined className="ml-2 cursor-pointer" />
-									</Tooltip>
-								</div>
-								<Button
-									className="text-[#717171] flex flex-row-reverse gap-1"
-									icon={<EyeOutlined />}
-									size="small"
-									disabled={true}
-								>
-									Preview Card
-								</Button>
-							</div>
-							{
-								(!allSection || allSection.length == 0) && <div className="border border-dashed boredr-[#E8E8E8] p-6 flex flex-col justify-center items-center mt-4">
-									<div>Create to start specifying your products</div>
-									<Button onClick={onAddSection} type="primary" className="mt-3" size="small" icon={<PlusOutlined />}>Section</Button>
-								</div>
-							}
-							{
-								(allSection && allSection.length > 0) && <div className="mt-2 text-center">
-									{
-										allSection.map((item: any, index: any) => {
-											let isSelected = item.code === selectedSection.code && item.code;
-											const selectedStyle = isSelected
-												? {
-													background: "#E3EBF8"
+					{
+						(
+							selectedProfile?.profile_code &&
+							selectedProductType?.option &&
+							selectedOpen?.option 
+						) &&
+						<div className="h-full text-xs text-[#717171]">
+							<div className="p-6 h-[50%] border-b border-[#EBEDF0] overflow-y-auto">
+								<div className="flex justify-between items-center">
+									<div className="flex items-center">
+										<span>Sections</span>
+										<Tooltip
+											placement="rightTop"
+											title={sectionsTooltipDom}
+											color="#fff"
+											styles={{
+												root: {
+													minWidth: 300,
+													maxWidth: 300,
+													fontSize: 10
 												}
-												: {
-
-												}
-											return (
-												<div
-													key={index}
-													className="
-														group
-														w-full
-														flex
-														p-2
-														pt-3
-														pb-3
-														border-b
-														border-b-[#EBEDF0]
-														items-center
-														justify-between
-														hover:bg-[#E3EBF8]
-														transition-colors
-														rounded-md
-														cursor-pointer
-													"
-													style={selectedStyle}
-													onClick={() => { onSelectSection(item) }}
-												>
-													{
-														<TreeSelect
-															style={{ width: '100%', textAlign: "left" }}
-															styles={{
-																popup: { root: { maxHeight: 500, minWidth: 500, overflow: 'auto' } },
-															}}
-															placeholder="Please select"
-															treeDefaultExpandAll
-															treeData={unitTreeData}
-															treeLine={true}
-															treeIcon={true}
-															value={item?.code}
-															onClick={(e: any) => { e.stopPropagation() }}
-															onChange={(value) => { onChangeSection(value, index, item) }}
-														/>
-													}
-													<div className='ml-6 mr-2'>
-														<DeleteOutlined onClick={(e: any) => { e.stopPropagation(); onDeleteSection(item, index) }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
-													</div>
-												</div>
-											)
-										})
-									}
+											}}
+										>
+											<InfoCircleOutlined className="ml-2 cursor-pointer" />
+										</Tooltip>
+									</div>
 									<Button
-										className='mt-2'
-										size='small'
-										type="primary"
-										shape="circle"
-										icon={<PlusOutlined />}
-										onClick={onAddSection}
+										className="text-[#717171] flex flex-row-reverse gap-1"
+										icon={<EyeOutlined />}
+										size="small"
+										disabled={true}
+									>
+										Preview Card
+									</Button>
+								</div>
+								{
+									(!allSection || allSection.length == 0) && <div className="border border-dashed boredr-[#E8E8E8] p-6 flex flex-col justify-center items-center mt-4">
+										<div>Create to start specifying your products</div>
+										<Button onClick={onAddSection} type="primary" className="mt-3" size="small" icon={<PlusOutlined />}>Section</Button>
+									</div>
+								}
+								{
+									(allSection && allSection.length > 0) && <div className="mt-2 text-center">
+										{
+											allSection.map((item: any, index: any) => {
+												let isSelected = item.code === selectedSection.code && item.code;
+												const selectedStyle = isSelected
+													? {
+														background: "#E3EBF8"
+													}
+													: {
+
+													}
+												return (
+													<div
+														key={index}
+														className="
+															group
+															w-full
+															flex
+															p-2
+															pt-3
+															pb-3
+															border-b
+															border-b-[#EBEDF0]
+															items-center
+															justify-between
+															hover:bg-[#E3EBF8]
+															transition-colors
+															rounded-md
+															cursor-pointer
+														"
+														style={selectedStyle}
+														onClick={() => { onSelectSection(item) }}
+													>
+														{
+															<TreeSelect
+																style={{ width: '100%', textAlign: "left" }}
+																styles={{
+																	popup: { root: { maxHeight: 500, minWidth: 500, overflow: 'auto' } },
+																}}
+																placeholder="Please select"
+																treeDefaultExpandAll
+																treeData={unitTreeData}
+																treeLine={true}
+																treeIcon={true}
+																value={item?.code}
+																onClick={(e: any) => { e.stopPropagation() }}
+																onChange={(value) => { onChangeSection(value, index, item) }}
+															/>
+														}
+														<div className='ml-6 mr-2'>
+															<DeleteOutlined onClick={(e: any) => { e.stopPropagation(); onDeleteSection(item, index) }} className="text-[#B1B1B1] hover:text-[#FF4D4F]" />
+														</div>
+													</div>
+												)
+											})
+										}
+										<Button
+											className='mt-2'
+											size='small'
+											type="primary"
+											shape="circle"
+											icon={<PlusOutlined />}
+											onClick={onAddSection}
+										/>
+									</div>
+								}
+							</div>
+							<div className="p-6 h-[50%] overflow-y-auto">
+								<div className="flex justify-between items-center mt-2">
+									<span>Constrains</span>
+									<span>mm</span>
+								</div>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Max Width</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
 									/>
 								</div>
-							}
-						</div>
-						<div className="p-6 h-[50%] overflow-y-auto">
-							<div className="flex justify-between items-center mt-2">
-								<span>Constrains</span>
-								<span>mm</span>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Max Width</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Min Width</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Max Height</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Min Height</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Max Weight</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
-							</div>
-							<div className="flex justify-between items-center mt-2">
-								<div className="text-[#000000]">Min Height</div>
-								<InputNumber
-									size="small"
-									placeholder="Input"
-								/>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Min Width</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
+									/>
+								</div>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Max Height</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
+									/>
+								</div>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Min Height</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
+									/>
+								</div>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Max Weight</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
+									/>
+								</div>
+								<div className="flex justify-between items-center mt-2">
+									<div className="text-[#000000]">Min Height</div>
+									<InputNumber
+										size="small"
+										placeholder="Input"
+									/>
+								</div>
 							</div>
 						</div>
-					</div>
+					}
 				</div>
 			</div>
 			<div className="flex-1 border border-[#E8E8E8] rounded-md ml-4 h-full overflow-y-auto">
@@ -705,16 +779,17 @@ const ProductEditor = () => {
 					</div>
 				}
 				{
-					selectedSection?.code && <div>
-						<div className="bg-[#F8F8F8] p-6 py-4">
+					selectedSection?.code && <div className="h-full">
+						<div className="bg-[#F8F8F8] flex justify-between items-center p-6 py-3">
 							<div className="flex items-center">
 								<span className="text-[#717171]">Sections</span>
 								<span className="ml-2 w-[200px] p-4 bg-[#fff] py-2 rounded-md">
 									{selectedSection?.title}
 								</span>
 							</div>
+							<Button onClick={onSaveChange} type="primary" size="small">Save Change</Button>
 						</div>
-						<div className="p-6">
+						<div className="p-6 overflow-auto w-full h-[calc(100%-65px)]">
 							{
 								(sectionTreeData && sectionTreeData.length == 0) && <div className="flex items-center justify-center">
 									<Button
@@ -728,19 +803,19 @@ const ProductEditor = () => {
 								</div>
 							}
 							{
-								(sectionTreeData && sectionTreeData.length != 0) && <div>
+								(sectionTreeData && sectionTreeData.length != 0) && <div className="w-full h-full overflow-x-auto">
 									{
 										sectionTreeData.map((item: any, index: any) => {
 											return <OptionTreeNodeCom
 												key={index}
 												optionItemMsg={item}
-												attributesTree={unitAttributesTree}
+												setedOptionLibraryList={setedOptionLibraryList}
 												addSubOptionHandler={(node: OptionMsgVO) => { addSubOptionHandler(node, index) }}
 												addSiblingOptionHandler={(node: OptionMsgVO) => { addSiblingOptionHandler(node, index) }}
 												deleteNode={(node: OptionMsgVO) => { deleteNode(node, index) }}
 												copyNode={(node: OptionMsgVO) => { copyNode(node, index) }}
 												onChangeAttribute={(attributeCode: string, node: OptionMsgVO) => { onChangeAttribute(attributeCode, node, index) }}
-												onChangeOption={(optionCode: string, node: OptionMsgVO) => { onChangeOption(optionCode, node, index) }}
+												onChangeOption={(optionCode: string[], node: OptionMsgVO) => { onChangeOption(optionCode, node, index) }}
 												onToggleHandler={(id: string) => { onToggleHandler(id, index) }}
 											/>
 										})
