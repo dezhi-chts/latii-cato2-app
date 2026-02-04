@@ -101,7 +101,7 @@ const fixed_page_type = [
     count: 0,
   }];
 
-const invalidPageType = ['Not Used', 'Not used', 'All', 'Active Pages'];
+const invalidPageType = ['Not Used', 'All', 'Active Pages'];
 
 const Identification = () => {
   const projectId = useParams().projectId;
@@ -354,9 +354,9 @@ const Identification = () => {
         oldTypeItem.count = (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
         newTypeItem.count = (newTypeItem?.count || 0) + 1;
 
-
         let activePages = list.filter((item: any) => !invalidPageType.includes(item.type));
-        activePagesItem.count = activePages.length;
+        // 计算所有非无效类型的计数之和
+        activePagesItem.count = activePages.reduce((total: number, item: any) => total + (item.count || 0), 0);
 
         return [...list];
       })
