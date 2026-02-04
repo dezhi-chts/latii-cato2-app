@@ -80,13 +80,14 @@ const IdentificationIndex = () => {
   const [fullLoading, setFullLoading] = useState<boolean>(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [buildLoadingStep, setBuildLoadingStep] = useState<string>(BuildLoadingStep.PageIndex);
-  const [showContentView, setShowContentView] = useState<boolean>(false);
+  const [showContentView, setShowContentView] = useState<boolean>(true);
   const [contentData, setContentData] = useState<any>([]);
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
   const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [matchPages, setMatchPages] = useState<any>([]);
+  const [isEmptyContent, setIsEmptyContent] = useState<boolean>(false);
 
   const skipType = useRef<any>(null);
   const evidenceIsLoaded = useRef<boolean>(false);
@@ -117,18 +118,7 @@ const IdentificationIndex = () => {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
-        // 临时测试数据
-        let tempFileList = project_files.map((item: any, index: number) => {
-          if (index === 0) {
-            return {
-              ...item,
-              status: FileStatus.Completed,
-            }
-          }
-          return item;
-        })
-        //setFileList(project_files);
-        setFileList(tempFileList);
+        setFileList(project_files);
         setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
       } else {
         notification.error({
@@ -206,14 +196,9 @@ const IdentificationIndex = () => {
           //获取file evidence
           getFileEvidences();
 
-          // 判断当前文件的状态，如果状态为complete，则显示contentView
-          if (file.status === FileStatus.Completed) {
-            setShowContentView(true);
-            getDrawingIndexData();
-          } else {
-            // 获取evidence显示
-            setShowContentView(false);
-          }
+          // 显示目录内容
+          setShowContentView(true);
+          getDrawingIndexData();
         }
         return;
       }
@@ -244,6 +229,7 @@ const IdentificationIndex = () => {
         description: "Drawing index recognized successfully",
       })
       // 识别成功后重新获取drawing index数据
+      setShowContentView(true);
       getDrawingIndexData();
     } else {
       notification.error({
@@ -254,20 +240,26 @@ const IdentificationIndex = () => {
   }
 
   const getDrawingIndexData = async () => {
-    setFullLoading(true)
+    setContentData([]);
+    setFullLoading(true);
+    setIsEmptyContent(false);
 
     let res: any = await getDrawingIndexInfoById(projectId as string, selectedFileId as number);
 
     setFullLoading(false);
 
     if (res.status === 'success') {
-      setContentData(res?.data?.drawings ?? []);
-      // 获取到content数据
-      setShowContentView(true);
+      let drawingData = res?.data?.drawings ?? [];
+      setContentData(drawingData);
 
-      // 设置当前文件状态为complete
-      updateFileStatus(selectedFileId, FileStatus.Completed)
-
+      if (drawingData.length > 0) {
+        // 设置文件状态为已完成
+        updateFileStatus(selectedFileId, FileStatus.Completed)
+      } else {
+        // 设置文件状态为未完成
+        updateFileStatus(selectedFileId, FileStatus.Processing)
+        setIsEmptyContent(true);
+      }
       // 如果发现drawingTypeList为空，则再次调用getTypeList
       if (drawingTypeList.length === 0) {
         getTypeList();
@@ -415,16 +407,20 @@ const IdentificationIndex = () => {
   const handleNext = (btnText: 'Next Step' | 'Next File' | 'Complete') => {
     // 处理右上角的next按钮
     if (btnText === 'Next Step') {
-      // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
-      if (indexBoxList.length > 0 && labelList.length > 0) {
-        recognizeDrawingIndexData();
+      if (showContentView) {
+        setShowContentView(false);
       } else {
-        if (indexBoxList.length === 0) {
-          skipType.current = 'index';
+        // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
+        if (indexBoxList.length > 0 && labelList.length > 0) {
+          recognizeDrawingIndexData();
         } else {
-          skipType.current = 'label';
+          if (indexBoxList.length === 0) {
+            skipType.current = 'index';
+          } else {
+            skipType.current = 'label';
+          }
+          setShowSkipModal(true);
         }
-        setShowSkipModal(true);
       }
     } else if (btnText === 'Next File') {
       // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
@@ -501,6 +497,7 @@ const IdentificationIndex = () => {
                 contentData={contentData}
                 setContentData={setContentData}
                 drawingTypeList={drawingTypeList}
+                isEmptyContent={isEmptyContent}
                 matchPages={matchPages}
                 pdfTotalPages={totalPage}
                 handlePageChange={handlePageChange}
@@ -581,6 +578,10 @@ const IdentificationIndex = () => {
         isOpen={showSkipModal}
         closeModal={() => { setShowSkipModal(false) }}
         skipType={skipType.current}
+        handleAddRectBox={(type: string) => {
+          setShowSkipModal(false);
+          cropsCount === 0 && handleAddRectBox(type);
+        }}
         handleSkip={() => {
           setShowSkipModal(false);
           recognizeDrawingIndexData();

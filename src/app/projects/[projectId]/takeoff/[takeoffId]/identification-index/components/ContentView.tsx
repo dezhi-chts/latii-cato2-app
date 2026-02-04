@@ -35,6 +35,7 @@ const ContentView = ({
   drawingTypeList,
   matchPages,
   pdfTotalPages,
+  isEmptyContent, // 是否数据为空
   handlePageChange
 }: any) => {
   const handleChangeType = async (item: any, value: string) => {
@@ -110,13 +111,21 @@ const ContentView = ({
       <div className="mt-8 mb-2 text-xs text-basicGray">
         Select Pages and respective type of content.
       </div>
-      <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
-        <div className="w-[50%] text-center">Index</div>
-        <div className="w-[50%] text-center">Type</div>
-      </div>
-      <div className="pr-2 flex-1 overflow-y-auto">
-        {contentData?.map((item: any) => contentItem(item))}
-      </div>
+      {
+        !isEmptyContent ?
+          <>
+            <div className="h-[28px] flex flex-row items-center bg-forumBlueLight text-xs text-forumBlue rounded-tl-md rounded-tr-md">
+              <div className="w-[50%] text-center">Index</div>
+              <div className="w-[50%] text-center">Type</div>
+            </div>
+            <div className="pr-2 flex-1 overflow-y-auto">
+              {contentData?.map((item: any) => contentItem(item))}
+            </div>
+          </> :
+          <div className="mt-8 text-xs">
+            Sorry, we were unable to categorize the pages automatically, please click “Next Step” button to manually label the content for AI to analyze
+          </div>
+      }
     </div>
   );
 };
