@@ -1,15 +1,16 @@
 "use client";
 import Image from "next/image";
 import Header from "./components/Header";
-import { Input, Spin, Button } from "antd";
+import { Input, Spin, Button, Modal } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import EmptyProject from "./components/Empty-Project";
 import { useEffect, useState } from "react";
 
 import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal";
-import { getTakeOffsByProjectId } from "@/services/takeOffService";
+import { getTakeOffsByProjectId, deleteTakeOffById } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
 
+const { confirm } = Modal;
 
 const Project = () => {
   const router = useRouter();
@@ -49,6 +50,19 @@ const Project = () => {
 
   const onClickTakeOff = (takeOff: any) => {
     router.push(`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`);
+  }
+
+  const handleRemoveTakeoff = async (takeoff: any) => {
+    confirm({
+      title: `Are you sure to delete this takeoff: ${takeoff?.name}?`,
+      okText: "Yes",
+      onOk: async () => {
+        setFullLoading(true);
+        const res = await deleteTakeOffById(takeoff?.id as string);
+        setFullLoading(false);
+        getProjectTakeoffs();
+      },
+    })
   }
 
   return (
@@ -121,10 +135,17 @@ const Project = () => {
                   <div>
                     <Image src="/assets/cato-images/schedules-tables.png" alt="info icon" width={156} height={100} />
                   </div>
-                  <div className="ml-[50px] flex flex-col gap-2">
+                  <div className="ml-[50px] flex-1 flex flex-col gap-2">
                     <div className="text-base">{takeOff?.take_off_result?.name || ''}</div>
                     <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">takeoff</div>
                     <div className="text-xs text-basicGray">Last edit | {takeOff?.take_off_result?.update_time || ''}</div>
+                  </div>
+                  <div className="flex justify-center items-center cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveTakeoff(takeOff.take_off_result);
+                    }}>
+                    <Image src="/assets/icons/delete.svg" alt="Delete" width={20} height={20} />
                   </div>
                 </div>
               })

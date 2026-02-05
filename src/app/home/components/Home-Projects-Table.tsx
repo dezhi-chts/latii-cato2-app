@@ -5,6 +5,7 @@ import { ConfigProvider, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTitleFromPropertyName } from "@/lib/functions";
+import Image from "next/image";
 
 const PAGE_SIZE = 20;
 
@@ -38,7 +39,8 @@ const TextCell = ({ value }: { value: unknown }) => {
 const HomeProjectsTable = ({
   tableLoading,
   projects,
-  selectedColumns
+  selectedColumns,
+  handleRemoveProject
 }: any) => {
   const [page, setPage] = useState(1);
   const router = useRouter();
@@ -120,6 +122,24 @@ const HomeProjectsTable = ({
       //       }</div>
       //   }
       // },
+      {
+        title: (
+          <span className="text-xs font-semibold text-basicGray">
+            Operation
+          </span>
+        ),
+        dataIndex: "operation",
+        key: "operation",
+        align: "center",
+        width: 160,
+        render: (value, record) => <div className="w-full flex justify-center items-center cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveProject(record);
+          }}>
+          <Image src="/assets/icons/delete.svg" alt="Delete" width={20} height={20} />
+        </div>
+      },
     ],
     []
   );
@@ -172,7 +192,7 @@ const HomeProjectsTable = ({
       }}
     >
       <Table<ProjectRow>
-        rowKey={(r: any) => r.id}
+        rowKey={(r: any) => r.project_id}
         columns={columns}
         dataSource={projects}
         onRow={handleRowClick}

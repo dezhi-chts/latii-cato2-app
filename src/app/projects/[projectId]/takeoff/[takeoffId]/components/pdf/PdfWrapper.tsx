@@ -582,6 +582,7 @@ const PdfWrapper = forwardRef(
         };
 
         const viewport: ViewPort = page.getViewport(viewPointsOptions);
+        console.log('######### viewport', viewport);
         // Limit the canvas size to avoid performance issues
         // if (
         //   viewport.width > MAX_CANVAS_SIZE ||
@@ -1937,6 +1938,9 @@ const PdfWrapper = forwardRef(
         return;
       }
 
+      const viewPort = currentViewportRef.current;
+      if (!viewPort) return;
+
       const updatedPageEvidence = filterPageEvidence.map((item: any) => {
         let pdfPolygons = [];
         try {
@@ -1945,6 +1949,19 @@ const PdfWrapper = forwardRef(
           } else if (typeof item.polygon === "string") {
             pdfPolygons = JSON.parse(item.polygon);
           }
+
+          // const viewBox = viewPort.viewBox;
+          // console.log('########## viewBox', viewBox);
+          // const offsetX =
+          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+          // const offsetY =
+          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
+
+          // pdfPolygons = pdfPolygons.map((p) => ({
+          //   x: p.x + offsetX,
+          //   y: p.y + offsetY,
+          // }));
+
         } catch (e) {
           console.error("Failed to parse polygon data:", item.polygon);
           return item;
@@ -1952,9 +1969,7 @@ const PdfWrapper = forwardRef(
 
         const viewPoints = Array.isArray(pdfPolygons)
           ? pdfPolygons.map((p: Point) => {
-            const viewport = currentViewportRef.current;
-            if (!viewport) return { x: p.x, y: p.y };
-            const [px, py] = viewport.convertToViewportPoint(p.x, p.y);
+            const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
             return { x: px, y: py };
           })
           : [];

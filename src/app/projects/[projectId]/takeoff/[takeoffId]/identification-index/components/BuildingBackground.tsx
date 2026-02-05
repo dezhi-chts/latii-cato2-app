@@ -11,7 +11,7 @@ const CircleProgress = () => {
     const startProgress = () => {
       interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 80) {
+          if (prev >= 90) {
             clearInterval(interval);
             return prev;
           }

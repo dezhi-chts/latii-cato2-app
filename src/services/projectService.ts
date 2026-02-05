@@ -64,7 +64,7 @@ export const updateProject = async (project: ProjectSettings) => {
 };
 
 export const deleteProject = async (projectId: number | string) => {
-  if (!projectId || isNaN(Number(projectId))) return;
+  if (!projectId) return;
   try {
     const url = `/project/${projectId}`;
     const response = await http.delete(url);
