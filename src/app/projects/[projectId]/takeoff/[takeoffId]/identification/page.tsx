@@ -542,7 +542,7 @@ const Identification = () => {
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
         <div
           className="pl-4 flex flex-col border-r border-primaryN30"
-          style={{ width: "300px" }}
+          style={{ width: "270px" }}
         >
           <div className="py-4 pl-10 flex flex-row ">
             <p className="mr-2 text-sm text-baseGray">Page Labeling</p>
@@ -565,6 +565,7 @@ const Identification = () => {
             page={page}
             setPage={setPage}
             showCategory={true}
+            showShadow={false}
             categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>

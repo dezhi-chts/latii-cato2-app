@@ -74,6 +74,7 @@ interface ThumbnailProps {
   setPage: (page: number) => void; // 设置当前选中的页面
   fixed?: boolean; // 是否固定位置
   showCategory?: boolean; // 是否显示分类
+  showShadow?: boolean; // 是否显示阴影
   categoryList?: {  // 分类列表
     type: string;
     color: string;
@@ -92,6 +93,7 @@ const Thumbnail = ({
   fixed = false, // 是否固定位置
   showCategory = false, // 是否显示分类
   categoryList = [], // 分类列表
+  showShadow = true, // 是否显示阴影
   onChangePageType, // 切换页面类型回调
 }: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -168,10 +170,10 @@ const Thumbnail = ({
         />
       </div> */}
       <div
-        className="w-full h-full pb-8 overflow-y-auto relative shadow-inner"
+        className={`w-full h-full pb-8 overflow-y-auto relative  ${showShadow ? "shadow-inner" : ""}`}
         ref={scrollContainerRef}
       >
-        <div className="px-[35px] py-6 flex flex-col gap-4 min-h-full">
+        <div className="py-6 flex flex-col gap-4 min-h-full justify-center items-center">
           {data.map((info, index) => {
             let itemPageNum = getItemPage(info, index);
             return (
