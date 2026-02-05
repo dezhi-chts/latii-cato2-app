@@ -203,7 +203,7 @@ const Thumbnail = ({
                       alt={info.file_name}
                       onError={(e) => {
                         e.currentTarget.src =
-                          "/assets/placeholder-images/placeholder.png";
+                          "/assets/placeholder-images/example_1.png";
                       }}
                     />
                   </div>
