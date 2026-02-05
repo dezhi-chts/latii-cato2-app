@@ -241,7 +241,7 @@ const OptionItemCom = (props: any) => {
 						<div
 							onClick={addSiblingOptionHandler}
 							className={
-								`w-[25px] h-[25px] rounded-[100%] bg-[#E3EBF8] flex items-center justify-center cursor-pointer ${(optionItemMsg._isLastOneAtThisLevel) && 'mb-2'}`
+								`w-[25px] h-[25px] rounded-[100%] bg-[#E3EBF8] flex items-center justify-center cursor-pointer ${(optionItemMsg._isLastOneAtThisLevel) && 'mb-10'}`
 							}
 						>
 							<PlusOutlined className="text-[#427CCE]" />
