@@ -4,11 +4,12 @@ import Header from "./components/Header";
 import { Input, Spin, Button, Modal } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import EmptyProject from "./components/Empty-Project";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal";
 import { getTakeOffsByProjectId, deleteTakeOffById } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
+import UploadFilesProgress from "./components/Upload-Files-Progress";
 
 const { confirm } = Modal;
 
@@ -19,6 +20,9 @@ const Project = () => {
   const [showCreateTakeOffModal, setShowCreateTakeOffModal] = useState(false);
   const [takeoffsList, setTakeoffsList] = useState<any[]>([]);
   const [fullLoading, setFullLoading] = useState(false);
+  const [showUploadProgess, setShowUploadProgess] = useState(false);
+
+  const uploadFiles = useRef<any>(null);
 
   useEffect(() => {
     getProjectTakeoffs();
@@ -46,6 +50,11 @@ const Project = () => {
 
 
   const handleUploadFiles = async (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
+    console.log('######### handleUploadFiles', data);
+    //打开Create-Project-Takeoff-Modal弹窗
+    uploadFiles.current = data;
+    // 打开Upload-Files-Progress弹窗
+    setShowUploadProgess(true);
   };
 
   const onClickTakeOff = (takeOff: any) => {
@@ -154,15 +163,32 @@ const Project = () => {
             )}
           </div>
         </div>
-
-        {showCreateTakeOffModal && (
-          <CreateTakeOffModal
-            isOpen={showCreateTakeOffModal}
-            setIsOpen={setShowCreateTakeOffModal}
-            onHandleUpload={handleUploadFiles}
-          />
-        )}
       </div>
+      {showCreateTakeOffModal && (
+        <CreateTakeOffModal
+          isOpen={showCreateTakeOffModal}
+          setIsOpen={setShowCreateTakeOffModal}
+          onHandleUpload={handleUploadFiles}
+        />
+      )}
+      {
+        showUploadProgess && (
+          <UploadFilesProgress
+            isOpen={showUploadProgess}
+            closeModal={() => setShowUploadProgess(false)}
+            uploadFilesData={uploadFiles.current}
+            syncCreateProject={false}
+            onSuccess={(data: any) => {
+              // 关闭Upload-Files-Progress弹窗
+              setShowUploadProgess(false);
+              // 关闭Create-TakeOff-Modal弹窗
+              setShowCreateTakeOffModal(false);
+              // 刷新takeoffsList
+              getProjectTakeoffs();
+            }}
+          />
+        )
+      }
       {fullLoading && <Spin fullscreen />}
       {/* {loadingCato && (
         <BuildingBackground

@@ -113,7 +113,7 @@ const PdfParse = ({
 
   // ===== 设置状态 =====
   const apiBaseUrl = 'https://cato-service2.dev.latii.com';
-  const modelName = 'unit_detect_8l_v1';
+  const modelName = 'unit_detect_11x_v1'; //'unit_detect_8l_v1';
   const confidenceThreshold = 0.35;
   const iouThreshold = 0.45;
   const dpi = 100;
