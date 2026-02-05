@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { uploadFiles, uploadFilesNoProjectId } from '@/services/filesService';
 import { message, Modal, notification, Spin } from 'antd';
+import { useParams } from 'next/navigation';
 
 const UploadFilesProgress = ({
   isOpen,
   closeModal,
   uploadFilesData,
+  syncCreateProject = true, // 上传文件的同时，同步创建工程
   onSuccess
 }: any) => {
+  const projectId = useParams().projectId;
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [uploadSizeProgress, setUploadSizeProgress] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'error'>('idle');
@@ -65,6 +68,9 @@ const UploadFilesProgress = ({
     setUploadProgress(0);
     setStatus('uploading');
 
+    let uploadFunction = syncCreateProject ? uploadFilesNoProjectId : uploadFiles;
+    let projectIdParam = syncCreateProject ? null : projectId;
+
     try {
       // 添加超时处理，避免无限期等待
       const timeoutPromise = new Promise((_, reject) => {
@@ -72,9 +78,10 @@ const UploadFilesProgress = ({
       });
 
       let res: any = await Promise.race([
-        uploadFilesNoProjectId(
+        uploadFunction(
           filesInfo,
           files,
+          projectIdParam as any,
           arcHingeMode as any,
           (progressEvent: any) => {
             handleProgress(progressEvent);
