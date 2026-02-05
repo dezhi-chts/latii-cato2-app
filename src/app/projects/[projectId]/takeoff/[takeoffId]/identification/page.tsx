@@ -101,7 +101,7 @@ const fixed_page_type = [
     count: 0,
   }];
 
-const invalidPageType = ['Not Used', 'All', 'Active Pages'];
+const invalidPageType = [null, 'Not Used', 'All', 'Active Pages'];
 
 const Identification = () => {
   const projectId = useParams().projectId;
@@ -311,7 +311,7 @@ const Identification = () => {
 
   const filterThumbnailList = useMemo(() => {
     if (currentType === "All") return [...thumbnailList];
-    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => !invalidPageType.includes(item.type));
+    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
     return [...thumbnailList].filter((item: any) => item.type === currentType);
   }, [currentType, thumbnailList]);
 

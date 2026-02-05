@@ -1997,18 +1997,22 @@ const PdfWrapper = forwardRef(
             pdfPolygons = JSON.parse(item.polygon);
           }
 
-          // const viewBox = viewPort.viewBox;
-          // console.log('########## viewBox', viewBox);
-          // const offsetX =
-          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
-          // const offsetY =
-          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
+          const viewBox = viewPort.viewBox;
+          const offsetX =
+            Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+          const offsetY =
+            Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
 
-          // pdfPolygons = pdfPolygons.map((p) => ({
-          //   x: p.x + offsetX,
-          //   y: p.y + offsetY,
-          // }));
-
+          pdfPolygons = pdfPolygons.map((p) => {
+            if (!item.is_manual) {
+              return {
+                x: p.x + offsetX,
+                y: p.y + offsetY,
+              };
+            } else {
+              return p;
+            }
+          });
         } catch (e) {
           console.error("Failed to parse polygon data:", item.polygon);
           return item;
