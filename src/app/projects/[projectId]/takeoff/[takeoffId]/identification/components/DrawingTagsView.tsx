@@ -33,7 +33,7 @@ const DrawingTagsView = ({
                 className="px-[5px] py-[1px] rounded-md text-xxs text-white"
                 style={{ backgroundColor: miniBtnColor }}
               >
-                {item.type?.length > 0 ? item.type[0].toUpperCase() : ""}
+                {item.icon}
               </span>
             )}
             <span className="ml-2 text-xxs" style={{ color: typeTextColor }}>

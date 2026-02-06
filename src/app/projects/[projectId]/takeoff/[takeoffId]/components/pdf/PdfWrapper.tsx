@@ -112,6 +112,11 @@ const getResizeCursorStyle = (pointType: string) => {
   return cursorMap[pointType] || "default";
 };
 
+const showReadBtnGroupTypes = [GroupType.OCR];
+const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+
+const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+
 const PdfWrapper = forwardRef(
   (
     {
@@ -144,6 +149,7 @@ const PdfWrapper = forwardRef(
     const pdfCanvas = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
     const renderTaskRef = useRef<any>(null);
+    const loadingTaskRef = useRef<any>(null);
     const pdfPageText = useRef<TextContent>({} as TextContent);
 
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -255,6 +261,17 @@ const PdfWrapper = forwardRef(
     useEffect(() => {
       if (!pdfUrl || pdfUrl.trim().length === 0) return;
       loadPdf(pdfUrl);
+
+      // 组件卸载时取消加载任务
+      return () => {
+        if (loadingTaskRef.current) {
+          try {
+            loadingTaskRef.current.destroy();
+          } catch (error) {
+            console.error('Error destroying loading task:', error);
+          }
+        }
+      };
     }, [pdfUrl]);
 
     useEffect(() => {
@@ -263,6 +280,15 @@ const PdfWrapper = forwardRef(
 
     const loadPdf = async (pdfUrl: string) => {
       if (!pdfUrl || pdfUrl.trim().length === 0) return;
+
+      // 先取消之前的加载任务
+      if (loadingTaskRef.current) {
+        try {
+          loadingTaskRef.current.destroy();
+        } catch (error) {
+          console.error('Error destroying previous loading task:', error);
+        }
+      }
 
       setPdfLoading(true);
       resetLoadingProgress();
@@ -275,6 +301,9 @@ const PdfWrapper = forwardRef(
         withCredentials: false,
         cMapPacked: true,
       });
+
+      // 保存加载任务引用
+      loadingTaskRef.current = loadingTask;
 
       loadingTask.onProgress = (progress: any) => {
         const percent = Math.round((progress.loaded / progress.total) * 100);
@@ -290,6 +319,8 @@ const PdfWrapper = forwardRef(
           const targetPage = page > 0 && page <= pdf.numPages ? page : 1;
           setPageNum(targetPage);
           setPdfLoading(false);
+          // 加载成功后清空引用
+          loadingTaskRef.current = null;
         })
         .catch((error) => {
           console.error("Failed to load PDF:", error);
@@ -298,6 +329,16 @@ const PdfWrapper = forwardRef(
             message: "Error",
             description: error.message,
           });
+
+          // 加载失败后取消任务并清空引用
+          if (loadingTaskRef.current) {
+            try {
+              loadingTaskRef.current.destroy();
+            } catch (destroyError) {
+              console.error('Error destroying failed loading task:', destroyError);
+            }
+            loadingTaskRef.current = null;
+          }
         });
     };
 
@@ -879,6 +920,7 @@ const PdfWrapper = forwardRef(
       let newGroup: GroupFrame = {
         id: `group-${Date.now()}`,
         type: cropMode as any,
+        shapeType: GroupShapeType.Rectangle,
         completed: false,
         polygons: [
           {
@@ -1067,21 +1109,26 @@ const PdfWrapper = forwardRef(
         bounds: getZoneBounds([p1, p2, p3, p4]),
       };
 
-      if (addingOption?.isSaveEvidence) {
-        // 如果有保存参数，则直接保存成evidence
-        batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false });
-        return;
-      }
-
       setCropMode(addingOption.type ?? GroupType.Item);
       insertGroup(groupFrame);
 
       setCropMode(null);
       resetAdding && resetAdding();
       if (operationMode !== "view") {
-        setSelectedShapeId(groupFrame.id);
+        // 取消默认添加时默认选中
+        //setSelectedShapeId(groupFrame.id);
       }
 
+      if (addingOption?.isSaveEvidence) {
+        // 如果有保存参数，则直接保存成evidence
+        batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false })
+          .then(() => {
+            // 保存成功
+          })
+          .catch(() => {
+
+          });
+      }
 
     };
 
@@ -1950,18 +1997,22 @@ const PdfWrapper = forwardRef(
             pdfPolygons = JSON.parse(item.polygon);
           }
 
-          // const viewBox = viewPort.viewBox;
-          // console.log('########## viewBox', viewBox);
-          // const offsetX =
-          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
-          // const offsetY =
-          //   Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
+          const viewBox = viewPort.viewBox;
+          const offsetX =
+            Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+          const offsetY =
+            Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
 
-          // pdfPolygons = pdfPolygons.map((p) => ({
-          //   x: p.x + offsetX,
-          //   y: p.y + offsetY,
-          // }));
-
+          pdfPolygons = pdfPolygons.map((p) => {
+            if (!item.is_manual) {
+              return {
+                x: p.x + offsetX,
+                y: p.y + offsetY,
+              };
+            } else {
+              return p;
+            }
+          });
         } catch (e) {
           console.error("Failed to parse polygon data:", item.polygon);
           return item;
@@ -2187,15 +2238,15 @@ const PdfWrapper = forwardRef(
                       }}
                     >
                       <div
-                        className="absolute flex flex-row items-center gap-2"
+                        className="absolute flex flex-row items-center"
                         style={{
-                          left: showEvidenceType ? (width - 75) : width - 30,
-                          top: "10px",
+                          left: !hiddenTypeGroupTypes.includes(type) ? (width - 68) : width - 22,
+                          top: 4,
                         }}
                       >
-                        <div className="w-[170px] flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {
-                            showEvidenceType && <LabelTypesSelect
+                            !hiddenTypeGroupTypes.includes(type) && <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
                               onChangeType={(type) => {
@@ -2247,34 +2298,18 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
-                      {/** 类型选择 */}
-                      {/* <div
-                        style={{
-                          position: "absolute",
-                          left: width - 40,
-                          top: "-20px",
-                          backgroundColor: "orange",
-                        }}
-                      >
-                        <LabelTypesSelect
-                          typeList={typeList as any}
-                          selectedType={
-                            group.type === "Table" ? "Floor Plan" : ""
-                          }
-                          onChangeType={(type: string) => {}}
-                        />
-                      </div> */}
                       <div
                         className="absolute flex flex-row items-center gap-1"
                         style={{
-                          left:
-                            group.type === GroupType.OCR ? width - 110 : width - 90,
-                          top: "10px",
+                          left: showReadBtnGroupTypes.includes(group.type) ?
+                            width - 110 :
+                            showConfirmBtnGroupTypes.includes(group.type) ? width - 90 : width - 22,
+                          top: 4,
                         }}
                       >
-                        {group.type === GroupType.OCR ? (
+                        {showReadBtnGroupTypes.includes(group.type) && (
                           <div
-                            className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                            className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-xl whitespace-nowrap cursor-pointer"
                             onClick={() => {
                               // 转换成图片进行OCR识别
                               OCRRecogize(group.id);
@@ -2282,7 +2317,9 @@ const PdfWrapper = forwardRef(
                           >
                             Read Content
                           </div>
-                        ) : (
+                        )}
+
+                        {showConfirmBtnGroupTypes.includes(group.type) && (
                           <div
                             className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
                             onClick={() => {
@@ -2334,7 +2371,7 @@ const PdfWrapper = forwardRef(
                             copyGroupShape(group, "right");
                           }}
                         >
-                          <span className="inline-block">+</span>
+                          <span className="">+</span>
                         </div>
                       </div>
                       <div
@@ -2438,7 +2475,6 @@ const ShapeWrapper = ({
   onCircleDragEnd: (e: any, info: any) => void;
 }) => {
   let color: string = colorList.forumBlue || "";
-  let borderColor: string = colorList.forumBlue || "";
   let polygons: Point[] = [];
   let bounds: any = {};
   let circlePoints: CirclePoint[] = [];
@@ -2471,18 +2507,18 @@ const ShapeWrapper = ({
     ...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
   ].join(" ") + 'Z';
 
-  // 默认颜色
-  color = colorList.accentIndigo;
-  borderColor = color;
 
   if (type === "evidence") {
     try {
       let evidType = shape.type ?? '';
       if (typeList && typeList?.length > 0) {
-        let typeColor = typeList.find((item) => item.type === evidType)?.color;
+        // 扁平化处理typeList
+        const flatTypeList = typeList.flatMap((item) => {
+          return item?.children?.length > 0 ? item.children : [item];
+        });
+        let typeColor = flatTypeList.find((item) => item.type === evidType)?.color;
         if (typeColor) {
           color = typeColor;
-          borderColor = typeColor;
         }
       }
     } catch (error) {
@@ -2504,7 +2540,7 @@ const ShapeWrapper = ({
       <Path
         data={pathData}
         fill={color + "30"}
-        stroke={borderColor}
+        stroke={color}
         strokeWidth={1}
         draggable={operationMode === "edit"}
         dragDistance={2}

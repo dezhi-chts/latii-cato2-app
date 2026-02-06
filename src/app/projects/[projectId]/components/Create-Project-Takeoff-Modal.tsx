@@ -107,7 +107,7 @@ const CreateProjectTakeoffModal = ({
   };
 
   const getPdfAnalyseProject = async () => {
-    let res: any = await getPdfAnalyseProjectInfo('01KG1CJC8D33D5B17TVGB9ZG5Y');
+    let res: any = await getPdfAnalyseProjectInfo(projectId);
     if (res.status === 'success') {
       let info = res?.data?.data?.project_info ?? {};
       console.log('######### info: ', info);

@@ -23,8 +23,9 @@ export type ValidCountryOfOrigin =
 export const uploadFiles = async (
   filesInfo: CatoUploadFile[],
   files: UploadFile[],
-  projectId: number | string,
+  projectId: any,
   hinge_status?: "1" | "2" | undefined,
+  onUploadProgress?: (progressEvent: any) => void,
 ) => {
   const url = `/project/file/upload_files?project_id=${projectId}${
     hinge_status ? `&hinge_status=${hinge_status}` : ""
@@ -42,7 +43,9 @@ export const uploadFiles = async (
   formData.append("metas", metas);
 
   try {
-    const response = await http.post(url, formData);
+    const response = await http.post(url, formData, undefined, {
+      onUploadProgress,
+    });
     return { data: response, status: "success" };
   } catch (error) {
     console.error("Error uploading files:", error);
@@ -53,6 +56,7 @@ export const uploadFiles = async (
 export const uploadFilesNoProjectId = async (
   filesInfo: CatoUploadFile[],
   files: UploadFile[],
+  projectId: any,
   hinge_status?: "1" | "2" | undefined,
   onUploadProgress?: (progressEvent: any) => void,
 ) => {
