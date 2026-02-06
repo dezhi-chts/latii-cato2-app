@@ -1,6 +1,11 @@
 import { OptionMsgVO, OptionMsgDTO } from "@/app/brand-editor/components/body-components/validators";
 const profileStartAnnotation = "# Profile msg script start (Cannot be deleted or modified, the processing script will use)";
 const profileEndAnnotation = "# Profile msg script end (Cannot be deleted or modified, the processing script will use)";
+const ruleMsgStartAnnotation = "# Rule msg script start (Cannot be deleted or modified, the processing script will use)";
+const ruleMsgEndAnnotation = "# Rule msg script end (Cannot be deleted or modified, the processing script will use)";
+const uiLogicMsgStartAnnotation = "# UI logic msg script start (Cannot be deleted or modified, the processing script will use)";
+const uiLogicMsgEndAnnotation = "# UI logic msg script end (Cannot be deleted or modified, the processing script will use)";
+
 
 /** 
  * 递归获取attribute类的key和value
@@ -272,7 +277,24 @@ export const generateUnitOptionsClassScriptFromTree = (tree: Record<string, any>
  * 生成空白模板rule msg的脚本
  */
 export const generateBlankTemplateRuleMsgScript = (): string => {
-	let str = "\n\nrule_msg = {}\n";
+	// let str = "\n\nrule_msg = {}\n";
+	// return str
+	let str = 
+`
+def rule_unit_width():
+	pass
+
+def rule_unit_height():
+	pass
+
+def rule_item_quantity():
+	pass
+
+rule_msg = {	
+	unit_attributes.width: rule_unit_width,
+	unit_attributes.height: rule_unit_height,
+	unit_attributes.weight: rule_item_quantity,
+};`
 	return str
 };
 
@@ -280,7 +302,7 @@ export const generateBlankTemplateRuleMsgScript = (): string => {
  * 生成空白模板ui logic msg的脚本
  */
 export const generateBlankTemplateUiLogicMsgScript = (): string => {
-	let str = "\nui_logic_msg = {}\n";
+	let str = "ui_logic_msg = {}";
 	return str
 };
 
@@ -716,7 +738,7 @@ export const generateProfileScriptFromProfileOptionMsg = (
 			optionStr = '""';
 		} else if (Array.isArray(node.option)) {
 			// option 是数组，拼成字符串形式
-			optionStr = `[${node.option.join(",\n")}]`;
+			optionStr = `[${node.option.join(",")}]`;
 		} else {
 			// option 是单值
 			optionStr = node.option;
@@ -724,7 +746,7 @@ export const generateProfileScriptFromProfileOptionMsg = (
 		const belongSectionStr = node.belong_section ? node.belong_section : '""';
 		let haveSectionsStr: any = "[]"
 		if (node.have_sections && node.have_sections.length != 0) {
-			haveSectionsStr = `[${node.have_sections.join(",\n")}]`
+			haveSectionsStr = `[${node.have_sections.join(",")}]`
 		} else {
 			haveSectionsStr = "[]"
 		}
@@ -774,9 +796,14 @@ export const generateProfileScriptFromProfileOptionMsg = (
 		`${profileStartAnnotation}\n` +
 		profileMsgScript +
 		`\n${profileEndAnnotation}\n` +
+		`\n${ruleMsgStartAnnotation}` +
 		ruleMsgScript +
-		uiLogicMsgScript
+		`\n${ruleMsgEndAnnotation}\n` +
+		`\n${uiLogicMsgStartAnnotation}\n` +
+		uiLogicMsgScript +
+		`\n${uiLogicMsgEndAnnotation}\n`
 
+	console.log(profileScript, 'profileScript')
 	return profileScript;
 };
 
