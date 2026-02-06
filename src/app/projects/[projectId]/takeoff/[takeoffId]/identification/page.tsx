@@ -103,6 +103,11 @@ const fixed_page_type = [
 
 const invalidPageType = [null, 'Not Used', 'All', 'Active Pages'];
 
+export enum ButtonText {
+  NextFile = 'Next File',
+  Complete = 'Complete',
+}
+
 const Identification = () => {
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
@@ -127,17 +132,83 @@ const Identification = () => {
   const [labelTypeList, setLabelTypeList] = useState<any>([]);
   const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
-  const [isThumbnailInitialized, setIsThumbnailInitialized] = useState<boolean>(false);
-  const [isPageTypeInitialized, setIsPageTypeInitialized] = useState<boolean>(false);
 
   const evidenceIsLoaded = useRef<boolean>(false);
+  const lastSelectedFileId = useRef<number>(-1);
 
 
   useEffect(() => {
-    // 获取takeOff详情
-    getTakeOffDetails();
-    getTypeList();
+    if (takeOffId) {
+      initPageData();
+    }
   }, [takeOffId]);
+
+  const initPageData = async () => {
+    setFullLoading(true);
+
+    await getTypeList();
+    // 获取takeOff详情
+    await getTakeOffDetails();
+
+    setFullLoading(false);
+  }
+
+
+  // 使用summary初始化pageTypeList
+  const initPageTypeWidthSummary = useCallback(async (summaryData: any) => {
+    if (!summaryData) return;
+    const page_classification = summaryData.page_classification ?? {};
+
+    setPageTypeList((prev: any) => {
+      return prev.map((item: any) => {
+        if (item.type === "All") {
+          return {
+            ...item,
+            count: summaryData.total_pages
+          }
+        } else if (item.type === "Active Pages") {
+          // 把page_classification中所有不是invalidPageType的type的count加起来
+          let totalCount: any = [];
+          for (let key in page_classification) {
+            if (!invalidPageType.includes(key)) {
+              totalCount.push(page_classification[key] ?? 0);
+            }
+          }
+          let count = totalCount.reduce((a: any, b: any) => a + b, 0);
+          return {
+            ...item,
+            count: count
+          }
+        }
+        return {
+          ...item,
+          count: page_classification[item.type] ?? 0
+        }
+      })
+    });
+  }, [pageTypeList]);
+
+  // 使用summary初始化thumbnailList
+  const initThumbnailWidthSummary = useCallback(async (summaryData: any) => {
+    if (!summaryData) return;
+
+    setThumbnailList((prev: any) => {
+      return prev.map((item: any) => {
+        let itemPageNum: number = 0;
+        if (typeof item.file_name === 'string') {
+          let pageArr = item.file_name?.split(".")[0];
+          itemPageNum = parseInt(pageArr) + 1;
+        }
+        const summaryPages = summaryData?.pages ?? [];
+        // 从 summaryPages 中查找对应的类型
+        let itemType = summaryPages.find((item: any) => item.page_number === itemPageNum)?.page_type ?? '';
+        return {
+          ...item,
+          type: itemType,
+        }
+      })
+    })
+  }, [thumbnailList]);
 
   const getTakeOffDetails = async () => {
     let res: any = await getTakeOffById(takeOffId as any);
@@ -183,7 +254,9 @@ const Identification = () => {
   const getPdfSummary = async () => {
     let res: any = await getPdfAnalyseSummary(selectedFileId as any);
     if (res.status === 'success') {
-      setSummaryData(res?.data?.data ?? null);
+      //  setSummaryData(res?.data?.data ?? null);
+      initPageTypeWidthSummary(res?.data?.data ?? null);
+      initThumbnailWidthSummary(res?.data?.data ?? null);
     } else {
       notification.error({
         message: "Error",
@@ -212,102 +285,47 @@ const Identification = () => {
   }
 
   useEffect(() => {
-    if (selectedFileId === -1 || fileList.length === 0) return;
-    pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
-      if (unsaved) {
-        // 没有crop需要保存
-        pdfRef?.current?.resetAllInfo();
+    if (selectedFileId === -1) return;
 
-        // 重置 file evidence
-        setFileEvidence([]);
-
-        //reset page
-        setPage(1);
-        setTotalPage(1);
-
-        setThumbnailList((prev: any) => []);
-
-        //设置新的url
-        let file = fileList.find((file: any) => file.id === selectedFileId);
-        if (file) {
-          let newPdfUrl = file?.parse_detail?.uploaded_file_url;
-          setPdfUrl(newPdfUrl);
-          let list = file?.parse_detail?.image_page_infos ?? [];
-
-          // 设置新的缩略图数据
-          setThumbnailList(() => [...list]);
-
-          //获取pdf analyse summary
-          getPdfSummary();
-
-          //获取file evidence
-          getFileEvidences();
-        }
-        return;
-      }
-    });
-  }, [selectedFileId, fileList]);
-
-  useEffect(() => {
-    // 确保pageTypeList和summaryData都有数据时，才初始化pageTypeList，且只初始化一次
-    if (pageTypeList?.length > 0 && summaryData && !isPageTypeInitialized) {
-      let list = [...pageTypeList];
-      const page_classification = summaryData.page_classification ?? {};
-      let typeList = list.map((item: any) => {
-        if (item.type === "All") {
-          return {
-            ...item,
-            count: thumbnailList.length
-          }
-        } else if (item.type === "Active Pages") {
-          // 把page_classification中所有不是invalidPageType的type的count加起来
-          let totalCount: any = [];
-          for (let key in page_classification) {
-            if (!invalidPageType.includes(key)) {
-              totalCount.push(page_classification[key] ?? 0);
-            }
-          }
-          let count = totalCount.reduce((a: any, b: any) => a + b, 0);
-          return {
-            ...item,
-            count: count
-          }
-        };
-        return {
-          ...item,
-          count: page_classification[item.type] ?? 0
-        }
-      });
-      setPageTypeList(() => [...typeList]);
-      setIsPageTypeInitialized(true);
+    if (lastSelectedFileId.current !== -1 && lastSelectedFileId.current !== selectedFileId) {
+      // 设置上个文件的状态为完成
+      updateFileStatus(lastSelectedFileId.current, FileStatus.Completed);
     }
-  }, [summaryData, pageTypeList, isPageTypeInitialized])
 
-  useEffect(() => {
-    // 确保thumbnailList和summaryData都有数据时，才初始化thumbnailList，且只初始化一次
-    if (thumbnailList.length > 0 && summaryData && !isThumbnailInitialized) {
-      // 初始化数据
-      const list = thumbnailList.map((item: any) => {
-        let itemPageNum: number = 0;
-        if (typeof item.file_name === 'string') {
-          let pageArr = item.file_name?.split(".")[0];
-          itemPageNum = parseInt(pageArr) + 1;
-        }
+    // 设置当前文件的状态为完成
+    updateFileStatus(selectedFileId, FileStatus.Completed);
 
-        const summaryPages = summaryData?.pages ?? [];
-        // 从 summaryPages 中查找对应的类型
-        let itemType = summaryPages.find((item: any) => item.page_number === itemPageNum)?.page_type ?? '';
-        return {
-          ...item,
-          type: itemType,
-        }
-      });
+    lastSelectedFileId.current = selectedFileId;
 
-      // 更新 thumbnailList 状态
+    // 没有crop需要保存
+    pdfRef?.current?.resetAllInfo();
+
+    // 重置 file evidence
+    setFileEvidence([]);
+
+    //reset page
+    setPage(1);
+    setTotalPage(1);
+
+    setThumbnailList((prev: any) => []);
+
+    //设置新的url
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    if (file) {
+      let newPdfUrl = file?.parse_detail?.uploaded_file_url;
+      setPdfUrl(newPdfUrl);
+      let list = file?.parse_detail?.image_page_infos ?? [];
+
+      // 设置新的缩略图数据
       setThumbnailList(() => [...list]);
-      setIsThumbnailInitialized(true);
+
+      //获取pdf analyse summary
+      getPdfSummary();
+
+      //获取file evidence
+      getFileEvidences();
     }
-  }, [summaryData, thumbnailList, isThumbnailInitialized])
+  }, [selectedFileId]);
 
   const filterThumbnailList = useMemo(() => {
     if (currentType === "All") return [...thumbnailList];
@@ -497,24 +515,29 @@ const Identification = () => {
     }
   };
 
-  const handleNext = () => {
-    //判断除当前文件外还有别的文件未处理
-    let filterFiles = fileList.filter((file: any) => file.id !== selectedFileId);
-    let nextFile = filterFiles.find((file: any) => file.status !== FileStatus.Completed);
-    if (nextFile) {
-      // 设置当前文件为完成状态
-      setFileList((prev: any) => {
-        return prev.map((file: any) => {
-          if (file.id === selectedFileId) {
-            return {
-              ...file,
-              status: FileStatus.Completed,
-            }
+  const updateFileStatus = (fileId: number, fileStatus: FileStatus) => {
+    setFileList((prev: any) => {
+      return prev.map((file: any) => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            status: fileStatus,
           }
-          return file;
-        })
-      });
-      setSelectedFileId(nextFile.id);
+        }
+        return file;
+      })
+    });
+  }
+
+  const handleNext = (buttonInfo: { text: string }) => {
+    if (buttonInfo.text === ButtonText.NextFile) {
+      let filterFiles = fileList.filter((file: any) => file.id !== selectedFileId);
+      let nextFile = filterFiles.find((file: any) => file.status !== FileStatus.Completed);
+      if (nextFile) {
+        // 设置当前文件为完成状态
+        //updateFileStatus(selectedFileId, FileStatus.Completed);
+        setSelectedFileId(nextFile.id);
+      }
     } else {
       // 没有其他文件需要处理，则进行下一步
       setBuildLoading(true);
@@ -524,6 +547,24 @@ const Identification = () => {
     }
   }
 
+  // 右上角按钮的相关信息
+  const nextButtonInfo = useMemo(() => {
+    // 判断当前的文件状态
+    const allComplete = fileList.every((file: any) => file.status === FileStatus.Completed);
+
+    let buttonText = '';
+    if (allComplete) {
+      buttonText = ButtonText.Complete;
+    } else {
+      if (fileList.length > 1) {
+        buttonText = ButtonText.NextFile;
+      }
+    }
+    return {
+      text: buttonText,
+    }
+  }, [fileList, selectedFileId]);
+
   return (
     <div className="w-full h-[100vh] flex flex-col">
       <Header
@@ -531,6 +572,7 @@ const Identification = () => {
         fileList={fileList}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
+        nextButtonInfo={nextButtonInfo}
         handleNext={handleNext}
       />
       <DrawingTagsView

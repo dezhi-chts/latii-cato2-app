@@ -52,10 +52,18 @@ import SkipTipModal from "./components/SkipTipModal";
 import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
 
-enum BuildLoadingStep {
+export enum BuildLoadingStep {
   PageAnalysis = 'page-analyze',
   PageLabel = 'page-label',
   PageIndex = 'page-index',
+}
+
+export enum ButtonText {
+  Analysis = 'Analysis',
+  NextFile = 'Next File',
+  Complete = 'Complete',
+  RestartIndex = 'Restart Index',
+  UnKnown = 'Unknown',
 }
 
 const IdentificationIndex = () => {
@@ -393,57 +401,6 @@ const IdentificationIndex = () => {
     setCropsCount(count);
   }
 
-  const handleNext = (btnText: 'Next Step' | 'Next File' | 'Complete') => {
-    // 处理右上角的next按钮
-    if (btnText === 'Next Step') {
-      if (showContentView) {
-        setShowContentView(false);
-      } else {
-        // 当前在画框页面， 判断两种框是否都绘制了，如果都绘制了，则直接到content页面，其他情况，则给个提示
-        if (indexBoxList.length > 0 && labelList.length > 0) {
-          recognizeDrawingIndexData();
-        } else {
-          if (indexBoxList.length === 0) {
-            skipType.current = 'index';
-          } else {
-            skipType.current = 'label';
-          }
-          setShowSkipModal(true);
-        }
-      }
-    } else if (btnText === 'Next File') {
-      // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
-      const findNextFile = fileList.find((item: any) => {
-        return item.status !== FileStatus.Completed;
-      });
-      if (findNextFile) {
-        // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
-        setSelectedFileId(findNextFile.id);
-      }
-    } else if (btnText === 'Complete') {
-      // 检测到所有文件都已经处理，则即将跳转下一个页面,提示用户，即将进入分析界面
-      // confirm({
-      //   title: null,
-      //   content: `All files have been processed. Do you want to continue to the analysis step?`,
-      //   okText: "OK",
-      //   cancelText: "Cancel",
-      //   onOk: () => {
-      //     // 进行分析请求，请求成功，则跳转
-      //     handleAnalysis();
-      //   }
-      // })
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
-    }
-  }
-
-  const handleAnalysis = async () => {
-    setBuildLoadingStep(BuildLoadingStep.PageLabel);
-    setBuildLoading(true);
-    setTimeout(() => {
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
-    }, 3000);
-  }
-
   const updateFileStatus = (fileId: number, status: FileStatus) => {
     // 设置当前文件状态未undo
     setFileList((prev: any) => {
@@ -461,9 +418,88 @@ const IdentificationIndex = () => {
 
   const handleRestartIndex = () => {
     setShowContentView(false);
-    // 设置当前文件状态未undo
+    // 设置当前文件状态为processing
     updateFileStatus(selectedFileId, FileStatus.Processing)
   }
+
+  const handleNext = useCallback((btnInfo: { text: string }) => {
+    // 处理右上角的next按钮
+    if (btnInfo.text === ButtonText.RestartIndex) {
+      setShowContentView(false);
+    } else if (btnInfo.text === ButtonText.Analysis) {
+      if (indexBoxList.length > 0 && labelList.length > 0) {
+        recognizeDrawingIndexData();
+      } else {
+        if (indexBoxList.length === 0) {
+          skipType.current = 'index';
+        } else {
+          skipType.current = 'label';
+        }
+        setShowSkipModal(true);
+      }
+    } else if (btnInfo.text === ButtonText.NextFile) {
+      // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
+      const findNextFile = fileList.find((item: any) => {
+        return item.status !== FileStatus.Completed;
+      });
+      if (findNextFile) {
+        // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
+        setSelectedFileId(findNextFile.id);
+      }
+    } else if (btnInfo.text === ButtonText.Complete) {
+      // 检测到所有文件都已经处理，即将进入page label界面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
+    }
+  }, [fileList, indexBoxList, labelList]);
+
+  // 右上角按钮的相关信息
+  const nextButtonInfo = useMemo(() => {
+    // 判断当前的文件状态
+    const currentFile = fileList.find((file: any) => file.id === selectedFileId);
+
+    let buttonText = '';
+    let buttonDisabled = false;
+
+    if (currentFile?.status === FileStatus.Processing) {
+      if (showContentView && contentData.length === 0) {
+        // 如果文件在处理状态，且contentData没有内容数据,则按钮更改为Restart Index
+        buttonText = ButtonText.RestartIndex;
+      } else {
+        // 如果文件在处理状态，且没有index框和label框，则禁用分析按钮
+        buttonText = ButtonText.Analysis;
+        if (indexBoxList.length === 0 && labelList.length === 0) {
+          buttonDisabled = true;
+        }
+      }
+    } else if (currentFile?.status === FileStatus.Completed) {
+      // 当前文件的状态为已完成，则判断是否有别的文件未处理
+      const hasUnprocessedFiles = fileList.some((file: any) => file.status === FileStatus.Processing || file.status === FileStatus.Uploaded);
+      if (hasUnprocessedFiles) {
+        buttonText = ButtonText.NextFile;
+      } else {
+        buttonText = ButtonText.Complete;
+      }
+    }
+
+    return {
+      text: buttonText,
+      disabled: buttonDisabled,
+    }
+  }, [fileList, selectedFileId, indexBoxList, labelList, contentData, showContentView]);
+
+  // 处理返回按钮的点击事件
+  const handleBack = useCallback(() => {
+    if (nextButtonInfo?.text === ButtonText.Analysis) {
+      setShowContentView(true);
+      if (contentData.length > 0) {
+        // 如果有内容数据，则需要更新文件状态为processing
+        updateFileStatus(selectedFileId, FileStatus.Completed)
+      }
+    } else {
+      router.push(`/home`);
+    }
+  }, [nextButtonInfo, contentData]);
+
 
   return (
     <div className="w-full h-[100vh] flex flex-col relative">
@@ -472,7 +508,9 @@ const IdentificationIndex = () => {
         fileList={fileList}
         selectedFileId={selectedFileId}
         setSelectedFileId={setSelectedFileId}
+        nextButtonInfo={nextButtonInfo}
         handleNext={handleNext}
+        handleBack={handleBack}
       />
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>

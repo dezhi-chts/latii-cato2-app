@@ -11,20 +11,23 @@ import {
 } from "antd";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "antd";
 
 import { useParams } from "next/navigation";
 import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
 import { FileStatus } from "../../types/evidence";
+import { ButtonText } from "../page";
 
 const Header = ({
   pdfRef,
   fileList,
   selectedFileId,
   setSelectedFileId,
+  nextButtonInfo,
   handleNext,
+  handleBack
 }: any) => {
   const router = useRouter();
   const projectId = useParams().projectId;
@@ -37,44 +40,16 @@ const Header = ({
     return fileList ?? [];
   }, [fileList]);
 
-  const buttonInfo = useMemo(() => {
-    // 判断当前的文件状态
-    const currentFile = filesData.find((file: any) => file.id === selectedFileId);
-    console.log(currentFile?.status);
-
-    if (currentFile?.status === FileStatus.Processing
-      || currentFile?.status === FileStatus.Uploaded) {
-      return {
-        text: 'Next Step',
-      };
-    } else if (currentFile?.status === FileStatus.Completed) {
-      // 当前文件的状态为已完成，则判断是否有别的文件未处理
-      const hasUnprocessedFiles = filesData.some((file: any) => file.status === FileStatus.Processing || file.status === FileStatus.Uploaded);
-      if (hasUnprocessedFiles) {
-        return {
-          text: 'Next File',
-        };
-      } else {
-        return {
-          text: 'Complete',
-        };
-      }
-    }
-  }, [fileList, selectedFileId])
-
   const handleClickFile = async (file: any) => {
-    const unsaved =
-      await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
-    if (unsaved) {
-      // 没有未保存的crop，切换文件
-      setSelectedFileId(file.id);
-    }
+    if (selectedFileId === file.id) return;
+    // 切换文件
+    setSelectedFileId(file.id);
   }
 
   return (
     <div className="px-14 w-full h-[110px] border-b border-primaryN30">
       <div className="h-full flex flex-row justify-between items-center">
-        <div>
+        <div className="cursor-pointer" onClick={handleBack}>
           <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={8}></Image>
         </div>
         <div className="ml-10 h-full flex-1 flex flex-row gap-4 items-center">
@@ -108,9 +83,10 @@ const Header = ({
         </div>
         <Button
           className="custom-primary-btn w-[102px] h-[26px]"
-          onClick={() => handleNext(buttonInfo?.text)}
+          onClick={() => handleNext(nextButtonInfo)}
+          disabled={nextButtonInfo?.disabled}
         >
-          {buttonInfo?.text}
+          {nextButtonInfo?.text}
         </Button>
       </div>
     </div>

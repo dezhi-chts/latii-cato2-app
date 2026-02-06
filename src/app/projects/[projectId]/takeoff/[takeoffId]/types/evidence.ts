@@ -115,6 +115,7 @@ export enum FileStatus {
   Uploaded = "Uploaded",
   Completed = "Completed",
   Processing = "Processing",
+  Unknown = "Unknown",
 }
 
 //pdf wrapper props
