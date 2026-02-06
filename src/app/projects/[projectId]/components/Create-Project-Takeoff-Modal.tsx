@@ -1,25 +1,26 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input, Modal, message, notification, Spin } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
+import Image from "next/image";
+import debounce from "lodash/debounce";
+import { useRouter } from "next/navigation";
+
+import { uploadFiles } from "@/services/filesService";
+import { createProject, updateProject, fetchProject } from "@/services/projectService";
+import { getPdfAnalyseProjectInfo } from "@/services/drawingIndexService";
+import { getTakeOffById } from "@/services/takeOffService";
+
 import {
   CreateProjectModalProps,
   ProjectSettings,
 } from "@/types/project";
-import { Button, Input, Modal, message, notification, Spin } from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
-import Image from "next/image";
+import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 
-import { useRouter } from "next/navigation";
 import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import { PageControls, ZoomControls } from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ProjectForm from "./Project-Form";
-import debounce from "lodash/debounce";
-import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
-import { uploadFiles } from "@/services/filesService";
-import { createProject, updateProject, fetchProject } from "@/services/projectService";
-import { getPdfAnalyseProjectInfo } from "@/services/drawingIndexService";
-
-import { getTakeOffById } from "@/services/takeOffService";
 
 const TabList = ({
   items,

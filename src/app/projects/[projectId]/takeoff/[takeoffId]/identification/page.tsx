@@ -20,21 +20,20 @@ import {
   FieldBinaryOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import Image from "next/image";
+import debounce from "lodash/debounce";
 
 import {
-  generateEvidenceByFileId,
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
 import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
 
+import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
-import debounce from "lodash/debounce";
 import {
   AddRectBoxControls,
   ZoomControls,
@@ -252,7 +251,9 @@ const Identification = () => {
   }, [selectedFileId]);
 
   const getPdfSummary = async () => {
+    setFullLoading(true);
     let res: any = await getPdfAnalyseSummary(selectedFileId as any);
+    setFullLoading(false);
     if (res.status === 'success') {
       //  setSummaryData(res?.data?.data ?? null);
       initPageTypeWidthSummary(res?.data?.data ?? null);
