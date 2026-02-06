@@ -16,25 +16,6 @@ const IndexRectView = ({
   const [showDrawingModal, setShowDrawingModal] = useState<boolean>(false);
   const [showTitleInfoModal, setShowTitleInfoModal] = useState<boolean>(false);
 
-  const handleSelectIndex = (indexId: number) => {
-    if (indexId !== selectedIndexId) {
-      setSelectedIndexId(indexId);
-    } else {
-      setSelectedIndexId(-1);
-    }
-    setSelectedLabelId(-1);
-  };
-
-  const handleSelectLabel = (labelId: number) => {
-    if (labelId !== selectedLabelId) {
-      setSelectedLabelId(labelId);
-    } else {
-      setSelectedLabelId(-1);
-    }
-    setSelectedIndexId(-1);
-  };
-
-
   return (
     <div className="pl-14 pr-6 pt-6">
       <div>
@@ -68,45 +49,32 @@ const IndexRectView = ({
         </div>
         <div className="mt-2 flex flex-row"><span className="ml-5 text-xs">Add a box around the entire Index or Table of Contents.</span></div>
         {/** index rect box  */}
-        <div className="my-2 mx-4 flex flex-col gap-4">
-          {indexBoxList.map((item: any) => {
-            return <div key={item.id} className={`rounded-md relative`}>
-              <Image
-                src={'/assets/placeholder-images/example_2.png'}
-                alt={''}
-                width={100}
-                height={50}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                }}
-                onClick={() => handleSelectIndex(item.id)}
-              />
-              {
-                selectedIndexId === item.id &&
-                <div className={`absolute left-0 top-0 w-full h-full border-2 border-solid rounded-md ${selectedIndexId === item.id ? 'border-forumBlue bg-forumBlue/15' : 'bg-transparent'}`}>
-                  <div className='absolute right-1 top-1'>
-                    <Popconfirm
-                      title="Are you sure you want to delete this evidence?"
-                      trigger="click"
-                      onConfirm={() => { handleDeleteEvidence([item.id]) }}
-                    >
-                      <div className="w-[18px] h-[16px] flex items-center justify-center bg-white rounded-md cursor-pointer shadow-md">
-                        <Image
-                          src="/assets/icons/delete-dark.svg"
-                          alt="delete icon"
-                          width={15}
-                          height={15}
-                        />
-                      </div>
-                    </Popconfirm>
-                  </div>
+        <div className="my-2 mx-4 flex flex-col gap-2">
+          {indexBoxList.map((item: any, index: number) => {
+            return <div key={item.id}>
+              <div className='pr-2 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-white bg-primaryN50'>
+                <div className='flex-1 text-center'>Page Index {index + 1}</div>
+                <div>
+                  <Popconfirm
+                    title="Are you sure you want to delete this evidence?"
+                    trigger="click"
+                    onConfirm={() => { handleDeleteEvidence([item.id]) }}
+                  >
+                    <div className="w-[18px] h-[16px] flex items-center justify-center cursor-pointer">
+                      <Image
+                        src="/assets/icons/delete-dark.svg"
+                        alt="delete icon"
+                        width={15}
+                        height={15}
+                      />
+                    </div>
+                  </Popconfirm>
                 </div>
-              }
+              </div>
             </div>
           })}
         </div>
-        <div className="mx-4 my-2 flex flex-row justify-center">
+        <div className="mx-4 my-4 flex flex-row justify-center">
           <AddRectBoxControls
             theme={cropsCount > 0 ? "primary-light" : "primary"}
             fullWidth={true}
@@ -132,40 +100,27 @@ const IndexRectView = ({
             <div className="mt-2 flex flex-row"><span className="ml-5 text-xs">Add a box around the entire Index or Table of Contents.</span></div>
             {/** index rect box  */}
             <div className="my-2 mx-4">
-              {labelList.map((item: any) => {
-                return <div key={item.id} className={`rounded-md relative `}>
-                  <Image
-                    src={'/assets/placeholder-images/example_2.png'}
-                    alt={''}
-                    width={100}
-                    height={50}
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                    }}
-                    onClick={() => handleSelectLabel(item.id)}
-                  />
-                  {
-                    selectedLabelId === item.id &&
-                    <div className={`absolute left-0 top-0 w-full h-full border-2 border-solid rounded-md ${selectedLabelId === item.id ? 'border-forumBlue bg-forumBlue/15' : 'bg-transparent'}`}>
-                      <div className='absolute right-1 top-1'>
-                        <Popconfirm
-                          title="Are you sure you want to delete this evidence?"
-                          trigger="click"
-                          onConfirm={() => { handleDeleteEvidence([item.id]) }}
-                        >
-                          <div className="w-[18px] h-[16px] flex items-center justify-center bg-white rounded-md cursor-pointer shadow-md">
-                            <Image
-                              src="/assets/icons/delete-dark.svg"
-                              alt="delete icon"
-                              width={15}
-                              height={15}
-                            />
-                          </div>
-                        </Popconfirm>
-                      </div>
+              {labelList.map((item: any, index: number) => {
+                return <div key={item.id}>
+                  <div className='pr-2 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-white bg-primaryN50'>
+                    <div className='flex-1 text-center'>Label {index + 1}</div>
+                    <div>
+                      <Popconfirm
+                        title="Are you sure you want to delete this evidence?"
+                        trigger="click"
+                        onConfirm={() => { handleDeleteEvidence([item.id]) }}
+                      >
+                        <div className="w-[18px] h-[16px] flex items-center justify-center cursor-pointer">
+                          <Image
+                            src="/assets/icons/delete-dark.svg"
+                            alt="delete icon"
+                            width={15}
+                            height={15}
+                          />
+                        </div>
+                      </Popconfirm>
                     </div>
-                  }
+                  </div>
                 </div>
               })}
             </div>

@@ -24,7 +24,7 @@ const Header = ({
   fileList,
   selectedFileId,
   setSelectedFileId,
-  showContentView,
+  nextButtonInfo,
   handleNext
 }: any) => {
   const router = useRouter();
@@ -38,19 +38,19 @@ const Header = ({
   const [loading, setLoading] = useState(false);
 
   const handleClickFile = async (file: any) => {
-    const unsaved =
-      await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
-    if (unsaved) {
-      // 没有未保存的crop，切换文件
-      setSelectedFileId(file.id);
-    }
+    if (selectedFileId === file.id) return;
+    // 切换文件
+    setSelectedFileId(file.id);
   }
 
+  const handleBack = () => {
+    router.push(`/projects/${projectId}/takeoff/${selectedFileId}/identification-index`);
+  };
 
   return (
     <div className="px-14 w-full h-[110px] border-b border-primaryN30">
       <div className="h-full flex flex-row justify-between items-center">
-        <div>
+        <div className="cursor-pointer" onClick={handleBack}>
           <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
         </div>
         <div className="ml-10 h-full flex-1 flex flex-row gap-4 items-center">
@@ -84,9 +84,9 @@ const Header = ({
         </div>
         <Button
           className="custom-primary-btn w-[102px] h-[26px] cursor-pointer"
-          onClick={() => handleNext()}
+          onClick={() => handleNext(nextButtonInfo)}
         >
-          Next Step
+          {nextButtonInfo?.text}
         </Button>
       </div>
     </div>

@@ -173,7 +173,7 @@ const Thumbnail = ({
         className={`w-full h-full pb-8 overflow-y-auto relative  ${showShadow ? "shadow-inner" : ""}`}
         ref={scrollContainerRef}
       >
-        <div className="py-6 flex flex-col gap-4 min-h-full justify-center items-center">
+        <div className="py-6 flex flex-col gap-4 min-h-full items-center">
           {data.map((info, index) => {
             let itemPageNum = getItemPage(info, index);
             return (
