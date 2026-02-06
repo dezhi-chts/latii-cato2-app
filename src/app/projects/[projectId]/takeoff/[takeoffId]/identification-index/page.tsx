@@ -21,9 +21,8 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import Image from "next/image";
-const { confirm } = Modal;
+import debounce from "lodash/debounce";
 
 import {
   deleteEvidenceById,
@@ -32,12 +31,13 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
+import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
+
+import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
-import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
-import debounce from "lodash/debounce";
 import {
   ZoomControls,
   AddRectBoxControls,
@@ -49,7 +49,6 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
-import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
 
 export enum BuildLoadingStep {
