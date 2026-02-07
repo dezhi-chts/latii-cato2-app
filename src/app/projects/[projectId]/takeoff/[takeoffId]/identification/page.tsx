@@ -42,6 +42,7 @@ import {
 } from "../components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground from "../identification-index/components/BuildingBackground";
+import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
 const { confirm } = Modal;
 
@@ -131,6 +132,7 @@ const Identification = () => {
   const [labelTypeList, setLabelTypeList] = useState<any>([]);
   const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
 
   const evidenceIsLoaded = useRef<boolean>(false);
   const lastSelectedFileId = useRef<number>(-1);
@@ -541,11 +543,16 @@ const Identification = () => {
       }
     } else {
       // 没有其他文件需要处理，则进行下一步
-      setBuildLoading(true);
-      setTimeout(() => {
-        setBuildLoading(false);
-      }, 5000);
+
+      setShowAnalysisModal(true);
     }
+  }
+
+  const handleAnalysis = async () => {
+    setBuildLoading(true);
+    setTimeout(() => {
+      setBuildLoading(false);
+    }, 5000);
   }
 
   // 右上角按钮的相关信息
@@ -653,6 +660,17 @@ const Identification = () => {
           </div>
         </div>
       </div>
+      {showAnalysisModal &&
+        <PreAnalysisMdal
+          isOpen={showAnalysisModal}
+          closeModal={() => setShowAnalysisModal(false)}
+          handleAnalysis={() => {
+            setShowAnalysisModal(false);
+            handleAnalysis();
+          }}
+        ></PreAnalysisMdal>
+      }
+
       {fullLoading && <Spin fullscreen />}
       {buildLoading && <BuildingBackground
         step={BuildLoadingStep.PageAnalysis}
