@@ -357,8 +357,8 @@ const OptionItemCom = (props: any) => {
 					</div>
 
 					<div className="flex justify-end">
-						<Button type="primary" onClick={() => setIsSubOptionsModalOpen(false)}>Cancel</Button>
-						<Button className="ml-4" onClick={()=>onSureSubOption()}>Confirm</Button>
+						<Button onClick={() => setIsSubOptionsModalOpen(false)}>Cancel</Button>
+						<Button className="ml-4" type="primary" onClick={()=>onSureSubOption()}>Confirm</Button>
 					</div>
 				</div>
 			</Modal>
