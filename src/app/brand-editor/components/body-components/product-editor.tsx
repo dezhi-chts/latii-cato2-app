@@ -44,7 +44,9 @@ import {
 	findTopLevelBySection,
 	deepCopyWithNewId,
 	collectOptionLibraryNodes,
-	markLastNodeAtEachLevel
+	markLastNodeAtEachLevel,
+	getallProductTypeOperabilityMaxMinDataByRuleScript,
+	collectOptionCodes
 } from "@/app/brand-editor/components/body-components/logics";
 import OptionTreeNodeCom from "@/app/brand-editor/components/body-components/option-tree-node";
 
@@ -94,6 +96,8 @@ const ProductEditor = () => {
 	});
 	const [sectionTreeData, setSectionTreeData] = useState<OptionMsgVO[]>([]);
 	const [setedOptionLibraryList, setSetedOptionLibraryList] = useState<any[]>([]);
+	const [allProductTypeOperabilityMaxMinData, setAllProductTypeOperabilityMaxMinData] = useState<Record<string, any>[]>([]);
+	const [selectProductTypeOperabilityMaxMinData, setSelectProductTypeOperabilityMaxMinData] = useState<Record<string, any>>({});
 
 	useEffect(() => {
 		initAllData()
@@ -192,8 +196,11 @@ const ProductEditor = () => {
 		setAllSection([])
 		setSelectedProductType({})
 		setSelectedOpen({})
+		setSelectProductTypeOperabilityMaxMinData({})
 		setSelectedSection({})
 		setSelectedProfile(targetProfile);
+		let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(targetProfile)
+		setAllProductTypeOperabilityMaxMinData(allProductTypeOperabilityMaxMinData)
 		getAttribute(targetProfile)
 
 	};
@@ -207,6 +214,7 @@ const ProductEditor = () => {
 		setAllOpen(targetOption.children)
 		setAllSection([])
 		setSelectedOpen({})
+		setSelectProductTypeOperabilityMaxMinData({})
 		setSelectedSection({})
 		setSelectedProductType(targetOption);
 	};
@@ -230,6 +238,49 @@ const ProductEditor = () => {
 		}
 		setSelectedSection({})
 		setSelectedOpen(targetOption);
+
+		let tempSelectProductTypeOperabilityMaxMinData = {}
+		const optionsList = collectOptionCodes([unitMsg?.attribute_tree]);
+		allProductTypeOperabilityMaxMinData.forEach((s) => {
+
+			const matchedProfileAttr = optionsList.find(
+				(o: Record<string, any>) =>
+					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+					s.profile.split(".")[1]
+			);
+			let profileCode = matchedProfileAttr ? matchedProfileAttr.option.code : null;
+
+			const matchedProductAttr = optionsList.find(
+				(o: Record<string, any>) =>
+					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+					s.product.split(".")[1]
+			);
+			let productCode = matchedProductAttr ? matchedProductAttr.option.code : null;
+
+			const matchedProductTypeAttr = optionsList.find(
+				(o: Record<string, any>) =>
+					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+					s.product_type.split(".")[1]
+			);
+			let productTypeCode = matchedProductTypeAttr ? matchedProductTypeAttr.option.code : null;
+
+			const matchedOperabilityAttr = optionsList.find(
+				(o: Record<string, any>) =>
+					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+					s.operability.split(".")[1]
+			);
+			let operabilityCode = matchedOperabilityAttr ? matchedOperabilityAttr.option.code : null;
+
+			if (
+				selectedProfile.profile_code == profileCode &&
+				selectedProductType.parent.option == productCode &&
+				selectedProductType.option == productTypeCode &&
+				targetOption.option == operabilityCode
+			) {
+				tempSelectProductTypeOperabilityMaxMinData = s
+			}
+		})
+		setSelectProductTypeOperabilityMaxMinData(tempSelectProductTypeOperabilityMaxMinData)
 	};
 
 	const onAddSection = () => {
@@ -256,7 +307,7 @@ const ProductEditor = () => {
 	};
 
 	const onDeleteSection = (sectionMsg: any, index: number) => {
-		
+
 		if (sectionMsg.isAdd) {
 			allSection.splice(index, 1)
 			setAllSection([...allSection])
@@ -276,9 +327,9 @@ const ProductEditor = () => {
 				}
 			})
 
-			let selectedOpenChildren:any = []
-			tempSelectedOpen.children.forEach((item:any)=>{
-				if(tempSelectedOpen.have_sections.includes(item.belong_section)){
+			let selectedOpenChildren: any = []
+			tempSelectedOpen.children.forEach((item: any) => {
+				if (tempSelectedOpen.have_sections.includes(item.belong_section)) {
 					selectedOpenChildren.push(item)
 				}
 			})
@@ -289,18 +340,36 @@ const ProductEditor = () => {
 		}
 	};
 
-	const onSaveScript = async (profileOptionMsg: OptionMsgVO, isBaseCheck:boolean=false) => {
+	const onSaveScript = async (profileOptionMsg: OptionMsgVO, isBaseCheck: boolean = false) => {
+
+		allProductTypeOperabilityMaxMinData.forEach((item) => {
+			if (
+				item.profile == selectProductTypeOperabilityMaxMinData.profile &&
+				item.product == selectProductTypeOperabilityMaxMinData.product &&
+				item.product_type == selectProductTypeOperabilityMaxMinData.product_type &&
+				item.operability == selectProductTypeOperabilityMaxMinData.operability
+			) {
+				item["maxWidth"] = selectProductTypeOperabilityMaxMinData.maxWidth
+				item["minWidth"] = selectProductTypeOperabilityMaxMinData.minWidth
+				item["maxHeight"] = selectProductTypeOperabilityMaxMinData.maxHeight
+				item["minHeight"] = selectProductTypeOperabilityMaxMinData.minHeight
+				item["maxWeight"] = selectProductTypeOperabilityMaxMinData.maxWeight
+				item["minWeight"] = selectProductTypeOperabilityMaxMinData.minWeight
+			}
+		})
+
 		let scriptMsg: string = generateProfileScriptFromProfileOptionMsg(
 			projectMsg?.attribute_tree,
 			quoteMsg?.attribute_tree,
 			itemMsg?.attribute_tree,
 			unitMsg?.attribute_tree,
-			profileOptionMsg
+			profileOptionMsg,
+			allProductTypeOperabilityMaxMinData
 		);
 		setFullLoading(false)
-		if(isBaseCheck){
+		if (isBaseCheck) {
 			let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
-			if (checkReturnMsg.status != "success"){
+			if (checkReturnMsg.status != "success") {
 				setFullLoading(false)
 				notification.error({
 					message: "Error",
@@ -309,7 +378,7 @@ const ProductEditor = () => {
 				return
 			}
 		}
-		
+
 		let saveReturnMsg: Record<string, any> = await saveProfileScript(selectedProfile.id, scriptMsg);
 
 		if (saveReturnMsg.status == "success") {
@@ -325,6 +394,8 @@ const ProductEditor = () => {
 			})
 			setAllProfile([...allProfile])
 			setSelectedProfile({ ...saveReturnMsg?.data })
+			let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript({ ...saveReturnMsg?.data })
+			setAllProductTypeOperabilityMaxMinData(allProductTypeOperabilityMaxMinData)
 			let profileOptionMsg = generateOptionMsgFromProfileScript(saveReturnMsg?.data, unitMsg?.attribute_tree);
 			setProfileOptionMsg(profileOptionMsg)
 			const allProductType = findProductTypeWithParent(profileOptionMsg)
@@ -338,6 +409,48 @@ const ProductEditor = () => {
 							item.children.forEach((item2: any) => {
 								if (item2?.option == selectedOpen?.option) {
 									setSelectedOpen({ ...item2 })
+									let tempSelectProductTypeOperabilityMaxMinData = {}
+									const optionsList = collectOptionCodes([unitMsg?.attribute_tree]);
+									allProductTypeOperabilityMaxMinData.forEach((s) => {
+
+										const matchedProfileAttr = optionsList.find(
+											(o: Record<string, any>) =>
+												o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+												s.profile.split(".")[1]
+										);
+										let profileCode = matchedProfileAttr ? matchedProfileAttr.option.code : null;
+
+										const matchedProductAttr = optionsList.find(
+											(o: Record<string, any>) =>
+												o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+												s.product.split(".")[1]
+										);
+										let productCode = matchedProductAttr ? matchedProductAttr.option.code : null;
+
+										const matchedProductTypeAttr = optionsList.find(
+											(o: Record<string, any>) =>
+												o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+												s.product_type.split(".")[1]
+										);
+										let productTypeCode = matchedProductTypeAttr ? matchedProductTypeAttr.option.code : null;
+
+										const matchedOperabilityAttr = optionsList.find(
+											(o: Record<string, any>) =>
+												o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
+												s.operability.split(".")[1]
+										);
+										let operabilityCode = matchedOperabilityAttr ? matchedOperabilityAttr.option.code : null;
+
+										if (
+											selectedProfile.profile_code == profileCode &&
+											selectedProductType.parent.option == productCode &&
+											selectedProductType.option == productTypeCode &&
+											item2.option == operabilityCode
+										) {
+											tempSelectProductTypeOperabilityMaxMinData = s
+										}
+									})
+									setSelectProductTypeOperabilityMaxMinData(tempSelectProductTypeOperabilityMaxMinData)
 								}
 							})
 						}
@@ -359,7 +472,7 @@ const ProductEditor = () => {
 		}
 		setSelectedSection({ ...sectionMsg })
 		let sectionTreeData = findTopLevelBySection(sectionMsg.code, selectedOpen.children)
-		sectionTreeData.forEach((item)=>{
+		sectionTreeData.forEach((item) => {
 			item._isTopLevel = true
 		})
 		sectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
@@ -389,7 +502,7 @@ const ProductEditor = () => {
 	};
 
 	// 增加子节点
-	const addSubOptionHandler = (optionItemMsg: OptionMsgVO, $index:number) => {
+	const addSubOptionHandler = (optionItemMsg: OptionMsgVO, $index: number) => {
 		let newOptionItemMsg = addSubOption(optionItemMsg)
 		let newProfileOptionMsg = updateOption(newOptionItemMsg, sectionTreeData[$index])
 		sectionTreeData[$index] = newProfileOptionMsg
@@ -399,9 +512,9 @@ const ProductEditor = () => {
 	};
 
 	// 增加兄弟节点
-	const addSiblingOptionHandler = (optionItemMsg: OptionMsgVO, $index:number) => {
-		if (optionItemMsg._isTopLevel){
-			
+	const addSiblingOptionHandler = (optionItemMsg: OptionMsgVO, $index: number) => {
+		if (optionItemMsg._isTopLevel) {
+
 			let subOptionMsgVO = {
 				id: crypto.randomUUID(),
 				attribute: optionItemMsg.attribute,
@@ -423,7 +536,7 @@ const ProductEditor = () => {
 				...sectionTreeData.slice($index + 1)
 			];
 			let tempSectionTreeData = markLastNodeAtEachLevel(newSectionTreeData)
-		
+
 			setSectionTreeData([...tempSectionTreeData])
 			return
 		}
@@ -436,9 +549,9 @@ const ProductEditor = () => {
 	};
 
 	// 删除节点
-	const deleteNode = (optionItemMsg: OptionMsgVO, $index:number) => {
-		if (optionItemMsg._isTopLevel){
-			sectionTreeData.splice($index,1)
+	const deleteNode = (optionItemMsg: OptionMsgVO, $index: number) => {
+		if (optionItemMsg._isTopLevel) {
+			sectionTreeData.splice($index, 1)
 			let tempSectionTreeData = markLastNodeAtEachLevel(sectionTreeData)
 			setSectionTreeData([...tempSectionTreeData])
 			return
@@ -451,8 +564,8 @@ const ProductEditor = () => {
 	};
 
 	// 复制节点
-	const copyNode = (optionItemMsg: OptionMsgVO, $index:number) => {
-		if (optionItemMsg._isTopLevel){
+	const copyNode = (optionItemMsg: OptionMsgVO, $index: number) => {
+		if (optionItemMsg._isTopLevel) {
 			const newNode = deepCopyWithNewId(optionItemMsg);
 			const newSectionTreeData = [
 				...sectionTreeData.slice(0, $index + 1),
@@ -471,7 +584,7 @@ const ProductEditor = () => {
 	};
 
 	// 修改attribute
-	const onChangeAttribute = (attributeCode: string, optionItemMsg: OptionMsgVO, $index:number) => {
+	const onChangeAttribute = (attributeCode: string, optionItemMsg: OptionMsgVO, $index: number) => {
 		let attributeMsg = getAttributeMsgByAttribute(attributeCode, unitAttributesTree[0]);
 		let options = getOptionsByAttributeCode(attributeCode, unitAttributesTree[0]);
 		optionItemMsg.attribute = attributeCode
@@ -483,9 +596,9 @@ const ProductEditor = () => {
 	};
 
 	// 修改option
-	const onChangeOption = (optionCode: string[], optionItemMsg: OptionMsgVO, $index:number) => {
-		let optionMsg:Record<string, any>[] = []
-		optionCode.forEach((item:any)=>{
+	const onChangeOption = (optionCode: string[], optionItemMsg: OptionMsgVO, $index: number) => {
+		let optionMsg: Record<string, any>[] = []
+		optionCode.forEach((item: any) => {
 			let msg = getOptionMsgByOption(item, optionItemMsg.options)
 			optionMsg.push(msg)
 		})
@@ -497,7 +610,7 @@ const ProductEditor = () => {
 	};
 
 	// 展开收起
-	const onToggleHandler = (id: string, $index:number) => {
+	const onToggleHandler = (id: string, $index: number) => {
 		const dfs = (node: OptionMsgVO): OptionMsgVO => {
 			if (node.id === id) {
 				return { ...node, _collapsed: !node._collapsed };
@@ -514,19 +627,30 @@ const ProductEditor = () => {
 	const onSaveChange = () => {
 		// let oldSectionTreeData = findTopLevelBySection(selectedSection.code, selectedOpen.children)
 		let tempSelectedOpen = JSON.parse(JSON.stringify(selectedOpen))
-		let selectedOpenChildren:any = []
-		tempSelectedOpen.children.forEach((item:any)=>{
-			if(item.belong_section != selectedSection.code){
+		let selectedOpenChildren: any = []
+		tempSelectedOpen.children.forEach((item: any) => {
+			if (item.belong_section != selectedSection.code) {
 				selectedOpenChildren.push(item)
 			}
 		})
 		tempSelectedOpen.children = selectedOpenChildren
-		sectionTreeData.forEach((item:any)=>{
+		sectionTreeData.forEach((item: any) => {
 			tempSelectedOpen.children.push(item)
 		})
 		let newProfileOptionMsg = updateOption(tempSelectedOpen, profileOptionMsg)
-		
+
 		onSaveScript(newProfileOptionMsg, true)
+	};
+
+	const onChangeConstrains = (value: number, $key: string) => {
+
+		selectProductTypeOperabilityMaxMinData[$key] = value
+	
+		setSelectProductTypeOperabilityMaxMinData({ ...selectProductTypeOperabilityMaxMinData })
+	};
+
+	const onEditConstrains = () => {
+		onSaveScript(profileOptionMsg, true)
 	};
 
 	return (
@@ -592,30 +716,16 @@ const ProductEditor = () => {
 						(
 							!selectedProfile?.profile_code ||
 							!selectedProductType?.option ||
-							!selectedOpen?.option 
+							!selectedOpen?.option
 						) && <div className="text-xs p-6 text-[#a3a3a3]">
 							Select the product specifications to see Sections and Constrains.
 						</div>
 					}
-					{/* {
-						(
-							selectedProfile?.profile_code &&
-							selectedProductType?.option &&
-							selectedOpen?.option 
-						) && <div className="h-full">
-							<div className="p-6 h-[50%] border-b border-[#EBEDF0]">
-								
-							</div>
-							<div className="p-6 h-[50%]">
-								
-							</div>
-						</div>
-					} */}
 					{
 						(
 							selectedProfile?.profile_code &&
 							selectedProductType?.option &&
-							selectedOpen?.option 
+							selectedOpen?.option
 						) &&
 						<div className="h-full text-xs text-[#717171]">
 							<div className="p-6 h-[50%] border-b border-[#EBEDF0] overflow-y-auto">
@@ -723,13 +833,16 @@ const ProductEditor = () => {
 							<div className="p-6 h-[50%] overflow-y-auto">
 								<div className="flex justify-between items-center mt-2">
 									<span>Constrains</span>
-									<span>mm</span>
+									{/* <span>mm</span> */}
+									<Button onClick={onEditConstrains} size="small" type="primary">Save</Button>
 								</div>
 								<div className="flex justify-between items-center mt-2">
 									<div className="text-[#000000]">Max Width</div>
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.maxWidth ?? null}
+										onChange={(e) => { onChangeConstrains(e, "maxWidth") }}
 									/>
 								</div>
 								<div className="flex justify-between items-center mt-2">
@@ -737,6 +850,8 @@ const ProductEditor = () => {
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.minWidth ?? null}
+										onChange={(e) => { onChangeConstrains(e, "minWidth") }}
 									/>
 								</div>
 								<div className="flex justify-between items-center mt-2">
@@ -744,6 +859,8 @@ const ProductEditor = () => {
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.maxHeight ?? null}
+										onChange={(e) => { onChangeConstrains(e, "maxHeight") }}
 									/>
 								</div>
 								<div className="flex justify-between items-center mt-2">
@@ -751,6 +868,8 @@ const ProductEditor = () => {
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.minHeight ?? null}
+										onChange={(e) => { onChangeConstrains(e, "minHeight") }}
 									/>
 								</div>
 								<div className="flex justify-between items-center mt-2">
@@ -758,6 +877,8 @@ const ProductEditor = () => {
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.maxWeight ?? null}
+										onChange={(e) => { onChangeConstrains(e, "maxWeight") }}
 									/>
 								</div>
 								<div className="flex justify-between items-center mt-2">
@@ -765,6 +886,8 @@ const ProductEditor = () => {
 									<InputNumber
 										size="small"
 										placeholder="Input"
+										value={selectProductTypeOperabilityMaxMinData?.minWeight ?? null}
+										onChange={(e) => { onChangeConstrains(e, "minWeight") }}
 									/>
 								</div>
 							</div>

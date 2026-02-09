@@ -241,7 +241,7 @@ const OptionItemCom = (props: any) => {
 						<div
 							onClick={addSiblingOptionHandler}
 							className={
-								`w-[25px] h-[25px] rounded-[100%] bg-[#E3EBF8] flex items-center justify-center cursor-pointer ${(optionItemMsg._isLastOneAtThisLevel) && 'mb-2'}`
+								`w-[25px] h-[25px] rounded-[100%] bg-[#E3EBF8] flex items-center justify-center cursor-pointer ${(optionItemMsg._isLastOneAtThisLevel) && 'mb-10'}`
 							}
 						>
 							<PlusOutlined className="text-[#427CCE]" />
@@ -357,8 +357,8 @@ const OptionItemCom = (props: any) => {
 					</div>
 
 					<div className="flex justify-end">
-						<Button type="primary" onClick={() => setIsSubOptionsModalOpen(false)}>Cancel</Button>
-						<Button className="ml-4" onClick={()=>onSureSubOption()}>Confirm</Button>
+						<Button onClick={() => setIsSubOptionsModalOpen(false)}>Cancel</Button>
+						<Button className="ml-4" type="primary" onClick={()=>onSureSubOption()}>Confirm</Button>
 					</div>
 				</div>
 			</Modal>

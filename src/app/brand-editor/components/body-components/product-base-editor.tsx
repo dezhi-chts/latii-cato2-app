@@ -42,7 +42,8 @@ import {
 	copyItem,
 	generateProfileScriptFromProfileOptionMsg,
 	findProductTypeWithParent,
-	pickProductProductTypeOpen
+	pickProductProductTypeOpen,
+	getallProductTypeOperabilityMaxMinDataByRuleScript
 } from "@/app/brand-editor/components/body-components/logics";
 
 
@@ -585,12 +586,15 @@ const ParameterBaseEditor = () => {
 			fetchUnitAttributesWithOptionsByVersionId(selectedProfile?.unit_version_id)
 		]);
 
+		let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(selectedProfile)
+
 		let scriptMsg: string = generateProfileScriptFromProfileOptionMsg(
 			projectMsg?.attribute_tree,
 			quoteMsg?.attribute_tree,
 			itemMsg?.attribute_tree,
 			unitAttributesWithOptions?.data?.attribute_tree,
-			profileOptionMsg
+			profileOptionMsg,
+			allProductTypeOperabilityMaxMinData
 		);
 		// let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
 		setFullLoading(false)
@@ -805,6 +809,7 @@ const ParameterBaseEditor = () => {
 		}
 
 		let profileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+		let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(profile)
 		let alreadyProdyctType: any = []
 		let notAlreadyProdyctType: any = []
 		copyItem.forEach((item: any) => {
@@ -877,7 +882,8 @@ const ParameterBaseEditor = () => {
 			quoteMsg?.attribute_tree,
 			itemMsg?.attribute_tree,
 			unitMsg?.attribute_tree,
-			profileOptionMsg
+			profileOptionMsg,
+			allProductTypeOperabilityMaxMinData
 		);
 		let saveReturnMsg: Record<string, any> = await saveProfileScript(profile.id, scriptMsg);
 
@@ -931,6 +937,7 @@ const ParameterBaseEditor = () => {
 			
 			let addProfileData = createProfileRes?.data;
 			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+			let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(profile)
 			copyProfileOptionMsg.option = addProfileData?.profile_code
 
 			const addProfileOptionMsg: any = pickProductProductTypeOpen(copyProfileOptionMsg)
@@ -948,7 +955,8 @@ const ParameterBaseEditor = () => {
 				quoteMsg?.attribute_tree,
 				itemMsg?.attribute_tree,
 				unitAttributesWithOptions?.data?.attribute_tree,
-				addProfileOptionMsg
+				addProfileOptionMsg,
+				allProductTypeOperabilityMaxMinData
 			);
 
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(addProfileData.id, scriptMsg);
@@ -1190,8 +1198,8 @@ const ParameterBaseEditor = () => {
 						</Dropdown>
 
 					</div>
-					<div className='flex-1 p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='h-[50%] overflow-y-auto'>
+					<div className='flex-1 p-4 pl-5 pr-5' style={{ height: "calc(100% - 40px)" }}>
+						<div className='h-[50%] min-h-0 overflow-y-auto'>
 							{
 								!selectedProfile?.id &&
 								<div
@@ -1298,7 +1306,7 @@ const ParameterBaseEditor = () => {
 								</div>
 							}
 						</div>
-						<div className='text-[12px] pt-2 h-[50%]'>
+						<div className='text-[12px] pt-2 h-[50%] min-h-0'>
 							<div className='text-[#717171]'>Options</div>
 							<div className='mt-2 mb-2'>
 								<Input
@@ -1347,8 +1355,8 @@ const ParameterBaseEditor = () => {
 					<div className="w-full h-[30px] flex items-center text-[#717171] border-b border-b-[#EBEDF0] p-5">
 						<div>Opens</div>
 					</div>
-					<div className='p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='h-[50%] overflow-y-auto'>
+					<div className='p-4 pl-5 pr-5' style={{ height: "calc(100% - 40px)" }}>
+						<div className='h-[50%] overflow-y-auto min-h-0'>
 							{
 								(!selectedProfile?.id || !selectedProductType?.option) &&
 								<div
@@ -1436,7 +1444,7 @@ const ParameterBaseEditor = () => {
 								</div>
 							}
 						</div>
-						<div className='text-[12px] pt-2 h-[50%]'>
+						<div className='text-[12px] pt-2 h-[50%] min-h-0'>
 							<div className='text-[#717171]'>Options</div>
 							<div className='mt-2 mb-2'>
 								<Input
