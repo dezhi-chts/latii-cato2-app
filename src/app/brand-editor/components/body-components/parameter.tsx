@@ -10,6 +10,7 @@ import {
 	fetchCompanyByKeycloakUser
 } from "@/services/companyService";
 import AttributeTreeEditor from "@/app/brand-editor/components/body-components/parameter-editor";
+import ProfileDefaultTemplate from "@/app/brand-editor/components/body-components/profile-default-template";
 import { motion, AnimatePresence } from "framer-motion";
 
 type ParameterItem = {
@@ -41,6 +42,10 @@ const Parameter = () => {
 			type: "unit",
 			title: "Unit Attribute",
 			name: "UNIT Attribute Tree"
+		}, {
+			type: "default_template",
+			title: "Default Template",
+			name: "Default Template"
 		},
 	]);
 	const [editParameterMsg, setEditParameterMsg] = useState<ParameterItem>({})
@@ -144,12 +149,14 @@ const Parameter = () => {
 
 						{/* hover 显示的底部按钮 */}
 						<div className="flex justify-end gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-							<Button
-								icon={<EyeOutlined />}
-								onClick={() => handleViewAttribute(item)}
-							>
-								View
-							</Button>
+							{
+								item?.type != "default_template" && <Button
+									icon={<EyeOutlined />}
+									onClick={() => handleViewAttribute(item)}
+								>
+									View
+								</Button>
+							}
 							<Button
 								type="primary"
 								icon={<EditOutlined />}
@@ -204,12 +211,21 @@ const Parameter = () => {
 							mass: 1
 						}}
 					>
-						<AttributeTreeEditor
-							attribute={editParameterMsg?.type}
-							version={editParameterMsg?.versionMsg?.id}
-							companyId={companyMsg?.id}
-							handleBackParameter={handleBackParameter}
-						/>
+						{
+							editParameterMsg?.type != "default_template" && <AttributeTreeEditor
+								attribute={editParameterMsg?.type}
+								version={editParameterMsg?.versionMsg?.id}
+								companyId={companyMsg?.id}
+								handleBackParameter={handleBackParameter}
+							/>
+						}
+						{
+							editParameterMsg?.type == "default_template" && <ProfileDefaultTemplate
+								handleBackParameter={handleBackParameter}
+							>
+
+							</ProfileDefaultTemplate>
+						}
 					</motion.div>
 				)}
 			</AnimatePresence>

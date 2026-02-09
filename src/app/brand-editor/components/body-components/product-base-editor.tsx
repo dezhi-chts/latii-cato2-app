@@ -1198,8 +1198,8 @@ const ParameterBaseEditor = () => {
 						</Dropdown>
 
 					</div>
-					<div className='flex-1 p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='h-[50%] overflow-y-auto'>
+					<div className='flex-1 p-4 pl-5 pr-5' style={{ height: "calc(100% - 40px)" }}>
+						<div className='h-[50%] min-h-0 overflow-y-auto'>
 							{
 								!selectedProfile?.id &&
 								<div
@@ -1306,7 +1306,7 @@ const ParameterBaseEditor = () => {
 								</div>
 							}
 						</div>
-						<div className='text-[12px] pt-2 h-[50%]'>
+						<div className='text-[12px] pt-2 h-[50%] min-h-0'>
 							<div className='text-[#717171]'>Options</div>
 							<div className='mt-2 mb-2'>
 								<Input
@@ -1355,8 +1355,8 @@ const ParameterBaseEditor = () => {
 					<div className="w-full h-[30px] flex items-center text-[#717171] border-b border-b-[#EBEDF0] p-5">
 						<div>Opens</div>
 					</div>
-					<div className='p-4 pl-5 pr-5' style={{ height: "calc(100% - 30px)" }}>
-						<div className='h-[50%] overflow-y-auto'>
+					<div className='p-4 pl-5 pr-5' style={{ height: "calc(100% - 40px)" }}>
+						<div className='h-[50%] overflow-y-auto min-h-0'>
 							{
 								(!selectedProfile?.id || !selectedProductType?.option) &&
 								<div
@@ -1444,7 +1444,7 @@ const ParameterBaseEditor = () => {
 								</div>
 							}
 						</div>
-						<div className='text-[12px] pt-2 h-[50%]'>
+						<div className='text-[12px] pt-2 h-[50%] min-h-0'>
 							<div className='text-[#717171]'>Options</div>
 							<div className='mt-2 mb-2'>
 								<Input
