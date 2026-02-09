@@ -241,33 +241,33 @@ const ProductEditor = () => {
 
 		let tempSelectProductTypeOperabilityMaxMinData = {}
 		const optionsList = collectOptionCodes([unitMsg?.attribute_tree]);
-		allProductTypeOperabilityMaxMinData.forEach((item) => {
+		allProductTypeOperabilityMaxMinData.forEach((s) => {
 
 			const matchedProfileAttr = optionsList.find(
 				(o: Record<string, any>) =>
 					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
-					item.profile.split(".")[1]
+					s.profile.split(".")[1]
 			);
 			let profileCode = matchedProfileAttr ? matchedProfileAttr.option.code : null;
 
 			const matchedProductAttr = optionsList.find(
 				(o: Record<string, any>) =>
 					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
-					item.product.split(".")[1]
+					s.product.split(".")[1]
 			);
 			let productCode = matchedProductAttr ? matchedProductAttr.option.code : null;
 
 			const matchedProductTypeAttr = optionsList.find(
 				(o: Record<string, any>) =>
 					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
-					item.product_type.split(".")[1]
+					s.product_type.split(".")[1]
 			);
 			let productTypeCode = matchedProductTypeAttr ? matchedProductTypeAttr.option.code : null;
 
 			const matchedOperabilityAttr = optionsList.find(
 				(o: Record<string, any>) =>
 					o.classCode.replace(/[\/\-\s.]/g, "_").toLowerCase() ===
-					item.operability.split(".")[1]
+					s.operability.split(".")[1]
 			);
 			let operabilityCode = matchedOperabilityAttr ? matchedOperabilityAttr.option.code : null;
 
@@ -277,7 +277,7 @@ const ProductEditor = () => {
 				selectedProductType.option == productTypeCode &&
 				targetOption.option == operabilityCode
 			) {
-				tempSelectProductTypeOperabilityMaxMinData = item
+				tempSelectProductTypeOperabilityMaxMinData = s
 			}
 		})
 		setSelectProductTypeOperabilityMaxMinData(tempSelectProductTypeOperabilityMaxMinData)
@@ -409,7 +409,6 @@ const ProductEditor = () => {
 							item.children.forEach((item2: any) => {
 								if (item2?.option == selectedOpen?.option) {
 									setSelectedOpen({ ...item2 })
-
 									let tempSelectProductTypeOperabilityMaxMinData = {}
 									const optionsList = collectOptionCodes([unitMsg?.attribute_tree]);
 									allProductTypeOperabilityMaxMinData.forEach((s) => {
@@ -448,7 +447,7 @@ const ProductEditor = () => {
 											selectedProductType.option == productTypeCode &&
 											item2.option == operabilityCode
 										) {
-											tempSelectProductTypeOperabilityMaxMinData = item
+											tempSelectProductTypeOperabilityMaxMinData = s
 										}
 									})
 									setSelectProductTypeOperabilityMaxMinData(tempSelectProductTypeOperabilityMaxMinData)
