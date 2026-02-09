@@ -3,6 +3,12 @@ const profileStartAnnotation = "# Profile msg script start (Cannot be deleted or
 const profileEndAnnotation = "# Profile msg script end (Cannot be deleted or modified, the processing script will use)";
 const ruleMsgStartAnnotation = "# Rule msg script start (Cannot be deleted or modified, the processing script will use)";
 const ruleMsgEndAnnotation = "# Rule msg script end (Cannot be deleted or modified, the processing script will use)";
+const maximumWidthStartDataAnnotation = "# Start of data for the maximum and minimum widths of all doors and windows (Cannot be deleted or modified, the processing script will use)"
+const maximumWidthEndDataAnnotation = '# End of data for the maximum and minimum widths of all doors and windows (Cannot be deleted or modified, the processing script will use)'
+const maximumHeightStartDataAnnotation = "# Start of data for the maximum and minimum heights of all doors and windows (Cannot be deleted or modified, the processing script will use)"
+const maximumHeightEndDataAnnotation = '# End of data for the maximum and minimum heights of all doors and windows (Cannot be deleted or modified, the processing script will use)'
+const maximumWeightStartDataAnnotation = "# Start of data for the maximum and minimum weights of all doors and windows (Cannot be deleted or modified, the processing script will use)"
+const maximumWeightEndDataAnnotation = '# End of data for the maximum and minimum weights of all doors and windows (Cannot be deleted or modified, the processing script will use)'
 const uiLogicMsgStartAnnotation = "# UI logic msg script start (Cannot be deleted or modified, the processing script will use)";
 const uiLogicMsgEndAnnotation = "# UI logic msg script end (Cannot be deleted or modified, the processing script will use)";
 
@@ -276,25 +282,457 @@ export const generateUnitOptionsClassScriptFromTree = (tree: Record<string, any>
 /** 
  * 生成空白模板rule msg的脚本
  */
-export const generateBlankTemplateRuleMsgScript = (): string => {
-	// let str = "\n\nrule_msg = {}\n";
-	// return str
-	let str = 
-`
+export const generateBlankTemplateRuleMsgScript = (
+	profileOptionMsg: OptionMsgDTO,
+	allProductTypeOperabilityMaxMinData: Record<string, any>[]
+): string => {
+
+	let str =
+		`
 def rule_unit_width():
-	pass
+	${generateWidthRuleMsgScript(profileOptionMsg, allProductTypeOperabilityMaxMinData)}
 
 def rule_unit_height():
-	pass
+	${generateHeightRuleMsgScript(profileOptionMsg, allProductTypeOperabilityMaxMinData)}
 
-def rule_item_quantity():
-	pass
+def rule_unit_weight():
+	${generateWeightRuleMsgScript(profileOptionMsg, allProductTypeOperabilityMaxMinData)}
 
 rule_msg = {	
 	unit_attributes.width: rule_unit_width,
 	unit_attributes.height: rule_unit_height,
-	unit_attributes.weight: rule_item_quantity,
+	unit_attributes.weight: rule_unit_weight
 };`
+	return str
+};
+
+export const generateWidthRuleMsgScript = (
+	profileOptionMsg: OptionMsgDTO,
+	originMaxMinMsg: Record<string, any>[] | null
+): string => {
+	let str = ``
+	// 基础校验脚本
+	let defaultCheck = `
+	# 没有width, 默认校验通过
+	if not unit_attributes.width:
+		return 200
+
+	# 没有profile, 默认校验通过
+	if not unit_attributes.profile:
+		return 200
+		
+	# 没有product, 默认校验通过
+	if not unit_attributes.product:
+		return 200
+
+	# 没有product type, 默认校验通过
+	if not unit_attributes.product_type:
+		return 200
+
+	# 没有operability, 默认校验通过
+	if not unit_attributes.operability:
+		return 200
+	`
+
+	// 二次校验脚本
+	let ruleLogic = `
+	# 开始校验
+	max_value = None
+	min_value = None
+	for option in all_product_type_operability_max_min_data:
+		if all(
+			[
+				unit_attributes.profile == option["profile"],
+				unit_attributes.product == option["product"],
+				unit_attributes.product_type == option["product_type"],
+				unit_attributes.operability == option["operability"],
+			]
+		):
+			max_value = option["max"] or None
+			min_value = option["min"] or None
+			break
+			
+	# 没有 max value，就设定最大宽度是99999999(目的是通过校验)
+	if max_value is None:
+		max_value = 99999999
+		
+	# 没有 min value，就设定最小宽度是0(目的是通过校验)
+	if min_value is None:
+		min_value = 0
+
+	# 范围校验（等于也合法）
+	width = unit_attributes.width
+	if min_value <= width <= max_value:
+		return 200
+	else:
+		return f"width {width} beyond the permitted limit [{min_value}, {max_value}]"
+
+	# 最后如果都没匹配到，默认校验成功(正常任何情况都不会走到这步，只做最后兜底，确保不影响后面的程序)
+	return 200
+`
+	const buildPythonItem = (node: any, level = 0): string => {
+		const indent = "  ".repeat(level);
+		const childIndent = "  ".repeat(level + 1);
+
+		// value 不加引号；为空就给 ""
+		const profileStr = node.profile || '""';
+		const productStr = node.product || '""';
+		const productTypeStr = node.product_type || '""';
+		const operabilityStr = node.operability || '""';
+		const maxStr = node.max || '""';
+		const minStr = node.min || '""';
+
+		return `${indent}{\n` +
+			`${childIndent}"profile": ${profileStr},\n` +
+			`${childIndent}"product": ${productStr},\n` +
+			`${childIndent}"product_type": ${productTypeStr},\n` +
+			`${childIndent}"operability": ${operabilityStr},\n` +
+			`${childIndent}"max": ${maxStr},\n` +
+			`${childIndent}"min": ${minStr}\n` +
+			`${indent}}`;
+	};
+
+	const buildPythonList = (list: any[]): string => {
+		const itemsCode = list
+			.map(item => buildPythonItem(item, 1 + 1))
+			.join(",\n");
+
+		return `all_product_type_operability_max_min_data = [\n${itemsCode}\n	]`;
+	};
+	let allProductTypeOperabilityMaxMinDataScript = ``
+	let arr: any = []
+	let tempProfileOptionMsg = JSON.parse(JSON.stringify(profileOptionMsg))
+	let allProductTypeOpen = pickProductProductTypeOpenForScript(tempProfileOptionMsg)
+	allProductTypeOpen.children.forEach((item1, index1) => { // product
+		item1.children.forEach((item2, index2) => { // product type
+			item2.children.forEach((item3, index3) => { // open
+				arr.push({
+					"profile": allProductTypeOpen.option,
+					"product": item1.option,
+					"product_type": item2.option,
+					"operability": item3.option,
+					"max": "",
+					"min": "",
+				})
+			})
+		})
+	})
+	if (originMaxMinMsg){
+		arr.forEach((item1:any)=>{
+			originMaxMinMsg.forEach((item2)=>{
+				if (
+					item1.profile == item2.profile &&
+					item1.product == item2.product &&
+					item1.product_type == item2.product_type &&
+					item1.operability == item2.operability
+				) {
+					item1["max"] = item2.maxWidth
+					item1["min"] = item2.minWidth
+				}
+			})
+		})
+	}
+	// 递归生成 Python 样式字符串
+	allProductTypeOperabilityMaxMinDataScript = `	${buildPythonList(arr)}`
+	str =
+		defaultCheck +
+		`\n` +
+		`	` +
+		`${maximumWidthStartDataAnnotation}\n` +
+		allProductTypeOperabilityMaxMinDataScript +
+		`\n` +
+		`	` +
+		`${maximumWidthEndDataAnnotation}\n` +
+		ruleLogic
+
+	return str
+};
+
+export const generateHeightRuleMsgScript = (
+	profileOptionMsg: OptionMsgDTO,
+	originMaxMinMsg: Record<string, any>[] | null
+): string => {
+	let str = ``
+	// 基础校验脚本
+	let defaultCheck = `
+	# 没有height, 默认校验通过
+	if not unit_attributes.height:
+		return 200
+
+	# 没有profile, 默认校验通过
+	if not unit_attributes.profile:
+		return 200
+		
+	# 没有product, 默认校验通过
+	if not unit_attributes.product:
+		return 200
+
+	# 没有product type, 默认校验通过
+	if not unit_attributes.product_type:
+		return 200
+
+	# 没有operability, 默认校验通过
+	if not unit_attributes.operability:
+		return 200
+	`
+
+	// 二次校验脚本
+	let ruleLogic = `
+	# 开始校验
+	max_value = None
+	min_value = None
+	for option in all_product_type_operability_max_min_data:
+		if all(
+			[
+				unit_attributes.profile == option["profile"],
+				unit_attributes.product == option["product"],
+				unit_attributes.product_type == option["product_type"],
+				unit_attributes.operability == option["operability"],
+			]
+		):
+			max_value = option["max"] or None
+			min_value = option["min"] or None
+			break
+			
+	# 没有 max value，就设定最大高度是99999999(目的是通过校验)
+	if max_value is None:
+		max_value = 99999999
+		
+	# 没有 min value，就设定最小高度是0(目的是通过校验)
+	if min_value is None:
+		min_value = 0
+
+	# 范围校验（等于也合法）
+	height = unit_attributes.height
+	if min_value <= height <= max_value:
+		return 200
+	else:
+		return f"height {height} beyond the permitted limit [{min_value}, {max_value}]"
+
+	# 最后如果都没匹配到，默认校验成功(正常任何情况都不会走到这步，只做最后兜底，确保不影响后面的程序)
+	return 200
+`
+	const buildPythonItem = (node: any, level = 0): string => {
+		const indent = "  ".repeat(level);
+		const childIndent = "  ".repeat(level + 1);
+
+		// value 不加引号；为空就给 ""
+		const profileStr = node.profile || '""';
+		const productStr = node.product || '""';
+		const productTypeStr = node.product_type || '""';
+		const operabilityStr = node.operability || '""';
+		const maxStr = node.max || '""';
+		const minStr = node.min || '""';
+
+		return `${indent}{\n` +
+			`${childIndent}"profile": ${profileStr},\n` +
+			`${childIndent}"product": ${productStr},\n` +
+			`${childIndent}"product_type": ${productTypeStr},\n` +
+			`${childIndent}"operability": ${operabilityStr},\n` +
+			`${childIndent}"max": ${maxStr},\n` +
+			`${childIndent}"min": ${minStr}\n` +
+			`${indent}}`;
+	};
+
+	const buildPythonList = (list: any[]): string => {
+		const itemsCode = list
+			.map(item => buildPythonItem(item, 1 + 1))
+			.join(",\n");
+
+		return `all_product_type_operability_max_min_data = [\n${itemsCode}\n	]`;
+	};
+	let allProductTypeOperabilityMaxMinDataScript = ``
+	let arr: any = []
+	let tempProfileOptionMsg = JSON.parse(JSON.stringify(profileOptionMsg))
+	let allProductTypeOpen = pickProductProductTypeOpenForScript(tempProfileOptionMsg)
+	allProductTypeOpen.children.forEach((item1, index1) => { // product
+		item1.children.forEach((item2, index2) => { // product type
+			item2.children.forEach((item3, index3) => { // open
+				arr.push({
+					"profile": allProductTypeOpen.option,
+					"product": item1.option,
+					"product_type": item2.option,
+					"operability": item3.option,
+					"max": "",
+					"min": "",
+				})
+			})
+		})
+	})
+	if (originMaxMinMsg){
+		arr.forEach((item1:any)=>{
+			originMaxMinMsg.forEach((item2)=>{
+				if (
+					item1.profile == item2.profile &&
+					item1.product == item2.product &&
+					item1.product_type == item2.product_type &&
+					item1.operability == item2.operability
+				) {
+					item1["max"] = item2.maxHeight
+					item1["min"] = item2.minHeight
+				}
+			})
+		})
+	}
+
+	// 递归生成 Python 样式字符串
+	allProductTypeOperabilityMaxMinDataScript = `	${buildPythonList(arr)}`
+
+	str =
+		defaultCheck +
+		`\n` +
+		`	` +
+		`${maximumHeightStartDataAnnotation}\n` +
+		allProductTypeOperabilityMaxMinDataScript +
+		`\n` +
+		`	` +
+		`${maximumHeightEndDataAnnotation}\n` +
+		ruleLogic
+
+	return str
+};
+
+export const generateWeightRuleMsgScript = (
+	profileOptionMsg: OptionMsgDTO,
+	originMaxMinMsg: Record<string, any>[] | null
+): string => {
+	let str = ``
+	// 基础校验脚本
+	let defaultCheck = `
+	# 没有weight, 默认校验通过
+	if not unit_attributes.weight:
+		return 200
+
+	# 没有profile, 默认校验通过
+	if not unit_attributes.profile:
+		return 200
+		
+	# 没有product, 默认校验通过
+	if not unit_attributes.product:
+		return 200
+
+	# 没有product type, 默认校验通过
+	if not unit_attributes.product_type:
+		return 200
+
+	# 没有operability, 默认校验通过
+	if not unit_attributes.operability:
+		return 200
+	`
+
+	// 二次校验脚本
+	let ruleLogic = `
+	# 开始校验
+	max_value = None
+	min_value = None
+	for option in all_product_type_operability_max_min_data:
+		if all(
+			[
+				unit_attributes.profile == option["profile"],
+				unit_attributes.product == option["product"],
+				unit_attributes.product_type == option["product_type"],
+				unit_attributes.operability == option["operability"],
+			]
+		):
+			max_value = option["max"] or None
+			min_value = option["min"] or None
+			break
+			
+	# 没有 max value，就设定最大宽度是99999999(目的是通过校验)
+	if max_value is None:
+		max_value = 99999999
+		
+	# 没有 min value，就设定最小宽度是0(目的是通过校验)
+	if min_value is None:
+		min_value = 0
+
+	# 范围校验（等于也合法）
+	weight = unit_attributes.weight
+	if min_value <= weight <= max_value:
+		return 200
+	else:
+		return f"weight {weight} beyond the permitted limit [{min_value}, {max_value}]"
+
+	# 最后如果都没匹配到，默认校验成功(正常任何情况都不会走到这步，只做最后兜底，确保不影响后面的程序)
+	return 200
+`
+	const buildPythonItem = (node: any, level = 0): string => {
+		const indent = "  ".repeat(level);
+		const childIndent = "  ".repeat(level + 1);
+
+		// value 不加引号；为空就给 ""
+		const profileStr = node.profile || '""';
+		const productStr = node.product || '""';
+		const productTypeStr = node.product_type || '""';
+		const operabilityStr = node.operability || '""';
+		const maxStr = node.max || '""';
+		const minStr = node.min || '""';
+
+		return `${indent}{\n` +
+			`${childIndent}"profile": ${profileStr},\n` +
+			`${childIndent}"product": ${productStr},\n` +
+			`${childIndent}"product_type": ${productTypeStr},\n` +
+			`${childIndent}"operability": ${operabilityStr},\n` +
+			`${childIndent}"max": ${maxStr},\n` +
+			`${childIndent}"min": ${minStr}\n` +
+			`${indent}}`;
+	};
+
+	const buildPythonList = (list: any[]): string => {
+		const itemsCode = list
+			.map(item => buildPythonItem(item, 1 + 1))
+			.join(",\n");
+
+		return `all_product_type_operability_max_min_data = [\n${itemsCode}\n	]`;
+	};
+	let allProductTypeOperabilityMaxMinDataScript = ``
+	let arr: any = []
+	let tempProfileOptionMsg = JSON.parse(JSON.stringify(profileOptionMsg))
+	let allProductTypeOpen = pickProductProductTypeOpenForScript(tempProfileOptionMsg)
+	allProductTypeOpen.children.forEach((item1, index1) => { // product
+		item1.children.forEach((item2, index2) => { // product type
+			item2.children.forEach((item3, index3) => { // open
+				arr.push({
+					"profile": allProductTypeOpen.option,
+					"product": item1.option,
+					"product_type": item2.option,
+					"operability": item3.option,
+					"max": "",
+					"min": "",
+				})
+			})
+		})
+	})
+	if (originMaxMinMsg){
+		arr.forEach((item1:any)=>{
+			originMaxMinMsg.forEach((item2)=>{
+				if (
+					item1.profile == item2.profile &&
+					item1.product == item2.product &&
+					item1.product_type == item2.product_type &&
+					item1.operability == item2.operability
+				) {
+					item1["max"] = item2.maxWeight
+					item1["min"] = item2.minWeight
+				}
+			})
+		})
+	}
+
+	// 递归生成 Python 样式字符串
+	allProductTypeOperabilityMaxMinDataScript = `	${buildPythonList(arr)}`
+
+	str =
+		defaultCheck +
+		`\n` +
+		`	` +
+		`${maximumWeightStartDataAnnotation}\n` +
+		allProductTypeOperabilityMaxMinDataScript +
+		`\n` +
+		`	` +
+		`${maximumWeightEndDataAnnotation}\n` +
+		ruleLogic
+
 	return str
 };
 
@@ -621,7 +1059,8 @@ export const generateProfileScriptFromProfileOptionMsg = (
 	quoteAttributeTree: Record<string, any>,
 	itemAttributeTree: Record<string, any>,
 	unitAttributeTree: Record<string, any>,
-	profileOptionMsg: OptionMsgVO
+	profileOptionMsg: OptionMsgVO,
+	allProductTypeOperabilityMaxMinData: Record<string, any>[]
 ): string => {
 	// 递归转换
 	const transform = (node: OptionMsgVO): OptionMsgDTO => {
@@ -778,7 +1217,7 @@ export const generateProfileScriptFromProfileOptionMsg = (
 	let itemOptionsClassScript: string = generateItemOptionsClassScriptFromTree(itemAttributeTree);
 	let unitOptionsClassScript: string = generateUnitOptionsClassScriptFromTree(unitAttributeTree);
 
-	let ruleMsgScript: string = generateBlankTemplateRuleMsgScript();
+	let ruleMsgScript: string = generateBlankTemplateRuleMsgScript(newProfileOptionMsg, allProductTypeOperabilityMaxMinData);
 	let uiLogicMsgScript: string = generateBlankTemplateUiLogicMsgScript();
 
 	let profileScript: string =
@@ -806,6 +1245,104 @@ export const generateProfileScriptFromProfileOptionMsg = (
 	console.log(profileScript, 'profileScript')
 	return profileScript;
 };
+
+export const buildProductTypeOperabilityJson = (
+	scriptMsg: string
+): Record<string, any> => {
+	let jsonStr = scriptMsg;
+
+	// 1. 先确保 key 本身是带引号的（容错用，已有也不影响）
+	jsonStr = jsonStr.replace(
+		/([,{]\s*)(profile|product|product_type|operability)\s*:/g,
+		'$1"$2":'
+	);
+
+	// 2. 给指定 key 的「单值变量」加双引号
+	// 排除：
+	// - 已经是字符串的
+	// - 数组
+	// - 数字 / 空字符串
+	jsonStr = jsonStr.replace(
+		/"(profile|product|product_type|operability)"\s*:\s*(?!\[|")([a-zA-Z_$][\w$.]*)/g,
+		'"$1":"$2"'
+	);
+
+	return JSON.parse(jsonStr);
+};
+
+export const getallProductTypeOperabilityMaxMinDataByRuleScript = (
+	profileMsg: Record<string, any>
+) => {
+	let tempArr: Record<string, any>[] = []
+	if (
+		profileMsg?.script_msg &&
+		profileMsg?.script_msg.includes(maximumWidthStartDataAnnotation) &&
+		profileMsg?.script_msg.includes(maximumWidthEndDataAnnotation) &&
+		profileMsg?.script_msg.includes("all_product_type_operability_max_min_data =")
+	) {
+		let tempScriptMsg: string = profileMsg?.script_msg;
+		let maxMinWidthDataStr: string = tempScriptMsg.split(maximumWidthStartDataAnnotation)[1].split(maximumWidthEndDataAnnotation)[0].split("all_product_type_operability_max_min_data =")[1];
+		let maxMinWidthDataArr: any = buildProductTypeOperabilityJson(maxMinWidthDataStr)
+		maxMinWidthDataArr.forEach((item: any) => {
+			tempArr.push({
+				"profile": item.profile,
+				"product": item.product,
+				"product_type": item.product_type,
+				"operability": item.operability,
+				"maxWidth": item.max,
+				"minWidth": item.min
+			})
+		})
+	}
+	if (
+		profileMsg?.script_msg &&
+		profileMsg?.script_msg.includes(maximumHeightStartDataAnnotation) &&
+		profileMsg?.script_msg.includes(maximumHeightEndDataAnnotation) &&
+		profileMsg?.script_msg.includes("all_product_type_operability_max_min_data =")
+	) {
+		let tempScriptMsg: string = profileMsg?.script_msg;
+		let maxMinHeightDataStr: string = tempScriptMsg.split(maximumHeightStartDataAnnotation)[1].split(maximumHeightEndDataAnnotation)[0].split("all_product_type_operability_max_min_data =")[1];
+		let maxMinHeightDataArr: any = buildProductTypeOperabilityJson(maxMinHeightDataStr)
+		tempArr.forEach((item1) => {
+			maxMinHeightDataArr.forEach((item2: any) => {
+				if (
+					item1.profile == item2.profile &&
+					item1.product == item2.product &&
+					item1.product_type == item2.product_type &&
+					item1.operability == item2.operability
+				) {
+					item1["maxHeight"] = item2.max
+					item1["minHeight"] = item2.min
+				}
+			})
+		})
+	}
+	if (
+		profileMsg?.script_msg &&
+		profileMsg?.script_msg.includes(maximumWeightStartDataAnnotation) &&
+		profileMsg?.script_msg.includes(maximumWeightEndDataAnnotation) &&
+		profileMsg?.script_msg.includes("all_product_type_operability_max_min_data =")
+	) {
+		let tempScriptMsg: string = profileMsg?.script_msg;
+		let maxMinWeightDataStr: string = tempScriptMsg.split(maximumWeightStartDataAnnotation)[1].split(maximumWeightEndDataAnnotation)[0].split("all_product_type_operability_max_min_data =")[1];
+		let maxMinWeightDataArr: any = buildProductTypeOperabilityJson(maxMinWeightDataStr)
+		tempArr.forEach((item1) => {
+			maxMinWeightDataArr.forEach((item2: any) => {
+				if (
+					item1.profile == item2.profile &&
+					item1.product == item2.product &&
+					item1.product_type == item2.product_type &&
+					item1.operability == item2.operability
+				) {
+					item1["maxWeight"] = item2.max
+					item1["minWeight"] = item2.min
+				}
+			})
+		})
+	}
+	return tempArr
+};
+
 
 /** 
  * 给option item添加子节点
@@ -1042,6 +1579,48 @@ export const pickProductProductTypeOpen = (root: OptionMsgVO): OptionMsgVO => {
 							const openNodes =
 								productTypeNode.children
 									?.filter(child => child.attribute === "unit$operability")
+									.map(openNode => ({
+										...openNode,
+										children: [], // 截断
+									})) ?? [];
+
+							return {
+								...productTypeNode,
+								children: openNodes,
+							};
+						}) ?? [];
+
+				return {
+					...productNode,
+					children: productTypeNodes,
+				};
+			}) ?? [];
+
+	// 如果第一层都没找到，children = []
+	return {
+		...newRoot,
+		children: productNodes.length > 0 ? productNodes : [],
+	};
+};
+
+export const pickProductProductTypeOpenForScript = (root: OptionMsgDTO): OptionMsgDTO => {
+	// 复制顶级节点，保证不破坏原数据
+	const newRoot: OptionMsgDTO = { ...root };
+
+	// 第一层：找到所有 product 节点
+	const productNodes =
+		newRoot.children
+			?.filter(child => child.attribute === "unit_attributes.product")
+			.map(productNode => {
+				// 第二层：找到所有 product_type 节点
+				const productTypeNodes =
+					productNode.children
+						?.filter(child => child.attribute === "unit_attributes.product_type")
+						.map(productTypeNode => {
+							// 第三层：找到所有 unit$operability 节点
+							const openNodes =
+								productTypeNode.children
+									?.filter(child => child.attribute === "unit_attributes.operability")
 									.map(openNode => ({
 										...openNode,
 										children: [], // 截断

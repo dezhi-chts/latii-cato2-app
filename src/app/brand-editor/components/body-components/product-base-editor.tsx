@@ -42,7 +42,8 @@ import {
 	copyItem,
 	generateProfileScriptFromProfileOptionMsg,
 	findProductTypeWithParent,
-	pickProductProductTypeOpen
+	pickProductProductTypeOpen,
+	getallProductTypeOperabilityMaxMinDataByRuleScript
 } from "@/app/brand-editor/components/body-components/logics";
 
 
@@ -585,12 +586,15 @@ const ParameterBaseEditor = () => {
 			fetchUnitAttributesWithOptionsByVersionId(selectedProfile?.unit_version_id)
 		]);
 
+		let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(selectedProfile)
+
 		let scriptMsg: string = generateProfileScriptFromProfileOptionMsg(
 			projectMsg?.attribute_tree,
 			quoteMsg?.attribute_tree,
 			itemMsg?.attribute_tree,
 			unitAttributesWithOptions?.data?.attribute_tree,
-			profileOptionMsg
+			profileOptionMsg,
+			allProductTypeOperabilityMaxMinData
 		);
 		// let checkReturnMsg: Record<string, any> = await baseCheckProfileScript(scriptMsg);
 		setFullLoading(false)
@@ -805,6 +809,7 @@ const ParameterBaseEditor = () => {
 		}
 
 		let profileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+		let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(profile)
 		let alreadyProdyctType: any = []
 		let notAlreadyProdyctType: any = []
 		copyItem.forEach((item: any) => {
@@ -877,7 +882,8 @@ const ParameterBaseEditor = () => {
 			quoteMsg?.attribute_tree,
 			itemMsg?.attribute_tree,
 			unitMsg?.attribute_tree,
-			profileOptionMsg
+			profileOptionMsg,
+			allProductTypeOperabilityMaxMinData
 		);
 		let saveReturnMsg: Record<string, any> = await saveProfileScript(profile.id, scriptMsg);
 
@@ -931,6 +937,7 @@ const ParameterBaseEditor = () => {
 			
 			let addProfileData = createProfileRes?.data;
 			let copyProfileOptionMsg = generateOptionMsgFromProfileScript(profile, unitMsg?.attribute_tree);
+			let allProductTypeOperabilityMaxMinData = getallProductTypeOperabilityMaxMinDataByRuleScript(profile)
 			copyProfileOptionMsg.option = addProfileData?.profile_code
 
 			const addProfileOptionMsg: any = pickProductProductTypeOpen(copyProfileOptionMsg)
@@ -948,7 +955,8 @@ const ParameterBaseEditor = () => {
 				quoteMsg?.attribute_tree,
 				itemMsg?.attribute_tree,
 				unitAttributesWithOptions?.data?.attribute_tree,
-				addProfileOptionMsg
+				addProfileOptionMsg,
+				allProductTypeOperabilityMaxMinData
 			);
 
 			let saveReturnMsg: Record<string, any> = await saveProfileScript(addProfileData.id, scriptMsg);
