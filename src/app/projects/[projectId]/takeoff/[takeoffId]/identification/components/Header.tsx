@@ -28,6 +28,7 @@ const Header = ({
 }: any) => {
   const router = useRouter();
   const projectId = useParams().projectId;
+  const takeOffId = useParams().takeoffId;
 
   const filesData = useMemo(() => {
     if (!fileList) return [];
@@ -43,7 +44,7 @@ const Header = ({
   }
 
   const handleBack = () => {
-    router.push(`/projects/${projectId}/takeoff/${selectedFileId}/identification-index`);
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification-index`);
   };
 
   return (
