@@ -74,6 +74,29 @@ const Project = () => {
     })
   }
 
+
+  const filterTypeList = [{
+    type: 'All',
+    bgColor: 'bg-primaryN30',
+    iconBgColor: 'bg-primaryN70',
+    icontextColor: 'text-white',
+  }, {
+    type: 'Upload',
+    bgColor: 'bg-[#FF931E4C]',
+    iconBgColor: 'bg-white',
+    icontextColor: 'text-dragonOrange',
+  }, {
+    type: 'Takeoff',
+    bgColor: 'bg-[#008ECE4C]',
+    iconBgColor: 'bg-white',
+    icontextColor: 'text-kahuBlue',
+  }, {
+    type: 'Quoting',
+    bgColor: 'bg-[#F7CD4D4C]',
+    iconBgColor: 'bg-white',
+    icontextColor: 'text-[#F7CD4D]',
+  }]
+
   return (
     <div>
       <div className="flex flex-col gap-12 zoomed-container">
@@ -99,22 +122,14 @@ const Project = () => {
                     />
                   }
                 />
-                <div className="w-[100px] h-full text-center rounded-md bg-primaryN30 flex justify-center items-center">
-                  <label className="mr-2 text-ms font-light">All</label>
-                  <span className="px-[6px] py-[1px] text-xs text-white bg-primaryN70 rounded">1</span>
-                </div>
-                <div className="w-[100px] h-full text-center rounded-md bg-[#FF931E4C] flex justify-center items-center">
-                  <label className="mr-2 text-ms font-light">Upload</label>
-                  <span className="px-[6px] py-[1px] text-xs text-dragonOrange bg-white rounded">0</span>
-                </div>
-                <div className="w-[100px] h-full text-center rounded-md bg-[#008ECE4C] flex justify-center items-center">
-                  <label className="mr-2 text-ms font-light">Takeoff</label>
-                  <span className="px-[6px] py-[1px] text-xs text-kahuBlue bg-white rounded">1</span>
-                </div>
-                <div className="w-[100px] h-full text-center rounded-md bg-[#F7CD4D4C] flex justify-center items-center">
-                  <label className="mr-2 text-ms font-light">Quoting</label>
-                  <span className="px-[6px] py-[1px] text-xs text-[#F7CD4D] bg-white rounded">1</span>
-                </div>
+                {
+                  filterTypeList.map((item) => (
+                    <div key={item.type} className={`w-[96px] h-[26px] text-center rounded-md ${item.bgColor} flex justify-center items-center text-xs`}>
+                      <label className="mr-2 text-ms font-light">{item.type}</label>
+                      <span className={`px-[6px] py-[1px] text-xs ${item.icontextColor} ${item.iconBgColor} rounded`}>1</span>
+                    </div>
+                  ))
+                }
               </div>
               <Button
                 type="primary"
