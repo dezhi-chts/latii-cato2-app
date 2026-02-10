@@ -49,8 +49,20 @@ export const PageLabelingStepInActive = () => {
   return (
     <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
       <InActiveCircle />
-      <div className="text-sm text-baseGray">Page Index</div>
+      <div className="text-sm text-baseGray">Page Labeling</div>
       <div className="text-xs text-baseGray">Step 2</div>
+    </div>
+  )
+}
+
+// Completed step with green check for Page Labeling (used in Pre-Analysis step 3)
+export const PageLabelingStepCompleted = () => {
+  return (
+    <div className="px-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
+      <div className="w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen">
+        <div className="text-white text-xxs font-sans">{'✓'}</div>
+      </div>
+      <div className="text-sm text-accentGreen">Page Labeling</div>
     </div>
   )
 }
@@ -59,6 +71,16 @@ export const PageAnalysisStepActive = () => {
   return (
     <div className="h-full pl-14 flex flex-row items-center">
       <div className="text-sm text-forumBlue">Page Analysis</div>
+      <div className="text-xs text-basicGray">Step 3</div>
+    </div>
+  )
+}
+
+export const PagePreAnalysisStepActive = () => {
+  return (
+    <div className="pl-10 h-full flex flex-row items-center gap-2">
+      <ActiveCircle number={3} />
+      <div className="text-sm text-forumBlue">Pre-Analysis</div>
       <div className="text-xs text-basicGray">Step 3</div>
     </div>
   )
