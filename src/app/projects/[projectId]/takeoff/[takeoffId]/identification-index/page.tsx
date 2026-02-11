@@ -19,6 +19,7 @@ import {
   DownOutlined,
   CloseOutlined,
   LoadingOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -31,9 +32,9 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
+import { deleteDrawingIndex, getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
 
-import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -49,6 +50,8 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
+
+const confirm = Modal.confirm;
 
 
 export enum BuildLoadingStep {
@@ -421,6 +424,35 @@ const IdentificationIndex = () => {
     updateFileStatus(selectedFileId, FileStatus.Processing)
   }
 
+  const handleDeleteIndex = (item: { id: number }) => {
+    confirm({
+      title: "Are you sure to delete this index?",
+      icon: <ExclamationCircleOutlined />,
+      onOk() {
+        handleDeleteIndexById(item?.id);
+      },
+      onCancel() { },
+    });
+  }
+
+  const handleDeleteIndexById = async (id: number) => {
+    let res = await deleteDrawingIndex(id);
+    if (res.status === 'success') {
+      notification.success({
+        message: "Success",
+        description: "Deleted successfully",
+      });
+      setContentData((prev: any) => {
+        return prev.filter((item: any) => item.id !== id);
+      });
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to delete evidence",
+      });
+    }
+  }
+
   const handleNext = useCallback((btnInfo: { text: string }) => {
     // 处理右上角的next按钮
     if (btnInfo.text === ButtonText.RestartIndex) {
@@ -439,7 +471,7 @@ const IdentificationIndex = () => {
     } else if (btnInfo.text === ButtonText.NextFile) {
       // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
       const findNextFile = fileList.find((item: any) => {
-        return item.status !== FileStatus.Completed;
+        return item.operation_type !== FileOperationType.Quote && item.status !== FileStatus.Completed;
       });
       if (findNextFile) {
         // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
@@ -450,6 +482,7 @@ const IdentificationIndex = () => {
       router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
     }
   }, [fileList, indexBoxList, labelList]);
+
 
   // 右上角按钮的相关信息
   const nextButtonInfo = useMemo(() => {
@@ -472,7 +505,7 @@ const IdentificationIndex = () => {
       }
     } else if (currentFile?.status === FileStatus.Completed) {
       // 当前文件的状态为已完成，则判断是否有别的文件未处理
-      const hasUnprocessedFiles = fileList.some((file: any) => file.status === FileStatus.Processing || file.status === FileStatus.Uploaded);
+      const hasUnprocessedFiles = fileList.some((file: any) => file.operation_type !== FileOperationType.Quote && (file.status === FileStatus.Processing || file.status === FileStatus.Uploaded));
       if (hasUnprocessedFiles) {
         buttonText = ButtonText.NextFile;
       } else {
@@ -526,6 +559,7 @@ const IdentificationIndex = () => {
                 isEmptyContent={isEmptyContent}
                 pdfTotalPages={totalPage}
                 handlePageChange={handlePageChange}
+                handleDeleteIndex={handleDeleteIndex}
               />
             ) : (
               <IndexRectView

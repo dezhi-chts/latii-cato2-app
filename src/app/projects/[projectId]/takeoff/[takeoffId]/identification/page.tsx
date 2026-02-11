@@ -29,7 +29,7 @@ import {
 import { getTakeOffById } from "@/services/takeOffService";
 import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
 
-import { EvidenceType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -512,9 +512,9 @@ const Identification = () => {
     }
   );
 
-  const handleAddRectBox = () => {
+  const handleAddRectBox = (type: GroupType) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
-      pdfRef.current?.addingRect({ type: "Item", isSaveEvidence: true });
+      pdfRef.current?.addingRect({ type, isSaveEvidence: true });
     }
   };
 
@@ -573,6 +573,12 @@ const Identification = () => {
     }
   }, [fileList, selectedFileId]);
 
+  const currentFileOperationType = useMemo(() => {
+    if (!fileList.length) return '';
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    return file.operation_type || '';
+  }, [fileList, selectedFileId]);
+
   return (
     <div className="w-full h-[100vh] flex flex-col">
       <Header
@@ -583,11 +589,15 @@ const Identification = () => {
         nextButtonInfo={nextButtonInfo}
         handleNext={handleNext}
       />
-      <DrawingTagsView
-        pageTypeTags={pageTypeList}
-        currentType={currentType}
-        setCurrentType={setCurrentType}
-      ></DrawingTagsView>
+      {
+        currentFileOperationType === FileOperationType.ArchitectureDrawing && (
+          <DrawingTagsView
+            pageTypeTags={pageTypeList}
+            currentType={currentType}
+            setCurrentType={setCurrentType}
+          ></DrawingTagsView>
+        )
+      }
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
         <div
@@ -623,8 +633,20 @@ const Identification = () => {
         <div className={`flex-1 flex flex-col px-6 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
-              <AddRectBoxControls handleAddRectBox={handleAddRectBox} />
-              <ClearAllControls handleClearAll={handleClearAllCrop} />
+              {
+                currentFileOperationType === FileOperationType.ArchitectureDrawing ?
+                  <>
+                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.Label)} />
+                    <ClearAllControls handleClearAll={handleClearAllCrop} />
+                  </>
+                  : currentFileOperationType === FileOperationType.Quote ?
+                    <>
+                      <AddRectBoxControls theme="default" text="Add Item" handleAddRectBox={() => handleAddRectBox(GroupType.Item)} />
+                      <AddRectBoxControls theme="default" text="Layer Information" handleAddRectBox={() => handleAddRectBox(GroupType.LayerInfo)} />
+                      <AddRectBoxControls theme="default" text="Add Description" handleAddRectBox={() => handleAddRectBox(GroupType.Description)} />
+                    </>
+                    : null
+              }
             </div>
             <div className="flex flex-row gap-2">
               <SelectPagesControls
@@ -651,6 +673,7 @@ const Identification = () => {
               onRefreshEvidence={() => {
                 getFileEvidences();
               }}
+              onChangePage={setPage}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}

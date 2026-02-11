@@ -20,6 +20,8 @@ import {
   Popconfirm,
   Image,
   message,
+  Popover,
+  InputNumber,
 } from "antd";
 import {
   LoadingOutlined,
@@ -60,6 +62,7 @@ import {
   GroupType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
+import { max } from "lodash";
 
 const { confirm } = Modal;
 
@@ -112,10 +115,21 @@ const getResizeCursorStyle = (pointType: string) => {
   return cursorMap[pointType] || "default";
 };
 
+// 以下的框类型显示 读取按钮
 const showReadBtnGroupTypes = [GroupType.OCR];
+// 以下的框类型显示 确认按钮
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+// 以下的框类型显示 数字按钮
+const showNumBtnGroupTypes = [GroupType.Item];
 
-const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+// 以下的框类型不显示 类型选择框
+const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+// 框类型对应的颜色
+const groupTypeColor: any = {
+  [GroupType.Item]: colorList.forumBlue,
+  [GroupType.LayerInfo]: colorList.accentIndigo,
+  [GroupType.Description]: colorList.accentGreen,
+}
 
 const PdfWrapper = forwardRef(
   (
@@ -132,6 +146,7 @@ const PdfWrapper = forwardRef(
       showEvidenceType = false,
       onRefreshEvidence,
       resetAdding,
+      onChangePage,
       onTotalPages,
       onAppendEvidence,
       onDeleteEvidence,
@@ -150,7 +165,7 @@ const PdfWrapper = forwardRef(
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
     const renderTaskRef = useRef<any>(null);
     const loadingTaskRef = useRef<any>(null);
-    const pdfPageText = useRef<TextContent>({} as TextContent);
+    //  const pdfPageText = useRef<TextContent>({} as TextContent);
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -195,6 +210,8 @@ const PdfWrapper = forwardRef(
     >({});
 
     const centerIndexRef = useRef<number>(0);
+
+    const createNewBoxInfo = useRef<any>(null);
 
     const [pageEvidence, setPageEvidence] = useState<any[]>([]);
 
@@ -258,6 +275,7 @@ const PdfWrapper = forwardRef(
       }
     }, []);
 
+    // 加载PDF文档
     useEffect(() => {
       if (!pdfUrl || pdfUrl.trim().length === 0) return;
       loadPdf(pdfUrl);
@@ -274,6 +292,7 @@ const PdfWrapper = forwardRef(
       };
     }, [pdfUrl]);
 
+    // 监听裁剪区域数量变化
     useEffect(() => {
       onCropSectionsCount?.(cropSections.length);
     }, [cropSections.length]);
@@ -440,6 +459,7 @@ const PdfWrapper = forwardRef(
             view_box: JSON.stringify(viewport.viewBox),
             is_rotate: rotateAngle !== 0,
             rotation_angle: rotateAngle,
+            sub_text: section.sub_text ?? '',
           };
         });
 
@@ -579,6 +599,7 @@ const PdfWrapper = forwardRef(
         view_box: JSON.stringify(viewport.viewBox),
         is_rotate: rotateAngle !== 0,
         rotation_angle: rotateAngle,
+        sub_text: evid.sub_text,
       };
       let res = await evidenceBatchUpdate([data]);
       if (res.status === "success") {
@@ -605,6 +626,7 @@ const PdfWrapper = forwardRef(
       addRectArea(addingOption);
     };
 
+    // 监听当前页码变化, 重新渲染当前页码的内容
     useEffect(() => {
       if (
         !pdfDoc.current ||
@@ -613,7 +635,6 @@ const PdfWrapper = forwardRef(
         pageNum === 0
       )
         return;
-      let aborted = false;
       (async () => {
         const page = await pdfDoc.current.getPage(pageNum);
         const pageOriginalRotation = page.rotate;
@@ -646,18 +667,16 @@ const PdfWrapper = forwardRef(
 
         try {
           await task.promise;
-          if (aborted) return;
-
           setStageWidth(viewport.width);
           setStageHeight(viewport.height);
 
           requestAnimationFrame(() => {
             setShowEvidence(true);
           });
-          pdfPageText.current = await page.getTextContent({
-            normalizeWhitespace: true,
-            disableCombineTextItems: true,
-          });
+          // pdfPageText.current = await page.getTextContent({
+          //   normalizeWhitespace: true,
+          //   disableCombineTextItems: true,
+          // });
 
           if (currentViewportRef.current && cropSections.length > 0) {
             setCropSections((prev) => {
@@ -694,12 +713,16 @@ const PdfWrapper = forwardRef(
               });
             });
           }
+
+          // 页面渲染成功后，需要判断是否需要增加一个一样尺寸的框，如果createNewBoxInfo有值，说明需要增加一个框
+          if (createNewBoxInfo.current) {
+            handlePrevOrNextBox(createNewBoxInfo.current);
+          }
         } catch (e: any) {
           if (e?.name !== "RenderingCancelledException") console.error(e);
         }
       })();
       return () => {
-        aborted = true;
         renderTaskRef.current?.cancel?.();
       };
     }, [pageNum, scale, rotate]);
@@ -1129,8 +1152,156 @@ const PdfWrapper = forwardRef(
 
           });
       }
-
     };
+
+    const handleCreateBox = (evid: any, type: 'center' | 'next' | 'prev') => {
+      if (type === 'center') {
+        // 在当前框的位置的下方，增加一个一样的宽度的框
+        handleCenterBox(evid);
+      } else if (type === 'next') {
+        if (page < totalPages) {
+          // 在下一页的头部位置增加一个一样尺寸的框，并且需要将前一页的页面滚动到头部
+          createNewBoxInfo.current = {
+            type: 'next',
+            evid: evid,
+          };
+          onChangePage && onChangePage(page + 1);
+        }
+
+      } else if (type === 'prev') {
+        if (page > 1) {
+          // 在上一页的尾部位置增加一个一样尺寸的框，并且需要将后一页的页面滚动到尾部
+          createNewBoxInfo.current = {
+            type: 'prev',
+            evid: evid,
+          };
+          onChangePage && onChangePage(page - 1);
+        }
+      }
+    }
+
+    const handleCenterBox = (evid: any) => {
+      // 获取当前框的位置和尺寸，然后在当前框的位置下方，增加一个一样的尺寸的框，但是需要注意，不能超过pdf的页面告诉，如果超过高度，则需要调整框的高度
+      if (!currentViewportRef.current) {
+        console.log("当前视图信息不存在");
+        return;
+      }
+      const viewPort = currentViewportRef.current;
+      const viewportHeight = viewPort.height;
+      if (!evid.viewportPolygons || evid.viewportPolygons.length === 0) {
+        console.log("当前框没有有效多边形信息");
+        return;
+      }
+      let { minX, minY, maxX, maxY, width, height } = getZoneBounds(
+        evid.viewportPolygons,
+      );
+      let y = minY + height + 30;
+      // 检查向下放是否超出视口高度
+      if (y + height > viewportHeight) {
+        // 尝试向上放
+        y = minY - height - 30;
+        // 检查向上放是否超出上边界
+        if (y < 0) {
+          // 上下都放不下，放在视口底部
+          y = viewportHeight - height - 30;
+        }
+      }
+
+      handleAutoCreateEvid(evid, { x: minX, y: y, width, height });
+    }
+
+
+    const handlePrevOrNextBox = (info: { evid: any, type: 'prev' | 'next' }) => {
+      if (!currentViewportRef.current) {
+        console.log("当前视图信息不存在");
+        return;
+      }
+      const viewPort = currentViewportRef.current;
+      const viewportHeight = viewPort.height;
+
+      const { evid, type } = info;
+      if (type === 'prev') {
+        // 在已经更新的页面尾部位置增加一个一样尺寸的框，并且需要将后一页的页面滚动到尾部，注意不能超过pdf的页面高度
+        let { minX, minY, width, height } = getZoneBounds(
+          evid.viewportPolygons,
+        );
+        let y = viewportHeight - height - 10;
+        handleAutoCreateEvid(evid, { x: minX, y: y, width, height });
+        // 将页面滚动到底部
+        const container = scrollRef.current;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      } else if (type === 'next') {
+        // 在已经更新的页面尾部头部增加一个一样尺寸的框
+        let { minX, minY, width, height } = getZoneBounds(
+          evid.viewportPolygons,
+        );
+        let y = 0;
+        handleAutoCreateEvid(evid, { x: minX, y: y, width, height });
+        // 将页面滚动到顶部
+        const container = scrollRef.current;
+        if (container) {
+          container.scrollTop = 0;
+        }
+      }
+    }
+
+
+    const handleAutoCreateEvid = (evid: any, bounds: { x: number, y: number, width: number, height: number }) => {
+      const viewPort = currentViewportRef.current;
+      if (!viewPort) return;
+
+      const { x: minX, y: minY, width, height } = bounds;
+      const p1 = { x: minX, y: minY };
+      const p2 = { x: minX + width, y: minY };
+      const p3 = { x: minX + width, y: minY + height };
+      const p4 = { x: minX, y: minY + height };
+
+      const pdfPoints = viewPort
+        ? [
+          {
+            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+          },
+        ]
+        : [];
+
+      const groupFrame = {
+        id: `group-${Date.now()}`,
+        shapeType: GroupShapeType.Rectangle, //矩形框
+        type: evid?.type,
+        polygons: [p1, p2, p3, p4],
+        pdfPolygons: pdfPoints,
+        completed: true,
+        bounds: getZoneBounds([p1, p2, p3, p4]),
+        sub_text: evid.sub_text ?? '',
+      };
+      // 先手动添加框到临时crop中
+      insertGroup(groupFrame);
+
+      // 直接保存成evidence
+      batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false })
+        .then(() => {
+          // 保存成功
+          createNewBoxInfo.current = null;
+        })
+        .catch(() => {
+          createNewBoxInfo.current = null;
+        });
+    }
 
     //生成截图
     const createImage = (groupId: string) => {
@@ -2222,12 +2393,12 @@ const PdfWrapper = forwardRef(
                   ) {
                     return null;
                   }
-                  let { minX, minY, width, height } = getZoneBounds(
+                  let { minX, minY, maxX, maxY, width, height } = getZoneBounds(
                     item.viewportPolygons,
                   );
 
                   let type = item.type ?? '';
-
+                  let color: string = groupTypeColor[type] ?? colorList.forumBlue;
                   return (
                     <div
                       key={item.id}
@@ -2237,6 +2408,24 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
+                      {showNumBtnGroupTypes.includes(type) &&
+                        <div className="pl-[2px] inline-block">
+                          <input
+                            className="px-[2px] h-[20px] w-fit text-center outline-none text-white text-xxs rounded-md "
+                            defaultValue={item.sub_text ?? ''}
+                            onBlur={(e: any) => {
+                              if (e.target.value.trim() !== '') {
+                                updateEvidence({ ...item, sub_text: e.target.value });
+                              }
+                            }}
+                            style={{
+                              width: 'fit-content',
+                              maxWidth: 35,
+                              backgroundColor: color
+                            }}
+                          />
+                        </div>
+                      }
                       <div
                         className="absolute flex flex-row items-center"
                         style={{
@@ -2270,6 +2459,54 @@ const PdfWrapper = forwardRef(
                           </Popconfirm>
                         </div>
                       </div>
+                      {showNumBtnGroupTypes.includes(type) &&
+                        <div
+                          className="transition-all flex justify-center items-center gap-1"
+                          style={{
+                            position: "absolute",
+                            left: width / 2 - 30 + "px",
+                            top:
+                              maxY > stageHeight - 10
+                                ? height - 30 + "px"
+                                : height + 2 + "px",
+                          }}
+                        >
+                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
+                            onClick={() => {
+                              handleCreateBox(item, 'prev');
+                            }}>
+                            <span className="-mt-[2px] text-xs">{'<'}</span>
+                          </div>
+                          <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
+                            onClick={() => {
+                              handleCreateBox(item, 'center');
+                            }}>
+                            <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
+                          </div>
+                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
+                            onClick={() => {
+                              handleCreateBox(item, 'next');
+                            }}>
+                            <span className="-mt-[2px] text-xs">{'>'}</span>
+                          </div>
+                          <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
+                          }}>
+                            <Popover placement="rightBottom"
+                              title={<div className="text-xs font-medium">Chain Link</div>}
+                              content={<div className="w-[300px] text-xs text-basicGray">
+                                Create Linked Box Create a new box linked to this item.
+                                <ul className="ml-3 list-disc">
+                                  <li>Use the <span className="text-black font-medium">Center button</span> to create a box on the current page.</li>
+                                  <li>Use the <span className="text-black font-medium">Previous or Next buttons</span> to create a linked box with this same label on the adjacent pages.</li>
+                                </ul>
+                              </div>}
+                              trigger="hover"
+                            >
+                              <Image src="/assets/icons/info-white.svg" alt="plus icon" width={12} height={12} preview={false}></Image>
+                            </Popover>
+                          </div>
+                        </div>
+                      }
                     </div>
                   );
                 })}
@@ -2284,11 +2521,7 @@ const PdfWrapper = forwardRef(
                   }
                   const { minX, minY, maxX, maxY, width, height } =
                     group.bounds;
-                  let color: string = colorList.forumBlue;
-                  let type = "";
-
-                  color = colorList.accentIndigo;
-                  type = group.type;
+                  let color: string = groupTypeColor[group.type] ?? colorList.forumBlue;
                   return (
                     <div
                       key={group.id}
@@ -2511,14 +2744,18 @@ const ShapeWrapper = ({
   if (type === "evidence") {
     try {
       let evidType = shape.type ?? '';
-      if (typeList && typeList?.length > 0) {
-        // 扁平化处理typeList
-        const flatTypeList = typeList.flatMap((item) => {
-          return item?.children?.length > 0 ? item.children : [item];
-        });
-        let typeColor = flatTypeList.find((item) => item.type === evidType)?.color;
-        if (typeColor) {
-          color = typeColor;
+      if (groupTypeColor[evidType]) {
+        color = groupTypeColor[evidType];
+      } else {
+        if (typeList && typeList?.length > 0) {
+          // 扁平化处理typeList
+          const flatTypeList = typeList.flatMap((item) => {
+            return item?.children?.length > 0 ? item.children : [item];
+          });
+          let typeColor = flatTypeList.find((item) => item.type === evidType)?.color;
+          if (typeColor) {
+            color = typeColor;
+          }
         }
       }
     } catch (error) {

@@ -134,9 +134,9 @@ export const AddRectBoxControls = ({
   const themeInfo = themeInfos[theme] || themeInfos['default']
   return (
     <div
-      className={`h-[28px] ${themeInfo.bgColor} text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
+      className={`px-4 h-[28px] ${themeInfo.bgColor} text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
       style={{
-        width: fullWidth ? '100%' : '124px',
+        width: fullWidth ? '100%' : 'auto',
       }}
       onClick={() => handleAddRectBox()}
     >

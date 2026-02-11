@@ -1,6 +1,7 @@
 import { updateDrawingIndexType } from "@/services/drawingIndexService";
 import { Checkbox, Select, notification } from "antd";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 
 // const LabelTypeList = [
@@ -32,7 +33,8 @@ const ContentView = ({
   drawingTypeList,
   pdfTotalPages,
   isEmptyContent, // 是否数据为空
-  handlePageChange
+  handlePageChange, // 切换页面
+  handleDeleteIndex, // 删除索引
 }: any) => {
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
@@ -89,6 +91,9 @@ const ContentView = ({
               </Select.Option>
             ))}
           </Select>
+        </div>
+        <div className="mx-1 cursor-pointer" onClick={() => handleDeleteIndex(item)}>
+          <Image src="/assets/icons/delete.svg" alt="Drag" width={20} height={20}></Image>
         </div>
       </div>
     );
