@@ -174,7 +174,7 @@ const Thumbnail = ({
         ref={scrollContainerRef}
       >
         <div className="py-6 flex flex-col gap-4 min-h-full items-center">
-          {data.map((info, index) => {
+          {data?.length > 0 && data.map((info, index) => {
             let itemPageNum = getItemPage(info, index);
             return (
               <div
@@ -201,7 +201,7 @@ const Thumbnail = ({
                   </div>
                   <div>
                     <LazyImage
-                      src={info.s3_url}
+                      src={info.s3_url || ""}
                       alt={info.file_name}
                       onError={(e) => {
                         e.currentTarget.src =

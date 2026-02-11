@@ -83,7 +83,7 @@ export const FileItem = ({
       bgColor: "bg-[#C4D6F0]",
       textColor: "text-forumBlue",
     },
-    'default': {
+    [FileStatus.NotApplicable]: {
       text: "Not Applicable",
       bgColor: "bg-[#DCDCDC]",
       textColor: "text-basicGray",

@@ -34,6 +34,8 @@ export enum GroupType {
   Table = "Table",
   TitleInfo = "Title Info", // 标题信息框
   DrawingIndex = "Drawing Index", // 绘图索引框
+  LayerInfo = "Layer Info", // 图层信息框
+  Description = "Description", // 描述框
 }
 
 //矩形/多边形框
@@ -110,12 +112,17 @@ export interface FileItem {
   total_pages: number;
 }
 
+export enum FileOperationType {
+  ArchitectureDrawing = "Architecture_drawing",
+  Quote = "Quote",
+}
+
 // 文件状态
 export enum FileStatus {
   Uploaded = "Uploaded",
   Completed = "Completed",
   Processing = "Processing",
-  Unknown = "Unknown",
+  NotApplicable = "Not Applicable",
 }
 
 //pdf wrapper props
@@ -133,6 +140,7 @@ export interface PdfWrapperProps {
   showEvidenceType?: boolean; //是否显示evidence type
   onRefreshEvidence?: () => void;
   resetAdding?: () => void;
+  onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
   onAppendEvidence?: (evidenceList: EvidenceType[]) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新
   onDeleteEvidence?: (evidenceIds: number[]) => void; // 删除evidence后，刷新evidence列表，进行增量刷新

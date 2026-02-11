@@ -10,6 +10,7 @@ import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal
 import { getTakeOffsByProjectId, deleteTakeOffById } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
 import UploadFilesProgress from "./components/Upload-Files-Progress";
+import PdfParseModal from "./components/Pdf-Parse-Modal";
 
 const { confirm } = Modal;
 
@@ -21,8 +22,10 @@ const Project = () => {
   const [takeoffsList, setTakeoffsList] = useState<any[]>([]);
   const [fullLoading, setFullLoading] = useState(false);
   const [showUploadProgess, setShowUploadProgess] = useState(false);
+  const [showPdfParseModal, setShowPdfParseModal] = useState(false);
 
   const uploadFiles = useRef<any>(null);
+  const projectInfo = useRef<any>(null);
 
   useEffect(() => {
     getProjectTakeoffs();
@@ -196,10 +199,29 @@ const Project = () => {
             onSuccess={(data: any) => {
               // 关闭Upload-Files-Progress弹窗
               setShowUploadProgess(false);
-              // 关闭Create-TakeOff-Modal弹窗
-              setShowCreateTakeOffModal(false);
+              projectInfo.current = data;
+              // 打开文件解析弹窗
+              setShowPdfParseModal(true);
               // 刷新takeoffsList
               getProjectTakeoffs();
+            }}
+          />
+        )
+      }
+      {
+        showPdfParseModal && (
+          <PdfParseModal
+            isOpen={showPdfParseModal}
+            closeModal={() => setShowPdfParseModal(false)}
+            data={projectInfo.current}
+            handleNext={(type: 'takeoffModal' | 'pageIndex') => {
+              // 跳转到Page-Index页面
+              //router.push(`/projects/38/takeoff/15/identification-index`);
+              router.push(`/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification-index`);
+            }}
+            handleCancel={() => {
+              // 关闭Pdf-Parse-Modal弹窗
+              setShowPdfParseModal(false);
             }}
           />
         )

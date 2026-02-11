@@ -17,6 +17,7 @@ import { Button } from "antd";
 import { useParams } from "next/navigation";
 import { FileItem } from '../../identification-index/components/FileList';
 import { PageIndexStepInActive, PageLabelingStepActive, PageAnalysisStepInActive } from '../../identification-index/components/HeaderStepProgress';
+import { FileOperationType, FileStatus } from "../../types/evidence";
 
 const Header = ({
   pdfRef,
@@ -61,7 +62,8 @@ const Header = ({
               const uploadFile: UploadFile = {
                 id: file.id,
                 name: file.file_name,
-                status: file.status || 'undo',
+                status: file.operation_type === FileOperationType.Quote ? FileStatus.Processing : (file.status || FileStatus.Processing),
+                operation_type: file.operation_type || FileOperationType.ArchitectureDrawing,
                 url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",
                 size: 0,

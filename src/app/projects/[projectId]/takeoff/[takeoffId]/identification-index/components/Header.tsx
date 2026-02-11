@@ -17,7 +17,7 @@ import { Button } from "antd";
 import { useParams } from "next/navigation";
 import { PageAnalysisStepInActive, PageIndexStepActive, PageLabelingStepInActive } from "./HeaderStepProgress";
 import { FileItem } from "./FileList";
-import { FileStatus } from "../../types/evidence";
+import { FileOperationType, FileStatus } from "../../types/evidence";
 import { ButtonText } from "../page";
 
 const Header = ({
@@ -42,6 +42,9 @@ const Header = ({
 
   const handleClickFile = async (file: any) => {
     if (selectedFileId === file.id) return;
+
+    if (file.operation_type === FileOperationType.Quote) return;
+
     // 切换文件
     setSelectedFileId(file.id);
   }
@@ -60,7 +63,8 @@ const Header = ({
               const uploadFile: UploadFile = {
                 id: file.id,
                 name: file.file_name,
-                status: file.status || 'undo',
+                status: file.operation_type === FileOperationType.Quote ? FileStatus.NotApplicable : (file.status || FileStatus.Processing),
+                operation_type: file.operation_type,
                 url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",
                 size: 0,
