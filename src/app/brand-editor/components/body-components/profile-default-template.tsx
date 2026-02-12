@@ -46,8 +46,53 @@ const ProfileDefaultTemplate = (props: any) => {
 		}
 	};
 
+	const changeProductTypesLibrarySearchWordAndAlreadyExistence = (e: any) => {
+		let keyword = ""
+		if (e) {
+			const value = e?.target?.value
+			setProductTypesLibrarySearchWord(value)
+			keyword = value.toLowerCase();
+		} else {
+			keyword = productTypesLibrarySearchWord.toLowerCase();
+		}
+		productTypesLibrary.forEach((item: any) => {
+			item.isShow = false;
+
+			if (
+				item.product_type_name &&
+				item.product_type_name.toLowerCase().includes(keyword)
+			) {
+				item.isShow = true;
+			}
+		});
+		setProductTypesLibrary([...productTypesLibrary])
+	};
+
+	const changeOperabilityLibrarySearchWordAndAlreadyExistence = (e: any) => {
+		let keyword = ""
+		if (e) {
+			const value = e?.target?.value
+			setOperabilityLibrarySearchWord(value)
+			keyword = value.toLowerCase();
+		} else {
+			keyword = operabilityLibrarySearchWord.toLowerCase();
+		}
+
+		operabilityLibrary.forEach((item: any) => {
+			item.isShow = false;
+
+			if (
+				item.name &&
+				item.name.toLowerCase().includes(keyword)
+			) {
+				item.isShow = true;
+			}
+		});
+		setOperabilityLibrary([...operabilityLibrary])
+	};
+
 	return (
-		<div className="bg-white h-full">
+		<div className="bg-white h-full text-[14px]">
 			<div
 				className="inline-flex items-center mb-2 cursor-pointer"
 				style={{ color: "#014767" }}
@@ -71,6 +116,8 @@ const ProfileDefaultTemplate = (props: any) => {
 								<Input
 									placeholder="Single Swing, Hopper"
 									prefix={<SearchOutlined className='text-[#DCDCDC]' />}
+									value={productTypesLibrarySearchWord}
+									onChange={changeProductTypesLibrarySearchWordAndAlreadyExistence}
 								/>
 							</div>
 							<div style={{ height: "calc(100% - 50px)" }} className='overflow-y-auto'>
@@ -121,6 +168,8 @@ const ProfileDefaultTemplate = (props: any) => {
 								<Input
 									placeholder="Please input"
 									prefix={<SearchOutlined className='text-[#DCDCDC]' />}
+									value={operabilityLibrarySearchWord}
+									onChange={changeOperabilityLibrarySearchWordAndAlreadyExistence}
 								/>
 							</div>
 							<div style={{ height: "calc(100% - 50px)" }} className='overflow-y-auto'>
