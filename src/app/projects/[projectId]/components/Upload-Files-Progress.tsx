@@ -56,33 +56,42 @@ const UploadFilesProgress = ({
   const handleUploadFiles = async () => {
     const { archFiles = [], arcHingeMode = '1', quoteFiles = [], quoteHingeMode = '1' } = uploadFilesData;
     // 目前只处理archFiles文件
-    const filesInfo: any = archFiles.map((file: any) => ({
+    const archFilesInfo: any = archFiles.map((file: any) => ({
       file_name: file.name,
       operation_type: 'Architecture_drawing',
       file_type: 'PDF',
       country_of_origin: "United States",
     }));
 
-    const files = archFiles;
+    const quoteFilesInfo: any = quoteFiles.map((file: any) => ({
+      file_name: file.name,
+      operation_type: 'Quote',
+      file_type: 'PDF',
+      country_of_origin: "United States",
+    }));
+
+    const filesInfo = [...archFilesInfo, ...quoteFilesInfo];
+
+    const files = [...archFiles, ...quoteFiles];
 
     setUploadProgress(0);
     setStatus('uploading');
 
-    let uploadFunction = syncCreateProject ? uploadFilesNoProjectId : uploadFiles;
     let projectIdParam = syncCreateProject ? null : projectId;
 
     try {
       // 添加超时处理，避免无限期等待
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout')), 300000); // 5分钟超时
+        setTimeout(() => reject(new Error('Upload timeout')), 10 * 60 * 1000); // 10分钟超时
       });
 
       let res: any = await Promise.race([
-        uploadFunction(
+        uploadFilesNoProjectId({
           filesInfo,
           files,
-          projectIdParam as any,
-          arcHingeMode as any,
+          projectId: projectIdParam,
+          hinge_status: arcHingeMode
+        },
           (progressEvent: any) => {
             handleProgress(progressEvent);
           }

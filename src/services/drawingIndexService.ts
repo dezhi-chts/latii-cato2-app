@@ -104,3 +104,14 @@ export const updatePageType = async ({
     return { data: null, status: "error" };
   }
 };
+
+export const deleteDrawingIndex = async (drawingIndexId: string | number) => {
+  try {
+    const url = `/pdf/drawing-index/${drawingIndexId}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error deleting drawing index:", error);
+    return { data: null, status: "error" };
+  }
+};

@@ -21,12 +21,15 @@ export type ValidCountryOfOrigin =
   | "Morocco";
 
 export const uploadFiles = async (
-  filesInfo: CatoUploadFile[],
-  files: UploadFile[],
-  projectId: any,
-  hinge_status?: "1" | "2" | undefined,
+  info: {
+    filesInfo: CatoUploadFile[];
+    files: UploadFile[];
+    projectId: any;
+    hinge_status?: "1" | "2" | undefined;
+  },
   onUploadProgress?: (progressEvent: any) => void,
 ) => {
+  const { filesInfo, files, projectId, hinge_status } = info;
   const url = `/project/file/upload_files?project_id=${projectId}${
     hinge_status ? `&hinge_status=${hinge_status}` : ""
   }`;
@@ -54,15 +57,16 @@ export const uploadFiles = async (
 };
 
 export const uploadFilesNoProjectId = async (
-  filesInfo: CatoUploadFile[],
-  files: UploadFile[],
-  projectId: any,
-  hinge_status?: "1" | "2" | undefined,
+  info: {
+    filesInfo: CatoUploadFile[];
+    files: UploadFile[];
+    projectId: any;
+    hinge_status?: "1" | "2" | undefined;
+  },
   onUploadProgress?: (progressEvent: any) => void,
 ) => {
-  const url = `/project/file/create_and_upload_files?${
-    hinge_status ? `&hinge_status=${hinge_status}` : ""
-  }`;
+  const { filesInfo, files, projectId, hinge_status } = info;
+  let url = `/project/file/create_and_upload_files?${hinge_status ? `hinge_status=${hinge_status}` : ""}`;
 
   const metas = JSON.stringify(filesInfo);
   const formData = new FormData();
@@ -74,6 +78,9 @@ export const uploadFilesNoProjectId = async (
   });
 
   formData.append("metas", metas);
+  if (projectId) {
+    formData.append("project_id", projectId);
+  }
 
   try {
     const response = await http.post(url, formData, undefined, {
