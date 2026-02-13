@@ -4,19 +4,21 @@ import { useUser } from "@/context/UserContext";
 import { useEffect, useRef, useState } from "react";
 import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
-import { Input, message, Segmented, Spin, Modal } from "antd";
+import { Input, Segmented, Spin, Modal } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
-import type { UploadFile } from "antd/es/upload/interface";
 import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
 import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation";
 import { fetchProjects, deleteProject } from "@/services/projectService";
-import { deleteTakeOffById, getAllTakeoffList } from "@/services/takeOffService";
+import {
+  deleteTakeOffById,
+  getAllTakeoffList,
+} from "@/services/takeOffService";
 
 import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
 
@@ -155,27 +157,20 @@ export const projects: ProjectRow[] = [
   },
 ];
 
-const defaultFields: { field_name: string, Hint_text: string }[] = [{
-  field_name: "project_name",
-  Hint_text: "Project Name",
-}, {
-  field_name: "update_time",
-  Hint_text: "Last Edit",
-}, {
-  field_name: "operation",
-  Hint_text: "Operation",
-}
-  /*{
-    field_name: "status",
-    Hint_text: "Status",
-  }, {
-    field_name: "notes",
-    Hint_text: "Notes",
-  }, {
-    field_name: "is_favorite",
-    Hint_text: "Favorite",
-  }*/
-]
+const defaultFields: { field_name: string; Hint_text: string }[] = [
+  {
+    field_name: "project_name",
+    Hint_text: "Project Name",
+  },
+  {
+    field_name: "update_time",
+    Hint_text: "Last Edit",
+  },
+  {
+    field_name: "operation",
+    Hint_text: "Operation",
+  },
+];
 
 type Category = "Projects" | "Take Offs";
 
@@ -183,15 +178,17 @@ const Home = () => {
   const router = useRouter();
 
   const { first_name } = useUser();
-  const [showCreateProjectModal, setShowCreateProjectModal] = useState<boolean>(false);
-  const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] = useState<boolean>(false);
+  const [showCreateProjectModal, setShowCreateProjectModal] =
+    useState<boolean>(false);
+  const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] =
+    useState<boolean>(false);
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
-  const [filterValue, setFilterValue] = useState<string>('');
+  const [filterValue, setFilterValue] = useState<string>("");
   const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [takeoffs, setTakeoffs] = useState<any>([])
+  const [takeoffs, setTakeoffs] = useState<any>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
-    return defaultFields.map((field) => field.field_name)
+    return defaultFields.map((field) => field.field_name);
   });
 
   const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
@@ -216,10 +213,6 @@ const Home = () => {
     }
   }
 
-  function emptyFilterValue() {
-    handleValueChange("");
-  }
-
   function openModal() {
     setShowCreateProjectModal(true);
   }
@@ -232,7 +225,6 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-
   const getProjects = async () => {
     setProjectLoading(true);
     const projects = await fetchProjects();
@@ -242,7 +234,7 @@ const Home = () => {
     } else {
       setProjects([]);
     }
-  }
+  };
 
   const getTakeoffs = async () => {
     setTakeOffLoading(true);
@@ -254,7 +246,7 @@ const Home = () => {
     } else {
       setTakeoffs([]);
     }
-  }
+  };
 
   const handleRemoveProject = async (record: ProjectRow) => {
     confirm({
@@ -266,8 +258,8 @@ const Home = () => {
         setLoading(false);
         getProjects();
       },
-    })
-  }
+    });
+  };
 
   const handleRemoveTakeoff = async (takeoff: any) => {
     confirm({
@@ -279,8 +271,8 @@ const Home = () => {
         setLoading(false);
         getTakeoffs();
       },
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     getProjects();
@@ -288,7 +280,7 @@ const Home = () => {
 
   return (
     <div className="w-full h-full">
-      <div className="flex items-start gap-8 pt-24 pl-32 zoomed-container flex-col w-9/12">
+      <div className="flex items-start gap-8 pt-10 pl-12 zoomed-container flex-col w-9/12">
         <div className="flex flex-col gap-2">
           <p className="text-baseGray text-sm ">{formatUserDate()}</p>
           <p className="text-forumBlue text-[22px]">
@@ -299,7 +291,7 @@ const Home = () => {
           <div className="flex items-center justify-between w-full">
             <div className="flex gap-4">
               <Input
-                className="min-w-[400px] w-[20vw] rounded-2xl"
+                className="min-w-[400px] w-[20vw] rounded-xl"
                 allowClear
                 value={filterValue}
                 onChange={(e) => handleValueChange(e.target.value)}
@@ -339,114 +331,103 @@ const Home = () => {
               </Button>
             </div>
           </div>
-          {
-            category === "Projects" ? (
-              <HomeProjectsTable
-                projects={projects}
-                selectedColumns={selectedColumns}
-                tableLoading={projectLoading}
-                handleRemoveProject={handleRemoveProject}
-              />
-            ) : (
-              <HomeTakeoffsTable
-                tableLoading={takeOffLoading}
-                takeoffs={takeoffs}
-                selectedColumns={[]}
-                handleRemoveTakeoff={handleRemoveTakeoff}
-              />
-            )
-          }
+          {category === "Projects" ? (
+            <HomeProjectsTable
+              projects={projects}
+              selectedColumns={selectedColumns}
+              tableLoading={projectLoading}
+              handleRemoveProject={handleRemoveProject}
+            />
+          ) : (
+            <HomeTakeoffsTable
+              tableLoading={takeOffLoading}
+              takeoffs={takeoffs}
+              selectedColumns={[]}
+              handleRemoveTakeoff={handleRemoveTakeoff}
+            />
+          )}
         </div>
 
-        {
-          showCreateProjectModal && (
-            <CreateProjectModal
-              isOpen={showCreateProjectModal}
-              closeModal={closeModal}
-              onHandleUpload={(data: any) => {
-                // 关闭Create-Project-Modal弹窗
-                //closeModal();
-                uploadFiles.current = data;
-                // 打开Upload-Files-Progress弹窗
-                setShowUploadProgess(true);
-                //setShowCreateProjectTakeOffModal(true);
-                //setShowPdfParseModal(true);
-              }}
-            />
-          )
-        }
+        {showCreateProjectModal && (
+          <CreateProjectModal
+            isOpen={showCreateProjectModal}
+            closeModal={closeModal}
+            onHandleUpload={(data: any) => {
+              // 关闭Create-Project-Modal弹窗
+              //closeModal();
+              uploadFiles.current = data;
+              // 打开Upload-Files-Progress弹窗
+              setShowUploadProgess(true);
+              //setShowCreateProjectTakeOffModal(true);
+              //setShowPdfParseModal(true);
+            }}
+          />
+        )}
 
-        {
-          showColumnView && (
-            <ColumnView
-              open={showColumnView}
-              onClose={() => setShowColumnView(false)}
-              columns={defaultFields}
-              onColumnsChange={handleColumnsChange}
-              selectedColumns={selectedColumns}
-            />
-          )
-        }
-        {
-          showUploadProgess && (
-            <UploadFilesProgress
-              isOpen={showUploadProgess}
-              closeModal={() => setShowUploadProgess(false)}
-              uploadFilesData={uploadFiles.current}
-              onSuccess={(data: any) => {
-                // 关闭Upload-Files-Progress弹窗
-                setShowUploadProgess(false);
-                // 打开Pdf-Parse-Modal弹窗
-                projectInfo.current = data;
-                setShowPdfParseModal(true);
-              }}
-            />
-          )
-        }
-        {
-          showPdfParseModal && (
-            <PdfParseModal
-              isOpen={showPdfParseModal}
-              closeModal={() => setShowPdfParseModal(false)}
-              data={projectInfo.current}
-              handleNext={(type: 'takeoffModal' | 'pageIndex') => {
-                // 关闭Pdf-Parse-Modal弹窗
-                setShowPdfParseModal(false);
-                if (type === 'takeoffModal') {
-                  // 打开Create-Project-Takeoff-Modal弹窗
-                  setShowCreateProjectTakeOffModal(true);
-                } else if (type === 'pageIndex') {
-                  // 跳转到Page-Index页面
-                  //router.push(`/projects/38/takeoff/15/identification-index`);
-                  router.push(`/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification-index`);
-                }
-              }}
-              handleCancel={() => {
-                // 关闭Pdf-Parse-Modal弹窗
-                setShowPdfParseModal(false);
-              }}
-            />
-          )
-        }
-        {
-          showCreateProjectTakeOffModal && (
-            <CreateProjectTakeoffModal
-              isOpen={showCreateProjectTakeOffModal}
-              closeModal={() => {
-                // 关闭Create-Project-Takeoff-Modal弹窗
-                setShowCreateProjectTakeOffModal(false);
-              }}
-              projectId={projectInfo.current?.project_id ?? null}
-              takeOffId={projectInfo.current?.take_off_id ?? null}
+        {showColumnView && (
+          <ColumnView
+            open={showColumnView}
+            onClose={() => setShowColumnView(false)}
+            columns={defaultFields}
+            onColumnsChange={handleColumnsChange}
+            selectedColumns={selectedColumns}
+          />
+        )}
+        {showUploadProgess && (
+          <UploadFilesProgress
+            isOpen={showUploadProgess}
+            closeModal={() => setShowUploadProgess(false)}
+            uploadFilesData={uploadFiles.current}
+            onSuccess={(data: any) => {
+              // 关闭Upload-Files-Progress弹窗
+              setShowUploadProgess(false);
+              // 打开Pdf-Parse-Modal弹窗
+              projectInfo.current = data;
+              setShowPdfParseModal(true);
+            }}
+          />
+        )}
+        {showPdfParseModal && (
+          <PdfParseModal
+            isOpen={showPdfParseModal}
+            closeModal={() => setShowPdfParseModal(false)}
+            data={projectInfo.current}
+            handleNext={(type: "takeoffModal" | "pageIndex") => {
+              // 关闭Pdf-Parse-Modal弹窗
+              setShowPdfParseModal(false);
+              if (type === "takeoffModal") {
+                // 打开Create-Project-Takeoff-Modal弹窗
+                setShowCreateProjectTakeOffModal(true);
+              } else if (type === "pageIndex") {
+                // 跳转到Page-Index页面
+                //router.push(`/projects/38/takeoff/15/identification-index`);
+                router.push(
+                  `/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification-index`,
+                );
+              }
+            }}
+            handleCancel={() => {
+              // 关闭Pdf-Parse-Modal弹窗
+              setShowPdfParseModal(false);
+            }}
+          />
+        )}
+        {showCreateProjectTakeOffModal && (
+          <CreateProjectTakeoffModal
+            isOpen={showCreateProjectTakeOffModal}
+            closeModal={() => {
+              // 关闭Create-Project-Takeoff-Modal弹窗
+              setShowCreateProjectTakeOffModal(false);
+            }}
+            projectId={projectInfo.current?.project_id ?? null}
+            takeOffId={projectInfo.current?.take_off_id ?? null}
             //projectId={'38'}
             //takeOffId={'15'}
-            />
-          )
-        }
+          />
+        )}
       </div>
       {loading && <Spin fullscreen />}
     </div>
-
   );
 };
 
