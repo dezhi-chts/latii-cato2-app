@@ -8,14 +8,53 @@ import { useEffect, useState } from "react";
 
 export const NAME_ONLY_REGEX = /[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g;
 
-const checkValidPassword = (password: string) => {
-  if (password.length < 8) return "Password must be at least 8 characters long";
-  if (!/[A-Z]/.test(password))
-    return "Password must contain at least one uppercase letter";
-  if (!/[a-z]/.test(password))
-    return "Password must contain at least one lowercase letter";
-  if (!/\d/.test(password)) return "Password must contain at least one number";
-  return "";
+type PasswordErrors = {
+  message: string;
+  code: "min_length" | "case" | "number";
+  is_valid: boolean;
+};
+
+const initialPasswordErrors: PasswordErrors[] = [
+  {
+    message: "Include lower and upper case characters.",
+    code: "case",
+    is_valid: false,
+  },
+  {
+    message: "Include at least one number or symbol.",
+    code: "number",
+    is_valid: false,
+  },
+  {
+    message: "Be at least 8 characters long.",
+    code: "min_length",
+    is_valid: false,
+  },
+];
+
+const validatePassword = (password: string): PasswordErrors[] => {
+  const hasMinLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumberOrSymbol = /[\d\W]/.test(password);
+
+  return [
+    {
+      message: "Include lower and upper case characters.",
+      code: "case",
+      is_valid: hasUpper && hasLower,
+    },
+    {
+      message: "Include at least one number or symbol.",
+      code: "number",
+      is_valid: hasNumberOrSymbol,
+    },
+    {
+      message: "Be at least 8 characters long.",
+      code: "min_length",
+      is_valid: hasMinLength,
+    },
+  ];
 };
 
 const checkValidEmail = (email: string): boolean => {
@@ -26,26 +65,25 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
-    company: "",
     role: "",
     email: "",
     password: "",
   });
 
-  const [touched, setTouched] = useState({ email: false, password: false });
+  const [touchedEmail, setTouchedEmail] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState<PasswordErrors[]>([
+    ...initialPasswordErrors,
+  ]);
+
   const [disabledButton, setDisabledButton] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    if (name === "email" && !touched.email) {
-      setTouched((prev) => ({ ...prev, email: true }));
-    }
-    if (name === "password" && !touched.password) {
-      setTouched((prev) => ({ ...prev, password: true }));
+    if (name === "email" && !touchedEmail) {
+      setTouchedEmail(true);
     }
 
     const newValue =
@@ -60,14 +98,13 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
     setForm({
       first_name: "",
       last_name: "",
-      company: "",
       role: "",
       email: "",
       password: "",
     });
-    setTouched({ email: false, password: false });
+    setTouchedEmail(false);
     setEmailError("");
-    setPasswordError("");
+    setPasswordErrors([...initialPasswordErrors]);
     setDisabledButton(true);
   };
 
@@ -112,39 +149,37 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
   };
 
   useEffect(() => {
-    const passwordErr =
-      touched.password && form.password
-        ? checkValidPassword(form.password)
-        : "";
+    const newPasswordErrors = validatePassword(form.password);
+    setPasswordErrors(newPasswordErrors);
 
+    const passwordErr = newPasswordErrors.some((error) => !error.is_valid);
     const emailErr =
-      touched.email && form.email
+      touchedEmail && form.email
         ? checkValidEmail(form.email)
           ? ""
           : "Invalid email format"
         : "";
 
     setEmailError(emailErr);
-    setPasswordError(passwordErr);
 
     const requiredOk = Boolean(
-      form.first_name && form.last_name && form.email && form.password
+      form.first_name && form.last_name && form.email && form.password,
     );
-    const hasErrors = Boolean(passwordErr || emailErr);
 
+    const hasErrors = Boolean(emailErr || passwordErr);
     setDisabledButton(!requiredOk || hasErrors);
-  }, [form, touched.email, touched.password]);
+  }, [form, touchedEmail]);
 
   return (
-    <div className="w-4/12 flex flex-col gap-6 border-l-2 pt-10 pl-12">
-      <p className="text-kahuBlue text-base">New User</p>
+    <div className="w-full flex flex-col gap-6 pt-10 pl-12">
+      <p className="text-forumBlue text-base">Add New User</p>
 
       <div className="flex flex-col gap-2 w-full">
         <p className="text-sm">
           First Name <span className="text-accentRed">*</span>
         </p>
         <Input
-          className="w-7/12 rounded-xl"
+          className="w-9/12 rounded-xl"
           name="first_name"
           size="large"
           value={form.first_name}
@@ -157,7 +192,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
           Last Name <span className="text-accentRed">*</span>
         </p>
         <Input
-          className="w-7/12 rounded-xl"
+          className="w-9/12 rounded-xl"
           name="last_name"
           size="large"
           value={form.last_name}
@@ -166,20 +201,9 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
       </div>
 
       <div className="flex flex-col gap-2 w-full">
-        <p className="text-sm">Company</p>
-        <Input
-          className="w-7/12 rounded-xl"
-          name="company"
-          size="large"
-          value={form.company}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2 w-full">
         <p className="text-sm">Role</p>
         <Input
-          className="w-7/12 rounded-xl"
+          className="w-9/12 rounded-xl"
           name="role"
           size="large"
           value={form.role}
@@ -192,7 +216,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
           Email <span className="text-accentRed">*</span>
         </p>
         <Input
-          className="w-7/12 rounded-xl"
+          className="w-9/12 rounded-xl"
           name="email"
           size="large"
           value={form.email}
@@ -206,20 +230,31 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
           Password <span className="text-accentRed">*</span>
         </p>
         <Input.Password
-          className="w-7/12 rounded-xl"
+          className="w-9/12 rounded-xl"
           name="password"
           size="large"
           value={form.password}
           onChange={handleChange}
         />
-        <p className="text-accentRed h-1">{passwordError}</p>
+        <ul className="list-disc pl-5">
+          {passwordErrors.map((error, index) => {
+            const isValid = error.is_valid;
+            const color = isValid ? "text-accentGreen" : "text-red-500";
+            return (
+              <li key={index} className={`${color}`}>
+                <p className="text-xs">{error.message}</p>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
-      <div className="flex justify-end w-7/12">
+      <div className="flex justify-end w-9/12">
         <Button
           backgroundColor="forumBlue"
           onClick={handleCreateContact}
           disabled={disabledButton || isLoading}
+          className="rounded-md w-28"
         >
           {isLoading ? <Spin /> : "Create"}
         </Button>

@@ -30,10 +30,10 @@ const AccountSettings = () => {
     },
   ];
   return (
-    <div className="pl-32 mt-10 flex flex-col gap-4 w-full zoomed-container">
+    <div className="pl-12 mt-10 flex flex-col gap-4 w-full zoomed-container">
       <div className="flex flex-col gap-1">
-        <p className="text-lg text-forumBlue">Account Preferences</p>
-        <p className="text-xxs text-basicGray">
+        <p className="text-xl text-forumBlue">Account Preferences</p>
+        <p className="text-xs text-basicGray">
           Manage your data and your team members, privacy and security.
         </p>
       </div>
@@ -51,7 +51,7 @@ const AccountSettings = () => {
         }}
       >
         <Tabs
-          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center"
+          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-primaryN30 [&_.ant-tabs-nav::before]:!opacity-100"
           defaultActiveKey="1"
           items={isAdmin ? itemsAdmin : items}
         />
