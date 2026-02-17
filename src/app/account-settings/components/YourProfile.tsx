@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
+import { getContactByKeycloakUser } from "@/services/contactsService";
 import { updateUser } from "@/services/userService";
 import { UserDataForUpdate } from "@/types/user";
 import { Input, notification } from "antd";
@@ -17,6 +18,18 @@ const YourProfile = () => {
     new_password: "",
     job_title: job_title,
   });
+
+  // const [keycloackUser, setKeycloackUser] = useState<any>(null);
+
+  // const fetchUser = async () => {
+  //   const response = await getContactByKeycloakUser();
+  //   setKeycloackUser(response.data);
+  //   console.log("DATA", response.data);
+  // };
+
+  // useEffect(() => {
+  //   fetchUser();
+  // }, []);
 
   useEffect(() => {
     setLocalUser({
@@ -68,7 +81,19 @@ const YourProfile = () => {
   };
 
   const hasChanges = (field: keyof UserDataForUpdate, value: string) => {
-    return localUser[field] !== value;
+    if (field === "first_name") {
+      return first_name !== value;
+    }
+    if (field === "last_name") {
+      return last_name !== value;
+    }
+    if (field === "email") {
+      return email !== value;
+    }
+    if (field === "job_title") {
+      return job_title !== value;
+    }
+    return false;
   };
 
   return (
