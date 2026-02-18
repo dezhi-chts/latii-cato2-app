@@ -10,6 +10,7 @@ import { signOut } from "next-auth/react";
 import LogoutModal from "./Logout-Modal";
 import { usePathname } from "next/navigation";
 import { UserDataForUpdate } from "@/types/user";
+import { Tooltip } from "antd";
 
 export default function Sidebar() {
   const {
@@ -236,13 +237,20 @@ export default function Sidebar() {
                   showInitialStyles ? "" : " justify-start"
                 } h-8 w-10 items-center pl-2.5 cursor-pointer`}
               >
-                <Image
-                  src={`/assets/icons/navbar/home${`${firstSegment}` === "home" ? "-selected" : ""}.svg`}
-                  alt="Home icon"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
+                <Tooltip
+                  title={expanded.sidebar ? "" : "Home"}
+                  placement="right"
+                  zIndex={9999}
+                  color="#ffffff"
+                >
+                  <Image
+                    src={`/assets/icons/navbar/home${`${firstSegment}` === "home" ? "-selected" : ""}.svg`}
+                    alt="Home icon"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
+                </Tooltip>
 
                 <p className="whitespace-nowrap">
                   {expanded.sidebar && "Home"}
@@ -387,9 +395,29 @@ export default function Sidebar() {
         </div>
 
         <div
-          className="flex flex-col pl-3 h-14 justify-around text-sm w-full"
+          className="flex flex-col pl-3 gap-3 text-sm w-full"
           onClick={(e) => e.stopPropagation()}
         >
+          <div
+            className={`flex items-center cursor-pointer hover:underline w-fit relative ${
+              expanded.sidebar && "gap-2"
+            }`}
+          >
+            <Tooltip
+              title={expanded.sidebar ? "" : "Support"}
+              placement="right"
+              zIndex={9999}
+              color="#ffffff"
+            >
+              <Image
+                src={`/assets/icons/navbar/support${firstSegment === "support" ? "-selected" : ""}.svg`}
+                alt="Support icon"
+                width={20}
+                height={20}
+              />
+            </Tooltip>
+            <span> {expanded.sidebar ? "Support" : ""} </span>
+          </div>
           <div
             className={`flex items-center cursor-pointer hover:underline w-fit relative ${
               expanded.sidebar && "gap-2"
