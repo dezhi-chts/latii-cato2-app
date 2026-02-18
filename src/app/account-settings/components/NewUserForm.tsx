@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@/components/Button";
+import { useUser } from "@/context/UserContext";
 import { createContact } from "@/services/contactsService";
 import { Contact } from "@/types/user";
 import { Input, notification, Spin } from "antd";
@@ -62,6 +63,8 @@ const checkValidEmail = (email: string): boolean => {
 };
 
 const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
+  const { company_id = 0 } = useUser();
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -116,12 +119,12 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
         email: form.email,
         phone: "",
         job_title: form.role,
-        company_id: 1,
+        company_id: company_id,
         password: form.password,
       };
 
       const response = await createContact({
-        company_id: 1,
+        company_id: company_id,
         contact_data: mappedForm,
       });
       setIsLoading(false);

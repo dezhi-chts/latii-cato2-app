@@ -19,17 +19,19 @@ const YourProfile = () => {
     job_title: job_title,
   });
 
-  // const [keycloackUser, setKeycloackUser] = useState<any>(null);
+  const fetchUser = async () => {
+    const response = await getContactByKeycloakUser();
+    if (response.status === "success") {
+      setLocalUser((prev) => ({
+        ...prev,
+        job_title: response.data.data.job_title,
+      }));
+    }
+  };
 
-  // const fetchUser = async () => {
-  //   const response = await getContactByKeycloakUser();
-  //   setKeycloackUser(response.data);
-  //   console.log("DATA", response.data);
-  // };
-
-  // useEffect(() => {
-  //   fetchUser();
-  // }, []);
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     setLocalUser({
