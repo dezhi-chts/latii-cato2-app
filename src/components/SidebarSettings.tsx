@@ -42,12 +42,11 @@ export default function SidebarSettings({
     };
   }, [open]);
 
-  if (!open) return null;
   return (
     <div
-      className={`absolute transition-all duration-700 ease-in-out ${
-        expanded ? "left-24" : "left-6"
-      } bottom-0 w-48 bg-white border border-baseLightHover  rounded-lg overflow-hidden z-50`}
+      className={`absolute transition-all duration-700 ease-in-out left-6
+      ${open ? "max-h-36 visible opacity-100" : "max-h-0 invisible opacity-0"}
+      bottom-0 w-48 bg-white border border-baseLightHover  rounded-lg overflow-hidden z-50`}
       ref={containerRef}
     >
       <div

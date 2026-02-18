@@ -50,6 +50,8 @@ export default {
         lushAqua: "#014768",
         forumBlue: "#427CCE",
         forumBlueLight: "#ECF2FA",
+        forumBlueLightActive: "#C4D6F0",
+        forumDarkBlue: "#284A7C",
         secondary400: "#2B6F7A",
         loadingGray: "#D9D9D9",
         border: "hsl(var(--border))",

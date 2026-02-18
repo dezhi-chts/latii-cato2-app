@@ -8,9 +8,8 @@ import { useEffect, useState } from "react";
 import { Divider } from "antd";
 import { useUser } from "@/context/UserContext";
 
+export const CONTACTS_TIMEOUT_MS = 10_000;
 const TeamMembers = () => {
-  const CONTACTS_TIMEOUT_MS = 10_000;
-
   const { company_id = 0 } = useUser();
 
   const [usersData, setUsersData] = useState<Contact[] | null>(null);

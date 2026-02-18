@@ -5,9 +5,19 @@ import { ConfigProvider, Tabs, TabsProps } from "antd";
 
 import YourProfile from "./components/YourProfile";
 import TeamMembers from "./components/TeamMembers";
+import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 
 const AccountSettings = () => {
   const { isAdmin } = useUser();
+
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
+
+  const defaultKey = useMemo(() => {
+    if (tab === "team-management") return "2";
+    return "1";
+  }, [tab]);
 
   const itemsAdmin: TabsProps["items"] = [
     {
@@ -52,7 +62,7 @@ const AccountSettings = () => {
       >
         <Tabs
           className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-primaryN30 [&_.ant-tabs-nav::before]:!opacity-100"
-          defaultActiveKey="1"
+          defaultActiveKey={defaultKey}
           items={isAdmin ? itemsAdmin : items}
         />
       </ConfigProvider>
