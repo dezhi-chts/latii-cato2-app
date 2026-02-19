@@ -16,6 +16,18 @@ export const fetchProjects = async (filterParams?: {
   }
 };
 
+export const getAllProjects = async (filterParams?: { per_page?: number }) => {
+  const url = `/project/list?page=1&per_page=${filterParams?.per_page || "10"}&order_by=project_id&order=desc`;
+
+  try {
+    const response = await http.get(url);
+    return response;
+  } catch (error) {
+    console.error("Error getting projects:", error);
+    return [];
+  }
+};
+
 export const createProject = async (project: ProjectSettings) => {
   const url = "/project";
 

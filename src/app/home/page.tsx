@@ -14,7 +14,11 @@ import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create
 import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
 import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
 import { useRouter } from "next/navigation";
-import { fetchProjects, deleteProject } from "@/services/projectService";
+import {
+  fetchProjects,
+  deleteProject,
+  getAllProjects,
+} from "@/services/projectService";
 import {
   deleteTakeOffById,
   getAllTakeoffList,
@@ -227,7 +231,9 @@ const Home = () => {
 
   const getProjects = async () => {
     setProjectLoading(true);
-    const projects = await fetchProjects();
+    const response: any = await getAllProjects({ per_page: 10 });
+    const projects = response?.items;
+    console.log(projects, "projects");
     setProjectLoading(false);
     if (projects?.length > 0) {
       setProjects(projects);
