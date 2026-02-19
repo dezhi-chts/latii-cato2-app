@@ -422,9 +422,11 @@ export default function Sidebar() {
             className={`flex items-center cursor-pointer hover:underline w-fit relative ${
               expanded.sidebar && "gap-2"
             }`}
-            onClick={() =>
-              setShowModal((prev) => ({ ...prev, settings: !prev.settings }))
-            }
+            onClick={() => {
+              setTimeout(() => {
+                setShowModal((prev) => ({ ...prev, settings: !prev.settings }));
+              }, 10);
+            }}
           >
             <Image
               src={`/assets/icons/navbar/profile${firstSegment === "account-settings" ? "-selected" : ""}.svg`}
