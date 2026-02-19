@@ -3,16 +3,16 @@ import Image from "next/image";
 
 const Header = () => {
   return (
-    <div className="h-16 flex items-center zoomed-container">
+    <div className="flex items-center">
       <Image
         src="/assets/logos/cato-with-text.svg"
-        width={92}
-        height={19}
+        width={60}
+        height={20}
         alt="Cato logo and name"
       />
-      <Divider type="vertical" className="h-16 border mx-5 border-primaryN30" />
+      <Divider type="vertical" className="border h-5 mx-4 border-primaryN30" />
       <div className="flex flex-col gap-3">
-        <h5 className="text-forumBlue text-xl">Knowledge Base</h5>
+        <p className="text-forumBlue text-lg">Knowledge Base</p>
       </div>
     </div>
   );

@@ -52,7 +52,7 @@ const PromptLibraryTab = () => {
   }, [promptList]);
 
   return (
-    <div className="flex gap-2 w-[90vw]">
+    <div className="pl-16 pt-10 flex gap-2 w-[90vw]">
       <div className="w-1/5">
         <div className="flex justify-between items-center pb-4">
           <p>All Prompts</p>

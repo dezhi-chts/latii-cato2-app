@@ -99,7 +99,7 @@ const YourProfile = () => {
   };
 
   return (
-    <div className="mt-8 ml-4 flex flex-col gap-12 w-[800px]">
+    <div className="pt-10 pl-16 flex flex-col gap-12 w-[800px]">
       <div className="flex flex-col gap-5 w-full">
         <p className="text-basicGray text-base">General Information</p>
         <div className="flex flex-col gap-8 w-full">

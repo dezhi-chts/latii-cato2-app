@@ -40,8 +40,8 @@ const AccountSettings = () => {
     },
   ];
   return (
-    <div className="pl-12 mt-10 flex flex-col gap-4 w-full zoomed-container">
-      <div className="flex flex-col gap-1">
+    <div className="mt-10 flex flex-col gap-2 w-full">
+      <div className="flex flex-col gap-1 pl-12">
         <p className="text-xl text-forumBlue">Account Preferences</p>
         <p className="text-xs text-basicGray">
           Manage your data and your team members, privacy and security.
@@ -61,7 +61,7 @@ const AccountSettings = () => {
         }}
       >
         <Tabs
-          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-primaryN30 [&_.ant-tabs-nav::before]:!opacity-100"
+          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-primaryN30 [&_.ant-tabs-nav::before]:!opacity-100 [&_.ant-tabs-nav-wrap]:pl-12"
           defaultActiveKey={defaultKey}
           items={isAdmin ? itemsAdmin : items}
         />

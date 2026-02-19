@@ -58,7 +58,7 @@ const TeamMembers = () => {
   }, []);
 
   return (
-    <div className="pl-4 flex flex-col gap-12 w-full">
+    <div className="pl-16 flex flex-col gap-12 w-full">
       <div className="flex">
         <div className="w-8/12 pt-10 flex flex-col gap-5">
           <p className="text-kahuBlue text-base">User Panel</p>
