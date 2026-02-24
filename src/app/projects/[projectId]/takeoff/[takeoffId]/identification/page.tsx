@@ -576,6 +576,7 @@ const Identification = () => {
                 Ensuring every section is correctly labeled guarantees the most accurate analysis from CATO.
               </div>}
               trigger="hover"
+              className="cursor-pointer"
             >
               <Image src="/assets/icons/info.svg" alt="info circle icon" width={14} height={14}></Image>
             </Popover>

@@ -66,7 +66,7 @@ import { max } from "lodash";
 
 const { confirm } = Modal;
 
-GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+GlobalWorkerOptions.workerSrc = "/assets/js/pdf.worker.min.js";
 
 
 const getZoneBounds = (polygons: Point[]) => {
@@ -2473,24 +2473,39 @@ const PdfWrapper = forwardRef(
                                 : height + 2 + "px",
                           }}
                         >
-                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
-                            onClick={() => {
-                              handleCreateBox(item, 'prev');
-                            }}>
-                            <span className="-mt-[2px] text-xs">{'<'}</span>
-                          </div>
+                          <Popover placement="bottom"
+                            title={null}
+                            content={<div className="text-xs text-basicGray">Extend to Previous Page</div>}
+                            trigger="hover"
+                          >
+                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
+                              onClick={() => {
+                                handleCreateBox(item, 'prev');
+                              }}>
+                              <span className="-mt-[2px] text-xs">{'<'}</span>
+                            </div>
+                          </Popover>
+
                           <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
                             onClick={() => {
                               handleCreateBox(item, 'center');
                             }}>
                             <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
                           </div>
-                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
-                            onClick={() => {
-                              handleCreateBox(item, 'next');
-                            }}>
-                            <span className="-mt-[2px] text-xs">{'>'}</span>
-                          </div>
+
+                          <Popover placement="bottom"
+                            title={null}
+                            content={<div className="text-xs text-basicGray">Extend to Next Page</div>}
+                            trigger="hover"
+                          >
+                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
+                              onClick={() => {
+                                handleCreateBox(item, 'next');
+                              }}>
+                              <span className="-mt-[2px] text-xs">{'>'}</span>
+                            </div>
+                          </Popover>
+
                           <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
                           }}>
                             <Popover placement="rightBottom"
