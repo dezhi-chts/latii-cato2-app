@@ -29,7 +29,7 @@ import {
 import { getTakeOffById } from "@/services/takeOffService";
 import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
 
-import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods, QuotePageTypes } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -536,7 +536,7 @@ const Identification = () => {
     }
   }, [fileList, selectedFileId]);
 
-  const currentFileOperationType = useMemo(() => {
+  const fileOperationType = useMemo(() => {
     if (!fileList.length) return '';
     let file = fileList.find((file: any) => file.id === selectedFileId);
     return file.operation_type || '';
@@ -553,7 +553,7 @@ const Identification = () => {
         handleNext={handleNext}
       />
       {
-        currentFileOperationType === FileOperationType.ArchitectureDrawing && (
+        fileOperationType === FileOperationType.ArchitectureDrawing && (
           <DrawingTagsView
             pageTypeTags={pageTypeList}
             currentType={currentType}
@@ -589,7 +589,12 @@ const Identification = () => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
-            categoryList={ArchDrawingPageTypes}
+            categoryList={
+              fileOperationType === FileOperationType.ArchitectureDrawing ?
+                ArchDrawingPageTypes :
+                fileOperationType === FileOperationType.Quote ?
+                  QuotePageTypes : []
+            }
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -597,12 +602,12 @@ const Identification = () => {
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
               {
-                currentFileOperationType === FileOperationType.ArchitectureDrawing ?
+                fileOperationType === FileOperationType.ArchitectureDrawing ?
                   <>
-                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.Label)} />
+                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.FloorPlan)} />
                     <ClearAllControls handleClearAll={handleClearAllCrop} />
                   </>
-                  : currentFileOperationType === FileOperationType.Quote ?
+                  : fileOperationType === FileOperationType.Quote ?
                     <>
                       <AddRectBoxControls theme="default" text="Add Item" handleAddRectBox={() => handleAddRectBox(GroupType.Item)} />
                       <AddRectBoxControls theme="default" text="Layer Information" handleAddRectBox={() => handleAddRectBox(GroupType.LayerInfo)} />

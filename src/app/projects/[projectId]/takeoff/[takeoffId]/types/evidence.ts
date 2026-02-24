@@ -120,7 +120,7 @@ export const ArchDrawingAllPageTags = [
   allPageTypes[PageType.All],
 ];
 
-// identification 页面下拉类型
+// identification Arch Drawing文件 页面下拉类型
 export const ArchDrawingPageTypes = [
   allPageTypes[PageType.FloorPlan],
   allPageTypes[PageType.Elevation],
@@ -152,6 +152,9 @@ export const ArchDrawingLabelTypes = [
   },
   allPageTypes[PageType.KeyNotes],
 ];
+
+// identification Quote文件 页面下拉类型
+export const QuotePageTypes = [allPageTypes[PageType.NotUsed]];
 
 //矩形/多边形框
 export interface GroupFrame {
