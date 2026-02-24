@@ -38,6 +38,7 @@ import {
   FileStatus,
   GroupType,
   PdfWrapperRefMethods,
+  QuotePageTypes,
 } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
@@ -53,45 +54,14 @@ import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground from "../identification-index/components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
-const { confirm } = Modal;
+import {
+  PageType,
+  ArchDrawingAllPageTags,
+  ArchDrawingPageTypes,
+  ArchDrawingLabelTypes,
+} from "../types/evidence";
 
-const defaultPageCategory = [
-  {
-    type: "All",
-    primaryColor: "#717171",
-    count: 0,
-  },
-  {
-    type: "Floor Plan",
-    primaryColor: "#D868D8",
-    count: 0,
-  },
-  {
-    type: "Elevation",
-    primaryColor: "#0BC6BE",
-    count: 0,
-  },
-  {
-    type: "Schedule",
-    primaryColor: "#5859D6",
-    count: 0,
-  },
-  {
-    type: "Mixed",
-    primaryColor: "#F5C00B",
-    count: 0,
-  },
-  {
-    type: "Generalities",
-    primaryColor: "#00798A",
-    count: 0,
-  },
-  {
-    type: "Not Used",
-    primaryColor: "#A3A3A3",
-    count: 0,
-  },
-];
+const { confirm } = Modal;
 
 enum BuildLoadingStep {
   PageAnalysis = "page-analyze",
@@ -99,20 +69,12 @@ enum BuildLoadingStep {
   PageIndex = "page-index",
 }
 
-const fixed_page_type = [
-  {
-    type: "Active Pages",
-    color: "#717171",
-    count: 0,
-  },
-  {
-    type: "All",
-    color: "#717171",
-    count: 0,
-  },
+const invalidPageType = [
+  null,
+  PageType.All,
+  PageType.ActivePages,
+  PageType.NotUsed,
 ];
-
-const invalidPageType = [null, "Not Used", "All", "Active Pages"];
 
 export enum ButtonText {
   NextFile = "Next File",
@@ -139,10 +101,12 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
-  const [labelTypeList, setLabelTypeList] = useState<any>([]);
+  const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
+  const [labelTypeList, setLabelTypeList] = useState<any>(
+    ArchDrawingLabelTypes,
+  );
   const [currentType, setCurrentType] = useState<string>(
-    fixed_page_type[0].type,
+    ArchDrawingAllPageTags[0].type,
   );
   const [summaryData, setSummaryData] = useState<any>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
@@ -159,7 +123,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   const initPageData = async () => {
     setFullLoading(true);
 
-    await getTypeList();
+    //await getTypeList();
     // 获取takeOff详情
     await getTakeOffDetails();
 
@@ -174,29 +138,29 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
 
       setPageTypeList((prev: any) => {
         return prev.map((item: any) => {
-          if (item.type === "All") {
+          if (item.type === PageType.All) {
             return {
               ...item,
               count: summaryData.total_pages,
             };
-          } else if (item.type === "Active Pages") {
+          } else if (item.type === PageType.ActivePages) {
             // 把page_classification中所有不是invalidPageType的type的count加起来
             let totalCount: any = [];
             for (let key in page_classification) {
               if (!invalidPageType.includes(key)) {
                 totalCount.push(page_classification[key] ?? 0);
               }
+              let count = totalCount.reduce((a: any, b: any) => a + b, 0);
+              return {
+                ...item,
+                count: count,
+              };
             }
-            let count = totalCount.reduce((a: any, b: any) => a + b, 0);
             return {
               ...item,
-              count: count,
+              count: page_classification[item.type] ?? 0,
             };
           }
-          return {
-            ...item,
-            count: page_classification[item.type] ?? 0,
-          };
         });
       });
     },
@@ -255,12 +219,17 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1) return;
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    let filterType = "QuoteLabel";
+    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
+      filterType = "ArchDrawingLabel";
+    }
 
     evidenceIsLoaded.current = false;
     const response = await getEvidenceByFileId(
       projectId as string,
       selectedFileId,
-      { filter_type: GroupType.Label },
+      { filter_type: filterType },
     );
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
@@ -304,7 +273,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
       let labelList = res?.data?.fixed_label_types ?? [];
       let first = pageTypeList[0];
       if (pageList.length > 0) {
-        pageList.push(fixed_page_type[1]);
+        //pageList.push(fixed_page_type[1]);
       }
       setPageTypeList([first, ...pageList]);
       setLabelTypeList(labelList);
@@ -363,13 +332,19 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   }, [selectedFileId]);
 
   const filterThumbnailList = useMemo(() => {
-    if (currentType === "All") return [...thumbnailList];
-    if (currentType === "Active Pages")
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    if (!file) return [];
+
+    if (file && file.operation_type === FileOperationType.Quote)
+      return [...thumbnailList];
+
+    if (currentType === PageType.All) return [...thumbnailList];
+    if (currentType === PageType.ActivePages)
       return [...thumbnailList].filter(
         (item: any) => item.type && !invalidPageType.includes(item.type),
       );
     return [...thumbnailList].filter((item: any) => item.type === currentType);
-  }, [currentType, thumbnailList]);
+  }, [selectedFileId, fileList, currentType, thumbnailList]);
 
   const getItemPage = (item: any, index: number) => {
     if (typeof item.file_name === "string") {
@@ -618,7 +593,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     };
   }, [fileList, selectedFileId]);
 
-  const currentFileOperationType = useMemo(() => {
+  const fileOperationType = useMemo(() => {
     if (!fileList.length) return "";
     let file = fileList.find((file: any) => file.id === selectedFileId);
     return file.operation_type || "";
@@ -638,7 +613,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
           handleNext={handleNext}
         />
       )}
-      {currentFileOperationType === FileOperationType.ArchitectureDrawing && (
+      {fileOperationType === FileOperationType.ArchitectureDrawing && (
         <DrawingTagsView
           pageTypeTags={pageTypeList}
           currentType={currentType}
@@ -667,6 +642,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
                 </div>
               }
               trigger="hover"
+              className="cursor-pointer"
             >
               <Image
                 src="/assets/icons/info.svg"
@@ -685,25 +661,34 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
-            categoryList={pageTypeList.filter(
-              (item: any) =>
-                item.type !== "All" && item.type !== "Active Pages",
-            )}
+            size={
+              fileOperationType === FileOperationType.Quote
+                ? "larger"
+                : "normal"
+            }
+            categoryList={
+              fileOperationType === FileOperationType.ArchitectureDrawing
+                ? ArchDrawingPageTypes
+                : fileOperationType === FileOperationType.Quote
+                  ? QuotePageTypes
+                  : []
+            }
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
         <div className={`flex-1 flex flex-col px-6 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
-              {currentFileOperationType ===
-              FileOperationType.ArchitectureDrawing ? (
+              {fileOperationType === FileOperationType.ArchitectureDrawing ? (
                 <>
                   <AddRectBoxControls
-                    handleAddRectBox={() => handleAddRectBox(GroupType.Label)}
+                    handleAddRectBox={() =>
+                      handleAddRectBox(GroupType.FloorPlan)
+                    }
                   />
                   <ClearAllControls handleClearAll={handleClearAllCrop} />
                 </>
-              ) : currentFileOperationType === FileOperationType.Quote ? (
+              ) : fileOperationType === FileOperationType.Quote ? (
                 <>
                   <AddRectBoxControls
                     theme="default"

@@ -6,10 +6,12 @@ import LabelTypesSelect from "./Label-Types-Select";
 const LazyImage = ({
   src,
   alt,
+  size, // 缩略图大小
   onError,
 }: {
   src: string;
   alt: string;
+  size: 'normal' | 'larger'; // 缩略图大小
   onError: (e: React.SyntheticEvent<HTMLImageElement>) => void;
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
@@ -43,14 +45,18 @@ const LazyImage = ({
   }, [src]);
 
   return (
-    <div className="w-full h-[100px] relative overflow-hidden">
+    <div className="w-full relative overflow-hidden"
+      style={{
+        height: size === 'normal' ? '100px' : '160px',
+      }}
+    >
       {!loaded && (
         <div className="absolute inset-0 w-[100%] h-[100%] bg-gray-300 animate-pulse"></div>
       )}
       <img
         ref={imgRef}
         alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"
+        className={`w-full h-full object-top transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"
           }`}
         onError={onError}
         loading="lazy"
@@ -75,6 +81,7 @@ interface ThumbnailProps {
   fixed?: boolean; // 是否固定位置
   showCategory?: boolean; // 是否显示分类
   showShadow?: boolean; // 是否显示阴影
+  size?: 'normal' | 'larger'; // 缩略图大小
   categoryList?: {  // 分类列表
     type: string;
     color: string;
@@ -92,6 +99,7 @@ const Thumbnail = ({
   setPage,
   fixed = false, // 是否固定位置
   showCategory = false, // 是否显示分类
+  size = 'normal', // 缩略图大小
   categoryList = [], // 分类列表
   showShadow = true, // 是否显示阴影
   onChangePageType, // 切换页面类型回调
@@ -180,10 +188,13 @@ const Thumbnail = ({
               <div
                 id={`thumbnail-page-${itemPageNum}`}
                 key={info.s3_key}
-                className={`w-[170px] h-[150px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
+                className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
                   ? "border-forumBlue"
                   : "border-transparent hover:border-forumBlue/50"
                   }`}
+                style={{
+                  height: size === 'normal' ? '150px' : '220px',
+                }}
                 onClick={() => onChangePage(itemPageNum)}
               >
                 <div className="p-[10px]">
@@ -203,6 +214,7 @@ const Thumbnail = ({
                     <LazyImage
                       src={info.s3_url || ""}
                       alt={info.file_name}
+                      size={size}
                       onError={(e) => {
                         e.currentTarget.src =
                           "/assets/placeholder-images/example_1.png";
