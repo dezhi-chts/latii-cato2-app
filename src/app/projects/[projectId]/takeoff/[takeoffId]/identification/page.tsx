@@ -44,45 +44,9 @@ import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground from "../identification-index/components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
-const { confirm } = Modal;
+import { PageType, ArchDrawingAllPageTags, ArchDrawingPageTypes, ArchDrawingLabelTypes } from "../types/evidence";
 
-const defaultPageCategory = [
-  {
-    type: "All",
-    primaryColor: "#717171",
-    count: 0,
-  },
-  {
-    type: "Floor Plan",
-    primaryColor: "#D868D8",
-    count: 0,
-  },
-  {
-    type: "Elevation",
-    primaryColor: "#0BC6BE",
-    count: 0,
-  },
-  {
-    type: "Schedule",
-    primaryColor: "#5859D6",
-    count: 0,
-  },
-  {
-    type: "Mixed",
-    primaryColor: "#F5C00B",
-    count: 0,
-  },
-  {
-    type: "Generalities",
-    primaryColor: "#00798A",
-    count: 0,
-  },
-  {
-    type: "Not Used",
-    primaryColor: "#A3A3A3",
-    count: 0,
-  },
-];
+const { confirm } = Modal;
 
 enum BuildLoadingStep {
   PageAnalysis = 'page-analyze',
@@ -90,18 +54,7 @@ enum BuildLoadingStep {
   PageIndex = 'page-index',
 }
 
-const fixed_page_type = [
-  {
-    type: "Active Pages",
-    color: "#717171",
-    count: 0,
-  }, {
-    type: "All",
-    color: "#717171",
-    count: 0,
-  }];
-
-const invalidPageType = [null, 'Not Used', 'All', 'Active Pages'];
+const invalidPageType = [null, PageType.All, PageType.ActivePages, PageType.NotUsed];
 
 export enum ButtonText {
   NextFile = 'Next File',
@@ -128,9 +81,9 @@ const Identification = () => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
-  const [labelTypeList, setLabelTypeList] = useState<any>([]);
-  const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
+  const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
+  const [labelTypeList, setLabelTypeList] = useState<any>(ArchDrawingLabelTypes);
+  const [currentType, setCurrentType] = useState<string>(ArchDrawingAllPageTags[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
 
@@ -147,7 +100,7 @@ const Identification = () => {
   const initPageData = async () => {
     setFullLoading(true);
 
-    await getTypeList();
+    //await getTypeList();
     // 获取takeOff详情
     await getTakeOffDetails();
 
@@ -162,12 +115,12 @@ const Identification = () => {
 
     setPageTypeList((prev: any) => {
       return prev.map((item: any) => {
-        if (item.type === "All") {
+        if (item.type === PageType.All) {
           return {
             ...item,
             count: summaryData.total_pages
           }
-        } else if (item.type === "Active Pages") {
+        } else if (item.type === PageType.ActivePages) {
           // 把page_classification中所有不是invalidPageType的type的count加起来
           let totalCount: any = [];
           for (let key in page_classification) {
@@ -275,7 +228,7 @@ const Identification = () => {
       let labelList = res?.data?.fixed_label_types ?? [];
       let first = pageTypeList[0];
       if (pageList.length > 0) {
-        pageList.push(fixed_page_type[1]);
+        //pageList.push(fixed_page_type[1]);
       }
       setPageTypeList([first, ...pageList]);
       setLabelTypeList(labelList);
@@ -331,10 +284,15 @@ const Identification = () => {
   }, [selectedFileId]);
 
   const filterThumbnailList = useMemo(() => {
-    if (currentType === "All") return [...thumbnailList];
-    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    if (!file) return [];
+
+    if (file && file.operation_type === FileOperationType.Quote) return [...thumbnailList];
+
+    if (currentType === PageType.All) return [...thumbnailList];
+    if (currentType === PageType.ActivePages) return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
     return [...thumbnailList].filter((item: any) => item.type === currentType);
-  }, [currentType, thumbnailList]);
+  }, [selectedFileId, fileList, currentType, thumbnailList]);
 
   const getItemPage = (item: any, index: number) => {
     if (typeof item.file_name === 'string') {
@@ -626,7 +584,7 @@ const Identification = () => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
-            categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
+            categoryList={ArchDrawingPageTypes}
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>

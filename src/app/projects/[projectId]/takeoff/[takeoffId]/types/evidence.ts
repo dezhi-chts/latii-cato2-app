@@ -38,6 +38,113 @@ export enum GroupType {
   Description = "Description", // 描述框
 }
 
+// 页面类型
+export enum PageType {
+  ActivePages = "Active Pages",
+  FloorPlan = "Floor Plan",
+  Elevation = "Elevation",
+  Schedule = "Schedule",
+  KeyNotes = "Key Notes",
+  Mix = "Mix",
+  NotUsed = "Not Used",
+  All = "All",
+}
+
+// 所有页面类型, 包含所有页面类型和图标
+export const allPageTypes = {
+  [PageType.ActivePages]: {
+    type: PageType.ActivePages,
+    color: "#717171",
+  },
+  [PageType.FloorPlan]: {
+    type: PageType.FloorPlan,
+    icon: "F",
+    color: "#D868D8",
+  },
+  [PageType.Elevation]: {
+    type: PageType.Elevation,
+    icon: "E",
+    color: "#0BC6BE",
+  },
+  [PageType.Schedule]: {
+    type: PageType.Schedule,
+    icon: "S",
+    color: "#5859D6",
+  },
+  [PageType.KeyNotes]: {
+    type: PageType.KeyNotes,
+    icon: "K",
+    color: "#00798A",
+  },
+  [PageType.Mix]: {
+    type: PageType.Mix,
+    icon: "M",
+    color: "#F5C00B",
+  },
+  [PageType.NotUsed]: {
+    type: PageType.NotUsed,
+    icon: "N",
+    color: "#717171",
+  },
+  [PageType.All]: {
+    type: PageType.All,
+    color: "#717171",
+  },
+};
+// identification-index summary页面类型
+export const ArchDrawingSummaryPageTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+];
+
+// identification 所有标签类型
+export const ArchDrawingAllPageTags = [
+  allPageTypes[PageType.ActivePages],
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+  allPageTypes[PageType.NotUsed],
+  allPageTypes[PageType.All],
+];
+
+// identification 页面下拉类型
+export const ArchDrawingPageTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+  allPageTypes[PageType.NotUsed],
+];
+
+export const ArchDrawingLabelTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  {
+    ...allPageTypes[PageType.Schedule],
+    children: [
+      {
+        type: "Window Door Unit",
+        icon: "W",
+        color: "#5859D6",
+        color_class: "bg-indigo-50",
+      },
+      {
+        type: "Table",
+        icon: "T",
+        color: "#9400D3",
+        color_class: "bg-indigo-50",
+      },
+    ],
+  },
+  allPageTypes[PageType.KeyNotes],
+];
+
 //矩形/多边形框
 export interface GroupFrame {
   id: string;

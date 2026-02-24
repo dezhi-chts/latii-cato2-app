@@ -51,6 +51,8 @@ import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
 
+import { ArchDrawingSummaryPageTypes } from "../types/evidence";
+
 const confirm = Modal.confirm;
 
 
@@ -93,7 +95,7 @@ const IdentificationIndex = () => {
   const [showContentView, setShowContentView] = useState<boolean>(true);
   const [contentData, setContentData] = useState<any>([]);
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
-  const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
+  const [drawingTypeList, setDrawingTypeList] = useState<any>(ArchDrawingSummaryPageTypes);
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [isEmptyContent, setIsEmptyContent] = useState<boolean>(false);
@@ -117,7 +119,7 @@ const IdentificationIndex = () => {
   useEffect(() => {
     // 获取takeOff详情
     getTakeOffDetails();
-    getTypeList();
+    //getTypeList();
   }, [takeOffId]);
 
   const getTakeOffDetails = async () => {
@@ -270,9 +272,9 @@ const IdentificationIndex = () => {
         setIsEmptyContent(true);
       }
       // 如果发现drawingTypeList为空，则再次调用getTypeList
-      if (drawingTypeList.length === 0) {
-        getTypeList();
-      }
+      // if (drawingTypeList.length === 0) {
+      //   getTypeList();
+      // }
     } else {
       notification.error({
         message: "Error",

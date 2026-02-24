@@ -124,6 +124,7 @@ const showNumBtnGroupTypes = [GroupType.Item];
 
 // 以下的框类型不显示 类型选择框
 const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+
 // 框类型对应的颜色
 const groupTypeColor: any = {
   [GroupType.Item]: colorList.forumBlue,
