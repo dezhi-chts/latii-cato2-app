@@ -590,6 +590,7 @@ const Identification = () => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
+            size={fileOperationType === FileOperationType.Quote ? 'larger' : 'normal'}
             categoryList={
               fileOperationType === FileOperationType.ArchitectureDrawing ?
                 ArchDrawingPageTypes :
