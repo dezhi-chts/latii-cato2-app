@@ -66,7 +66,7 @@ import { max } from "lodash";
 
 const { confirm } = Modal;
 
-GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+GlobalWorkerOptions.workerSrc = "/assets/js/pdf.worker.min.js";
 
 
 const getZoneBounds = (polygons: Point[]) => {
@@ -119,11 +119,13 @@ const getResizeCursorStyle = (pointType: string) => {
 const showReadBtnGroupTypes = [GroupType.OCR];
 // 以下的框类型显示 确认按钮
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
-// 以下的框类型显示 数字按钮
-const showNumBtnGroupTypes = [GroupType.Item];
 
-// 以下的框类型不显示 类型选择框
-const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+// 以下的框类型显示 数字按钮,复制按钮
+const showNumBtnGroupTypes = [GroupType.Item, GroupType.WindowDoorUnitList];
+
+// 以下框类型显示下拉框
+const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupType.WindowDoorUnit, GroupType.Table, GroupType.KeyNotes];
+
 // 框类型对应的颜色
 const groupTypeColor: any = {
   [GroupType.Item]: colorList.forumBlue,
@@ -2429,13 +2431,13 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center"
                         style={{
-                          left: !hiddenTypeGroupTypes.includes(type) ? (width - 68) : width - 22,
+                          left: showSelectGroupTypes.includes(type) ? (width - 68) : width - 22,
                           top: 4,
                         }}
                       >
                         <div className="flex items-center gap-1">
                           {
-                            !hiddenTypeGroupTypes.includes(type) && <LabelTypesSelect
+                            showSelectGroupTypes.includes(type) && <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
                               onChangeType={(type) => {
@@ -2471,24 +2473,39 @@ const PdfWrapper = forwardRef(
                                 : height + 2 + "px",
                           }}
                         >
-                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
-                            onClick={() => {
-                              handleCreateBox(item, 'prev');
-                            }}>
-                            <span className="-mt-[2px] text-xs">{'<'}</span>
-                          </div>
+                          <Popover placement="bottom"
+                            title={null}
+                            content={<div className="text-xs text-basicGray">Extend to Previous Page</div>}
+                            trigger="hover"
+                          >
+                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
+                              onClick={() => {
+                                handleCreateBox(item, 'prev');
+                              }}>
+                              <span className="-mt-[2px] text-xs">{'<'}</span>
+                            </div>
+                          </Popover>
+
                           <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
                             onClick={() => {
                               handleCreateBox(item, 'center');
                             }}>
                             <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
                           </div>
-                          <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
-                            onClick={() => {
-                              handleCreateBox(item, 'next');
-                            }}>
-                            <span className="-mt-[2px] text-xs">{'>'}</span>
-                          </div>
+
+                          <Popover placement="bottom"
+                            title={null}
+                            content={<div className="text-xs text-basicGray">Extend to Next Page</div>}
+                            trigger="hover"
+                          >
+                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
+                              onClick={() => {
+                                handleCreateBox(item, 'next');
+                              }}>
+                              <span className="-mt-[2px] text-xs">{'>'}</span>
+                            </div>
+                          </Popover>
+
                           <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
                           }}>
                             <Popover placement="rightBottom"

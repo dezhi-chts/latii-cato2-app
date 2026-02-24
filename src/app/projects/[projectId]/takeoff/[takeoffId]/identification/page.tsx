@@ -29,7 +29,7 @@ import {
 import { getTakeOffById } from "@/services/takeOffService";
 import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
 
-import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods, QuotePageTypes } from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -44,45 +44,9 @@ import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground from "../identification-index/components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
-const { confirm } = Modal;
+import { PageType, ArchDrawingAllPageTags, ArchDrawingPageTypes, ArchDrawingLabelTypes } from "../types/evidence";
 
-const defaultPageCategory = [
-  {
-    type: "All",
-    primaryColor: "#717171",
-    count: 0,
-  },
-  {
-    type: "Floor Plan",
-    primaryColor: "#D868D8",
-    count: 0,
-  },
-  {
-    type: "Elevation",
-    primaryColor: "#0BC6BE",
-    count: 0,
-  },
-  {
-    type: "Schedule",
-    primaryColor: "#5859D6",
-    count: 0,
-  },
-  {
-    type: "Mixed",
-    primaryColor: "#F5C00B",
-    count: 0,
-  },
-  {
-    type: "Generalities",
-    primaryColor: "#00798A",
-    count: 0,
-  },
-  {
-    type: "Not Used",
-    primaryColor: "#A3A3A3",
-    count: 0,
-  },
-];
+const { confirm } = Modal;
 
 enum BuildLoadingStep {
   PageAnalysis = 'page-analyze',
@@ -90,18 +54,7 @@ enum BuildLoadingStep {
   PageIndex = 'page-index',
 }
 
-const fixed_page_type = [
-  {
-    type: "Active Pages",
-    color: "#717171",
-    count: 0,
-  }, {
-    type: "All",
-    color: "#717171",
-    count: 0,
-  }];
-
-const invalidPageType = [null, 'Not Used', 'All', 'Active Pages'];
+const invalidPageType = [null, PageType.All, PageType.ActivePages, PageType.NotUsed];
 
 export enum ButtonText {
   NextFile = 'Next File',
@@ -128,9 +81,9 @@ const Identification = () => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
-  const [labelTypeList, setLabelTypeList] = useState<any>([]);
-  const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
+  const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
+  const [labelTypeList, setLabelTypeList] = useState<any>(ArchDrawingLabelTypes);
+  const [currentType, setCurrentType] = useState<string>(ArchDrawingAllPageTags[0].type);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
 
@@ -147,7 +100,7 @@ const Identification = () => {
   const initPageData = async () => {
     setFullLoading(true);
 
-    await getTypeList();
+    //await getTypeList();
     // 获取takeOff详情
     await getTakeOffDetails();
 
@@ -162,12 +115,12 @@ const Identification = () => {
 
     setPageTypeList((prev: any) => {
       return prev.map((item: any) => {
-        if (item.type === "All") {
+        if (item.type === PageType.All) {
           return {
             ...item,
             count: summaryData.total_pages
           }
-        } else if (item.type === "Active Pages") {
+        } else if (item.type === PageType.ActivePages) {
           // 把page_classification中所有不是invalidPageType的type的count加起来
           let totalCount: any = [];
           for (let key in page_classification) {
@@ -236,9 +189,14 @@ const Identification = () => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1) return;
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    let filterType = 'QuoteLabel';
+    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
+      filterType = 'ArchDrawingLabel';
+    }
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.Label });
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: filterType });
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
@@ -275,7 +233,7 @@ const Identification = () => {
       let labelList = res?.data?.fixed_label_types ?? [];
       let first = pageTypeList[0];
       if (pageList.length > 0) {
-        pageList.push(fixed_page_type[1]);
+        //pageList.push(fixed_page_type[1]);
       }
       setPageTypeList([first, ...pageList]);
       setLabelTypeList(labelList);
@@ -331,10 +289,15 @@ const Identification = () => {
   }, [selectedFileId]);
 
   const filterThumbnailList = useMemo(() => {
-    if (currentType === "All") return [...thumbnailList];
-    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    if (!file) return [];
+
+    if (file && file.operation_type === FileOperationType.Quote) return [...thumbnailList];
+
+    if (currentType === PageType.All) return [...thumbnailList];
+    if (currentType === PageType.ActivePages) return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
     return [...thumbnailList].filter((item: any) => item.type === currentType);
-  }, [currentType, thumbnailList]);
+  }, [selectedFileId, fileList, currentType, thumbnailList]);
 
   const getItemPage = (item: any, index: number) => {
     if (typeof item.file_name === 'string') {
@@ -573,7 +536,7 @@ const Identification = () => {
     }
   }, [fileList, selectedFileId]);
 
-  const currentFileOperationType = useMemo(() => {
+  const fileOperationType = useMemo(() => {
     if (!fileList.length) return '';
     let file = fileList.find((file: any) => file.id === selectedFileId);
     return file.operation_type || '';
@@ -590,7 +553,7 @@ const Identification = () => {
         handleNext={handleNext}
       />
       {
-        currentFileOperationType === FileOperationType.ArchitectureDrawing && (
+        fileOperationType === FileOperationType.ArchitectureDrawing && (
           <DrawingTagsView
             pageTypeTags={pageTypeList}
             currentType={currentType}
@@ -613,6 +576,7 @@ const Identification = () => {
                 Ensuring every section is correctly labeled guarantees the most accurate analysis from CATO.
               </div>}
               trigger="hover"
+              className="cursor-pointer"
             >
               <Image src="/assets/icons/info.svg" alt="info circle icon" width={14} height={14}></Image>
             </Popover>
@@ -626,7 +590,13 @@ const Identification = () => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
-            categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
+            size={fileOperationType === FileOperationType.Quote ? 'larger' : 'normal'}
+            categoryList={
+              fileOperationType === FileOperationType.ArchitectureDrawing ?
+                ArchDrawingPageTypes :
+                fileOperationType === FileOperationType.Quote ?
+                  QuotePageTypes : []
+            }
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
@@ -634,12 +604,12 @@ const Identification = () => {
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
               {
-                currentFileOperationType === FileOperationType.ArchitectureDrawing ?
+                fileOperationType === FileOperationType.ArchitectureDrawing ?
                   <>
-                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.Label)} />
+                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.FloorPlan)} />
                     <ClearAllControls handleClearAll={handleClearAllCrop} />
                   </>
-                  : currentFileOperationType === FileOperationType.Quote ?
+                  : fileOperationType === FileOperationType.Quote ?
                     <>
                       <AddRectBoxControls theme="default" text="Add Item" handleAddRectBox={() => handleAddRectBox(GroupType.Item)} />
                       <AddRectBoxControls theme="default" text="Layer Information" handleAddRectBox={() => handleAddRectBox(GroupType.LayerInfo)} />

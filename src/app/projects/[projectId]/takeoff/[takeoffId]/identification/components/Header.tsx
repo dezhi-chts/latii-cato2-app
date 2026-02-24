@@ -62,7 +62,7 @@ const Header = ({
               const uploadFile: UploadFile = {
                 id: file.id,
                 name: file.file_name,
-                status: file.operation_type === FileOperationType.Quote ? FileStatus.Processing : (file.status || FileStatus.Processing),
+                status: file.status || FileStatus.Processing,
                 operation_type: file.operation_type || FileOperationType.ArchitectureDrawing,
                 url: file?.parse_detail?.uploaded_file_url,
                 type: "application/pdf",

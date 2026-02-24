@@ -26,17 +26,135 @@ export enum GroupShapeType {
   Polygon = "polygon",
 }
 
+// 页面类型
+export enum PageType {
+  ActivePages = "Active Pages",
+  FloorPlan = "Floor Plan",
+  Elevation = "Elevation",
+  Schedule = "Schedule",
+  KeyNotes = "Key Notes",
+  Mix = "Mix",
+  NotUsed = "Not Used",
+  All = "All",
+}
+
 /** 框所代表的label类型 */
 export enum GroupType {
-  OCR = "OCR", // ocr框
-  Label = "Label", // label框
-  Item = "Item", // 项目项框
-  Table = "Table",
+  OCR = "OCR", // OCR框
+  Label = "Label", // Label框
+
   TitleInfo = "Title Info", // 标题信息框
   DrawingIndex = "Drawing Index", // 绘图索引框
+
+  Item = "Item", // 项目项框
   LayerInfo = "Layer Info", // 图层信息框
   Description = "Description", // 描述框
+  WindowDoorUnitList = "window_door_unit_list", // 窗门单元列表框
+
+  FloorPlan = PageType.FloorPlan, // 平面框
+  Elevation = PageType.Elevation, // 立面框
+  WindowDoorUnit = "Window Door Unit", // 窗口门单元框
+  Table = "Table", // 表格框
+  KeyNotes = PageType.KeyNotes, // 注释框
 }
+
+// 所有页面类型, 包含所有页面类型和图标
+export const allPageTypes = {
+  [PageType.ActivePages]: {
+    type: PageType.ActivePages,
+    color: "#717171",
+  },
+  [PageType.FloorPlan]: {
+    type: PageType.FloorPlan,
+    icon: "F",
+    color: "#D868D8",
+  },
+  [PageType.Elevation]: {
+    type: PageType.Elevation,
+    icon: "E",
+    color: "#0BC6BE",
+  },
+  [PageType.Schedule]: {
+    type: PageType.Schedule,
+    icon: "S",
+    color: "#5859D6",
+  },
+  [PageType.KeyNotes]: {
+    type: PageType.KeyNotes,
+    icon: "K",
+    color: "#00798A",
+  },
+  [PageType.Mix]: {
+    type: PageType.Mix,
+    icon: "M",
+    color: "#F5C00B",
+  },
+  [PageType.NotUsed]: {
+    type: PageType.NotUsed,
+    icon: "N",
+    color: "#717171",
+  },
+  [PageType.All]: {
+    type: PageType.All,
+    color: "#717171",
+  },
+};
+// identification-index summary页面类型
+export const ArchDrawingSummaryPageTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+];
+
+// identification 所有标签类型
+export const ArchDrawingAllPageTags = [
+  allPageTypes[PageType.ActivePages],
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+  allPageTypes[PageType.NotUsed],
+  allPageTypes[PageType.All],
+];
+
+// identification Arch Drawing文件 页面下拉类型
+export const ArchDrawingPageTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  allPageTypes[PageType.Schedule],
+  allPageTypes[PageType.KeyNotes],
+  allPageTypes[PageType.Mix],
+  allPageTypes[PageType.NotUsed],
+];
+
+export const ArchDrawingLabelTypes = [
+  allPageTypes[PageType.FloorPlan],
+  allPageTypes[PageType.Elevation],
+  {
+    ...allPageTypes[PageType.Schedule],
+    children: [
+      {
+        type: GroupType.WindowDoorUnit,
+        icon: "W",
+        color: "#5859D6",
+        color_class: "bg-indigo-50",
+      },
+      {
+        type: GroupType.Table,
+        icon: "T",
+        color: "#9400D3",
+        color_class: "bg-indigo-50",
+      },
+    ],
+  },
+  allPageTypes[PageType.KeyNotes],
+];
+
+// identification Quote文件 页面下拉类型
+export const QuotePageTypes = [allPageTypes[PageType.NotUsed]];
 
 //矩形/多边形框
 export interface GroupFrame {
