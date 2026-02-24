@@ -233,11 +233,11 @@ export const formatLabel = (value: string) =>
   value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 export const FIELD_TYPE_MAP = {
-  0: "INPUT_TEXT",
-  1: "TEXTAREA",
-  2: "INPUT_NUMBER",
-  3: "DROPDOWN",
-  4: "CHECKBOX",
+  0: "SHORT_TEXT",
+  1: "LONG_TEXT",
+  2: "NUMBERS",
+  3: "SELECTOR",
+  4: "CHECKS",
   5: "RADIO",
   6: "SWITCHES",
   7: "DATE",

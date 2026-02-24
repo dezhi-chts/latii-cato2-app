@@ -38,6 +38,27 @@ const ProjectsSettings = () => {
     console.log(response);
   };
 
+  const addField = async () => {
+    const newAttribute = {
+      type: 0,
+      hint: "",
+      required: true,
+      label: "",
+      metadata: [],
+    };
+
+    setModifiedCompany((prev) => {
+      const updated = {
+        ...prev,
+        project_attributes: [...(prev?.project_attributes ?? []), newAttribute],
+      };
+
+      updateCompanyByCompanyId(company.id, updated);
+
+      return updated;
+    });
+  };
+
   const gridConfig =
     fieldsCount <= 7
       ? { cols: 1, rows: fieldsCount }
@@ -89,6 +110,7 @@ const ProjectsSettings = () => {
             <Button
               backgroundColor="forumBlue"
               className="rounded-md !px-4 !py-1"
+              onClick={addField}
             >
               + Add Field
             </Button>
@@ -99,7 +121,8 @@ const ProjectsSettings = () => {
               {modifiedCompany?.project_attributes?.map(
                 (field: any, index: number) => (
                   <FieldBox
-                    key={`${field.type}-${field.name}-${index}`}
+                    key={`${field.type}-${field.label}-${index}`}
+                    id={index}
                     {...field}
                   />
                   /* Falta agregar Onchange , etc de metodos*/
