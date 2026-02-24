@@ -189,9 +189,14 @@ const Identification = () => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1) return;
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    let filterType = 'QuoteLabel';
+    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
+      filterType = 'ArchDrawingLabel';
+    }
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.Label });
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: filterType });
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];

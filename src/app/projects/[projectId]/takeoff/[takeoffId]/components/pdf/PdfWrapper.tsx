@@ -119,11 +119,12 @@ const getResizeCursorStyle = (pointType: string) => {
 const showReadBtnGroupTypes = [GroupType.OCR];
 // 以下的框类型显示 确认按钮
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
-// 以下的框类型显示 数字按钮
-const showNumBtnGroupTypes = [GroupType.Item];
 
-// 以下的框类型不显示 类型选择框
-const hiddenTypeGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+// 以下的框类型显示 数字按钮,复制按钮
+const showNumBtnGroupTypes = [GroupType.Item, GroupType.WindowDoorUnitList];
+
+// 以下框类型显示下拉框
+const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupType.WindowDoorUnit, GroupType.Table, GroupType.KeyNotes];
 
 // 框类型对应的颜色
 const groupTypeColor: any = {
@@ -2430,13 +2431,13 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center"
                         style={{
-                          left: !hiddenTypeGroupTypes.includes(type) ? (width - 68) : width - 22,
+                          left: showSelectGroupTypes.includes(type) ? (width - 68) : width - 22,
                           top: 4,
                         }}
                       >
                         <div className="flex items-center gap-1">
                           {
-                            !hiddenTypeGroupTypes.includes(type) && <LabelTypesSelect
+                            showSelectGroupTypes.includes(type) && <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
                               onChangeType={(type) => {

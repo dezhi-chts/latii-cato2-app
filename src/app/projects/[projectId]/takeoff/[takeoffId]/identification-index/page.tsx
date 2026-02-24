@@ -151,7 +151,7 @@ const IdentificationIndex = () => {
     if (selectedFileId === -1 || !takeOff) return;
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.DrawingIndex });
+    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: 'DrawingIndex' });
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];

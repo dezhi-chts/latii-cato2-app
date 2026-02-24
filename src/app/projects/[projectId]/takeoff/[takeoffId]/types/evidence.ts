@@ -26,18 +26,6 @@ export enum GroupShapeType {
   Polygon = "polygon",
 }
 
-/** 框所代表的label类型 */
-export enum GroupType {
-  OCR = "OCR", // ocr框
-  Label = "Label", // label框
-  Item = "Item", // 项目项框
-  Table = "Table",
-  TitleInfo = "Title Info", // 标题信息框
-  DrawingIndex = "Drawing Index", // 绘图索引框
-  LayerInfo = "Layer Info", // 图层信息框
-  Description = "Description", // 描述框
-}
-
 // 页面类型
 export enum PageType {
   ActivePages = "Active Pages",
@@ -48,6 +36,26 @@ export enum PageType {
   Mix = "Mix",
   NotUsed = "Not Used",
   All = "All",
+}
+
+/** 框所代表的label类型 */
+export enum GroupType {
+  OCR = "OCR", // OCR框
+  Label = "Label", // Label框
+
+  TitleInfo = "Title Info", // 标题信息框
+  DrawingIndex = "Drawing Index", // 绘图索引框
+
+  Item = "Item", // 项目项框
+  LayerInfo = "Layer Info", // 图层信息框
+  Description = "Description", // 描述框
+  WindowDoorUnitList = "window_door_unit_list", // 窗门单元列表框
+
+  FloorPlan = PageType.FloorPlan, // 平面框
+  Elevation = PageType.Elevation, // 立面框
+  WindowDoorUnit = "Window Door Unit", // 窗口门单元框
+  Table = "Table", // 表格框
+  KeyNotes = PageType.KeyNotes, // 注释框
 }
 
 // 所有页面类型, 包含所有页面类型和图标
@@ -129,13 +137,13 @@ export const ArchDrawingLabelTypes = [
     ...allPageTypes[PageType.Schedule],
     children: [
       {
-        type: "Window Door Unit",
+        type: GroupType.WindowDoorUnit,
         icon: "W",
         color: "#5859D6",
         color_class: "bg-indigo-50",
       },
       {
-        type: "Table",
+        type: GroupType.Table,
         icon: "T",
         color: "#9400D3",
         color_class: "bg-indigo-50",
