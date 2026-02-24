@@ -23,6 +23,7 @@ type UserContextType = {
   changeUser: (updatedData: UserDataForUpdate) => void;
   clearLocalStorage: () => void;
   isAdmin: boolean;
+  project_attributes?: any[];
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -42,6 +43,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     changeUser: () => {},
     clearLocalStorage: () => {},
     isAdmin: false,
+    project_attributes: [],
   });
 
   const changeUser = (updatedData: UserDataForUpdate) => {
@@ -85,7 +87,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     if (!savedUser?.username) return;
 
-    const companyId = await getCompanyId();
+    const { companyId, projectAttributes } = await getCompanyInfo();
 
     const isAdmin = await isUserAdmin();
     let first_name = "Guest";
@@ -108,17 +110,24 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       clearLocalStorage: () => {},
       isAdmin: isAdmin,
       job_title: savedUser.job_title,
+      project_attributes: projectAttributes,
     });
     return;
   };
 
-  const getCompanyId = async () => {
+  const getCompanyInfo = async () => {
     try {
       const response = await fetchCompanyByKeycloakUser();
-      return response.data?.id || null;
+      return {
+        companyId: response?.data.id || null,
+        projectAttributes: response?.data.project_attributes || [],
+      };
     } catch (error) {
       console.log("Error fetching company id:", error);
-      return null;
+      return {
+        companyId: null,
+        projectAttributes: [],
+      };
     }
   };
 
