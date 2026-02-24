@@ -1,11 +1,14 @@
-import { ProjectRow, ProjectStatus } from "@/types/home";
+import { ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { StarFilled, StarOutlined } from "@ant-design/icons";
 import { ConfigProvider, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getTitleFromPropertyName } from "@/lib/functions";
 import Image from "next/image";
+import dayjs from "dayjs";
+import "dayjs/locale/en";
+
+dayjs.locale("en");
 
 const PAGE_SIZE = 20;
 
@@ -40,14 +43,14 @@ const HomeProjectsTable = ({
   tableLoading,
   projects,
   selectedColumns,
-  handleRemoveProject
+  handleRemoveProject,
 }: any) => {
   const [page, setPage] = useState(1);
   const router = useRouter();
 
   const dynamicProperties = useMemo(() => {
     return [];
-  }, [projects])
+  }, [projects]);
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -72,7 +75,9 @@ const HomeProjectsTable = ({
         dataIndex: "update_time",
         key: "update_time",
         align: "center",
-        render: (value) => <TextCell value={value} />,
+        render: (value) => (
+          <TextCell value={value && dayjs(value).format("MMMM D, YYYY")} />
+        ),
       },
       // {
       //   title: (
@@ -132,16 +137,25 @@ const HomeProjectsTable = ({
         key: "operation",
         align: "center",
         width: 160,
-        render: (value, record) => <div className="w-full flex justify-center items-center cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemoveProject(record);
-          }}>
-          <Image src="/assets/icons/delete.svg" alt="Delete" width={20} height={20} />
-        </div>
+        render: (value, record) => (
+          <div
+            className="w-full flex justify-center items-center cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveProject(record);
+            }}
+          >
+            <Image
+              src="/assets/icons/delete.svg"
+              alt="Delete"
+              width={20}
+              height={20}
+            />
+          </div>
+        ),
       },
     ],
-    []
+    [],
   );
 
   const dynamicColumns: ColumnsType<ProjectRow> = useMemo(
@@ -157,28 +171,29 @@ const HomeProjectsTable = ({
         align: "center" as const,
         render: (value) => <TextCell value={value} />,
       })),
-    [dynamicProperties]
+    [dynamicProperties],
   );
 
   const allColumns = useMemo(
     () => [...defaultColumns, ...dynamicColumns],
-    [defaultColumns, dynamicColumns]
+    [defaultColumns, dynamicColumns],
   );
 
   const columns = useMemo(() => {
     if (!selectedColumns || selectedColumns.length === 0) {
       return allColumns;
     }
-    return allColumns.filter(column => selectedColumns.includes(column.key as string));
+    return allColumns.filter((column) =>
+      selectedColumns.includes(column.key as string),
+    );
   }, [allColumns, selectedColumns]);
-
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
       onClick: () => router.push(`/projects/${record.project_id}`),
       className: "cursor-pointer hover:bg-gray-50",
     }),
-    [router]
+    [router],
   );
 
   return (

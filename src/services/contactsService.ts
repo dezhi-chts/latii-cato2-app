@@ -60,3 +60,14 @@ export const deleteContactById = async ({
     return { data: null, status: "error" };
   }
 };
+
+export const getContactByKeycloakUser = async () => {
+  try {
+    const url = `/company/get_company_contact_by_keycloak_user/`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error fetching contact by keycloak user:", error);
+    return { data: null, status: "error" };
+  }
+};

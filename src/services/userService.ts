@@ -29,9 +29,15 @@ export const updateUser = async (data: UserDataForUpdate) => {
   const url = `/admin/dealer/user`;
 
   try {
-    const params = new URLSearchParams(data).toString();
+    const params = new URLSearchParams();
 
-    const response = await http.post(url, params);
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, value);
+      }
+    });
+
+    const response = await http.post(url, params.toString());
 
     return { status: "success", data: response };
   } catch (error) {
@@ -39,7 +45,6 @@ export const updateUser = async (data: UserDataForUpdate) => {
     return { status: "error", data: error };
   }
 };
-
 export const changePassword = async (data: passwordChangeData) => {
   const url = "/admin/dealer/user";
 

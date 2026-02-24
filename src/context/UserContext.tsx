@@ -1,3 +1,4 @@
+import { fetchCompanyByKeycloakUser } from "@/services/companyService";
 import { isUserAdmin } from "@/services/userService";
 import { UserDataForUpdate } from "@/types/user";
 import {
@@ -17,6 +18,7 @@ type UserContextType = {
   job_title: string;
   company?: any;
   company_contact?: any;
+  company_id?: number;
   force_logout: boolean;
   changeUser: (updatedData: UserDataForUpdate) => void;
   clearLocalStorage: () => void;
@@ -35,6 +37,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     job_title: "",
     company: null,
     company_contact: null,
+    company_id: 0,
     force_logout: false,
     changeUser: () => {},
     clearLocalStorage: () => {},
@@ -82,25 +85,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     if (!savedUser?.username) return;
 
+    const companyId = await getCompanyId();
+
     const isAdmin = await isUserAdmin();
-    // const response = await fetchUser(savedUser.username);
-    // return;
-
-    // if (response.is_force_logout) {
-    //   setUser((prev) => ({
-    //     ...prev,
-    //     force_logout: true,
-    //   }));
-    //   return;
-    // }
-
-    // if (!response.is_success) throw new Error("Error fetching user data");
-
-    // setUser({
-    //   ...response.data,
-    //   changeUser,
-    //   clearLocalStorage,
-    // });
     let first_name = "Guest";
     let last_name = "";
     if (savedUser.name.split(" ").length == 2) {
@@ -115,6 +102,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       email: savedUser.email,
       company: null,
       company_contact: null,
+      company_id: companyId,
       force_logout: false,
       changeUser: () => {},
       clearLocalStorage: () => {},
@@ -122,6 +110,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       job_title: savedUser.job_title,
     });
     return;
+  };
+
+  const getCompanyId = async () => {
+    try {
+      const response = await fetchCompanyByKeycloakUser();
+      return response.data?.id || null;
+    } catch (error) {
+      console.log("Error fetching company id:", error);
+      return null;
+    }
   };
 
   useEffect(() => {

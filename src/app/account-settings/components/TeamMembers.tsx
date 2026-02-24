@@ -5,9 +5,12 @@ import NewUserForm from "./NewUserForm";
 import { getContactsByCompanyId } from "@/services/contactsService";
 import { Contact } from "@/types/user";
 import { useEffect, useState } from "react";
+import { Divider } from "antd";
+import { useUser } from "@/context/UserContext";
 
+export const CONTACTS_TIMEOUT_MS = 10_000;
 const TeamMembers = () => {
-  const CONTACTS_TIMEOUT_MS = 10_000;
+  const { company_id = 0 } = useUser();
 
   const [usersData, setUsersData] = useState<Contact[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +29,7 @@ const TeamMembers = () => {
     }, CONTACTS_TIMEOUT_MS);
 
     try {
-      const response = await getContactsByCompanyId({ company_id: 1 });
+      const response = await getContactsByCompanyId({ company_id: company_id });
 
       if (timedOut) return;
 
@@ -55,9 +58,9 @@ const TeamMembers = () => {
   }, []);
 
   return (
-    <div className="ml-4 flex flex-col gap-12 w-11/12">
+    <div className="pl-16 flex flex-col gap-12 w-full">
       <div className="flex">
-        <div className="w-8/12 pt-10">
+        <div className="w-8/12 pt-10 flex flex-col gap-5">
           <p className="text-kahuBlue text-base">User Panel</p>
           <div className="w-11/12">
             {isLoading ? (
@@ -76,8 +79,11 @@ const TeamMembers = () => {
             )}
           </div>
         </div>
+        <Divider type="vertical" className="h-auto bg-primaryN20" />
 
-        <NewUserForm refreshContacts={fetchCompanyContacts} />
+        <div className="w-4/12">
+          <NewUserForm refreshContacts={fetchCompanyContacts} />
+        </div>
       </div>
     </div>
   );

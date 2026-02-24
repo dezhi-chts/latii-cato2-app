@@ -6,15 +6,21 @@ import Link from "next/link";
 import SidebarSettings from "./SidebarSettings";
 import CreateProjectModal from "@/app/projects/[projectId]/components/Create-Project-Modal";
 import { useUser } from "@/context/UserContext";
-import { ProjectSettings } from "@/types/project";
 import { signOut } from "next-auth/react";
 import LogoutModal from "./Logout-Modal";
 import { usePathname } from "next/navigation";
 import { UserDataForUpdate } from "@/types/user";
+import { Tooltip } from "antd";
 
 export default function Sidebar() {
-  const { email, first_name, force_logout, clearLocalStorage, last_name } =
-    useUser();
+  const {
+    email,
+    first_name,
+    force_logout,
+    clearLocalStorage,
+    last_name,
+    isAdmin,
+  } = useUser();
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   const [expanded, setExpanded] = useState({
@@ -151,6 +157,7 @@ export default function Sidebar() {
   };
 
   const activePage = usePathname();
+  const firstSegment = activePage.split("/")[1];
 
   if (activePage.startsWith("/public")) return null;
 
@@ -161,7 +168,7 @@ export default function Sidebar() {
           loadingExpansion ? "w-[340px] px-9" : "w-16"
         } 
       ${!expanded.sidebar && "cursor-pointer"}
-      top-0 z-[9999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-black transition-all linear duration-700`}
+      top-0 z-[9999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-black transition-all linear duration-700 font-nunito`}
         ref={sidebarRef}
         onClick={() => {
           !expanded.sidebar && toggleExpand("sidebar");
@@ -198,17 +205,15 @@ export default function Sidebar() {
           </div>
           <button
             className={`${
-              expanded.sidebar
-                ? "px-3.5 bg-forumBlue text-white"
-                : "bg-forumBlueLight w-7 h-7 self-center"
-            } h-7 text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
+              expanded.sidebar ? "px-3.5" : " w-7 h-7 self-center"
+            } h-7 bg-forumBlueLight text-forumDarkBlue hover:bg-forumBlue hover:text-white text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
             onClick={(e) => {
               e.stopPropagation();
               setShowModal((prev) => ({ ...prev, createProject: true }));
             }}
           >
             {expanded.sidebar ? (
-              <p>+ New Project</p>
+              <p>+ Create Project</p>
             ) : (
               <Image
                 src="/assets/icons/add-sidebar-blue.svg"
@@ -224,6 +229,7 @@ export default function Sidebar() {
               e.stopPropagation();
               if (expanded.sidebar) toggleExpand("sidebar");
             }}
+            className={`${firstSegment === "home" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
           >
             <Link href="/home">
               <div
@@ -231,13 +237,20 @@ export default function Sidebar() {
                   showInitialStyles ? "" : " justify-start"
                 } h-8 w-10 items-center pl-2.5 cursor-pointer`}
               >
-                <Image
-                  src="/assets/icons/home-gray.svg"
-                  alt="Home icon"
-                  width={20}
-                  height={20}
-                  className="w-5 h-5"
-                />
+                <Tooltip
+                  title={expanded.sidebar ? "" : "Home"}
+                  placement="right"
+                  zIndex={9999}
+                  color="#ffffff"
+                >
+                  <Image
+                    src={`/assets/icons/navbar/home${`${firstSegment}` === "home" ? "-selected" : ""}.svg`}
+                    alt="Home icon"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
+                </Tooltip>
 
                 <p className="whitespace-nowrap">
                   {expanded.sidebar && "Home"}
@@ -245,11 +258,13 @@ export default function Sidebar() {
               </div>
             </Link>
           </div>
-          <div
+          {/* For now, Lucius Chat has been removed from the sidebar. Don't delete the code below, it's just commented out. */}
+          {/* <div
             onClick={(e) => {
               e.stopPropagation();
               if (expanded.sidebar) toggleExpand("sidebar");
             }}
+            className="hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out"
           >
             <Link href="/ask-lucius">
               <div
@@ -269,29 +284,67 @@ export default function Sidebar() {
                 </p>
               </div>
             </Link>
-          </div>
+          </div> */}
           {expanded.sidebar && (
             <div className="pl-2.5 pt-4 flex flex-col gap-4">
               <p className="text-baseGray text-sm ">Management</p>
-              <Link href="/brand-editor">
+              {isAdmin && (
                 <div
-                  className={`flex gap-2 rounded-xl ${
-                    showInitialStyles ? "" : " justify-start"
-                  } h-8 w-10 items-center pl-1 cursor-pointer`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (expanded.sidebar) toggleExpand("sidebar");
+                  }}
+                  className={`${firstSegment === "brand-editor" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
                 >
-                  <Image
-                    src="/assets/icons/edit-sidebar.svg"
-                    alt="brand management icon"
-                    width={20}
-                    height={20}
-                    className="w-4 h-4"
-                  />
-                  <p className="whitespace-nowrap text-black text-sm">
-                    {expanded.sidebar && "Brand Management"}
-                  </p>
+                  <Link href="/brand-editor">
+                    <div
+                      className={`flex gap-2 ${
+                        showInitialStyles ? "" : "justify-start"
+                      } h-8 min-w-10 items-center cursor-pointer`}
+                    >
+                      <Image
+                        src={`/assets/icons/navbar/your-company${`${firstSegment}` === "brand-editor" ? "-selected" : ""}.svg`}
+                        alt="brand management icon"
+                        width={20}
+                        height={20}
+                        className="w-4 h-4 ml-2"
+                      />
+                      <p className="whitespace-nowrap text-black text-sm">
+                        {expanded.sidebar && "Your Company"}
+                      </p>
+                    </div>
+                  </Link>
                 </div>
-              </Link>
-              <Link href="/knowledge-base-lucius">
+              )}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (expanded.sidebar) toggleExpand("sidebar");
+                }}
+                className={`${firstSegment === "brand-settings" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+              >
+                <Link href="/brand-settings">
+                  <div
+                    className={`flex gap-2 ${
+                      showInitialStyles ? "" : "justify-start"
+                    } h-8 min-w-10 items-center cursor-pointer`}
+                  >
+                    <Image
+                      src={`/assets/icons/navbar/settings${`${firstSegment}` === "brand-settings" ? "-selected" : ""}.svg`}
+                      alt="brand management icon"
+                      width={20}
+                      height={20}
+                      className="w-4 h-4 ml-2"
+                    />
+                    <p className="whitespace-nowrap text-black text-sm">
+                      {expanded.sidebar && "Settings"}
+                    </p>
+                  </div>
+                </Link>
+              </div>
+
+              {/* For now, Lucius Knowledge Base has been removed from the sidebar. Don't delete the code below, it's just commented out. */}
+              {/* <Link href="/knowledge-base-lucius">
                 <div
                   className={`flex gap-2 rounded-xl ${
                     showInitialStyles ? "" : " justify-start"
@@ -309,44 +362,74 @@ export default function Sidebar() {
                     {expanded.sidebar && "LUCIUS | Knowledge Base"}
                   </p>
                 </div>
-              </Link>
-              <Link href="/knowledge-base-cato">
-                <div
-                  className={`flex gap-1 rounded-xl ${
-                    showInitialStyles ? "" : " justify-start"
-                  } h-8 w-10 items-center pl-1 cursor-pointer`}
-                >
-                  <Image
-                    src="/assets/icons/cato-knowledge-sidebar.svg"
-                    alt="Cato Knowledge Base icon"
-                    width={20}
-                    height={20}
-                    className="w-5 h-5"
-                  />
+              </Link> */}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (expanded.sidebar) toggleExpand("sidebar");
+                }}
+                className={`${firstSegment === "knowledge-base-cato" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+              >
+                <Link href="/knowledge-base-cato">
+                  <div
+                    className={`flex gap-1 rounded-xl ${
+                      showInitialStyles ? "" : " justify-start"
+                    } h-8 w-10 items-center pl-1 cursor-pointer`}
+                  >
+                    <Image
+                      src={`/assets/icons/navbar/cato-knowledge-base${`${firstSegment}` === "knowledge-base-cato" ? "-selected" : ""}.svg`}
+                      alt="Cato Knowledge Base icon"
+                      width={20}
+                      height={20}
+                      className="w-5 h-5 ml-1"
+                    />
 
-                  <p className="whitespace-nowrap text-black text-sm">
-                    {expanded.sidebar && "CATO | Knowledge Base"}
-                  </p>
-                </div>
-              </Link>
+                    <p className="whitespace-nowrap text-black text-sm">
+                      {expanded.sidebar && "CATO | Knowledge Base"}
+                    </p>
+                  </div>
+                </Link>
+              </div>
             </div>
           )}
         </div>
 
         <div
-          className="flex flex-col pl-3 h-14 justify-around text-sm w-full"
+          className="flex flex-col pl-3 gap-3 text-sm w-full"
           onClick={(e) => e.stopPropagation()}
         >
           <div
             className={`flex items-center cursor-pointer hover:underline w-fit relative ${
               expanded.sidebar && "gap-2"
             }`}
-            onClick={() =>
-              setShowModal((prev) => ({ ...prev, settings: !prev.settings }))
-            }
+          >
+            <Tooltip
+              title={expanded.sidebar ? "" : "Support"}
+              placement="right"
+              zIndex={9999}
+              color="#ffffff"
+            >
+              <Image
+                src={`/assets/icons/navbar/support${firstSegment === "support" ? "-selected" : ""}.svg`}
+                alt="Support icon"
+                width={20}
+                height={20}
+              />
+            </Tooltip>
+            <span> {expanded.sidebar ? "Support" : ""} </span>
+          </div>
+          <div
+            className={`flex items-center cursor-pointer hover:underline w-fit relative ${
+              expanded.sidebar && "gap-2"
+            }`}
+            onClick={() => {
+              setTimeout(() => {
+                setShowModal((prev) => ({ ...prev, settings: !prev.settings }));
+              }, 10);
+            }}
           >
             <Image
-              src="/assets/icons/user.svg"
+              src={`/assets/icons/navbar/profile${firstSegment === "account-settings" ? "-selected" : ""}.svg`}
               alt="User Settings"
               width={20}
               height={20}

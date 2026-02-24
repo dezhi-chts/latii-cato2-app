@@ -11,9 +11,14 @@ import { NAME_ONLY_REGEX } from "./NewUserForm";
 type UserTableProps = {
   contacts: Contact[];
   refreshContacts: () => void;
+  showActions?: boolean;
 };
 
-const UserTable = ({ contacts, refreshContacts }: UserTableProps) => {
+const UserTable = ({
+  contacts,
+  refreshContacts,
+  showActions = true,
+}: UserTableProps) => {
   const [editingIndex, setEditingIndex] = useState<number>(-1);
 
   const handleIndexChange = (index: number) => {
@@ -26,15 +31,17 @@ const UserTable = ({ contacts, refreshContacts }: UserTableProps) => {
 
   return (
     <div className="w-full flex flex-col">
-      <div className="w-full rounded-t-xl bg-primaryN20 border-b border-primaryN30 flex text-basicGray text-xs text-center py-3">
+      <div className="w-full rounded-t-xl bg-primaryN20 border-b border-primaryN30 flex text-basicGray text-xs text-center py-3 gap-2">
         <p className="w-1/5">First Name</p>
         <p className="w-1/5">Last Name</p>
         <p className="w-1/5">Role</p>
         <p className="w-1/5">Email</p>
-        <p className="w-[10%]">Permits</p>
-        <p className="w-[10%]">Actions</p>
+        <p className={`${showActions ? "w-[10%]" : "w-1/5"}`}>Permits</p>
+        {showActions && <p className="w-[10%]">Actions</p>}
       </div>
-      <div className="max-h-[70vh] overflow-auto scrollbar-hidden">
+      <div
+        className={`${showActions ? "max-h-[70vh]" : "max-h-[30vh]"} overflow-auto scrollbar-hidden`}
+      >
         {contacts
           ? contacts.map((user, index) => {
               return (
@@ -45,6 +52,7 @@ const UserTable = ({ contacts, refreshContacts }: UserTableProps) => {
                   handleIndexChange={handleIndexChange}
                   editingIndex={editingIndex}
                   refreshContacts={refreshContacts}
+                  showActions={showActions}
                 />
               );
             })
@@ -62,6 +70,7 @@ type RowProps = {
   handleIndexChange: (i: number) => void;
   editingIndex: number;
   refreshContacts: () => void;
+  showActions: boolean;
 };
 
 const Row = ({
@@ -70,6 +79,7 @@ const Row = ({
   handleIndexChange,
   editingIndex,
   refreshContacts,
+  showActions,
 }: RowProps) => {
   const parts = user.name.split(/[\s-]+/);
   const firstName = parts[0] || "";
@@ -165,31 +175,35 @@ const Row = ({
       {renderField(contact.last_name, "last_name")}
       {renderField(contact.job_title, "job_title")}
       {renderField(contact.email, "email")}
-      <p className="w-[10%] text-basicGray">Owner</p>
-      <div className="w-[10%] flex justify-center gap-1.5 items-center">
-        <Image
-          src={`/assets/icons/edit-table${isEditing ? "-active" : ""}.svg`}
-          alt="contact edit icon"
-          width={25}
-          height={18}
-          className="cursor-pointer hover:opacity-80"
-          onClick={handleEditButtonClick}
-        />
-        <Popconfirm
-          title="Are you sure you want to delete this contact?"
-          onConfirm={handleDeleteButtonClick}
-          okText="Yes"
-          cancelText="No"
-        >
+      <p className={`${showActions ? "w-[10%]" : "w-1/5"} text-basicGray`}>
+        Owner
+      </p>
+      {showActions && (
+        <div className="w-[10%] flex justify-center gap-1.5 items-center">
           <Image
-            src="/assets/icons/delete-table.svg"
-            alt="contact delete icon"
+            src={`/assets/icons/edit-table${isEditing ? "-active" : ""}.svg`}
+            alt="contact edit icon"
             width={25}
             height={18}
             className="cursor-pointer hover:opacity-80"
+            onClick={handleEditButtonClick}
           />
-        </Popconfirm>
-      </div>
+          <Popconfirm
+            title="Are you sure you want to delete this contact?"
+            onConfirm={handleDeleteButtonClick}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Image
+              src="/assets/icons/delete-table.svg"
+              alt="contact delete icon"
+              width={25}
+              height={18}
+              className="cursor-pointer hover:opacity-80"
+            />
+          </Popconfirm>
+        </div>
+      )}
     </div>
   );
 };
