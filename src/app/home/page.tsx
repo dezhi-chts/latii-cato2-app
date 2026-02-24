@@ -25,6 +25,7 @@ import {
 } from "@/services/takeOffService";
 
 import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
+import { useCompany } from "@/context/CompanyContext";
 
 const { confirm } = Modal;
 
@@ -233,7 +234,6 @@ const Home = () => {
     setProjectLoading(true);
     const response: any = await getAllProjects({ per_page: 10 });
     const projects = response?.items;
-    console.log(projects, "projects");
     setProjectLoading(false);
     if (projects?.length > 0) {
       setProjects(projects);
