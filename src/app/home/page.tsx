@@ -432,7 +432,6 @@ const Home = () => {
           />
         )}
       </div>
-      {loading && <Spin fullscreen />}
     </div>
   );
 };

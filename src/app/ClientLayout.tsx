@@ -1,7 +1,6 @@
 "use client";
 
 import Sidebar from "@/components/Sidebar";
-import { GlobalLoadingProvider } from "@/context/GlobalLoadingContext";
 import { ProjectsProvider } from "@/context/ProjectsContext";
 import { UserProvider } from "@/context/UserContext";
 import { SessionProvider } from "next-auth/react";
@@ -11,12 +10,10 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
     <SessionProvider>
       <UserProvider>
         <AuthWrapper>
-          <GlobalLoadingProvider>
-            <ProjectsProvider>
-              <Sidebar />
-              <div className="pl-12">{children}</div>
-            </ProjectsProvider>
-          </GlobalLoadingProvider>
+          <ProjectsProvider>
+            <Sidebar />
+            <div className="pl-12">{children}</div>
+          </ProjectsProvider>
         </AuthWrapper>
       </UserProvider>
     </SessionProvider>
