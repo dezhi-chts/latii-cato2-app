@@ -137,7 +137,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
       const page_classification = summaryData.page_classification ?? {};
 
       setPageTypeList((prev: any) => {
-        return prev.map((item: any) => {
+        let newPageTypeList = prev.map((item: any) => {
           if (item.type === PageType.All) {
             return {
               ...item,
@@ -160,8 +160,14 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
               ...item,
               count: page_classification[item.type] ?? 0,
             };
+          } else {
+            return {
+              ...item,
+              count: page_classification[item.type] ?? 0,
+            };
           }
         });
+        return newPageTypeList;
       });
     },
     [pageTypeList],
