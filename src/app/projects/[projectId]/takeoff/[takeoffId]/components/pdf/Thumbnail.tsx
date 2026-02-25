@@ -83,7 +83,6 @@ interface ThumbnailProps {
   showShadow?: boolean; // 是否显示阴影
   size?: 'normal' | 'larger'; // 缩略图大小
   categoryList?: any[]; // 页面分类
-  onChangePageType?: (page: number, type: string) => void; // 切换页面类型回调
 }
 
 const Thumbnail = ({
@@ -98,7 +97,6 @@ const Thumbnail = ({
   size = 'normal', // 缩略图大小
   categoryList = [], // 页面分类
   showShadow = true, // 是否显示阴影
-  onChangePageType, // 切换页面类型回调
 }: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 

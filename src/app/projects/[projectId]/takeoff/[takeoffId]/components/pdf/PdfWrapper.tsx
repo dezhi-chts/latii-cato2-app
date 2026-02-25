@@ -149,9 +149,6 @@ const PdfWrapper = forwardRef(
       allEvidence,
       selectedEvidenceIds,
       typeList,
-      showEvidenceType = false,
-      onRefreshEvidence,
-      resetAdding,
       onChangePage,
       onTotalPages,
       onAppendEvidence,
@@ -737,7 +734,6 @@ const PdfWrapper = forwardRef(
       setShowEvidence(false);
       setCropSections((prev) => []);
       setCropMode(null);
-      resetAdding && resetAdding();
     };
 
     const startDrawing = () => {
@@ -799,7 +795,6 @@ const PdfWrapper = forwardRef(
       setCropMode(null);
 
       centerIndexRef.current = 0;
-      resetAdding && resetAdding();
     };
 
     const rotatePDF = useCallback(async () => {
@@ -1066,8 +1061,6 @@ const PdfWrapper = forwardRef(
         });
       });
       setCropMode(null);
-
-      resetAdding && resetAdding();
     };
 
     const deleteCrop = (groupId: string) => {
@@ -1142,7 +1135,6 @@ const PdfWrapper = forwardRef(
       insertGroup(groupFrame);
 
       setCropMode(null);
-      resetAdding && resetAdding();
       if (operationMode !== "view") {
         // 取消默认添加时默认选中
         //setSelectedShapeId(groupFrame.id);
@@ -2260,6 +2252,8 @@ const PdfWrapper = forwardRef(
                   onClick={(e) => {
                     if (e.target === e.target.getStage()) {
                       setSelectedShapeId(null);
+                      // 当点击画布时，让所有输入框失去焦点
+                      document.activeElement?.blur();
                     }
 
                     stageClick(e);
@@ -2417,7 +2411,7 @@ const PdfWrapper = forwardRef(
                       {showNumBtnGroupTypes.includes(type) &&
                         <div className="pl-[2px] inline-block">
                           <input
-                            className="px-[2px] h-[20px] w-fit text-center outline-none text-white text-xxs rounded-md "
+                            className="h-[20px] text-center outline-none text-white text-xxs rounded-md "
                             defaultValue={item.sub_text ?? ''}
                             onBlur={(e: any) => {
                               if (e.target.value.trim() !== '') {
@@ -2426,7 +2420,7 @@ const PdfWrapper = forwardRef(
                             }}
                             style={{
                               width: 'fit-content',
-                              maxWidth: 35,
+                              maxWidth: 45,
                               backgroundColor: color
                             }}
                           />

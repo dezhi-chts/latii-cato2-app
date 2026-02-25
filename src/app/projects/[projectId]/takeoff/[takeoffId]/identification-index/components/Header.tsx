@@ -33,8 +33,6 @@ const Header = ({
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
 
-  const [loading, setLoading] = useState(false);
-
   const filesData = useMemo(() => {
     if (!fileList) return [];
     return fileList ?? [];

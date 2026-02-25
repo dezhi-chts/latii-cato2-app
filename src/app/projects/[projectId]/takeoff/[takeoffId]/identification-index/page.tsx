@@ -47,13 +47,12 @@ import {
   PdfWrapperRefMethods,
 } from "../types/evidence";
 
+import LoadingScreen from "@/components/loading-screen";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
 import {
   ZoomControls,
-  AddRectBoxControls,
-  PageControls,
   SelectPagesControls,
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
@@ -61,6 +60,7 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
+
 
 import { ArchDrawingSummaryPageTypes } from "../types/evidence";
 
@@ -337,13 +337,6 @@ const IdentificationIndex = ({
     debouncedZoomChange(value);
   };
 
-  const handleSafeZoomChange = (value: number) => {
-    message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`,
-    );
-    debouncedZoomChange(value - 0.1);
-  };
-
   const handlePageChange = (value: number) => {
     // 需要判断当前pdf页面上是否有裁剪区域未提交
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
@@ -615,7 +608,7 @@ const IdentificationIndex = ({
             </div>
           </div>
           <div className="flex-1 flex overflow-hidden border border-primaryN30 rounded-md relative">
-            <PdfWrapper
+            {/* <PdfWrapper
               ref={pdfRef}
               operationMode={"edit"}
               mode="edit"
@@ -626,16 +619,12 @@ const IdentificationIndex = ({
               zoom={zoom}
               page={page}
               allEvidence={fileEvidence}
-              onRefreshEvidence={() => {
-                getFileEvidences();
-              }}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
-              onUpdateSafeZoom={handleSafeZoomChange}
               onCropSectionsCount={handleCropsCount}
-            ></PdfWrapper>
+            ></PdfWrapper> */}
           </div>
         </div>
         <div
@@ -670,7 +659,7 @@ const IdentificationIndex = ({
           }}
         />
       )}
-      {fullLoading && <Spin fullscreen />}
+      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && <BuildingBackground step={buildLoadingStep} />}
     </div>
   );

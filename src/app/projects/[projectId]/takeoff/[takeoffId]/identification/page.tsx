@@ -41,6 +41,7 @@ import {
   QuotePageTypes,
 } from "../types/evidence";
 
+import LoadingScreen from "@/components/loading-screen";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
@@ -360,7 +361,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     return index + 1;
   };
 
-  const setThumbnailPageType = (page: number, type: string) => {
+  const updateThumbnailPageType = (page: number, type: string) => {
     setThumbnailList((prev: any) => {
       return prev.map((item: any, index: number) => {
         let itemPageNum = getItemPage(item, index);
@@ -375,62 +376,47 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     });
   };
 
-  const handlePageType = async (
-    page: number,
-    newType: string,
-    oldType: string,
-  ) => {
-    let res = await updatePageType({
-      fileId: selectedFileId as any,
-      pageNum: page,
-      newType: newType,
-    });
-    if (res.status === "success") {
-      // 更新成功，更新tags中的数据
-      setPageTypeList((prev: any) => {
-        let list = [...prev];
-        let oldTypeItem = list.find((item: any) => item.type === oldType);
-        let newTypeItem = list.find((item: any) => item.type === newType);
-        let activePagesItem = list.find(
-          (item: any) => item.type === "Active Pages",
-        );
-        oldTypeItem.count =
-          (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
-        newTypeItem.count = (newTypeItem?.count || 0) + 1;
+  const handleUpdatePageType = useCallback((pageInfo: any) => {
+    return;
+    const { page, newType } = pageInfo;
 
-        let activePages = list.filter(
-          (item: any) => validPageType.includes(item.type),
-        );
-        // 计算所有非无效类型的计数之和
-        activePagesItem.count = activePages.reduce(
-          (total: number, item: any) => total + (item.count || 0),
-          0,
-        );
-
-        return [...list];
-      });
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to update page type",
-      });
-      // 回滚到上次的类型设置
-      setThumbnailPageType(page, oldType);
-    }
-  };
-
-  const handlePageTypeChange = async (page: number, type: string) => {
+    // 获取当前页旧的type
     let oldType =
       thumbnailList.find((item: any, index: number) => {
         let itemPageNum = getItemPage(item, index);
         return itemPageNum === page;
       })?.type || "";
+    if (oldType === newType) return;
 
-    // 设置新的type
-    setThumbnailPageType(page, type);
-    // 调用type更新接口
-    handlePageType(page, type, oldType);
-  };
+    // 更新当前页的type
+    updateThumbnailPageType(page, newType);
+    // 更新tags中的数据
+    setPageTypeList((prev: any) => {
+      let list = [...prev];
+      let oldTypeItem = list.find((item: any) => item.type === oldType);
+      let newTypeItem = list.find((item: any) => item.type === newType);
+      let activePagesItem = list.find(
+        (item: any) => item.type === PageType.ActivePages,
+      );
+      // 页面旧类型集合数量减1
+      oldTypeItem.count =
+        (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
+      // 页面新类型集合数量加1
+      newTypeItem.count = (newTypeItem?.count || 0) + 1;
+
+      let activePages = list.filter(
+        (item: any) => validPageType.includes(item.type),
+      );
+      // 计算所有有效类型的计数之和
+      activePagesItem.count = activePages.reduce(
+        (total: number, item: any) => total + (item.count || 0),
+        0,
+      );
+
+      return [...list];
+    });
+
+  }, [page, thumbnailList]);
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -455,13 +441,6 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     debouncedZoomChange(value);
   };
 
-  const handleSafeZoomChange = (value: number) => {
-    message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`,
-    );
-    debouncedZoomChange(value - 0.1);
-  };
-
   const handlePageChange = (value: number) => {
     // 需要判断当前pdf页面上是否有裁剪区域未提交
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
@@ -476,10 +455,6 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   };
   const handleRotate = () => {
     pdfRef?.current?.rotatePDF?.();
-  };
-
-  const handleThumbnail = () => {
-    setShowThumbnail(!showThumbnail);
   };
 
   const handleClearAllCrop = () => {
@@ -497,6 +472,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     }
     if (!evidenceList?.length) return;
     setFileEvidence([...fileEvidence, ...evidenceList]);
+    handleUpdatePageType({ page: page, newType: PageType.FloorPlan });
   };
 
   const handleDeleteEvidence = (deleteIds: number[]) => {
@@ -509,6 +485,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     setFileEvidence(
       fileEvidence.filter((item: EvidenceType) => !deleteIds.includes(item.id)),
     );
+    handleUpdatePageType({ page: page, newType: PageType.FloorPlan });
   };
 
   const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
@@ -530,6 +507,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         return item;
       }),
     );
+    handleUpdatePageType({ page: page, newType: PageType.FloorPlan });
   };
 
   const handleAddRectBox = (type: GroupType) => {
@@ -679,7 +657,6 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
                   ? QuotePageTypes
                   : []
             }
-            onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
         <div className={`flex-1 flex flex-col px-6 overflow-hidden`}>
@@ -739,16 +716,11 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
               zoom={zoom}
               page={page}
               allEvidence={fileEvidence}
-              showEvidenceType={true}
-              onRefreshEvidence={() => {
-                getFileEvidences();
-              }}
               onChangePage={setPage}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
-              onUpdateSafeZoom={handleSafeZoomChange}
             ></PdfWrapper>
           </div>
         </div>
@@ -764,7 +736,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         ></PreAnalysisMdal>
       )}
 
-      {fullLoading && <Spin fullscreen />}
+      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && (
         <BuildingBackground step={BuildLoadingStep.PageAnalysis} />
       )}

@@ -201,6 +201,7 @@ export interface ViewPort {
   width: number;
   height: number;
   scale: number;
+  viewBox: number[];
   convertToViewportPoint: (x: number, y: number) => [number, number];
   convertToPdfPoint: (x: number, y: number) => [number, number];
   getTextContent: () => string;
@@ -259,11 +260,8 @@ export interface PdfWrapperProps {
   page: number;
   zoom: number;
   allEvidence: EvidenceType[]; //当前文件所有的evidence
-  typeList?: any[]; //当前文件所有的type
+  typeList?: any[]; //当前文件所有框的全部类型
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
-  showEvidenceType?: boolean; //是否显示evidence type
-  onRefreshEvidence?: () => void;
-  resetAdding?: () => void;
   onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
   onAppendEvidence?: (evidenceList: EvidenceType[]) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新
