@@ -310,8 +310,8 @@ export default function Sidebar() {
                         className="w-4 h-4 ml-2"
                       />
                       <p className="whitespace-nowrap text-black text-sm">
-                        {/* {expanded.sidebar && "Your Company"} */}
-                        {expanded.sidebar && "Brand Management"}
+                        {expanded.sidebar && "Your Company"}
+                        {/* Please let this title. It's according to the figma. If you have any question, please ask me or the UX/UI team. */}
                       </p>
                     </div>
                   </Link>
