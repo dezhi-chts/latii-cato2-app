@@ -145,10 +145,24 @@ const ProjectsSettings = () => {
 
           <div className="overflow-auto max-h-[65vh] scrollbar-hidden">
             <div className="flex flex-col gap-6">
+              <FieldBox
+                id={0}
+                uuid="project-name-fixed"
+                label="Project Name"
+                type={0}
+                required
+                has_hint_text={false}
+                hint=""
+                metadata={[]}
+                onDelete={() => {}}
+                onDuplicate={() => {}}
+                onChange={() => {}}
+                is_fixed={true}
+              />
               {company?.project_attributes?.map((field: any, index: number) => (
                 <FieldBox
                   key={field.uuid ?? `${field.type}-${field.label}-${index}`}
-                  id={index}
+                  id={index + 1}
                   {...field}
                   onDelete={deleteField}
                   onDuplicate={() => field.uuid && duplicateField(field.uuid)}
@@ -186,6 +200,45 @@ const ProjectsSettings = () => {
                 gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
               }
             >
+              <div
+                className={
+                  gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
+                }
+              >
+                <div className="w-full break-inside-avoid mb-4">
+                  <ShortText
+                    name="Project Name"
+                    required
+                    hint_text="Input a recognizable name for you."
+                  />
+                </div>
+
+                {company?.project_attributes?.map(
+                  (field: any, index: number) => {
+                    const RenderComponent =
+                      FIELD_COMPONENTS_BY_NUMBER[field.type];
+                    if (!RenderComponent) return null;
+
+                    const props = {
+                      name: field.label,
+                      required: field.required,
+                      hint_text: field.has_hint_text ? field.hint : undefined,
+                      options: field?.metadata || undefined,
+                    };
+
+                    return (
+                      <div
+                        key={
+                          field.uuid ?? `${field.type}-${field.label}-${index}`
+                        }
+                        className="w-full break-inside-avoid mb-4"
+                      >
+                        {RenderComponent(props)}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
               {company?.project_attributes?.map((field: any, index: number) => {
                 const RenderComponent = FIELD_COMPONENTS_BY_NUMBER[field.type];
                 if (!RenderComponent) return null;

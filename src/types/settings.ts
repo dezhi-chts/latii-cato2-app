@@ -15,8 +15,9 @@ export type ProjectField = {
   id: number;
   uuid: string;
   label: string;
-  type: ProjectInputTypes;
+  type: number;
   required: boolean;
+  is_fixed: boolean;
   has_hint_text?: boolean;
   hint?: string;
   metadata: String[];

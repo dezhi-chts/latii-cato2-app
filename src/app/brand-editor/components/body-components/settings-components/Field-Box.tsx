@@ -21,6 +21,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
     required,
     has_hint_text,
     hint,
+    is_fixed,
     metadata,
     onChange,
     onDuplicate,
@@ -67,6 +68,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         <Input
           value={localLabel}
           onChange={(e) => setLocalLabel(e.target.value)}
+          disabled={!!is_fixed}
           onBlur={() => {
             if (localLabel !== (label ?? "")) {
               onChange?.({ label: localLabel });
@@ -79,39 +81,42 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         <Select
           value={type}
           onChange={(value) => onChange?.({ type: value })}
+          disabled={!!is_fixed}
           options={inputTypeOptions}
           className="w-52 rounded-md h-8 font-normal"
           placeholder="Select Type"
         />
 
-        <div className="ml-auto flex items-center gap-3 mr-3">
-          <button
-            type="button"
-            disabled={!uuid}
-            onClick={() => uuid && onDelete(uuid)}
-            className="items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Image
-              src="/assets/icons/delete.svg"
-              alt="Delete"
-              width={16}
-              height={16}
-            />
-          </button>
+        {!is_fixed && (
+          <div className="ml-auto flex items-center gap-3 mr-3">
+            <button
+              type="button"
+              disabled={!uuid}
+              onClick={() => uuid && onDelete(uuid)}
+              className="items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Image
+                src="/assets/icons/delete.svg"
+                alt="Delete"
+                width={16}
+                height={16}
+              />
+            </button>
 
-          <button
-            type="button"
-            onClick={onDuplicate}
-            className="items-center justify-center"
-          >
-            <Image
-              src="/assets/icons/duplicate.svg"
-              alt="Duplicate"
-              width={16}
-              height={16}
-            />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="items-center justify-center"
+            >
+              <Image
+                src="/assets/icons/duplicate.svg"
+                alt="Duplicate"
+                width={16}
+                height={16}
+              />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3">
@@ -120,6 +125,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           <Checkbox
             checked={!!has_hint_text}
             onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
+            disabled={!!is_fixed}
           >
             Hint Text
           </Checkbox>
@@ -129,6 +135,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
             <Switch
               checked={!!required}
               onChange={(checked) => onChange?.({ required: checked })}
+              disabled={!!is_fixed}
             />
           </div>
         </div>
