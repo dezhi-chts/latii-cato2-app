@@ -10,7 +10,7 @@ const Header = () => {
           Your Company
         </p>
         <p className="text-baseGray text-sm">
-          Save all the information of your company
+          Save all information of your company
         </p>
       </div>
     </div>

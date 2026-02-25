@@ -29,6 +29,7 @@ const LocationSelector = ({
   updateProject,
   handleInputChange,
   handleDropdownChange,
+  handleOnBlur,
   height,
   style,
 }: LocationSelectorProps) => {
@@ -87,103 +88,93 @@ const LocationSelector = ({
         }}
         size="large"
       />
-      {isOpen && (
-        <div
-          className={`${selectorClassName} flex flex-col w-96 rounded-xl border border-primaryN30 py-8 px-5 gap-5 text-xs absolute top-8 shadow-xl z-50 bg-white`}
-          ref={divRef}
-        >
-          <ConfigProvider
-            theme={{
-              components: {
-                Select: {
-                  borderRadius: 9999,
-                  fontSize: 12,
-                },
-              },
+
+      <div
+        className={`${selectorClassName} ${isOpen ? "" : "hidden"} flex flex-col w-96 rounded-xl border border-primaryN30 py-8 px-5 gap-5 text-xs absolute top-8 shadow-xl z-50 bg-white`}
+        ref={divRef}
+      >
+        <div className="w-full flex gap-2.5 items-center">
+          <p className="w-1/4 text-basicGray">
+            State <span className="text-accentRed">*</span>
+          </p>
+
+          <Select
+            className="w-3/4 border-primaryN30 [&_.ant-select-selector]:!rounded-lg text-xs h-6"
+            placeholder="Select State"
+            value={projectSettings?.state || undefined} // es isoCode
+            onChange={(val) => {
+              // val es el isoCode seleccionado
+              if (!handleDropdownChange) return;
+              handleDropdownChange("state")(val);
+              handleDropdownChange("city")(""); // reset city
             }}
+            getPopupContainer={(triggerNode) =>
+              triggerNode.parentElement || document.body
+            }
+            showSearch
+            optionFilterProp="children"
           >
-            <div className="w-full flex gap-2.5 items-center">
-              <p className="w-1/4 text-basicGray">
-                State <span className="text-accentRed">*</span>
-              </p>
-
-              <Select
-                className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-                placeholder="Select State"
-                value={projectSettings?.state || undefined} // es isoCode
-                onChange={(val) => {
-                  // val es el isoCode seleccionado
-                  if (!handleDropdownChange) return;
-                  handleDropdownChange("state")(val);
-                  handleDropdownChange("city")(""); // reset city
-                }}
-                getPopupContainer={(triggerNode) =>
-                  triggerNode.parentElement || document.body
-                }
-                showSearch
-                optionFilterProp="children"
-              >
-                {states.map((s) => (
-                  <Option key={s.isoCode} value={s.isoCode}>
-                    {s.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-            <div className="w-full flex gap-2.5 items-center">
-              <p className="w-1/4 text-basicGray">
-                City <span className="text-accentRed">*</span>
-              </p>
-
-              <Select
-                className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-                placeholder="Select City"
-                value={projectSettings?.city || undefined}
-                onChange={(val) => {
-                  if (!handleDropdownChange) return;
-                  handleDropdownChange("city")(val);
-                }}
-                disabled={!projectSettings?.state}
-                showSearch
-                optionFilterProp="children"
-                getPopupContainer={(triggerNode) =>
-                  triggerNode.parentElement || document.body
-                }
-              >
-                {cities.map((c) => (
-                  <Option key={c.name} value={c.name}>
-                    {c.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          </ConfigProvider>
-          <div className="w-full flex gap-2.5 items-center">
-            <p className="w-1/4 text-basicGray">Postal Code</p>
-            <Input
-              placeholder="70001, etc."
-              className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-              onChange={() => {
-                if (!handleInputChange) return;
-                handleInputChange("postal_code");
-              }}
-              defaultValue={projectSettings?.postal_code}
-            />
-          </div>
-          <div className="w-full flex gap-2.5 items-center">
-            <p className="w-1/4 text-basicGray">Address</p>
-            <Input
-              placeholder="6002 Westplano Park, etc."
-              className="w-3/4 rounded-xl border-primaryN30 text-xs h-6"
-              onChange={() => {
-                if (!handleInputChange) return;
-                handleInputChange("address");
-              }}
-              defaultValue={projectSettings?.address}
-            />
-          </div>
+            {states.map((s) => (
+              <Option key={s.isoCode} value={s.isoCode}>
+                {s.name}
+              </Option>
+            ))}
+          </Select>
         </div>
-      )}
+        <div className="w-full flex gap-2.5 items-center">
+          <p className="w-1/4 text-basicGray">
+            City <span className="text-accentRed">*</span>
+          </p>
+
+          <Select
+            className="w-3/4 border-primaryN30 [&_.ant-select-selector]:!rounded-lg "
+            placeholder="Select City"
+            value={projectSettings?.city || undefined}
+            onChange={(val) => {
+              if (!handleDropdownChange) return;
+              handleDropdownChange("city")(val);
+            }}
+            disabled={!projectSettings?.state}
+            showSearch
+            optionFilterProp="children"
+            getPopupContainer={(triggerNode) =>
+              triggerNode.parentElement || document.body
+            }
+          >
+            {cities.map((c) => (
+              <Option key={c.name} value={c.name}>
+                {c.name}
+              </Option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-full flex gap-2.5 items-center">
+          <p className="w-1/4 text-basicGray">Postal Code</p>
+          <Input
+            placeholder="70001, etc."
+            className="w-3/4 border-primaryN30 [&.ant-input]:!rounded-lg"
+            onChange={(e) => {
+              if (!handleInputChange) return;
+              handleInputChange("postal_code", e.target.value);
+            }}
+            onBlur={handleOnBlur}
+            value={projectSettings?.postal_code}
+          />
+        </div>
+        <div className="w-full flex gap-2.5 items-center">
+          <p className="w-1/4 text-basicGray">Address</p>
+          <Input
+            placeholder="6002 Westplano Park, etc."
+            className="w-3/4 border-primaryN30 [&.ant-input]:!rounded-lg"
+            onChange={(e) => {
+              if (!handleInputChange) return;
+              handleInputChange("address", e.target.value);
+            }}
+            onBlur={handleOnBlur}
+            value={projectSettings?.address}
+          />
+        </div>
+      </div>
     </div>
   );
 };
