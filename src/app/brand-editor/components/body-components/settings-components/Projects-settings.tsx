@@ -6,8 +6,35 @@ import { FieldBox } from "./Field-Box";
 import { ConfigProvider, Divider } from "antd";
 import { useCompany } from "@/context/CompanyContext";
 import { updateCompanyByCompanyId } from "@/services/companyService";
+import ShortText from "@/components/fields/ShortText";
+import Numbers from "@/components/fields/Numbers";
+import LongText from "@/components/fields/LongText";
+import Selector from "@/components/fields/Selector";
+import Checkbox from "@/components/fields/Checkbox";
+import Radio from "@/components/fields/Radio";
+import Switch from "@/components/fields/Switch";
+import DateInput from "@/components/fields/DateInput";
+import Weblink from "@/components/fields/Link";
 
 const ProjectsSettings = () => {
+  const FIELD_COMPONENTS_BY_NUMBER: Record<
+    number,
+    (props: any) => React.ReactNode
+  > = {
+    0: (props) => <ShortText {...props} />,
+    1: (props) => <LongText {...props} />, // TEXTAREA
+    2: (props) => <Numbers {...props} />,
+    3: (props) => <Selector {...props} />,
+    4: (props) => <Checkbox {...props} />,
+    5: (props) => <Radio {...props} />,
+    6: (props) => <Switch {...props} />,
+    7: (props) => <DateInput {...props} />,
+    8: (props) => <Weblink {...props} />,
+    9: (props) => <Location {...props} />,
+    // si el backend lo soporta, agregás:
+    // 10: (props) => <UploadFiles {...props} />,
+  };
+
   const { company, refreshCompany } = useCompany();
 
   const fieldsCount = company?.project_attributes?.length ?? 0;
@@ -162,17 +189,26 @@ const ProjectsSettings = () => {
                 gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
               }
             >
-              {company?.project_attributes?.map((field: any, index: number) => (
-                <div
-                  key={field.uuid ?? `${field.type}-${field.label}-${index}`}
-                  className="w-full break-inside-avoid mb-4"
-                >
-                  {/* Preview placeholder */}
-                  <div className="text-xs text-basicGray">
-                    {field.label || "Untitled field"} (type: {field.type})
+              {company?.project_attributes?.map((field: any, index: number) => {
+                const RenderComponent = FIELD_COMPONENTS_BY_NUMBER[field.type];
+                if (!RenderComponent) return null;
+
+                const props = {
+                  name: field.label,
+                  required: field.required,
+                  hint_text: field.has_hint_text ? field.hint : undefined,
+                  options: field?.metadata || undefined,
+                };
+
+                return (
+                  <div
+                    key={field.uuid ?? `${field.type}-${field.label}-${index}`}
+                    className="w-full break-inside-avoid mb-4"
+                  >
+                    {RenderComponent(props)}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex justify-end w-full mt-6 max-w-80">
