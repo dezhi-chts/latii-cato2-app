@@ -1,5 +1,7 @@
+"use client";
+
 import { fetchCompanyByKeycloakUser } from "@/services/companyService";
-import {
+import React, {
   createContext,
   ReactNode,
   useContext,
@@ -15,7 +17,7 @@ type Location = {
   country: string;
 };
 
-type CompanyContextType = {
+type CompanyData = {
   name: string;
   description: string;
   website: string;
@@ -26,38 +28,43 @@ type CompanyContextType = {
   project_attributes: any[];
 };
 
+type CompanyContextType = {
+  company: CompanyData;
+  changeCompany: (updatedData: Partial<CompanyData>) => void;
+  refreshCompany: () => Promise<void>;
+};
+
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
-export const CompanyProvider = ({ children }: { children: ReactNode }) => {
-  const [company, setCompany] = useState<CompanyContextType>({
-    name: "",
-    description: "",
-    website: "",
-    social_media: "",
-    location: {
-      state: "",
-      city: "",
-      address: "",
-      postal_code: "",
-      country: "",
-    },
-    id: 0,
-    photo_url: "",
-    project_attributes: [],
-  });
+const initialCompany: CompanyData = {
+  name: "",
+  description: "",
+  website: "",
+  social_media: "",
+  location: {
+    state: "",
+    city: "",
+    address: "",
+    postal_code: "",
+    country: "",
+  },
+  id: 0,
+  photo_url: "",
+  project_attributes: [],
+};
 
-  const changeCompany = (updatedData: CompanyContextType) => {
-    setCompany((prev) => {
-      const updatedCompany = { ...prev, ...updatedData };
-      return updatedCompany;
-    });
+export const CompanyProvider = ({ children }: { children: ReactNode }) => {
+  const [company, setCompany] = useState<CompanyData>(initialCompany);
+
+  const changeCompany = (updatedData: Partial<CompanyData>) => {
+    setCompany((prev) => ({ ...prev, ...updatedData }));
   };
 
-  const fetchCompanyData = async () => {
+  const refreshCompany = async () => {
     try {
       const response = await fetchCompanyByKeycloakUser();
       if (response.status === "success") {
-        changeCompany(response.data);
+        setCompany(response.data); // pisa todo con lo del backend
       }
     } catch (error) {
       console.error("Error fetching company data:", error);
@@ -65,11 +72,11 @@ export const CompanyProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchCompanyData();
+    refreshCompany();
   }, []);
 
   return (
-    <CompanyContext.Provider value={{ ...company }}>
+    <CompanyContext.Provider value={{ company, changeCompany, refreshCompany }}>
       {children}
     </CompanyContext.Provider>
   );

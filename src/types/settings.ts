@@ -13,12 +13,12 @@ export type ProjectInputTypes =
 
 export type ProjectField = {
   id: number;
-  uuid: number;
+  uuid: string;
   label: string;
   type: ProjectInputTypes;
   required: boolean;
   has_hint_text?: boolean;
-  hint_text?: string;
+  hint?: string;
   metadata: String[];
 };
 
@@ -37,7 +37,7 @@ export type FormulasBoxProps = FormulasBox & {
 export type ProjectFieldBoxProps = ProjectField & {
   onChange?: (patch: Partial<ProjectField>) => void;
   onDuplicate?: () => void;
-  onDelete?: () => void;
+  onDelete: (uuid: string) => void;
 };
 
 export const PROJECT_INPUT_TYPES_OPTIONS = [

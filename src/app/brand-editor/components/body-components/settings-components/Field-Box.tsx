@@ -1,32 +1,44 @@
 "use client";
 
-import { FIELD_TYPE_MAP, formatLabel } from "@/lib/functions";
-import {
-  PROJECT_INPUT_TYPES_OPTIONS,
-  ProjectFieldBoxProps,
-} from "@/types/settings";
+import React, { useEffect, useState } from "react";
+import { FIELD_TYPE_MAP } from "@/lib/functions";
+import { ProjectFieldBoxProps } from "@/types/settings";
 import { Checkbox, Input, Select, Switch } from "antd";
 import Image from "next/image";
+
+const formatLabel = (label: string) =>
+  label
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
 
 export const FieldBox = (field: ProjectFieldBoxProps) => {
   const {
     id,
+    uuid,
     label,
     type,
     required,
     has_hint_text,
-    hint_text,
+    hint,
     metadata,
     onChange,
     onDuplicate,
     onDelete,
   } = field;
 
-  const formatLabel = (label: string) =>
-    label
-      .replaceAll("_", " ")
-      .toLowerCase()
-      .replace(/^\w/, (c) => c.toUpperCase());
+  // ✅ estado local para poder tipear
+  const [localLabel, setLocalLabel] = useState(label ?? "");
+  const [localHint, setLocalHint] = useState(hint ?? "");
+
+  // ✅ si el backend refresca y cambia el valor, lo sincronizamos
+  useEffect(() => {
+    setLocalLabel(label ?? "");
+  }, [label]);
+
+  useEffect(() => {
+    setLocalHint(hint ?? "");
+  }, [hint]);
 
   const inputTypeOptions = Object.entries(FIELD_TYPE_MAP).map(
     ([value, label]) => ({
@@ -53,8 +65,13 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         </div>
 
         <Input
-          value={label}
-          onChange={(e) => onChange?.({ label: e.target.value })}
+          value={localLabel}
+          onChange={(e) => setLocalLabel(e.target.value)}
+          onBlur={() => {
+            if (localLabel !== (label ?? "")) {
+              onChange?.({ label: localLabel });
+            }
+          }}
           placeholder="Project Name"
           className="rounded-md px-3 h-8 w-60 font-normal"
         />
@@ -70,8 +87,9 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         <div className="ml-auto flex items-center gap-3 mr-3">
           <button
             type="button"
-            onClick={onDelete}
-            className="items-center justify-center"
+            disabled={!uuid}
+            onClick={() => uuid && onDelete(uuid)}
+            className="items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Image
               src="/assets/icons/delete.svg"
@@ -115,13 +133,18 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           </div>
         </div>
 
-        {/* Hint text input (si está activo) */}
+        {/* Hint input */}
         {has_hint_text && (
           <div className="px-4 pb-4">
             <Input
               size="small"
-              value={hint_text ?? ""}
-              onChange={(e) => onChange?.({ hint_text: e.target.value })}
+              value={localHint}
+              onChange={(e) => setLocalHint(e.target.value)}
+              onBlur={() => {
+                if (localHint !== (hint ?? "")) {
+                  onChange?.({ hint: localHint });
+                }
+              }}
               placeholder="Hint text..."
             />
           </div>
