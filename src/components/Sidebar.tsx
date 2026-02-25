@@ -310,7 +310,8 @@ export default function Sidebar() {
                         className="w-4 h-4 ml-2"
                       />
                       <p className="whitespace-nowrap text-black text-sm">
-                        {expanded.sidebar && "Your Company"}
+                        {/* {expanded.sidebar && "Your Company"} */}
+                        {expanded.sidebar && "Brand Management"}
                       </p>
                     </div>
                   </Link>
