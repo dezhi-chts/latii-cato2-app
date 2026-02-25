@@ -10,11 +10,11 @@ import ShortText from "@/components/fields/ShortText";
 import Numbers from "@/components/fields/Numbers";
 import LongText from "@/components/fields/LongText";
 import Selector from "@/components/fields/Selector";
-import Checkbox from "@/components/fields/Checkbox";
 import Radio from "@/components/fields/Radio";
 import Switch from "@/components/fields/Switch";
 import DateInput from "@/components/fields/DateInput";
 import Weblink from "@/components/fields/Link";
+import Check from "@/components/fields/Check";
 
 const ProjectsSettings = () => {
   const FIELD_COMPONENTS_BY_NUMBER: Record<
@@ -22,17 +22,14 @@ const ProjectsSettings = () => {
     (props: any) => React.ReactNode
   > = {
     0: (props) => <ShortText {...props} />,
-    1: (props) => <LongText {...props} />, // TEXTAREA
+    1: (props) => <LongText {...props} />,
     2: (props) => <Numbers {...props} />,
     3: (props) => <Selector {...props} />,
-    4: (props) => <Checkbox {...props} />,
+    4: (props) => <Check {...props} />,
     5: (props) => <Radio {...props} />,
     6: (props) => <Switch {...props} />,
     7: (props) => <DateInput {...props} />,
     8: (props) => <Weblink {...props} />,
-    9: (props) => <Location {...props} />,
-    // si el backend lo soporta, agregás:
-    // 10: (props) => <UploadFiles {...props} />,
   };
 
   const { company, refreshCompany } = useCompany();
