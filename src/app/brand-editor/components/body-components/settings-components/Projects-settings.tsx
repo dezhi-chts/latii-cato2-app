@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Button from "@/components/Button";
 import { FieldBox } from "./Field-Box";
 import { ConfigProvider, Divider } from "antd";
@@ -16,107 +16,48 @@ import Checkbox from "@/components/fields/Checkbox";
 import Radio from "@/components/fields/Radio";
 import Location from "@/components/fields/Location";
 import UploadFiles from "@/components/fields/UploadFiles";
-
-type MockField = {
-  id: number;
-  name: string;
-  type: ProjectInputTypesOptions;
-  required: boolean;
-  has_hint_text: boolean;
-  hint_text?: string;
-  options?: string[];
-};
+import { useCompany } from "@/context/CompanyContext";
+import { updateCompanyByCompanyId } from "@/services/companyService";
 
 const ProjectsSettings = () => {
-  const mockedFields: MockField[] = [
-    {
-      id: 1,
-      name: "Short Text Example",
-      type: "short_text",
-      required: true,
-      has_hint_text: true,
-      hint_text: "Write a short text here",
-    },
-    {
-      id: 2,
-      name: "Selector Example",
-      type: "selector",
-      required: true,
-      has_hint_text: true,
-      hint_text: "Select option here",
-    },
-    {
-      id: 3,
-      name: "Long Text Example",
-      type: "long_text",
-      required: false,
-      has_hint_text: true,
-      hint_text: "Write a description here",
-    },
-    {
-      id: 4,
-      name: "Numbers Example",
-      type: "numbers",
-      required: false,
-      has_hint_text: false,
-    },
-    {
-      id: 5,
-      name: "Date Example",
-      type: "date",
-      required: true,
-      has_hint_text: false,
-    },
-    {
-      id: 6,
-      name: "Is Active",
-      type: "switch",
-      required: false,
-      has_hint_text: false,
-      hint_text: "Switch",
-    },
-    {
-      id: 7,
-      name: "Web Link",
-      type: "link",
-      required: false,
-      has_hint_text: true,
-      hint_text: "Website",
-    },
-    {
-      id: 8,
-      name: "Checkbox",
-      type: "checks",
-      required: false,
-      has_hint_text: false,
-      options: ["option1", "option2", "option3"],
-    },
-    {
-      id: 9,
-      name: "Radios",
-      type: "radios",
-      required: false,
-      has_hint_text: false,
-      options: ["option1", "option2", "option3"],
-    },
-    {
-      id: 10,
-      name: "Location",
-      type: "location",
-      required: true,
-      has_hint_text: false,
-    },
-    {
-      id: 11,
-      name: "Upload Files",
-      type: "upload_files",
-      required: true,
-      has_hint_text: true,
-      hint_text: "Upload files here",
-    },
-  ];
+  const company = useCompany();
 
-  const fieldsCount = mockedFields.length;
+  const [modifiedCompany, setModifiedCompany] = useState<any>();
+
+  useEffect(() => {
+    setModifiedCompany(company);
+  }, [company]);
+
+  const fieldsCount = modifiedCompany?.project_attributes?.length;
+
+  const updateCompany = async () => {
+    const response = await updateCompanyByCompanyId(
+      company.id,
+      modifiedCompany
+    );
+    console.log(response);
+  };
+
+  const addField = async () => {
+    const newAttribute = {
+      type: 0,
+      hint: "",
+      required: true,
+      label: "",
+      metadata: [],
+    };
+
+    setModifiedCompany((prev) => {
+      const updated = {
+        ...prev,
+        project_attributes: [...(prev?.project_attributes ?? []), newAttribute],
+      };
+
+      updateCompanyByCompanyId(company.id, updated);
+
+      return updated;
+    });
+  };
 
   const gridConfig =
     fieldsCount <= 7
@@ -169,6 +110,7 @@ const ProjectsSettings = () => {
             <Button
               backgroundColor="forumBlue"
               className="rounded-md !px-4 !py-1"
+              onClick={addField}
             >
               + Add Field
             </Button>
@@ -176,13 +118,16 @@ const ProjectsSettings = () => {
 
           <div className="overflow-auto max-h-[65vh] scrollbar-hidden">
             <div className="flex flex-col gap-6">
-              {mockedFields.map((field: any, index: number) => (
-                <FieldBox
-                  key={`${field.type}-${field.name}-${index}`}
-                  {...field}
-                />
-                /* Falta agregar Onchange , etc de metodos*/
-              ))}
+              {modifiedCompany?.project_attributes?.map(
+                (field: any, index: number) => (
+                  <FieldBox
+                    key={`${field.type}-${field.label}-${index}`}
+                    id={index}
+                    {...field}
+                  />
+                  /* Falta agregar Onchange , etc de metodos*/
+                )
+              )}
             </div>
           </div>
         </div>
@@ -248,7 +193,7 @@ const ProjectsSettings = () => {
                 gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
               }
             >
-              {mockedFields.map((field: any, index: number) => {
+              {company?.project_attributes.map((field: any, index: number) => {
                 const type = field.type as ProjectInputTypesOptions;
                 const RenderComponent = FIELD_COMPONENTS[type];
                 if (!RenderComponent) return null;

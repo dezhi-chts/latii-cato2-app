@@ -25,7 +25,7 @@ function Auth({ children }: { children: React.ReactNode }) {
   if (isUser || activePage.includes("/public")) {
     return children;
   }
-  return <div>Loading...</div>;
+  return <Spin fullscreen tip="Loading..." size="large" />;
 }
 
 const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -34,7 +34,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
   // Function to check user group permissions
   const checkGroupPermission = (
-    userGroups: string[] | string | undefined
+    userGroups: string[] | string | undefined,
   ): boolean => {
     if (!userGroups) return false;
 
@@ -43,7 +43,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
     // Exact match - only groups exactly equal to "Latii" will pass
     return groupsArray.some(
-      (group) => group && group === process.env.NEXT_PUBLIC_KEYCLOAK_CATO_GROUP
+      (group) => group && group === process.env.NEXT_PUBLIC_KEYCLOAK_CATO_GROUP,
     );
   };
 
@@ -68,7 +68,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
           if (exp && exp < now) {
             console.warn("Access token expired, signing out...");
             message.error(
-              "Session timed out. You will be redirected to the login page to sign in again."
+              "Session timed out. You will be redirected to the login page to sign in again.",
             );
             await new Promise((resolve) => setTimeout(resolve, 2000));
             await signOut({ callbackUrl: "/" });
@@ -78,7 +78,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
           // Check user group permissions
           if (!checkGroupPermission(session.user.groups)) {
             console.warn(
-              "User does not have required group permissions (Latii), signing out..."
+              "User does not have required group permissions (Latii), signing out...",
             );
             message.error("User does not have the permissions.");
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -99,10 +99,10 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             name: session?.user.name,
           };
 
-//           const existingUserData = localStorage.getItem("userData");
-//           if (!existingUserData) {
-//             localStorage.setItem("userData", JSON.stringify(userData));
-//           }
+          //           const existingUserData = localStorage.getItem("userData");
+          //           if (!existingUserData) {
+          //             localStorage.setItem("userData", JSON.stringify(userData));
+          //           }
           localStorage.setItem("userData", JSON.stringify(userData));
 
           setLoading(false);
@@ -126,11 +126,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex h-screen justify-center items-center">
-        <Spin size="large" />
-      </div>
-    );
+    return <Spin fullscreen tip="Loading..." size="large" />;
   }
 
   return (

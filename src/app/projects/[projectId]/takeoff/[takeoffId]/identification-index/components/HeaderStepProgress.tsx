@@ -1,19 +1,20 @@
-import Image from "next/image";
-
 const ActiveCircle = ({ number }: any) => {
-  return <div className="w-[16px] h-[16px] rounded-full border border-forumBlue flex items-center justify-center">
-    <div className="w-[14px] h-[14px] rounded-full bg-forumBlue text-white text-xxs block text-center">
-      {typeof number !== 'undefined' ? number : ''}
+  return (
+    <div className="w-[16px] h-[16px] rounded-full border border-forumBlue flex items-center justify-center">
+      <div className="w-[14px] h-[14px] rounded-full bg-forumBlue text-white text-xxs block text-center">
+        {typeof number !== "undefined" ? number : ""}
+      </div>
     </div>
-  </div>
-}
+  );
+};
 
 const InActiveCircle = () => {
-  return <div className="w-[16px] h-[16px] rounded-full bg-[#DCDCDC] flex items-center justify-center">
-    <div className="w-[5px] h-[5px] rounded-full bg-white block">
+  return (
+    <div className="w-[16px] h-[16px] rounded-full bg-[#DCDCDC] flex items-center justify-center">
+      <div className="w-[5px] h-[5px] rounded-full bg-white block"></div>
     </div>
-  </div>
-}
+  );
+};
 
 export const PageIndexStepActive = () => {
   return (
@@ -22,19 +23,34 @@ export const PageIndexStepActive = () => {
       <div className="text-sm text-forumBlue">Page Index</div>
       <div className="text-xs text-basicGray">Step 1</div>
     </div>
-  )
-}
+  );
+};
 
 export const PageIndexStepInActive = () => {
   return (
     <div className="pr-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
-      <div className={`w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen`}>
-        <div className=" text-white text-xxs font-sans">{'✓'}</div>
+      <div
+        className={`w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen`}
+      >
+        <div className=" text-white text-xxs font-sans">{"✓"}</div>
       </div>
       <div className="text-sm text-accentGreen">Page Index</div>
     </div>
-  )
-}
+  );
+};
+
+export const PageIndexStepCompleted = () => {
+  return (
+    <div className="pr-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
+      <div
+        className={`w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen`}
+      >
+        <div className=" text-white text-xxs font-sans">{"✓"}</div>
+      </div>
+      <div className="text-sm text-accentGreen">Page Index</div>
+    </div>
+  );
+};
 
 export const PageLabelingStepActive = () => {
   return (
@@ -43,8 +59,8 @@ export const PageLabelingStepActive = () => {
       <div className="text-sm text-forumBlue">Page Labeling</div>
       <div className="text-xs text-basicGray">Step 2</div>
     </div>
-  )
-}
+  );
+};
 export const PageLabelingStepInActive = () => {
   return (
     <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
@@ -52,20 +68,20 @@ export const PageLabelingStepInActive = () => {
       <div className="text-sm text-baseGray">Page Labeling</div>
       <div className="text-xs text-baseGray">Step 2</div>
     </div>
-  )
-}
+  );
+};
 
 // Completed step with green check for Page Labeling (used in Pre-Analysis step 3)
 export const PageLabelingStepCompleted = () => {
   return (
     <div className="px-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
       <div className="w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen">
-        <div className="text-white text-xxs font-sans">{'✓'}</div>
+        <div className="text-white text-xxs font-sans">{"✓"}</div>
       </div>
       <div className="text-sm text-accentGreen">Page Labeling</div>
     </div>
-  )
-}
+  );
+};
 
 export const PageAnalysisStepActive = () => {
   return (
@@ -73,8 +89,8 @@ export const PageAnalysisStepActive = () => {
       <div className="text-sm text-forumBlue">Page Analysis</div>
       <div className="text-xs text-basicGray">Step 3</div>
     </div>
-  )
-}
+  );
+};
 
 export const PagePreAnalysisStepActive = () => {
   return (
@@ -83,8 +99,8 @@ export const PagePreAnalysisStepActive = () => {
       <div className="text-sm text-forumBlue">Pre-Analysis</div>
       <div className="text-xs text-basicGray">Step 3</div>
     </div>
-  )
-}
+  );
+};
 export const PageAnalysisStepInActive = () => {
   return (
     <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
@@ -92,6 +108,16 @@ export const PageAnalysisStepInActive = () => {
       <div className="text-sm text-baseGray">Pre-Analysis</div>
       <div className="text-xs text-baseGray">Step 3</div>
     </div>
-  )
-}
+  );
+};
 
+export const PagePreAnalysisStepCompleted = () => {
+  return (
+    <div className="px-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
+      <div className="w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen">
+        <div className="text-white text-xxs font-sans">{"✓"}</div>
+      </div>
+      <div className="text-sm text-accentGreen">Pre-Analysis</div>
+    </div>
+  );
+};

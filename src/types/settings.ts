@@ -13,15 +13,13 @@ export type ProjectInputTypes =
 
 export type ProjectField = {
   id: number;
-  name: string;
+  uuid: number;
+  label: string;
   type: ProjectInputTypes;
   required: boolean;
   has_hint_text?: boolean;
   hint_text?: string;
-  options?: string[];
-  is_multiselect?: boolean;
-  text?: string;
-  is_ranged_date?: boolean;
+  metadata: String[];
 };
 
 export type FormulasBox = {

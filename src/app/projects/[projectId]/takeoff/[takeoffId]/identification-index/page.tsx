@@ -11,7 +11,7 @@ import {
   Radio,
   Select,
   Spin,
-  Modal
+  Modal,
 } from "antd";
 import {
   ArrowDownOutlined,
@@ -32,9 +32,20 @@ import {
   getEvidenceByFileId,
 } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { deleteDrawingIndex, getDrawingIndexInfoById, getDrawingIndexTypeList, recognizeDrawingIndex } from "@/services/drawingIndexService";
+import {
+  deleteDrawingIndex,
+  getDrawingIndexInfoById,
+  getDrawingIndexTypeList,
+  recognizeDrawingIndex,
+} from "@/services/drawingIndexService";
 
-import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import {
+  EvidenceType,
+  FileOperationType,
+  FileStatus,
+  GroupType,
+  PdfWrapperRefMethods,
+} from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -51,24 +62,29 @@ import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
 
+import { ArchDrawingSummaryPageTypes } from "../types/evidence";
+
 const confirm = Modal.confirm;
 
-
 export enum BuildLoadingStep {
-  PageAnalysis = 'page-analyze',
-  PageLabel = 'page-label',
-  PageIndex = 'page-index',
+  PageAnalysis = "page-analyze",
+  PageLabel = "page-label",
+  PageIndex = "page-index",
 }
 
 export enum ButtonText {
-  Analysis = 'Analysis',
-  NextFile = 'Next File',
-  Complete = 'Complete',
-  RestartIndex = 'Restart Index',
-  UnKnown = 'Unknown',
+  Analysis = "Analysis",
+  NextFile = "Next File",
+  Complete = "Complete",
+  RestartIndex = "Restart Index",
+  UnKnown = "Unknown",
 }
 
-const IdentificationIndex = () => {
+const IdentificationIndex = ({
+  showHeader = true,
+}: {
+  showHeader?: boolean;
+}) => {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
@@ -89,11 +105,15 @@ const IdentificationIndex = () => {
   const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
-  const [buildLoadingStep, setBuildLoadingStep] = useState<string>(BuildLoadingStep.PageIndex);
+  const [buildLoadingStep, setBuildLoadingStep] = useState<string>(
+    BuildLoadingStep.PageIndex,
+  );
   const [showContentView, setShowContentView] = useState<boolean>(true);
   const [contentData, setContentData] = useState<any>([]);
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
-  const [drawingTypeList, setDrawingTypeList] = useState<any>([]);
+  const [drawingTypeList, setDrawingTypeList] = useState<any>(
+    ArchDrawingSummaryPageTypes,
+  );
   const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [isEmptyContent, setIsEmptyContent] = useState<boolean>(false);
@@ -117,13 +137,13 @@ const IdentificationIndex = () => {
   useEffect(() => {
     // 获取takeOff详情
     getTakeOffDetails();
-    getTypeList();
+    //getTypeList();
   }, [takeOffId]);
 
   const getTakeOffDetails = async () => {
     setFullLoading(true);
     let res: any = await getTakeOffById(takeOffId as any);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
@@ -149,7 +169,11 @@ const IdentificationIndex = () => {
     if (selectedFileId === -1 || !takeOff) return;
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.DrawingIndex });
+    const response = await getEvidenceByFileId(
+      projectId as string,
+      selectedFileId,
+      { filter_type: "DrawingIndex" },
+    );
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
@@ -159,23 +183,22 @@ const IdentificationIndex = () => {
       notification.error({
         message: "Error",
         description: "Failed to get file evidence",
-      })
+      });
     }
   }, [selectedFileId, takeOff]);
 
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let list = res?.data?.fixed_index_types ?? [];
       setDrawingTypeList(list);
     } else {
       notification.error({
         message: "Error",
         description: "Failed to get drawing index type list",
-      })
+      });
     }
-  }
-
+  };
 
   useEffect(() => {
     if (selectedFileId === -1 || fileList.length === 0) return;
@@ -196,12 +219,10 @@ const IdentificationIndex = () => {
         //设置新的url
         let file = fileList.find((file: any) => file.id === selectedFileId);
         if (file) {
-          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? '';
+          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? "";
           setPdfUrl(newPdfUrl);
           // 设置新的缩略图数据
-          setThumbnailList(() =>
-            file?.parse_detail?.image_page_infos ?? [],
-          );
+          setThumbnailList(() => file?.parse_detail?.image_page_infos ?? []);
           //获取file evidence
           getFileEvidences();
 
@@ -216,27 +237,33 @@ const IdentificationIndex = () => {
 
   useEffect(() => {
     // 进行分类
-    setIndexBoxList(fileEvidence.filter((item: any) => {
-      return item.type === GroupType.DrawingIndex;
-    }));
-    setLabelList(fileEvidence.filter((item: any) => {
-      return item.type === GroupType.TitleInfo
-    }));
+    setIndexBoxList(
+      fileEvidence.filter((item: any) => {
+        return item.type === GroupType.DrawingIndex;
+      }),
+    );
+    setLabelList(
+      fileEvidence.filter((item: any) => {
+        return item.type === GroupType.TitleInfo;
+      }),
+    );
   }, [fileEvidence]);
-
 
   const recognizeDrawingIndexData = async () => {
     setBuildLoadingStep(BuildLoadingStep.PageIndex);
     setBuildLoading(true);
 
-    let res: any = await recognizeDrawingIndex(projectId as string, selectedFileId as number);
+    let res: any = await recognizeDrawingIndex(
+      projectId as string,
+      selectedFileId as number,
+    );
     setBuildLoading(false);
 
-    if (res.status === 'success') {
+    if (res.status === "success") {
       notification.success({
         message: "Success",
         description: "Drawing index recognized successfully",
-      })
+      });
       // 识别成功后重新获取drawing index数据
       setShowContentView(true);
       getDrawingIndexData();
@@ -244,35 +271,38 @@ const IdentificationIndex = () => {
       notification.error({
         message: "Error",
         description: "Failed to recognize drawing index",
-      })
+      });
     }
-  }
+  };
 
   const getDrawingIndexData = async () => {
     setContentData([]);
     setFullLoading(true);
     setIsEmptyContent(false);
 
-    let res: any = await getDrawingIndexInfoById(projectId as string, selectedFileId as number);
+    let res: any = await getDrawingIndexInfoById(
+      projectId as string,
+      selectedFileId as number,
+    );
 
     setFullLoading(false);
 
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let drawingData = res?.data?.drawings ?? [];
       setContentData(drawingData);
 
       if (drawingData.length > 0) {
         // 设置文件状态为已完成
-        updateFileStatus(selectedFileId, FileStatus.Completed)
+        updateFileStatus(selectedFileId, FileStatus.Completed);
       } else {
         // 设置文件状态为未完成
-        updateFileStatus(selectedFileId, FileStatus.Processing)
+        updateFileStatus(selectedFileId, FileStatus.Processing);
         setIsEmptyContent(true);
       }
       // 如果发现drawingTypeList为空，则再次调用getTypeList
-      if (drawingTypeList.length === 0) {
-        getTypeList();
-      }
+      // if (drawingTypeList.length === 0) {
+      //   getTypeList();
+      // }
     } else {
       notification.error({
         message: "Error",
@@ -280,7 +310,6 @@ const IdentificationIndex = () => {
       });
     }
   };
-
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -325,72 +354,63 @@ const IdentificationIndex = () => {
     });
   };
 
-
-  const handleAppendEvidence = (
-    (evidenceList: EvidenceType[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!evidenceList?.length) return;
-      setFileEvidence([...fileEvidence, ...evidenceList]);
+  const handleAppendEvidence = (evidenceList: EvidenceType[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!evidenceList?.length) return;
+    setFileEvidence([...fileEvidence, ...evidenceList]);
+  };
 
-  const handleDeleteEvidence = (
-    (deleteIds: number[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!deleteIds?.length) return;
-      setFileEvidence((prev: any) => {
-        return prev.filter(
-          (item: EvidenceType) => !deleteIds.includes(item.id)
-        )
-      });
+  const handleDeleteEvidence = (deleteIds: number[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!deleteIds?.length) return;
+    setFileEvidence((prev: any) => {
+      return prev.filter((item: EvidenceType) => !deleteIds.includes(item.id));
+    });
+  };
 
   const deleteEvidence = async (deleteIds: number[]) => {
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
-    console.log('######### res', res);
-    if (res.status === 'success') {
+    console.log("######### res", res);
+    if (res.status === "success") {
       handleDeleteEvidence(deleteIds);
     } else {
       notification.error({
         message: "Error",
         description: "Failed to delete evidence",
-      })
+      });
     }
     setFullLoading(false);
-  }
+  };
 
-  const handleUpdateEvidence = (
-    (evidenceList: EvidenceType[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!evidenceList?.length) return;
-      setFileEvidence(
-        fileEvidence.map((item: EvidenceType) => {
-          // 找到需要更新的item
-          let updateItem = evidenceList.find(
-            (evid: EvidenceType) => evid.id === item.id
-          );
-          if (updateItem) {
-            return { ...updateItem };
-          }
-          return item;
-        })
-      );
+  const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!evidenceList?.length) return;
+    setFileEvidence(
+      fileEvidence.map((item: EvidenceType) => {
+        // 找到需要更新的item
+        let updateItem = evidenceList.find(
+          (evid: EvidenceType) => evid.id === item.id,
+        );
+        if (updateItem) {
+          return { ...updateItem };
+        }
+        return item;
+      }),
+    );
+  };
 
   const handleAddRectBox = (type: string) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
@@ -401,7 +421,7 @@ const IdentificationIndex = () => {
   const handleCropsCount = (count: number) => {
     // 如果当前页面有未处理的crop
     setCropsCount(count);
-  }
+  };
 
   const updateFileStatus = (fileId: number, status: FileStatus) => {
     // 设置当前文件状态未undo
@@ -416,13 +436,13 @@ const IdentificationIndex = () => {
         return item;
       });
     });
-  }
+  };
 
   const handleRestartIndex = () => {
     setShowContentView(false);
     // 设置当前文件状态为processing
-    updateFileStatus(selectedFileId, FileStatus.Processing)
-  }
+    updateFileStatus(selectedFileId, FileStatus.Processing);
+  };
 
   const handleDeleteIndex = (item: { id: number }) => {
     confirm({
@@ -431,13 +451,13 @@ const IdentificationIndex = () => {
       onOk() {
         handleDeleteIndexById(item?.id);
       },
-      onCancel() { },
+      onCancel() {},
     });
-  }
+  };
 
   const handleDeleteIndexById = async (id: number) => {
     let res = await deleteDrawingIndex(id);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       notification.success({
         message: "Success",
         description: "Deleted successfully",
@@ -451,45 +471,54 @@ const IdentificationIndex = () => {
         description: "Failed to delete evidence",
       });
     }
-  }
+  };
 
-  const handleNext = useCallback((btnInfo: { text: string }) => {
-    // 处理右上角的next按钮
-    if (btnInfo.text === ButtonText.RestartIndex) {
-      setShowContentView(false);
-    } else if (btnInfo.text === ButtonText.Analysis) {
-      if (indexBoxList.length > 0 && labelList.length > 0) {
-        recognizeDrawingIndexData();
-      } else {
-        if (indexBoxList.length === 0) {
-          skipType.current = 'index';
+  const handleNext = useCallback(
+    (btnInfo: { text: string }) => {
+      // 处理右上角的next按钮
+      if (btnInfo.text === ButtonText.RestartIndex) {
+        setShowContentView(false);
+      } else if (btnInfo.text === ButtonText.Analysis) {
+        if (indexBoxList.length > 0 && labelList.length > 0) {
+          recognizeDrawingIndexData();
         } else {
-          skipType.current = 'label';
+          if (indexBoxList.length === 0) {
+            skipType.current = "index";
+          } else {
+            skipType.current = "label";
+          }
+          setShowSkipModal(true);
         }
-        setShowSkipModal(true);
+      } else if (btnInfo.text === ButtonText.NextFile) {
+        // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
+        const findNextFile = fileList.find((item: any) => {
+          return (
+            item.operation_type !== FileOperationType.Quote &&
+            item.status !== FileStatus.Completed
+          );
+        });
+        if (findNextFile) {
+          // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
+          setSelectedFileId(findNextFile.id);
+        }
+      } else if (btnInfo.text === ButtonText.Complete) {
+        // 检测到所有文件都已经处理，即将进入page label界面
+        router.push(
+          `/projects/${projectId}/takeoff/${takeOffId}/identification`,
+        );
       }
-    } else if (btnInfo.text === ButtonText.NextFile) {
-      // 当前在目录页面，检查当前文件列表中是否有未处理过的文件，如果有未处理过的，则进行下个文件的处理
-      const findNextFile = fileList.find((item: any) => {
-        return item.operation_type !== FileOperationType.Quote && item.status !== FileStatus.Completed;
-      });
-      if (findNextFile) {
-        // 如果存在未处理的文件，需要提示用户，检测到有未处理的文件，即将切换到下个未处理的文件
-        setSelectedFileId(findNextFile.id);
-      }
-    } else if (btnInfo.text === ButtonText.Complete) {
-      // 检测到所有文件都已经处理，即将进入page label界面
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification`);
-    }
-  }, [fileList, indexBoxList, labelList]);
-
+    },
+    [fileList, indexBoxList, labelList],
+  );
 
   // 右上角按钮的相关信息
   const nextButtonInfo = useMemo(() => {
     // 判断当前的文件状态
-    const currentFile = fileList.find((file: any) => file.id === selectedFileId);
+    const currentFile = fileList.find(
+      (file: any) => file.id === selectedFileId,
+    );
 
-    let buttonText = '';
+    let buttonText = "";
     let buttonDisabled = false;
 
     if (currentFile?.status === FileStatus.Processing) {
@@ -505,7 +534,12 @@ const IdentificationIndex = () => {
       }
     } else if (currentFile?.status === FileStatus.Completed) {
       // 当前文件的状态为已完成，则判断是否有别的文件未处理
-      const hasUnprocessedFiles = fileList.some((file: any) => file.operation_type !== FileOperationType.Quote && (file.status === FileStatus.Processing || file.status === FileStatus.Uploaded));
+      const hasUnprocessedFiles = fileList.some(
+        (file: any) =>
+          file.operation_type !== FileOperationType.Quote &&
+          (file.status === FileStatus.Processing ||
+            file.status === FileStatus.Uploaded),
+      );
       if (hasUnprocessedFiles) {
         buttonText = ButtonText.NextFile;
       } else {
@@ -516,8 +550,15 @@ const IdentificationIndex = () => {
     return {
       text: buttonText,
       disabled: buttonDisabled,
-    }
-  }, [fileList, selectedFileId, indexBoxList, labelList, contentData, showContentView]);
+    };
+  }, [
+    fileList,
+    selectedFileId,
+    indexBoxList,
+    labelList,
+    contentData,
+    showContentView,
+  ]);
 
   // 处理返回按钮的点击事件
   const handleBack = useCallback(() => {
@@ -525,63 +566,65 @@ const IdentificationIndex = () => {
       setShowContentView(true);
       if (contentData.length > 0) {
         // 如果有内容数据，则需要更新文件状态为processing
-        updateFileStatus(selectedFileId, FileStatus.Completed)
+        updateFileStatus(selectedFileId, FileStatus.Completed);
       }
     } else {
       router.push(`/home`);
     }
   }, [nextButtonInfo, contentData]);
 
-
   return (
-    <div className="w-full h-[100vh] flex flex-col relative">
-      <Header
-        pdfRef={pdfRef}
-        fileList={fileList}
-        selectedFileId={selectedFileId}
-        setSelectedFileId={setSelectedFileId}
-        nextButtonInfo={nextButtonInfo}
-        handleNext={handleNext}
-        handleBack={handleBack}
-      />
+    <div
+      className={`w-full flex flex-col relative ${showHeader ? "h-[100vh]" : "h-full"}`}
+    >
+      {showHeader && (
+        <Header
+          pdfRef={pdfRef}
+          fileList={fileList}
+          selectedFileId={selectedFileId}
+          setSelectedFileId={setSelectedFileId}
+          nextButtonInfo={nextButtonInfo}
+          handleNext={handleNext}
+          handleBack={handleBack}
+        />
+      )}
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
           style={{ width: showContentView ? "500px" : "340px" }}
         >
-          {
-            showContentView ? (
-              <ContentView
-                contentData={contentData}
-                setContentData={setContentData}
-                drawingTypeList={drawingTypeList}
-                isEmptyContent={isEmptyContent}
-                pdfTotalPages={totalPage}
-                handlePageChange={handlePageChange}
-                handleDeleteIndex={handleDeleteIndex}
-              />
-            ) : (
-              <IndexRectView
-                indexBoxList={indexBoxList}
-                labelList={labelList}
-                cropsCount={cropsCount}
-                handleAddRectBox={handleAddRectBox}
-                handleDeleteEvidence={deleteEvidence}
-              ></IndexRectView>
-            )
-          }
+          {showContentView ? (
+            <ContentView
+              contentData={contentData}
+              setContentData={setContentData}
+              drawingTypeList={drawingTypeList}
+              isEmptyContent={isEmptyContent}
+              pdfTotalPages={totalPage}
+              handlePageChange={handlePageChange}
+              handleDeleteIndex={handleDeleteIndex}
+            />
+          ) : (
+            <IndexRectView
+              indexBoxList={indexBoxList}
+              labelList={labelList}
+              cropsCount={cropsCount}
+              handleAddRectBox={handleAddRectBox}
+              handleDeleteEvidence={deleteEvidence}
+            ></IndexRectView>
+          )}
         </div>
         <div className={`flex-1 flex flex-col pl-6 pt-4 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
-              {showContentView &&
-                <div className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
+              {showContentView && (
+                <div
+                  className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
                   onClick={handleRestartIndex}
                 >
                   <span className="text-baseGray text-xs">Restart Index</span>
                 </div>
-              }
+              )}
               <SelectPagesControls
                 page={page}
                 totalPages={totalPage}
@@ -590,7 +633,9 @@ const IdentificationIndex = () => {
               <ThumbnailControls
                 showThumbnail={showThumbnail}
                 setShowThumbnail={setShowThumbnail}
-                onClick={() => { setShowThumbnail(!showThumbnail) }}
+                onClick={() => {
+                  setShowThumbnail(!showThumbnail);
+                }}
               />
             </div>
             <div className="flex flex-row gap-2">
@@ -621,7 +666,10 @@ const IdentificationIndex = () => {
             ></PdfWrapper>
           </div>
         </div>
-        <div ref={thumbnailRef} className="h-full absolute right-0 top-0 z-9999">
+        <div
+          ref={thumbnailRef}
+          className="h-full absolute right-0 top-0 z-9999"
+        >
           <Thumbnail
             pdfRef={pdfRef}
             showThumbnail={showThumbnail}
@@ -633,27 +681,28 @@ const IdentificationIndex = () => {
           ></Thumbnail>
         </div>
       </div>
-      {showSkipModal && <SkipTipModal
-        isOpen={showSkipModal}
-        closeModal={() => { setShowSkipModal(false) }}
-        skipType={skipType.current}
-        handleAddRectBox={(type: string) => {
-          setShowSkipModal(false);
-          cropsCount === 0 && handleAddRectBox(type);
-        }}
-        handleSkip={() => {
-          setShowSkipModal(false);
-          recognizeDrawingIndexData();
-        }}
-      />}
+      {showSkipModal && (
+        <SkipTipModal
+          isOpen={showSkipModal}
+          closeModal={() => {
+            setShowSkipModal(false);
+          }}
+          skipType={skipType.current}
+          handleAddRectBox={(type: string) => {
+            setShowSkipModal(false);
+            cropsCount === 0 && handleAddRectBox(type);
+          }}
+          handleSkip={() => {
+            setShowSkipModal(false);
+            recognizeDrawingIndexData();
+          }}
+        />
+      )}
       {fullLoading && <Spin fullscreen />}
-      {buildLoading && <BuildingBackground
-        step={buildLoadingStep}
-      />}
+      {buildLoading && <BuildingBackground step={buildLoadingStep} />}
     </div>
   );
 };
 
 // 为自定义 Select 选项添加必要的全局样式
 export default IdentificationIndex;
-

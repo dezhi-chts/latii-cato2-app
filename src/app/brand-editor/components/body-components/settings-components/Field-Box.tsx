@@ -1,6 +1,6 @@
 "use client";
 
-import { formatLabel } from "@/lib/functions";
+import { FIELD_TYPE_MAP, formatLabel } from "@/lib/functions";
 import {
   PROJECT_INPUT_TYPES_OPTIONS,
   ProjectFieldBoxProps,
@@ -11,44 +11,50 @@ import Image from "next/image";
 export const FieldBox = (field: ProjectFieldBoxProps) => {
   const {
     id,
-    name,
+    label,
     type,
     required,
     has_hint_text,
     hint_text,
-    text,
-    is_ranged_date,
-    is_multiselect,
+    metadata,
     onChange,
     onDuplicate,
     onDelete,
   } = field;
 
-  const inputTypeOptions = PROJECT_INPUT_TYPES_OPTIONS.map((t) => ({
-    value: t,
-    label: (
-      <div className="flex items-center gap-2">
-        <img
-          src={`/assets/icons/fields/${t}.svg`}
-          alt={t}
-          className="w-4 h-4"
-        />
-        <span>{formatLabel(t)}</span>
-      </div>
-    ),
-  }));
+  const formatLabel = (label: string) =>
+    label
+      .replaceAll("_", " ")
+      .toLowerCase()
+      .replace(/^\w/, (c) => c.toUpperCase());
+
+  const inputTypeOptions = Object.entries(FIELD_TYPE_MAP).map(
+    ([value, label]) => ({
+      value: Number(value),
+      label: (
+        <div className="flex items-center gap-2">
+          <img
+            src={`/assets/icons/fields/${label.toLowerCase()}.svg`}
+            alt={label}
+            className="w-4 h-4"
+          />
+          <span>{formatLabel(label)}</span>
+        </div>
+      ),
+    })
+  );
 
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white">
       {/* Row 1 */}
       <div className="flex items-center gap-3 bg-baseLight p-4">
         <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-basicGray">
-          {id}
+          {id + 1}
         </div>
 
         <Input
-          value={name}
-          onChange={(e) => onChange?.({ name: e.target.value })}
+          value={label}
+          onChange={(e) => onChange?.({ label: e.target.value })}
           placeholder="Project Name"
           className="rounded-md px-3 h-8 w-60 font-normal"
         />

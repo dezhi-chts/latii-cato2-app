@@ -23,13 +23,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash/debounce";
 
-import {
-  getEvidenceByFileId,
-} from "@/services/evidenceService";
+import { getEvidenceByFileId } from "@/services/evidenceService";
 import { getTakeOffById } from "@/services/takeOffService";
-import { getDrawingIndexTypeList, getPdfAnalysePages, getPdfAnalyseSummary, updatePageType } from "@/services/drawingIndexService";
+import {
+  getDrawingIndexTypeList,
+  getPdfAnalysePages,
+  getPdfAnalyseSummary,
+  updatePageType,
+} from "@/services/drawingIndexService";
 
-import { EvidenceType, FileOperationType, FileStatus, GroupType, PdfWrapperRefMethods } from "../types/evidence";
+import {
+  EvidenceType,
+  FileOperationType,
+  FileStatus,
+  GroupType,
+  PdfWrapperRefMethods,
+  QuotePageTypes,
+} from "../types/evidence";
 
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
@@ -44,71 +54,34 @@ import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground from "../identification-index/components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
+import {
+  PageType,
+  ArchDrawingAllPageTags,
+  ArchDrawingPageTypes,
+  ArchDrawingLabelTypes,
+} from "../types/evidence";
+
 const { confirm } = Modal;
 
-const defaultPageCategory = [
-  {
-    type: "All",
-    primaryColor: "#717171",
-    count: 0,
-  },
-  {
-    type: "Floor Plan",
-    primaryColor: "#D868D8",
-    count: 0,
-  },
-  {
-    type: "Elevation",
-    primaryColor: "#0BC6BE",
-    count: 0,
-  },
-  {
-    type: "Schedule",
-    primaryColor: "#5859D6",
-    count: 0,
-  },
-  {
-    type: "Mixed",
-    primaryColor: "#F5C00B",
-    count: 0,
-  },
-  {
-    type: "Generalities",
-    primaryColor: "#00798A",
-    count: 0,
-  },
-  {
-    type: "Not Used",
-    primaryColor: "#A3A3A3",
-    count: 0,
-  },
+enum BuildLoadingStep {
+  PageAnalysis = "page-analyze",
+  PageLabel = "page-label",
+  PageIndex = "page-index",
+}
+
+const invalidPageType = [
+  null,
+  PageType.All,
+  PageType.ActivePages,
+  PageType.NotUsed,
 ];
 
-enum BuildLoadingStep {
-  PageAnalysis = 'page-analyze',
-  PageLabel = 'page-label',
-  PageIndex = 'page-index',
-}
-
-const fixed_page_type = [
-  {
-    type: "Active Pages",
-    color: "#717171",
-    count: 0,
-  }, {
-    type: "All",
-    color: "#717171",
-    count: 0,
-  }];
-
-const invalidPageType = [null, 'Not Used', 'All', 'Active Pages'];
-
 export enum ButtonText {
-  NextFile = 'Next File',
-  Complete = 'Complete',
+  NextFile = "Next File",
+  Complete = "Complete",
 }
 
-const Identification = () => {
+const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
@@ -128,15 +101,18 @@ const Identification = () => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
 
   const [cropsCount, setCropsCount] = useState<number>(0);
-  const [pageTypeList, setPageTypeList] = useState<any>([fixed_page_type[0]]);
-  const [labelTypeList, setLabelTypeList] = useState<any>([]);
-  const [currentType, setCurrentType] = useState<string>(fixed_page_type[0].type);
+  const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
+  const [labelTypeList, setLabelTypeList] = useState<any>(
+    ArchDrawingLabelTypes,
+  );
+  const [currentType, setCurrentType] = useState<string>(
+    ArchDrawingAllPageTags[0].type,
+  );
   const [summaryData, setSummaryData] = useState<any>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
 
   const evidenceIsLoaded = useRef<boolean>(false);
   const lastSelectedFileId = useRef<number>(-1);
-
 
   useEffect(() => {
     if (takeOffId) {
@@ -147,73 +123,80 @@ const Identification = () => {
   const initPageData = async () => {
     setFullLoading(true);
 
-    await getTypeList();
+    //await getTypeList();
     // 获取takeOff详情
     await getTakeOffDetails();
 
     setFullLoading(false);
-  }
-
+  };
 
   // 使用summary初始化pageTypeList
-  const initPageTypeWidthSummary = useCallback(async (summaryData: any) => {
-    if (!summaryData) return;
-    const page_classification = summaryData.page_classification ?? {};
+  const initPageTypeWidthSummary = useCallback(
+    async (summaryData: any) => {
+      if (!summaryData) return;
+      const page_classification = summaryData.page_classification ?? {};
 
-    setPageTypeList((prev: any) => {
-      return prev.map((item: any) => {
-        if (item.type === "All") {
-          return {
-            ...item,
-            count: summaryData.total_pages
-          }
-        } else if (item.type === "Active Pages") {
-          // 把page_classification中所有不是invalidPageType的type的count加起来
-          let totalCount: any = [];
-          for (let key in page_classification) {
-            if (!invalidPageType.includes(key)) {
-              totalCount.push(page_classification[key] ?? 0);
+      setPageTypeList((prev: any) => {
+        return prev.map((item: any) => {
+          if (item.type === PageType.All) {
+            return {
+              ...item,
+              count: summaryData.total_pages,
+            };
+          } else if (item.type === PageType.ActivePages) {
+            // 把page_classification中所有不是invalidPageType的type的count加起来
+            let totalCount: any = [];
+            for (let key in page_classification) {
+              if (!invalidPageType.includes(key)) {
+                totalCount.push(page_classification[key] ?? 0);
+              }
+              let count = totalCount.reduce((a: any, b: any) => a + b, 0);
+              return {
+                ...item,
+                count: count,
+              };
             }
+            return {
+              ...item,
+              count: page_classification[item.type] ?? 0,
+            };
           }
-          let count = totalCount.reduce((a: any, b: any) => a + b, 0);
-          return {
-            ...item,
-            count: count
-          }
-        }
-        return {
-          ...item,
-          count: page_classification[item.type] ?? 0
-        }
-      })
-    });
-  }, [pageTypeList]);
+        });
+      });
+    },
+    [pageTypeList],
+  );
 
   // 使用summary初始化thumbnailList
-  const initThumbnailWidthSummary = useCallback(async (summaryData: any) => {
-    if (!summaryData) return;
+  const initThumbnailWidthSummary = useCallback(
+    async (summaryData: any) => {
+      if (!summaryData) return;
 
-    setThumbnailList((prev: any) => {
-      return prev.map((item: any) => {
-        let itemPageNum: number = 0;
-        if (typeof item.file_name === 'string') {
-          let pageArr = item.file_name?.split(".")[0];
-          itemPageNum = parseInt(pageArr) + 1;
-        }
-        const summaryPages = summaryData?.pages ?? [];
-        // 从 summaryPages 中查找对应的类型
-        let itemType = summaryPages.find((item: any) => item.page_number === itemPageNum)?.page_type ?? '';
-        return {
-          ...item,
-          type: itemType,
-        }
-      })
-    })
-  }, [thumbnailList]);
+      setThumbnailList((prev: any) => {
+        return prev.map((item: any) => {
+          let itemPageNum: number = 0;
+          if (typeof item.file_name === "string") {
+            let pageArr = item.file_name?.split(".")[0];
+            itemPageNum = parseInt(pageArr) + 1;
+          }
+          const summaryPages = summaryData?.pages ?? [];
+          // 从 summaryPages 中查找对应的类型
+          let itemType =
+            summaryPages.find((item: any) => item.page_number === itemPageNum)
+              ?.page_type ?? "";
+          return {
+            ...item,
+            type: itemType,
+          };
+        });
+      });
+    },
+    [thumbnailList],
+  );
 
   const getTakeOffDetails = async () => {
     let res: any = await getTakeOffById(takeOffId as any);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
@@ -236,19 +219,34 @@ const Identification = () => {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1) return;
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    let filterType = "QuoteLabel";
+    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
+      filterType = "ArchDrawingLabel";
+    }
 
     evidenceIsLoaded.current = false;
-    const response = await getEvidenceByFileId(projectId as string, selectedFileId, { filter_type: GroupType.Label });
+    const response = await getEvidenceByFileId(
+      projectId as string,
+      selectedFileId,
+      { filter_type: filterType },
+    );
     if (response.status === "success") {
       evidenceIsLoaded.current = true;
       const evidenceList = response?.data ?? [];
-      setFileEvidence(evidenceList.filter((item: any) => item.type !== GroupType.DrawingIndex && item.type !== GroupType.TitleInfo));
+      setFileEvidence(
+        evidenceList.filter(
+          (item: any) =>
+            item.type !== GroupType.DrawingIndex &&
+            item.type !== GroupType.TitleInfo,
+        ),
+      );
     } else {
       evidenceIsLoaded.current = false;
       notification.error({
         message: "Error",
         description: "Failed to get file evidence",
-      })
+      });
     }
   }, [selectedFileId]);
 
@@ -256,7 +254,7 @@ const Identification = () => {
     setFullLoading(true);
     let res: any = await getPdfAnalyseSummary(selectedFileId as any);
     setFullLoading(false);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       //  setSummaryData(res?.data?.data ?? null);
       initPageTypeWidthSummary(res?.data?.data ?? null);
       initThumbnailWidthSummary(res?.data?.data ?? null);
@@ -266,16 +264,16 @@ const Identification = () => {
         description: "Failed to get pdf analyse pages",
       });
     }
-  }
+  };
 
   const getTypeList = async () => {
     let res: any = await getDrawingIndexTypeList();
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let pageList = res?.data?.fixed_page_types ?? [];
       let labelList = res?.data?.fixed_label_types ?? [];
       let first = pageTypeList[0];
       if (pageList.length > 0) {
-        pageList.push(fixed_page_type[1]);
+        //pageList.push(fixed_page_type[1]);
       }
       setPageTypeList([first, ...pageList]);
       setLabelTypeList(labelList);
@@ -283,14 +281,17 @@ const Identification = () => {
       notification.error({
         message: "Error",
         description: "Failed to get drawing index type list",
-      })
+      });
     }
-  }
+  };
 
   useEffect(() => {
     if (selectedFileId === -1) return;
 
-    if (lastSelectedFileId.current !== -1 && lastSelectedFileId.current !== selectedFileId) {
+    if (
+      lastSelectedFileId.current !== -1 &&
+      lastSelectedFileId.current !== selectedFileId
+    ) {
       // 设置上个文件的状态为完成
       updateFileStatus(lastSelectedFileId.current, FileStatus.Completed);
     }
@@ -331,18 +332,27 @@ const Identification = () => {
   }, [selectedFileId]);
 
   const filterThumbnailList = useMemo(() => {
-    if (currentType === "All") return [...thumbnailList];
-    if (currentType === "Active Pages") return [...thumbnailList].filter((item: any) => item.type && !invalidPageType.includes(item.type));
+    const file = fileList.find((file: any) => file.id === selectedFileId);
+    if (!file) return [];
+
+    if (file && file.operation_type === FileOperationType.Quote)
+      return [...thumbnailList];
+
+    if (currentType === PageType.All) return [...thumbnailList];
+    if (currentType === PageType.ActivePages)
+      return [...thumbnailList].filter(
+        (item: any) => item.type && !invalidPageType.includes(item.type),
+      );
     return [...thumbnailList].filter((item: any) => item.type === currentType);
-  }, [currentType, thumbnailList]);
+  }, [selectedFileId, fileList, currentType, thumbnailList]);
 
   const getItemPage = (item: any, index: number) => {
-    if (typeof item.file_name === 'string') {
+    if (typeof item.file_name === "string") {
       let pageArr = item.file_name?.split(".")[0];
       return parseInt(pageArr) + 1;
     }
     return index + 1;
-  }
+  };
 
   const setThumbnailPageType = (page: number, type: string) => {
     setThumbnailList((prev: any) => {
@@ -355,32 +365,44 @@ const Identification = () => {
           };
         }
         return item;
-      })
+      });
     });
-  }
+  };
 
-  const handlePageType = async (page: number, newType: string, oldType: string) => {
+  const handlePageType = async (
+    page: number,
+    newType: string,
+    oldType: string,
+  ) => {
     let res = await updatePageType({
       fileId: selectedFileId as any,
       pageNum: page,
       newType: newType,
     });
-    if (res.status === 'success') {
+    if (res.status === "success") {
       // 更新成功，更新tags中的数据
       setPageTypeList((prev: any) => {
         let list = [...prev];
         let oldTypeItem = list.find((item: any) => item.type === oldType);
         let newTypeItem = list.find((item: any) => item.type === newType);
-        let activePagesItem = list.find((item: any) => item.type === 'Active Pages');
-        oldTypeItem.count = (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
+        let activePagesItem = list.find(
+          (item: any) => item.type === "Active Pages",
+        );
+        oldTypeItem.count =
+          (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
         newTypeItem.count = (newTypeItem?.count || 0) + 1;
 
-        let activePages = list.filter((item: any) => !invalidPageType.includes(item.type));
+        let activePages = list.filter(
+          (item: any) => !invalidPageType.includes(item.type),
+        );
         // 计算所有非无效类型的计数之和
-        activePagesItem.count = activePages.reduce((total: number, item: any) => total + (item.count || 0), 0);
+        activePagesItem.count = activePages.reduce(
+          (total: number, item: any) => total + (item.count || 0),
+          0,
+        );
 
         return [...list];
-      })
+      });
     } else {
       notification.error({
         message: "Error",
@@ -389,20 +411,20 @@ const Identification = () => {
       // 回滚到上次的类型设置
       setThumbnailPageType(page, oldType);
     }
-  }
+  };
 
   const handlePageTypeChange = async (page: number, type: string) => {
-    let oldType = thumbnailList.find((item: any, index: number) => {
-      let itemPageNum = getItemPage(item, index);
-      return itemPageNum === page;
-    })?.type || '';
+    let oldType =
+      thumbnailList.find((item: any, index: number) => {
+        let itemPageNum = getItemPage(item, index);
+        return itemPageNum === page;
+      })?.type || "";
 
     // 设置新的type
     setThumbnailPageType(page, type);
     // 调用type更新接口
     handlePageType(page, type, oldType);
   };
-
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -461,56 +483,48 @@ const Identification = () => {
     pdfRef?.current?.handleBatchDelete();
   };
 
-  const handleAppendEvidence = (
-    (evidenceList: EvidenceType[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!evidenceList?.length) return;
-      setFileEvidence([...fileEvidence, ...evidenceList]);
+  const handleAppendEvidence = (evidenceList: EvidenceType[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!evidenceList?.length) return;
+    setFileEvidence([...fileEvidence, ...evidenceList]);
+  };
 
-  const handleDeleteEvidence = (
-    (deleteIds: number[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!deleteIds?.length) return;
-      setFileEvidence(
-        fileEvidence.filter(
-          (item: EvidenceType) => !deleteIds.includes(item.id)
-        )
-      );
+  const handleDeleteEvidence = (deleteIds: number[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!deleteIds?.length) return;
+    setFileEvidence(
+      fileEvidence.filter((item: EvidenceType) => !deleteIds.includes(item.id)),
+    );
+  };
 
-  const handleUpdateEvidence = (
-    (evidenceList: EvidenceType[]) => {
-      // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
-      if (!evidenceIsLoaded.current) {
-        getFileEvidences();
-        return;
-      }
-      if (!evidenceList?.length) return;
-      setFileEvidence(
-        fileEvidence.map((item: EvidenceType) => {
-          // 找到需要更新的item
-          let updateItem = evidenceList.find(
-            (evid: EvidenceType) => evid.id === item.id
-          );
-          if (updateItem) {
-            return { ...updateItem };
-          }
-          return item;
-        })
-      );
+  const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
+    // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+    if (!evidenceIsLoaded.current) {
+      getFileEvidences();
+      return;
     }
-  );
+    if (!evidenceList?.length) return;
+    setFileEvidence(
+      fileEvidence.map((item: EvidenceType) => {
+        // 找到需要更新的item
+        let updateItem = evidenceList.find(
+          (evid: EvidenceType) => evid.id === item.id,
+        );
+        if (updateItem) {
+          return { ...updateItem };
+        }
+        return item;
+      }),
+    );
+  };
 
   const handleAddRectBox = (type: GroupType) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
@@ -525,17 +539,21 @@ const Identification = () => {
           return {
             ...file,
             status: fileStatus,
-          }
+          };
         }
         return file;
-      })
+      });
     });
-  }
+  };
 
   const handleNext = (buttonInfo: { text: string }) => {
     if (buttonInfo.text === ButtonText.NextFile) {
-      let filterFiles = fileList.filter((file: any) => file.id !== selectedFileId);
-      let nextFile = filterFiles.find((file: any) => file.status !== FileStatus.Completed);
+      let filterFiles = fileList.filter(
+        (file: any) => file.id !== selectedFileId,
+      );
+      let nextFile = filterFiles.find(
+        (file: any) => file.status !== FileStatus.Completed,
+      );
       if (nextFile) {
         // 设置当前文件为完成状态
         //updateFileStatus(selectedFileId, FileStatus.Completed);
@@ -546,21 +564,23 @@ const Identification = () => {
 
       setShowAnalysisModal(true);
     }
-  }
+  };
 
   const handleAnalysis = async () => {
     setBuildLoading(true);
     setTimeout(() => {
       setBuildLoading(false);
     }, 5000);
-  }
+  };
 
   // 右上角按钮的相关信息
   const nextButtonInfo = useMemo(() => {
     // 判断当前的文件状态
-    const allComplete = fileList.every((file: any) => file.status === FileStatus.Completed);
+    const allComplete = fileList.every(
+      (file: any) => file.status === FileStatus.Completed,
+    );
 
-    let buttonText = '';
+    let buttonText = "";
     if (allComplete) {
       buttonText = ButtonText.Complete;
     } else {
@@ -570,34 +590,36 @@ const Identification = () => {
     }
     return {
       text: buttonText,
-    }
+    };
   }, [fileList, selectedFileId]);
 
-  const currentFileOperationType = useMemo(() => {
-    if (!fileList.length) return '';
+  const fileOperationType = useMemo(() => {
+    if (!fileList.length) return "";
     let file = fileList.find((file: any) => file.id === selectedFileId);
-    return file.operation_type || '';
+    return file.operation_type || "";
   }, [fileList, selectedFileId]);
 
   return (
-    <div className="w-full h-[100vh] flex flex-col">
-      <Header
-        pdfRef={pdfRef}
-        fileList={fileList}
-        selectedFileId={selectedFileId}
-        setSelectedFileId={setSelectedFileId}
-        nextButtonInfo={nextButtonInfo}
-        handleNext={handleNext}
-      />
-      {
-        currentFileOperationType === FileOperationType.ArchitectureDrawing && (
-          <DrawingTagsView
-            pageTypeTags={pageTypeList}
-            currentType={currentType}
-            setCurrentType={setCurrentType}
-          ></DrawingTagsView>
-        )
-      }
+    <div
+      className={`w-full flex flex-col relative ${showHeader ? "h-[100vh]" : "h-full"}`}
+    >
+      {showHeader && (
+        <Header
+          pdfRef={pdfRef}
+          fileList={fileList}
+          selectedFileId={selectedFileId}
+          setSelectedFileId={setSelectedFileId}
+          nextButtonInfo={nextButtonInfo}
+          handleNext={handleNext}
+        />
+      )}
+      {fileOperationType === FileOperationType.ArchitectureDrawing && (
+        <DrawingTagsView
+          pageTypeTags={pageTypeList}
+          currentType={currentType}
+          setCurrentType={setCurrentType}
+        ></DrawingTagsView>
+      )}
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
         <div
@@ -606,15 +628,28 @@ const Identification = () => {
         >
           <div className="py-4 pl-10 flex flex-row ">
             <p className="mr-2 text-sm text-baseGray">Page Labeling</p>
-            <Popover placement="rightBottom"
-              title={<div className="text-xxs font-medium">About Page Labeling</div>}
-              content={<div className="w-[300px] text-xxs text-baseGray">
-                Review and analyze the sections identified by CATO. You can verify existing results or add new labels manually.
-                Ensuring every section is correctly labeled guarantees the most accurate analysis from CATO.
-              </div>}
+            <Popover
+              placement="rightBottom"
+              title={
+                <div className="text-xxs font-medium">About Page Labeling</div>
+              }
+              content={
+                <div className="w-[300px] text-xxs text-baseGray">
+                  Review and analyze the sections identified by CATO. You can
+                  verify existing results or add new labels manually. Ensuring
+                  every section is correctly labeled guarantees the most
+                  accurate analysis from CATO.
+                </div>
+              }
               trigger="hover"
+              className="cursor-pointer"
             >
-              <Image src="/assets/icons/info.svg" alt="info circle icon" width={14} height={14}></Image>
+              <Image
+                src="/assets/icons/info.svg"
+                alt="info circle icon"
+                width={14}
+                height={14}
+              ></Image>
             </Popover>
           </div>
           <Thumbnail
@@ -626,27 +661,56 @@ const Identification = () => {
             setPage={setPage}
             showCategory={true}
             showShadow={false}
-            categoryList={pageTypeList.filter((item: any) => item.type !== "All" && item.type !== "Active Pages")}
+            size={
+              fileOperationType === FileOperationType.Quote
+                ? "larger"
+                : "normal"
+            }
+            categoryList={
+              fileOperationType === FileOperationType.ArchitectureDrawing
+                ? ArchDrawingPageTypes
+                : fileOperationType === FileOperationType.Quote
+                  ? QuotePageTypes
+                  : []
+            }
             onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
         <div className={`flex-1 flex flex-col px-6 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
-              {
-                currentFileOperationType === FileOperationType.ArchitectureDrawing ?
-                  <>
-                    <AddRectBoxControls handleAddRectBox={() => handleAddRectBox(GroupType.Label)} />
-                    <ClearAllControls handleClearAll={handleClearAllCrop} />
-                  </>
-                  : currentFileOperationType === FileOperationType.Quote ?
-                    <>
-                      <AddRectBoxControls theme="default" text="Add Item" handleAddRectBox={() => handleAddRectBox(GroupType.Item)} />
-                      <AddRectBoxControls theme="default" text="Layer Information" handleAddRectBox={() => handleAddRectBox(GroupType.LayerInfo)} />
-                      <AddRectBoxControls theme="default" text="Add Description" handleAddRectBox={() => handleAddRectBox(GroupType.Description)} />
-                    </>
-                    : null
-              }
+              {fileOperationType === FileOperationType.ArchitectureDrawing ? (
+                <>
+                  <AddRectBoxControls
+                    handleAddRectBox={() =>
+                      handleAddRectBox(GroupType.FloorPlan)
+                    }
+                  />
+                  <ClearAllControls handleClearAll={handleClearAllCrop} />
+                </>
+              ) : fileOperationType === FileOperationType.Quote ? (
+                <>
+                  <AddRectBoxControls
+                    theme="default"
+                    text="Add Item"
+                    handleAddRectBox={() => handleAddRectBox(GroupType.Item)}
+                  />
+                  <AddRectBoxControls
+                    theme="default"
+                    text="Layer Information"
+                    handleAddRectBox={() =>
+                      handleAddRectBox(GroupType.LayerInfo)
+                    }
+                  />
+                  <AddRectBoxControls
+                    theme="default"
+                    text="Add Description"
+                    handleAddRectBox={() =>
+                      handleAddRectBox(GroupType.Description)
+                    }
+                  />
+                </>
+              ) : null}
             </div>
             <div className="flex flex-row gap-2">
               <SelectPagesControls
@@ -683,7 +747,7 @@ const Identification = () => {
           </div>
         </div>
       </div>
-      {showAnalysisModal &&
+      {showAnalysisModal && (
         <PreAnalysisMdal
           isOpen={showAnalysisModal}
           closeModal={() => setShowAnalysisModal(false)}
@@ -692,14 +756,14 @@ const Identification = () => {
             handleAnalysis();
           }}
         ></PreAnalysisMdal>
-      }
+      )}
 
       {fullLoading && <Spin fullscreen />}
-      {buildLoading && <BuildingBackground
-        step={BuildLoadingStep.PageAnalysis}
-      />}
+      {buildLoading && (
+        <BuildingBackground step={BuildLoadingStep.PageAnalysis} />
+      )}
     </div>
   );
 };
 
-export default Identification;
+export default PageLabeling;

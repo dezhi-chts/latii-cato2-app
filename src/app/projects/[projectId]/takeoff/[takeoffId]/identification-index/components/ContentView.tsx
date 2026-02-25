@@ -85,9 +85,9 @@ const ContentView = ({
             value={item.type === 'Unknown' ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
-            {drawingTypeList.map((item: any) => (
-              <Select.Option key={item} value={item}>
-                {item}
+            {drawingTypeList.map((item: any, index: number) => (
+              <Select.Option key={item.type + '_' + index} value={item.type}>
+                {item.type}
               </Select.Option>
             ))}
           </Select>
