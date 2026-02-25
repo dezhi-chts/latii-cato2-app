@@ -1,116 +1,109 @@
-import { forwardRef, useImperativeHandle } from "react";
-import FormFieldItem from "./Form-Field-Item";
-import { CustomField, FieldType } from "@/types/project";
+"use client";
 
-const testFields: CustomField[] = [{
-  field_name: 'project_name',
-  field_type: FieldType.INPUT_TEXT,
-  Hint_text: "Project Name",
-  required: true,
-}, {
-  field_name: 'project_address',
-  field_type: FieldType.INPUT_TEXT,
-  Hint_text: "Primary Location",
-  required: true,
-  suffixIcon: '/assets/icons/location.svg'
-},
-  // {
-  //   field_name: 'project_end_customer',
-  //   field_type: FieldType.INPUT_TEXT,
-  //   Hint_text: "End Customer(Optional)",
-  //   required: false,
-  // },
-  // {
-  //   field_name: 'project_date',
-  //   field_type: FieldType.DATE,
-  //   Hint_text: "Client Expected Delivery Date",
-  //   required: true,
-  // },
-  // {
-  //   field_name: 'project_award',
-  //   field_type: FieldType.DROPDOWN,
-  //   Hint_text: "Project Award Likelihood",
-  //   field_options: ['High', 'Medium', 'Low'],
-  //   required: false,
-  // }, {
-  //   field_name: 'project_desc',
-  //   field_type: FieldType.TEXTAREA,
-  //   Hint_text: "Project Description",
-  //   required: false,
-  // }, 
-  // {
-  //   field_name: 'project_number_test',
-  //   field_type: FieldType.INPUT_NUMBER,
-  //   Hint_text: "Project Number Test",
-  //   required: false,
-  // }, {
-  //   field_name: 'project_radio_test',
-  //   field_type: FieldType.RADIO,
-  //   Hint_text: "Project Radio Test",
-  //   field_options: ['test1', 'test2', 'test3'],
-  //   required: false,
-  // }, {
-  //   field_name: 'project_checkbox_test',
-  //   field_type: FieldType.CHECKBOX,
-  //   Hint_text: "Project Checkbox Test",
-  //   field_options: ['test1', 'test2', 'test3'],
-  //   required: false,
-  // }, {
-  //   field_name: 'project_switch_test',
-  //   field_type: FieldType.SWITCH,
-  //   Hint_text: "Project Switch Test",
-  //   required: false,
-  // }
-]
+import Checkbox from "@/components/fields/Check";
+import DateInput from "@/components/fields/DateInput";
+import Weblink from "@/components/fields/Link";
+import LongText from "@/components/fields/LongText";
+import Numbers from "@/components/fields/Numbers";
+import Radio from "@/components/fields/Radio";
+import Selector from "@/components/fields/Selector";
+import ShortText from "@/components/fields/ShortText";
+import Switch from "@/components/fields/Switch";
+import { useCompany } from "@/context/CompanyContext";
+import React, { useState } from "react";
 
-// 定义组件的对外接口类型
-type ProjectFormHandle = {
-  isValidForm: () => boolean;
+const FIELD_COMPONENTS_BY_NUMBER: Record<
+  number,
+  (props: any) => React.ReactNode
+> = {
+  0: (props) => <ShortText {...props} />,
+  1: (props) => <LongText {...props} />,
+  2: (props) => <Numbers {...props} />,
+  3: (props) => <Selector {...props} />,
+  4: (props) => <Checkbox {...props} />,
+  5: (props) => <Radio {...props} />,
+  6: (props) => <Switch {...props} />,
+  7: (props) => <DateInput {...props} />,
+  8: (props) => <Weblink {...props} />,
 };
 
-interface ProjectFormProps {
-  projectSettings: any;
-  setProjectSettings: any;
-  showOCRIcon?: boolean;
-  OCRFieldName?: string;
-  handleAddOCRBox?: (fieldName: string) => void;
-}
+const COMMIT_ON_BLUR = new Set([0, 1, 2, 8]);
 
-const ProjectForm = forwardRef<ProjectFormHandle, ProjectFormProps>(({ projectSettings, setProjectSettings, OCRFieldName = '', showOCRIcon = false, handleAddOCRBox }, ref) => {
-  const isValidForm = () => {
-    let isValid = true;
-    for (const field of testFields) {
-      if (field.required) {
-        let notValid = projectSettings[field.field_name] === null || projectSettings[field.field_name] === '';
-        if (notValid) {
-          isValid = false;
-          break;
-        }
-      }
-    }
-    return isValid;
+//TODO: Agregar validaciones a los campos que sean required.
+
+const ProjectForm = () => {
+  const [form, setForm] = useState<Record<string, any>>({});
+  const { company } = useCompany();
+  const attributes = company?.project_attributes ?? [];
+
+  const commit = (label: string) => (value: any) => {
+    setForm((prev) => ({ ...prev, [label]: value }));
   };
 
-  // 暴露isValidForm方法给父组件
-  useImperativeHandle(ref, () => ({
-    isValidForm
-  }));
+  function formatOptions(options: string[]) {
+    if (!options.length) return [];
+    const formatted = options.map((option: string) => ({
+      value: option,
+      label: option,
+    }));
+    return formatted;
+  }
 
-  return <div className="flex flex-col gap-3">
-    {testFields.map((field) => {
-      return <div key={field.field_name}>
-        <FormFieldItem
-          field={field}
-          OCRFieldName={OCRFieldName}
-          showOCRIcon={showOCRIcon}
-          projectSettings={projectSettings}
-          setProjectSettings={setProjectSettings}
-          handleAddOCRBox={handleAddOCRBox} />
-      </div>;
-    })}
-  </div>
-});
+  return (
+    <div className="flex flex-col gap-3">
+      <ShortText
+        name="Project Name"
+        required
+        onBlur={
+          ((e: any) => commit("project_name")(e?.target?.value ?? "")) as any
+        }
+      />
+      {attributes.map((attr) => {
+        if (!attr?.label) return null;
 
-ProjectForm.displayName = 'ProjectForm';
+        const Component = FIELD_COMPONENTS_BY_NUMBER[attr.type];
+        if (!Component) return null;
+
+        const isBlur = COMMIT_ON_BLUR.has(attr.type);
+
+        const options = attr?.metadata ?? [];
+        const formattedOptions = formatOptions(options);
+
+        return (
+          <Component
+            key={attr.uuid}
+            name={attr.label}
+            required={attr.required}
+            hint_text={attr.has_hint_text ? attr.hint : undefined}
+            options={formattedOptions}
+            {...(isBlur
+              ? {
+                  onBlur: (e: any) =>
+                    commit(attr.label)(e?.target?.value ?? ""),
+                }
+              : {
+                  value: form[attr.label],
+                  onChange: (v: any) => commit(attr.label)(v),
+                })}
+          />
+        );
+      })}
+    </div>
+  );
+};
 
 export default ProjectForm;
+
+const parseOptions = (metadata?: string[]) => {
+  if (!metadata?.length) return [];
+
+  try {
+    if (metadata.length === 1 && metadata[0].startsWith("[")) {
+      return JSON.parse(metadata[0]);
+    }
+
+    return metadata.map((m) => JSON.parse(m));
+  } catch {
+    return [];
+  }
+};

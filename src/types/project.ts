@@ -1,5 +1,3 @@
-import type { UploadFile } from "antd/es/upload/interface";
-
 export type ProjectSettings = {
   project_name: string;
   // expected_end_date: string | null;
@@ -131,4 +129,7 @@ export type CustomField = {
   Hint_text: string;
   Multiple_selection?: boolean;
   range?: boolean;
+  suffixIcon?: string;
 };
+
+export type Option = { value: string; label: string };
