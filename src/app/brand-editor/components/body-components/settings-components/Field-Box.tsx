@@ -140,41 +140,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
       {/* BODY */}
       <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3">
-        {/* HINT + REQUIRED */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <Checkbox
-            checked={!!has_hint_text}
-            disabled={!!is_fixed}
-            onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
-          >
-            Hint Text
-          </Checkbox>
-
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-700">Required</span>
-
-            <Switch
-              checked={!!required}
-              disabled={!!is_fixed}
-              onChange={(checked) => onChange?.({ required: checked })}
-            />
-          </div>
-        </div>
-
-        {/* HINT INPUT */}
-        {has_hint_text && (
-          <div className="px-4 pb-4">
-            <Input
-              size="small"
-              value={localHint}
-              disabled={!!is_fixed}
-              onChange={(e) => setLocalHint(e.target.value)}
-              onBlur={commitHint}
-              placeholder="Hint text..."
-            />
-          </div>
-        )}
-
         {/* OPTIONS (Dropdown / Radio / Checkbox) */}
         {hasOptions && (
           <div className="px-4 pb-4">
@@ -227,6 +192,40 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
             >
               + Add option
             </Button>
+          </div>
+        )}
+        {/* HINT + REQUIRED */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <Checkbox
+            checked={!!has_hint_text}
+            disabled={!!is_fixed}
+            onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
+          >
+            Hint Text
+          </Checkbox>
+
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-neutral-700">Required</span>
+
+            <Switch
+              checked={!!required}
+              disabled={!!is_fixed}
+              onChange={(checked) => onChange?.({ required: checked })}
+            />
+          </div>
+        </div>
+
+        {/* HINT INPUT */}
+        {has_hint_text && (
+          <div className="px-4 pb-4">
+            <Input
+              size="small"
+              value={localHint}
+              disabled={!!is_fixed}
+              onChange={(e) => setLocalHint(e.target.value)}
+              onBlur={commitHint}
+              placeholder="Hint text..."
+            />
           </div>
         )}
       </div>
