@@ -13,10 +13,10 @@ const BrandEditor = () => {
         selectedOptionId={selectedOptionId}
         setSelectedOptionId={setSelectedOptionId}
       />
-      {/* <Body selectedOptionId={selectedOptionId} /> */}
-      <div className="w-full h-full pl-10 pt-10">
+      <Body selectedOptionId={selectedOptionId} />
+      {/* <div className="w-full h-full pl-10 pt-10">
         <Company />
-      </div>
+      </div> */}
     </div>
   );
 };
