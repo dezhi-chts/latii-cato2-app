@@ -213,6 +213,9 @@ const IdentificationIndex = ({
         //reset page
         setPage(1);
         setTotalPage(1);
+        if (zoom !== 1.0) {
+          setZoom(1.0);
+        }
 
         setThumbnailList((prev: any) => []);
 
@@ -379,7 +382,6 @@ const IdentificationIndex = ({
   const deleteEvidence = async (deleteIds: number[]) => {
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
-    console.log("######### res", res);
     if (res.status === "success") {
       handleDeleteEvidence(deleteIds);
     } else {
@@ -442,35 +444,6 @@ const IdentificationIndex = ({
     setShowContentView(false);
     // 设置当前文件状态为processing
     updateFileStatus(selectedFileId, FileStatus.Processing);
-  };
-
-  const handleDeleteIndex = (item: { id: number }) => {
-    confirm({
-      title: "Are you sure to delete this index?",
-      icon: <ExclamationCircleOutlined />,
-      onOk() {
-        handleDeleteIndexById(item?.id);
-      },
-      onCancel() {},
-    });
-  };
-
-  const handleDeleteIndexById = async (id: number) => {
-    let res = await deleteDrawingIndex(id);
-    if (res.status === "success") {
-      notification.success({
-        message: "Success",
-        description: "Deleted successfully",
-      });
-      setContentData((prev: any) => {
-        return prev.filter((item: any) => item.id !== id);
-      });
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to delete evidence",
-      });
-    }
   };
 
   const handleNext = useCallback(
@@ -602,7 +575,6 @@ const IdentificationIndex = ({
               isEmptyContent={isEmptyContent}
               pdfTotalPages={totalPage}
               handlePageChange={handlePageChange}
-              handleDeleteIndex={handleDeleteIndex}
             />
           ) : (
             <IndexRectView

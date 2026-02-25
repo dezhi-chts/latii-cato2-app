@@ -3,30 +3,6 @@ import { Checkbox, Select, notification } from "antd";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-
-// const LabelTypeList = [
-//   {
-//     label: "Floor Plan", // 平面图
-//     value: "Floor Plan",
-//   },
-//   {
-//     label: "Elevation", // 立面图
-//     value: "Elevation",
-//   },
-//   {
-//     label: "Schedule", // 表格页
-//     value: "Schedule",
-//   },
-//   {
-//     label: "General Notes", // 一般备注
-//     value: "General Notes",
-//   },
-//   {
-//     label: "Mix", // 混合图
-//     value: "Mix",
-//   },
-// ];
-
 const ContentView = ({
   contentData,
   setContentData,
@@ -34,7 +10,6 @@ const ContentView = ({
   pdfTotalPages,
   isEmptyContent, // 是否数据为空
   handlePageChange, // 切换页面
-  handleDeleteIndex, // 删除索引
 }: any) => {
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
@@ -62,7 +37,7 @@ const ContentView = ({
   };
 
   const contentItem = (item: any) => {
-    let checked = item.type;
+    let checked = item.type !== 'Unknown' && item.type !== '' && item.type !== null;
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
@@ -82,7 +57,7 @@ const ContentView = ({
           <Select
             className="w-[150px] h-[28px] text-xs"
             placeholder="Floor Plan,etc."
-            value={item.type === 'Unknown' ? null : item.type}
+            value={item.type === 'Unknown' || !item.type ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
             {drawingTypeList.map((item: any, index: number) => (
@@ -91,9 +66,6 @@ const ContentView = ({
               </Select.Option>
             ))}
           </Select>
-        </div>
-        <div className="mx-1 cursor-pointer" onClick={() => handleDeleteIndex(item)}>
-          <Image src="/assets/icons/delete.svg" alt="Drag" width={20} height={20}></Image>
         </div>
       </div>
     );

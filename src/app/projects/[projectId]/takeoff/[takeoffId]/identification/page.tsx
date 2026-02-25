@@ -69,11 +69,12 @@ enum BuildLoadingStep {
   PageIndex = "page-index",
 }
 
-const invalidPageType = [
-  null,
-  PageType.All,
-  PageType.ActivePages,
-  PageType.NotUsed,
+const validPageType = [
+  PageType.FloorPlan,
+  PageType.Elevation,
+  PageType.Schedule,
+  PageType.KeyNotes,
+  PageType.Mix,
 ];
 
 export enum ButtonText {
@@ -147,18 +148,14 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
             // 把page_classification中所有不是invalidPageType的type的count加起来
             let totalCount: any = [];
             for (let key in page_classification) {
-              if (!invalidPageType.includes(key)) {
+              if (validPageType.includes(key)) {
                 totalCount.push(page_classification[key] ?? 0);
               }
-              let count = totalCount.reduce((a: any, b: any) => a + b, 0);
-              return {
-                ...item,
-                count: count,
-              };
             }
+            let count = totalCount.reduce((a: any, b: any) => a + b, 0);
             return {
               ...item,
-              count: page_classification[item.type] ?? 0,
+              count: count,
             };
           } else {
             return {
@@ -316,6 +313,9 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     //reset page
     setPage(1);
     setTotalPage(1);
+    if (zoom !== 1.0) {
+      setZoom(1.0);
+    }
 
     setThumbnailList((prev: any) => []);
 
@@ -347,7 +347,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     if (currentType === PageType.All) return [...thumbnailList];
     if (currentType === PageType.ActivePages)
       return [...thumbnailList].filter(
-        (item: any) => item.type && !invalidPageType.includes(item.type),
+        (item: any) => item.type && validPageType.includes(item.type),
       );
     return [...thumbnailList].filter((item: any) => item.type === currentType);
   }, [selectedFileId, fileList, currentType, thumbnailList]);
@@ -399,7 +399,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         newTypeItem.count = (newTypeItem?.count || 0) + 1;
 
         let activePages = list.filter(
-          (item: any) => !invalidPageType.includes(item.type),
+          (item: any) => validPageType.includes(item.type),
         );
         // 计算所有非无效类型的计数之和
         activePagesItem.count = activePages.reduce(

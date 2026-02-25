@@ -36,6 +36,7 @@ export enum PageType {
   Mix = "Mix",
   NotUsed = "Not Used",
   All = "All",
+  Unknown = "Unknown",
 }
 
 /** 框所代表的label类型 */
@@ -106,6 +107,11 @@ export const ArchDrawingSummaryPageTypes = [
   allPageTypes[PageType.Schedule],
   allPageTypes[PageType.KeyNotes],
   allPageTypes[PageType.Mix],
+  {
+    type: PageType.Unknown,
+    icon: "?",
+    color: "#717171",
+  },
 ];
 
 // identification 所有标签类型
