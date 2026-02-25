@@ -15,6 +15,7 @@ import Switch from "@/components/fields/Switch";
 import DateInput from "@/components/fields/DateInput";
 import Weblink from "@/components/fields/Link";
 import Check from "@/components/fields/Check";
+import { formatMetadataOptions } from "@/lib/functions";
 
 const ProjectsSettings = () => {
   const FIELD_COMPONENTS_BY_NUMBER: Record<
@@ -31,7 +32,18 @@ const ProjectsSettings = () => {
     7: (props) => <DateInput {...props} />,
     8: (props) => <Weblink {...props} />,
   };
+  type FieldOption = { label: string; value: string };
 
+  const parseMetadataOptions = (metadata?: any[]): FieldOption[] => {
+    try {
+      const raw = metadata?.[0];
+      if (!raw || typeof raw !== "string") return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
   const { company, refreshCompany } = useCompany();
 
   const fieldsCount = company?.project_attributes?.length ?? 0;
@@ -214,11 +226,14 @@ const ProjectsSettings = () => {
                 const RenderComponent = FIELD_COMPONENTS_BY_NUMBER[field.type];
                 if (!RenderComponent) return null;
 
+                const needsOptions =
+                  field.type === 3 || field.type === 4 || field.type === 5;
+
                 const props = {
                   name: field.label,
                   required: field.required,
                   hint_text: field.has_hint_text ? field.hint : undefined,
-                  options: field?.metadata || undefined,
+                  options: needsOptions ? field.metadata ?? [] : undefined, // ✅ string[]
                 };
 
                 return (
