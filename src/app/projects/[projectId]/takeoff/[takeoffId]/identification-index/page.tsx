@@ -202,40 +202,36 @@ const IdentificationIndex = ({
 
   useEffect(() => {
     if (selectedFileId === -1 || fileList.length === 0) return;
-    pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
-      if (unsaved) {
-        // 没有crop需要保存
-        pdfRef?.current?.resetAllInfo();
+    // 重置pdf数据
+    pdfRef?.current?.resetAllInfo();
 
-        // 重置 file evidence
-        setFileEvidence([]);
+    // 重置 file evidence
+    setFileEvidence([]);
 
-        //reset page
-        setPage(1);
-        setTotalPage(1);
-        if (zoom !== 1.0) {
-          setZoom(1.0);
-        }
+    //reset page
+    setPage(1);
+    setTotalPage(1);
+    if (zoom !== 1.0) {
+      setZoom(1.0);
+    }
+    // 重置缩略图数据
+    setThumbnailList((prev: any) => []);
 
-        setThumbnailList((prev: any) => []);
+    //设置新的url
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    if (file) {
+      let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? "";
+      setPdfUrl(newPdfUrl);
+      // 设置新的缩略图数据
+      setThumbnailList(() => file?.parse_detail?.image_page_infos ?? []);
+      //获取file evidence
+      getFileEvidences();
 
-        //设置新的url
-        let file = fileList.find((file: any) => file.id === selectedFileId);
-        if (file) {
-          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? "";
-          setPdfUrl(newPdfUrl);
-          // 设置新的缩略图数据
-          setThumbnailList(() => file?.parse_detail?.image_page_infos ?? []);
-          //获取file evidence
-          getFileEvidences();
-
-          // 显示目录内容
-          setShowContentView(true);
-          getDrawingIndexData();
-        }
-        return;
-      }
-    });
+      // 显示目录内容
+      setShowContentView(true);
+      getDrawingIndexData();
+    }
+    return;
   }, [selectedFileId]);
 
   useEffect(() => {
@@ -608,7 +604,7 @@ const IdentificationIndex = ({
             </div>
           </div>
           <div className="flex-1 flex overflow-hidden border border-primaryN30 rounded-md relative">
-            {/* <PdfWrapper
+            <PdfWrapper
               ref={pdfRef}
               operationMode={"edit"}
               mode="edit"
@@ -624,7 +620,7 @@ const IdentificationIndex = ({
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
               onCropSectionsCount={handleCropsCount}
-            ></PdfWrapper> */}
+            ></PdfWrapper>
           </div>
         </div>
         <div

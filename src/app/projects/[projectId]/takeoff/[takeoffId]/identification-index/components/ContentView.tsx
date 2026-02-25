@@ -1,5 +1,5 @@
 import { updateDrawingIndexType } from "@/services/drawingIndexService";
-import { Checkbox, Select, notification } from "antd";
+import { Button, Checkbox, Select, notification } from "antd";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
@@ -11,6 +11,19 @@ const ContentView = ({
   isEmptyContent, // 是否数据为空
   handlePageChange, // 切换页面
 }: any) => {
+  // 是否需要过滤 
+  const [isFiltered, setIsFiltered] = useState(false);
+
+  const [filteredContentData, setFilteredContentData] = useState(contentData);
+
+  useEffect(() => {
+    if (contentData?.length === 0) return;
+    if (isFiltered) {
+      setFilteredContentData(contentData.filter((item: any) => item.type !== 'Unknown' && item.type !== '' && item.type !== null));
+    } else {
+      setFilteredContentData(contentData);
+    }
+  }, [isFiltered, contentData]);
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
     setContentData((prev: any) =>
@@ -72,8 +85,11 @@ const ContentView = ({
   };
   return (
     <div className="pl-14 pr-6 w-full h-full flex flex-col">
-      <div className="mt-8 mb-2 text-xs text-basicGray">
-        Select Pages and respective type of content.
+      <div className="mt-8 mb-2 flex flex-row justify-between items-center">
+        <div className="text-xs text-basicGray">Select Pages and respective type of content.</div>
+        <div>
+          <Button className={`!w-[100px] ${isFiltered ? 'custom-primary-btn' : 'custom-default-btn'}`} onClick={() => setIsFiltered(!isFiltered)}>Active Pages</Button>
+        </div>
       </div>
       {
         !isEmptyContent ?
@@ -83,7 +99,7 @@ const ContentView = ({
               <div className="w-[50%] text-center">Type</div>
             </div>
             <div className="pr-2 flex-1 overflow-y-auto">
-              {contentData?.map((item: any) => contentItem(item))}
+              {filteredContentData?.map((item: any) => contentItem(item))}
             </div>
           </> :
           <div className="mt-8 text-xs">
