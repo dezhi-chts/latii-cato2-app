@@ -188,8 +188,8 @@ const ProjectsSettings = () => {
 
           <div
             className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all
-            ${isWide ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"}
-          `}
+      ${isWide ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"}
+    `}
           >
             <div className="flex gap-4 items-center pb-6">
               <p className="text-forumBlue">Create New Project</p>
@@ -200,45 +200,16 @@ const ProjectsSettings = () => {
                 gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
               }
             >
-              <div
-                className={
-                  gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
-                }
-              >
-                <div className="w-full break-inside-avoid mb-4">
-                  <ShortText
-                    name="Project Name"
-                    required
-                    hint_text="Input a recognizable name for you."
-                  />
-                </div>
-
-                {company?.project_attributes?.map(
-                  (field: any, index: number) => {
-                    const RenderComponent =
-                      FIELD_COMPONENTS_BY_NUMBER[field.type];
-                    if (!RenderComponent) return null;
-
-                    const props = {
-                      name: field.label,
-                      required: field.required,
-                      hint_text: field.has_hint_text ? field.hint : undefined,
-                      options: field?.metadata || undefined,
-                    };
-
-                    return (
-                      <div
-                        key={
-                          field.uuid ?? `${field.type}-${field.label}-${index}`
-                        }
-                        className="w-full break-inside-avoid mb-4"
-                      >
-                        {RenderComponent(props)}
-                      </div>
-                    );
-                  }
-                )}
+              {/* Fixed field */}
+              <div className="w-full break-inside-avoid mb-4">
+                <ShortText
+                  name="Project Name"
+                  required
+                  hint_text="Input a recognizable name for you."
+                />
               </div>
+
+              {/* Dynamic fields */}
               {company?.project_attributes?.map((field: any, index: number) => {
                 const RenderComponent = FIELD_COMPONENTS_BY_NUMBER[field.type];
                 if (!RenderComponent) return null;
