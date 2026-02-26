@@ -1,24 +1,16 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import {
-  CreateProjectModalProps,
-  defaultProjectSettings,
-  ProjectSettings,
-} from "@/types/project";
-import { Button, Input, Modal, message } from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
-
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import { Button, Modal, message } from "antd";
 import TakeoffUpload from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
+import { type ProjectSettings, defaultProjectSettings } from "@/types/project";
+import { type UploadFile } from "antd/es/upload/interface";
 
 const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     ...defaultProjectSettings,
   });
   const projectFormRef = useRef<any>(null);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   // 创建工程
   const handleProjectSubmit = async () => {
@@ -55,11 +47,7 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
         <div className="w-[400px] flex flex-col border border-baseLightHover rounded-md overflow-hidden">
           <div className="px-5 my-4 text-lg">Start from Blank Template</div>
           <div className="px-5 py-2 overflow-y-auto">
-            <ProjectForm
-              ref={projectFormRef}
-              projectSettings={projectSettings}
-              setProjectSettings={setProjectSettings}
-            />
+            <ProjectForm />
           </div>
           <div className="flex-1 flex items-end justify-center">
             <Button

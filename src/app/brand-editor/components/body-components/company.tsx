@@ -18,6 +18,7 @@ import { CONTACTS_TIMEOUT_MS } from "@/app/account-settings/components/TeamMembe
 import { getContactsByCompanyId } from "@/services/contactsService";
 import { useUser } from "@/context/UserContext";
 import Link from "next/link";
+import { ProjectSettings } from "@/types/project";
 
 type Location = {
   state: string;
@@ -62,8 +63,12 @@ const Company = () => {
 
   useEffect(() => {
     getCompanyMsg();
-    fetchCompanyContacts();
   }, []);
+
+  useEffect(() => {
+    if (company_id == 0 || !!usersData) return;
+    fetchCompanyContacts();
+  }, [company_id]);
 
   const getCompanyMsg = async () => {
     const companyRes = await fetchCompanyByKeycloakUser();
@@ -102,23 +107,35 @@ const Company = () => {
     }
   };
 
-  const handleInputChange = (field: any) => (e: any) => {
-    let tempLocation: any = companyMsg.location;
-    tempLocation[field] = e.target.value;
+  const handleInputChange = (field: string, value: string) => {
     setCompanyMsg((prev) => ({
       ...prev,
-      location: tempLocation,
+      location: {
+        ...prev.location,
+        [field]: value,
+      },
     }));
   };
 
-  const handleDropdownChange = (field: any) => (value: any) => {
-    let tempLocation: any = companyMsg.location;
-    tempLocation[field] = value;
-    setCompanyMsg((prev) => ({
-      ...prev,
-      location: tempLocation,
-    }));
-  };
+  const handleDropdownChange =
+    <K extends keyof ProjectSettings["location"]>(field: K) =>
+    (value: ProjectSettings["location"][K]) => {
+      setCompanyMsg((prev) => {
+        const next: typeof prev = {
+          ...prev,
+          location: {
+            ...prev.location,
+            [field]: value,
+          },
+        };
+
+        if (field === "state") return next;
+
+        void handleSaveChange(next);
+
+        return next;
+      });
+    };
 
   const handleCompanyChange = (field: any, value: any) => {
     setCompanyMsg((prev) => ({
@@ -127,8 +144,11 @@ const Company = () => {
     }));
   };
 
-  const handleSaveChange = async () => {
-    const res = await updateCompanyByCompanyId(companyMsg.id, companyMsg);
+  const handleSaveChange = async (updatedCompany = companyMsg) => {
+    const res = await updateCompanyByCompanyId(
+      updatedCompany.id,
+      updatedCompany,
+    );
     if (res.status == "success") {
       getCompanyMsg();
       notification.success({
@@ -222,11 +242,13 @@ const Company = () => {
               value={companyMsg.name}
               size="large"
               onChange={(e: any) => handleCompanyChange("name", e.target.value)}
+              onBlur={() => handleSaveChange()}
             />
           </div>
           <div className="zoomed-container mt-8 flex gap-6 w-[800px] items-start">
             <p className="w-2/12">Description</p>
             <TextArea
+              style={{ resize: "none" }}
               className="w-10/12"
               rows={4}
               placeholder="Any additional notes, descriptions"
@@ -235,6 +257,7 @@ const Company = () => {
               onChange={(e: any) =>
                 handleCompanyChange("description", e.target.value)
               }
+              onBlur={() => handleSaveChange()}
             />
           </div>
           <div className="zoomed-container mt-8 flex gap-6 w-[800px] items-center">
@@ -249,8 +272,9 @@ const Company = () => {
                 isOpen={showLocationSelector}
                 setIsOpen={setShowLocationSelector}
                 height="medium"
+                handleOnBlur={() => handleSaveChange()}
               />
-              <Space.Addon className="bg-white">
+              <Space.Addon className="bg-white border-l-0">
                 <EnvironmentOutlined style={{ color: "#C6C6C6" }} />
               </Space.Addon>
             </Space.Compact>
@@ -265,6 +289,7 @@ const Company = () => {
                 onChange={(e: any) =>
                   handleCompanyChange("website", e.target.value)
                 }
+                onBlur={() => handleSaveChange()}
               />
               <Space.Addon className="bg-white">
                 <GlobalOutlined style={{ color: "#C6C6C6" }} />
@@ -281,16 +306,12 @@ const Company = () => {
                 onChange={(e: any) =>
                   handleCompanyChange("social_media", e.target.value)
                 }
+                onBlur={() => handleSaveChange()}
               />
               <Space.Addon className="bg-white">
                 <GlobalOutlined style={{ color: "#C6C6C6" }} />
               </Space.Addon>
             </Space.Compact>
-          </div>
-          <div className="zoomed-container mt-8 flex gap-6 w-[800px] items-center justify-start">
-            <AntButton onClick={handleSaveChange} type="primary">
-              Save Change
-            </AntButton>
           </div>
         </div>
       </div>

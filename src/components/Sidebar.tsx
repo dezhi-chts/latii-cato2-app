@@ -311,6 +311,7 @@ export default function Sidebar() {
                       />
                       <p className="whitespace-nowrap text-black text-sm">
                         {expanded.sidebar && "Your Company"}
+                        {/* Please let this title. It's according to the figma. If you have any question, please ask me or the UX/UI team. */}
                       </p>
                     </div>
                   </Link>

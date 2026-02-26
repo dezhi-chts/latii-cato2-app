@@ -229,8 +229,10 @@ export const getPropertyNameFromTitle = (title: string) => {
   return propertyName.toLowerCase();
 };
 
-export const formatLabel = (value: string) =>
-  value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+export const formatLabel = (value: unknown) => {
+  const str = typeof value === "string" ? value : "";
+  return str.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 export const FIELD_TYPE_MAP = {
   0: "SHORT_TEXT",
@@ -250,3 +252,31 @@ export type FieldTypeValue =
 
 export const getFieldType = (type: number): FieldTypeValue | undefined =>
   FIELD_TYPE_MAP[type as keyof typeof FIELD_TYPE_MAP];
+type FieldOption = {
+  label: string;
+  value: string;
+};
+
+export const formatMetadataOptions = (metadata?: any[]): FieldOption[] => {
+  try {
+    if (!metadata?.length) return [];
+
+    const parsed = JSON.parse(metadata[0]);
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((o) => ({
+      label: String(o.label ?? ""),
+      value: String(o.value ?? ""),
+    }));
+  } catch {
+    return [];
+  }
+};
+
+export const buildMetadataOptions = (options: FieldOption[]): string[] => {
+  return [JSON.stringify(options)];
+};
+
+export const slugifyOptionValue = (label: string) =>
+  label.trim().toLowerCase().replaceAll(" ", "_");

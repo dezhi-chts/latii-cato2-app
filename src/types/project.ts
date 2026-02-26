@@ -1,5 +1,3 @@
-import type { UploadFile } from "antd/es/upload/interface";
-
 export type ProjectSettings = {
   project_name: string;
   // expected_end_date: string | null;
@@ -61,14 +59,13 @@ export type CreateProjectModalProps = {
 
 export type LocationSelectorProps = {
   onClose?: () => void;
-  handleInputChange?: <K extends keyof ProjectSettings>(
+  handleInputChange?: <K extends Extract<keyof ProjectSettings, string>>(
     field: K,
-  ) => (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    value: string,
   ) => void;
-  handleDropdownChange?: <K extends keyof ProjectSettings>(
+  handleDropdownChange?: <K extends keyof ProjectSettings["location"]>(
     field: K,
-  ) => (value: ProjectSettings[K]) => void;
+  ) => (value: ProjectSettings["location"][K]) => void;
   projectSettings?: any;
   isOpen?: boolean;
   setIsOpen?: (isOpen: boolean) => void;
@@ -77,6 +74,7 @@ export type LocationSelectorProps = {
   updateProject?: () => void;
   height?: "small" | "medium";
   style?: any;
+  handleOnBlur?: () => void;
 };
 
 export type QuickActionsForm = {
@@ -131,4 +129,7 @@ export type CustomField = {
   Hint_text: string;
   Multiple_selection?: boolean;
   range?: boolean;
+  suffixIcon?: string;
 };
+
+export type Option = { value: string; label: string };

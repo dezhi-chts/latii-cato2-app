@@ -1,12 +1,12 @@
 import { Select } from "antd";
 import RequiredHint from "./RequiredHint";
-import { formatLabel } from "@/lib/functions";
+import { Option } from "@/types/project";
 
 type SelectorProps = {
   name: string;
   required: boolean;
   hint_text?: string;
-  options?: string[];
+  options?: Option[];
   onChange?: () => void;
 };
 
@@ -17,11 +17,6 @@ const Selector = ({
   options = [],
   onChange,
 }: SelectorProps) => {
-  const inputTypeOptions = options.map((t) => ({
-    value: t,
-    label: formatLabel(t),
-  }));
-
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
@@ -30,7 +25,7 @@ const Selector = ({
       <Select
         placeholder={hint_text}
         className="max-w-80"
-        options={inputTypeOptions}
+        options={options}
         onChange={onChange}
       />
     </div>
