@@ -70,8 +70,12 @@ const Home = () => {
   const [projectsCache, setProjectsCache] = useState<
     Record<number, ProjectRow[]>
   >({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [currentProjectsPage, setCurrentProjectsPage] = useState(1);
+  const [totalProjectPages, setTotalProjectPages] = useState(1);
+
+  const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
+  const [currentTakeoffsPage, setCurrentTakeoffsPage] = useState(1);
+  const [totalTakeoffsPages, setTotalTakeoffsPages] = useState(1);
 
   const uploadFiles = useRef<any>(null);
   const projectInfo = useRef<any>(null);
@@ -85,7 +89,7 @@ const Home = () => {
     if (category === "Projects") {
       fetchProjects();
     } else if (category === "Take Offs") {
-      getTakeoffs();
+      getTakeoffs(currentTakeoffsPage);
     }
   }
 
@@ -110,12 +114,12 @@ const Home = () => {
 
     const params = {
       per_page: PAGE_SIZE,
-      page: currentPage,
+      page: currentProjectsPage,
     };
 
     const response: any = await getAllProjects(params);
     const projects = response?.items;
-    setTotalPages(response?.total_pages ?? 1);
+    setTotalProjectPages(response?.total_pages ?? 1);
     setProjectLoading(false);
     if (projects?.length > 0) {
       setProjectsCache((prev) => ({ ...prev, [page]: projects }));
@@ -124,15 +128,24 @@ const Home = () => {
     }
   };
 
-  const getTakeoffs = async () => {
+  const getTakeoffs = async (page: number) => {
+    if (takeoffsCache[page]) {
+      return;
+    }
+    const params = {
+      per_page: PAGE_SIZE,
+      page: currentTakeoffsPage,
+    };
+
     setTakeOffLoading(true);
-    const res = await getAllTakeoffList();
+    const res = await getAllTakeoffList(params);
+    const takeoffs = res?.data?.items ?? [];
+    setTotalTakeoffsPages(res?.data?.total_pages ?? 1);
     setTakeOffLoading(false);
     if (res?.status === "success") {
-      let takeoffs = res?.data?.items ?? [];
-      setTakeoffs(takeoffs);
+      setTakeoffsCache((prev) => ({ ...prev, [page]: takeoffs }));
     } else {
-      setTakeoffs([]);
+      setTakeoffsCache((prev) => ({ ...prev, [page]: [] }));
     }
   };
 
@@ -142,7 +155,7 @@ const Home = () => {
       okText: "Yes",
       onOk: async () => {
         const res = await deleteProject(record.project_id as string);
-        getProjects(currentPage);
+        getProjects(currentProjectsPage);
       },
     });
   };
@@ -153,14 +166,14 @@ const Home = () => {
       okText: "Yes",
       onOk: async () => {
         const res = await deleteTakeOffById(takeoff?.id as string);
-        getTakeoffs();
+        getTakeoffs(1);
       },
     });
   };
 
   useEffect(() => {
-    getProjects(currentPage);
-  }, [currentPage]);
+    getProjects(currentProjectsPage);
+  }, [currentProjectsPage]);
 
   return (
     <div className="w-full h-full">
@@ -217,20 +230,23 @@ const Home = () => {
           </div>
           {category === "Projects" ? (
             <HomeProjectsTable
-              projects={projectsCache[currentPage]}
+              projects={projectsCache[currentProjectsPage]}
               selectedColumns={selectedColumns}
               tableLoading={projectLoading}
               handleRemoveProject={handleRemoveProject}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-              totalPages={totalPages}
+              currentPage={currentProjectsPage}
+              setCurrentPage={setCurrentProjectsPage}
+              totalPages={totalProjectPages}
             />
           ) : (
             <HomeTakeoffsTable
               tableLoading={takeOffLoading}
-              takeoffs={takeoffs}
+              takeoffs={takeoffsCache[currentTakeoffsPage]}
               selectedColumns={[]}
               handleRemoveTakeoff={handleRemoveTakeoff}
+              currentPage={currentTakeoffsPage}
+              setCurrentPage={setCurrentTakeoffsPage}
+              totalPages={totalTakeoffsPages}
             />
           )}
         </div>

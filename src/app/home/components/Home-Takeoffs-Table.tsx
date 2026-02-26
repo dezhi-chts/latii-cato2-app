@@ -1,13 +1,10 @@
-import { ProjectRow, ProjectStatus } from "@/types/home";
+import { ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { StarFilled, StarOutlined } from "@ant-design/icons";
 import { ConfigProvider, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getTitleFromPropertyName } from "@/lib/functions";
 import Image from "next/image";
-
-const PAGE_SIZE = 20;
+import { PAGE_SIZE } from "./Home-Projects-Table";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -36,13 +33,25 @@ const TextCell = ({ value }: { value: unknown }) => {
   );
 };
 
+type HomeTakeoffsTableProps = {
+  tableLoading: boolean;
+  takeoffs: any[];
+  selectedColumns: string[];
+  handleRemoveTakeoff: (takeoff: any) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  totalPages: number;
+};
+
 const HomeTakeoffsTable = ({
   tableLoading,
   takeoffs,
   selectedColumns,
-  handleRemoveTakeoff
-}: any) => {
-  const [page, setPage] = useState(1);
+  handleRemoveTakeoff,
+  currentPage,
+  setCurrentPage,
+  totalPages,
+}: HomeTakeoffsTableProps) => {
   const router = useRouter();
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
@@ -56,7 +65,7 @@ const HomeTakeoffsTable = ({
         dataIndex: "name",
         key: "name",
         align: "center",
-        sorter: (a, b) => a.name.localeCompare(b.name),
+        sorter: (a: any, b: any) => a.name.localeCompare(b.name),
         render: (value) => <TextCell value={value} />,
       },
       {
@@ -92,37 +101,47 @@ const HomeTakeoffsTable = ({
         key: "operation",
         align: "center",
         width: 160,
-        render: (value, record) => <div className="w-full flex justify-center items-center cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemoveTakeoff(record);
-          }}>
-          <Image src="/assets/icons/delete.svg" alt="Delete" width={20} height={20} />
-        </div>
+        render: (value, record) => (
+          <div
+            className="w-full flex justify-center items-center cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveTakeoff(record);
+            }}
+          >
+            <Image
+              src="/assets/icons/delete.svg"
+              alt="Delete"
+              width={20}
+              height={20}
+            />
+          </div>
+        ),
       },
     ],
-    []
+    [],
   );
 
-  const allColumns = useMemo(
-    () => [...defaultColumns],
-    [defaultColumns]
-  );
+  const allColumns = useMemo(() => [...defaultColumns], [defaultColumns]);
 
   const columns = useMemo(() => {
     if (!selectedColumns || selectedColumns.length === 0) {
       return allColumns;
     }
-    return allColumns.filter(column => selectedColumns.includes(column.key as string));
+    return allColumns.filter((column) =>
+      selectedColumns.includes(column.key as string),
+    );
   }, [allColumns, selectedColumns]);
-
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
-      onClick: () => router.push(`/projects/${record.project_id}/takeoff/${record.id}/identification-index`),
+      onClick: () =>
+        router.push(
+          `/projects/${record.project_id}/takeoff/${record.id}/identification-index`,
+        ),
       className: "cursor-pointer hover:bg-gray-50",
     }),
-    [router]
+    [router],
   );
 
   return (
@@ -142,20 +161,19 @@ const HomeTakeoffsTable = ({
         onRow={handleRowClick}
         loading={tableLoading}
         pagination={{
-          current: page,
+          current: currentPage,
           pageSize: PAGE_SIZE,
           showSizeChanger: false,
           showQuickJumper: false,
           itemRender: () => null,
           position: ["bottomRight"],
-          showTotal: (total) => {
-            const totalPages = Math.ceil(total / PAGE_SIZE);
+          showTotal: () => {
             return (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Page</span>
                 <select
-                  value={page}
-                  onChange={(e) => setPage(Number(e.target.value))}
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
                   className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
                 >
                   {Array.from({ length: totalPages }).map((_, i) => (

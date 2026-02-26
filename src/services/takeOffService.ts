@@ -1,8 +1,11 @@
 import { http } from "@/lib/http";
 
-export const getAllTakeoffList = async () => {
+export const getAllTakeoffList = async (filterParams?: {
+  per_page?: number;
+  page?: number;
+}) => {
   try {
-    const url = `/project/take_off/list`;
+    const url = `/project/take_off/list?page=${filterParams?.page || 1}&per_page=${filterParams?.per_page || 10}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
   } catch (error) {
