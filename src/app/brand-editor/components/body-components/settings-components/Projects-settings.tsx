@@ -229,6 +229,9 @@ const ProjectsSettings = () => {
                 const needsOptions =
                   field.type === 3 || field.type === 4 || field.type === 5;
 
+                const isRangedDate =
+                  field.type === 7 && (field.metadata ?? []).includes("ranged");
+
                 const props = {
                   name: field.label,
                   required: field.required,
@@ -239,6 +242,7 @@ const ProjectsSettings = () => {
                         value: opt,
                       }))
                     : undefined,
+                  is_ranged_date: isRangedDate,
                 };
 
                 return (

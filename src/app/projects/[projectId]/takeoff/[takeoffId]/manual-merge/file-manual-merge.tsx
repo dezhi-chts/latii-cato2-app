@@ -1,7 +1,7 @@
 "use client";
 
 import Button from "@/components/Button";
-import { Input, Radio } from "antd";
+import { Input, Radio, Select } from "antd";
 import Image from "next/image";
 
 type Label = {
@@ -26,15 +26,15 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
     <div className="min-w-[25vw] text-sm pt-8">
       {/*  Title */}
       <div className="flex justify-between items-center">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <p className="text-base"> {file.file_name}</p>
-          <div className="flex gap-3">
-            <p className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs">
-              {file.labels_amount} Labels
-            </p>
-            <p className="bg-baseLightHover py-0.5 px-2 rounded-md">
-              {file.type}
-            </p>
+          <div className="flex gap-2">
+            <div className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
+              <span>{file.labels_amount} Labels </span>
+            </div>
+            <div className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
+              <span>{file.type}</span>
+            </div>
           </div>
         </div>
         <div className="flex gap-4">
@@ -50,7 +50,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
             </div>
           )}
           <div
-            className={` text-xs py-1 px-2 rounded-md flex items-center justify-center ${
+            className={` text-xs py-2 px-2 rounded-md flex items-center justify-center ${
               file.is_base
                 ? "text-tealDark bg-cyanLightActive "
                 : "text-baseGray bg-baseLight"
@@ -86,30 +86,37 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           ))}
         </div>
       </div>
-      <p>Edit in Detail Merge</p>
+      <p className="pt-1 underline text-forumBlue">Edit in Detail Merge</p>
       {/*  Merge options */}
-      <div className="w-full">
-        <div className="flex justify-between items-center">
-          <p>Merge Type</p>
-          <p>Learn More</p>
-        </div>
-        {!file.is_base && (
+      <div className="w-full mt-3 flex justify-center">
+        <div className="w-4/6 flex flex-col gap-4 ">
           <div className="flex justify-between items-center">
-            <p>Label</p>
-            <Input />
+            <p className="text-forumBlue">Merge Type</p>
+            <p className="text-baseGray underline">Learn More</p>
           </div>
-        )}
+          {!file.is_base && (
+            <div className="flex justify-between items-center">
+              <p>Label</p>
+              <Input />
+            </div>
+          )}
 
-        <div className="flex justify-between items-center">
-          <p>Row</p>
-          <Input />
-        </div>
-        <div className="flex justify-between items-center">
-          <p>Column</p>
-          <Input />
-        </div>
-        <div>
-          <Button>Merge All</Button>
+          <div className="flex justify-between items-center">
+            <p>Row</p>
+            <Select />
+          </div>
+          <div className="flex justify-between items-center">
+            <p>Column</p>
+            <Select className="w-7/12" />
+          </div>
+          <div>
+            <Button
+              className="w-full rounded-md text-white"
+              backgroundColor={"forumBlue"}
+            >
+              Merge All
+            </Button>
+          </div>
         </div>
       </div>
     </div>
