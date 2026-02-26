@@ -43,7 +43,7 @@ const DrawingTagsView = ({
               {item?.type}
             </span>
             <span
-              className="ml-4 px-[5px] py-[1px] text-xxs bg-white rounded"
+              className="ml-4 px-[8px] py-[1px] text-xxs bg-white rounded"
               style={{ color: miniBtnColor }}
             >
               {item?.count || 0}

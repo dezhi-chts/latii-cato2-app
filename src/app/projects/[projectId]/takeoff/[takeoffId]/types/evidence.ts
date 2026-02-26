@@ -96,7 +96,7 @@ export const allPageTypes = {
   [PageType.NotUsed]: {
     type: PageType.NotUsed,
     icon: "N",
-    color: "#717171",
+    color: "#A3A3A3",
   },
   [PageType.All]: {
     type: PageType.All,

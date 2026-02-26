@@ -3,6 +3,7 @@ import { CloseOutlined } from "@ant-design/icons";
 import { notification, Select, Dropdown, Space } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import LabelTypesSelect from "./Label-Types-Select";
+import { allPageTypes, PageType } from "../../types/evidence";
 const LazyImage = ({
   src,
   alt,
@@ -179,7 +180,10 @@ const Thumbnail = ({
         <div className="py-6 flex flex-col gap-4 min-h-full items-center">
           {data?.length > 0 && data.map((info, index) => {
             let itemPageNum = getItemPage(info, index);
-            let { color = '#717171', icon = 'N' } = pageTypeInfo(info);
+            let {
+              color = allPageTypes[PageType.NotUsed].color,
+              icon = allPageTypes[PageType.NotUsed].icon
+            } = pageTypeInfo(info);
             return (
               <div
                 id={`thumbnail-page-${itemPageNum}`}
