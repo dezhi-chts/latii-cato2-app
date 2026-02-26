@@ -40,6 +40,7 @@ import {
 } from "@/services/drawingIndexService";
 
 import {
+  EvidenceResult,
   EvidenceType,
   FileOperationType,
   FileStatus,
@@ -47,13 +48,12 @@ import {
   PdfWrapperRefMethods,
 } from "../types/evidence";
 
+import LoadingScreen from "@/components/loading-screen";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
 import {
   ZoomControls,
-  AddRectBoxControls,
-  PageControls,
   SelectPagesControls,
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
@@ -61,6 +61,7 @@ import BuildingBackground from "./components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
+
 
 import { ArchDrawingSummaryPageTypes } from "../types/evidence";
 
@@ -202,37 +203,36 @@ const IdentificationIndex = ({
 
   useEffect(() => {
     if (selectedFileId === -1 || fileList.length === 0) return;
-    pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
-      if (unsaved) {
-        // 没有crop需要保存
-        pdfRef?.current?.resetAllInfo();
+    // 重置pdf数据
+    pdfRef?.current?.resetAllInfo();
 
-        // 重置 file evidence
-        setFileEvidence([]);
+    // 重置 file evidence
+    setFileEvidence([]);
 
-        //reset page
-        setPage(1);
-        setTotalPage(1);
+    //reset page
+    setPage(1);
+    setTotalPage(1);
+    if (zoom !== 1.0) {
+      setZoom(1.0);
+    }
+    // 重置缩略图数据
+    setThumbnailList((prev: any) => []);
 
-        setThumbnailList((prev: any) => []);
+    //设置新的url
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    if (file) {
+      let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? "";
+      setPdfUrl(newPdfUrl);
+      // 设置新的缩略图数据
+      setThumbnailList(() => file?.parse_detail?.image_page_infos ?? []);
+      //获取file evidence
+      getFileEvidences();
 
-        //设置新的url
-        let file = fileList.find((file: any) => file.id === selectedFileId);
-        if (file) {
-          let newPdfUrl = file?.parse_detail?.uploaded_file_url ?? "";
-          setPdfUrl(newPdfUrl);
-          // 设置新的缩略图数据
-          setThumbnailList(() => file?.parse_detail?.image_page_infos ?? []);
-          //获取file evidence
-          getFileEvidences();
-
-          // 显示目录内容
-          setShowContentView(true);
-          getDrawingIndexData();
-        }
-        return;
-      }
-    });
+      // 显示目录内容
+      setShowContentView(true);
+      getDrawingIndexData();
+    }
+    return;
   }, [selectedFileId]);
 
   useEffect(() => {
@@ -334,13 +334,6 @@ const IdentificationIndex = ({
     debouncedZoomChange(value);
   };
 
-  const handleSafeZoomChange = (value: number) => {
-    message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`,
-    );
-    debouncedZoomChange(value - 0.1);
-  };
-
   const handlePageChange = (value: number) => {
     // 需要判断当前pdf页面上是否有裁剪区域未提交
     pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
@@ -354,8 +347,10 @@ const IdentificationIndex = ({
     });
   };
 
-  const handleAppendEvidence = (evidenceList: EvidenceType[]) => {
+  const handleAppendEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+    const { evidences } = evidenceResult;
+    const evidenceList = evidences || [];
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -364,8 +359,9 @@ const IdentificationIndex = ({
     setFileEvidence([...fileEvidence, ...evidenceList]);
   };
 
-  const handleDeleteEvidence = (deleteIds: number[]) => {
+  const handleDeleteEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+    const { deleteIds = [] } = evidenceResult;
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -379,9 +375,8 @@ const IdentificationIndex = ({
   const deleteEvidence = async (deleteIds: number[]) => {
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
-    console.log("######### res", res);
     if (res.status === "success") {
-      handleDeleteEvidence(deleteIds);
+      handleDeleteEvidence({ deleteIds } as any);
     } else {
       notification.error({
         message: "Error",
@@ -391,8 +386,11 @@ const IdentificationIndex = ({
     setFullLoading(false);
   };
 
-  const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
+  const handleUpdateEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+    const { evidences } = evidenceResult;
+    const evidenceList = evidences || [];
+
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -442,35 +440,6 @@ const IdentificationIndex = ({
     setShowContentView(false);
     // 设置当前文件状态为processing
     updateFileStatus(selectedFileId, FileStatus.Processing);
-  };
-
-  const handleDeleteIndex = (item: { id: number }) => {
-    confirm({
-      title: "Are you sure to delete this index?",
-      icon: <ExclamationCircleOutlined />,
-      onOk() {
-        handleDeleteIndexById(item?.id);
-      },
-      onCancel() {},
-    });
-  };
-
-  const handleDeleteIndexById = async (id: number) => {
-    let res = await deleteDrawingIndex(id);
-    if (res.status === "success") {
-      notification.success({
-        message: "Success",
-        description: "Deleted successfully",
-      });
-      setContentData((prev: any) => {
-        return prev.filter((item: any) => item.id !== id);
-      });
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to delete evidence",
-      });
-    }
   };
 
   const handleNext = useCallback(
@@ -602,7 +571,6 @@ const IdentificationIndex = ({
               isEmptyContent={isEmptyContent}
               pdfTotalPages={totalPage}
               handlePageChange={handlePageChange}
-              handleDeleteIndex={handleDeleteIndex}
             />
           ) : (
             <IndexRectView
@@ -654,14 +622,10 @@ const IdentificationIndex = ({
               zoom={zoom}
               page={page}
               allEvidence={fileEvidence}
-              onRefreshEvidence={() => {
-                getFileEvidences();
-              }}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
-              onUpdateSafeZoom={handleSafeZoomChange}
               onCropSectionsCount={handleCropsCount}
             ></PdfWrapper>
           </div>
@@ -698,7 +662,7 @@ const IdentificationIndex = ({
           }}
         />
       )}
-      {fullLoading && <Spin fullscreen />}
+      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && <BuildingBackground step={buildLoadingStep} />}
     </div>
   );

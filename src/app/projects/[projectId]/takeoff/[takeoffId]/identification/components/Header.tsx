@@ -40,8 +40,13 @@ const Header = ({
 
   const handleClickFile = async (file: any) => {
     if (selectedFileId === file.id) return;
-    // 切换文件
-    setSelectedFileId(file.id);
+    // 切换文件, 判断当前是否有未保存的crop，如果有则显示提示框并且保存
+    const unsaved =
+      await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+    if (!pdfRef.current || unsaved) {
+      // 没有未保存的crop，切换文件
+      setSelectedFileId(file.id);
+    }
   }
 
   const handleBack = () => {

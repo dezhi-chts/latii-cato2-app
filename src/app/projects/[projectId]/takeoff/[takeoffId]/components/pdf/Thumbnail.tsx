@@ -22,8 +22,8 @@ const LazyImage = ({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          imgRef.current!.src = src;
+        if (entry.isIntersecting && imgRef.current) {
+          imgRef.current.src = src;
           setLoaded(true);
 
           observer.disconnect();
@@ -82,12 +82,7 @@ interface ThumbnailProps {
   showCategory?: boolean; // 是否显示分类
   showShadow?: boolean; // 是否显示阴影
   size?: 'normal' | 'larger'; // 缩略图大小
-  categoryList?: {  // 分类列表
-    type: string;
-    color: string;
-    icon: string;
-  }[];
-  onChangePageType?: (page: number, type: string) => void; // 切换页面类型回调
+  categoryList?: any[]; // 页面分类
 }
 
 const Thumbnail = ({
@@ -100,9 +95,8 @@ const Thumbnail = ({
   fixed = false, // 是否固定位置
   showCategory = false, // 是否显示分类
   size = 'normal', // 缩略图大小
-  categoryList = [], // 分类列表
+  categoryList = [], // 页面分类
   showShadow = true, // 是否显示阴影
-  onChangePageType, // 切换页面类型回调
 }: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -138,19 +132,12 @@ const Thumbnail = ({
     }
   }, [page, showThumbnail]);
 
-  const onChangePage = (page: number) => {
-    if (typeof pdfRef !== "undefined") {
-      pdfRef?.current
-        ?.checkAndHandleUnsavedCrops?.()
-        .then((unsaved: boolean) => {
-          if (unsaved) {
-            setPage(page);
-          }
-        });
-      return;
+  const onChangePage = async (page: number) => {
+    let unSaved = await pdfRef?.current
+      ?.checkAndHandleUnsavedCrops?.()
+    if (!pdfRef?.current || unSaved) {
+      setPage(page);
     }
-
-    setPage(page);
   }
 
   const getItemPage = (item: any, index: number) => {
@@ -159,6 +146,14 @@ const Thumbnail = ({
       return parseInt(pageArr) + 1;
     }
     return index + 1;
+  }
+
+  const pageTypeInfo = (info: any) => {
+    let category = categoryList.find((item) => {
+      return item.type === info.type || item.type.toUpperCase() === info.type?.toUpperCase()
+    });
+    if (!category) return {};
+    return category || {};
   }
 
   return (
@@ -184,6 +179,7 @@ const Thumbnail = ({
         <div className="py-6 flex flex-col gap-4 min-h-full items-center">
           {data?.length > 0 && data.map((info, index) => {
             let itemPageNum = getItemPage(info, index);
+            let { color = '#717171', icon = 'N' } = pageTypeInfo(info);
             return (
               <div
                 id={`thumbnail-page-${itemPageNum}`}
@@ -200,15 +196,10 @@ const Thumbnail = ({
                 <div className="p-[10px]">
                   <div className="h-[30px] flex flex-row justify-between">
                     <p className="mb-3 text-xxs text-basicGray">{itemPageNum}</p>
-                    {showCategory && <div>
-                      <LabelTypesSelect
-                        typeList={categoryList}
-                        selectedType={info.type}
-                        onChangeType={(type: string) => {
-                          onChangePageType && onChangePageType(itemPageNum, type);
-                        }}
-                      ></LabelTypesSelect>
-                    </div>}
+                    {showCategory &&
+                      <div className="w-[42px] h-[18px] flex items-center justify-center rounded text-xxs text-white" style={{ backgroundColor: color }}>
+                        <span>{icon}</span>
+                      </div>}
                   </div>
                   <div>
                     <LazyImage

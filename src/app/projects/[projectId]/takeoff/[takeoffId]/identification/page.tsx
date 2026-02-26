@@ -41,6 +41,7 @@ import {
   QuotePageTypes,
 } from "../types/evidence";
 
+import LoadingScreen from "@/components/loading-screen";
 import PdfWrapper from "../components/pdf/PdfWrapper";
 import Header from "./components/Header";
 import Thumbnail from "../components/pdf/Thumbnail";
@@ -56,6 +57,7 @@ import PreAnalysisMdal from "./components/PreAnalysisMdal";
 
 import {
   PageType,
+  EvidenceResult,
   ArchDrawingAllPageTags,
   ArchDrawingPageTypes,
   ArchDrawingLabelTypes,
@@ -69,11 +71,16 @@ enum BuildLoadingStep {
   PageIndex = "page-index",
 }
 
-const invalidPageType = [
-  null,
-  PageType.All,
-  PageType.ActivePages,
-  PageType.NotUsed,
+const validPageType = [
+  PageType.FloorPlan,
+  PageType.Elevation,
+  PageType.Schedule,
+  PageType.KeyNotes,
+  PageType.Mix,
+
+  PageType.Item,
+  PageType.Information,
+  PageType.Description
 ];
 
 export enum ButtonText {
@@ -113,6 +120,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
 
   const evidenceIsLoaded = useRef<boolean>(false);
   const lastSelectedFileId = useRef<number>(-1);
+  const unSavedCropsCount = useRef<number>(0);
 
   useEffect(() => {
     if (takeOffId) {
@@ -147,18 +155,14 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
             // 把page_classification中所有不是invalidPageType的type的count加起来
             let totalCount: any = [];
             for (let key in page_classification) {
-              if (!invalidPageType.includes(key)) {
+              if (validPageType.includes(key)) {
                 totalCount.push(page_classification[key] ?? 0);
               }
-              let count = totalCount.reduce((a: any, b: any) => a + b, 0);
-              return {
-                ...item,
-                count: count,
-              };
             }
+            let count = totalCount.reduce((a: any, b: any) => a + b, 0);
             return {
               ...item,
-              count: page_classification[item.type] ?? 0,
+              count: count,
             };
           } else {
             return {
@@ -316,6 +320,9 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     //reset page
     setPage(1);
     setTotalPage(1);
+    if (zoom !== 1.0) {
+      setZoom(1.0);
+    }
 
     setThumbnailList((prev: any) => []);
 
@@ -347,7 +354,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     if (currentType === PageType.All) return [...thumbnailList];
     if (currentType === PageType.ActivePages)
       return [...thumbnailList].filter(
-        (item: any) => item.type && !invalidPageType.includes(item.type),
+        (item: any) => item.type && validPageType.includes(item.type),
       );
     return [...thumbnailList].filter((item: any) => item.type === currentType);
   }, [selectedFileId, fileList, currentType, thumbnailList]);
@@ -360,7 +367,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     return index + 1;
   };
 
-  const setThumbnailPageType = (page: number, type: string) => {
+  const updateThumbnailPageType = (page: number, type: string) => {
     setThumbnailList((prev: any) => {
       return prev.map((item: any, index: number) => {
         let itemPageNum = getItemPage(item, index);
@@ -375,62 +382,61 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     });
   };
 
-  const handlePageType = async (
-    page: number,
-    newType: string,
-    oldType: string,
-  ) => {
-    let res = await updatePageType({
-      fileId: selectedFileId as any,
-      pageNum: page,
-      newType: newType,
-    });
-    if (res.status === "success") {
-      // 更新成功，更新tags中的数据
-      setPageTypeList((prev: any) => {
-        let list = [...prev];
-        let oldTypeItem = list.find((item: any) => item.type === oldType);
-        let newTypeItem = list.find((item: any) => item.type === newType);
-        let activePagesItem = list.find(
-          (item: any) => item.type === "Active Pages",
-        );
-        oldTypeItem.count =
-          (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
-        newTypeItem.count = (newTypeItem?.count || 0) + 1;
-
-        let activePages = list.filter(
-          (item: any) => !invalidPageType.includes(item.type),
-        );
-        // 计算所有非无效类型的计数之和
-        activePagesItem.count = activePages.reduce(
-          (total: number, item: any) => total + (item.count || 0),
-          0,
-        );
-
-        return [...list];
-      });
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to update page type",
-      });
-      // 回滚到上次的类型设置
-      setThumbnailPageType(page, oldType);
+  const handleUpdatePageType = useCallback((pageTypes: any) => {
+    const page_types = pageTypes || [];
+    let findCurrentPageType = page_types.find((item: any) => item.page_number === page);
+    if (!findCurrentPageType) {
+      return;
     }
-  };
 
-  const handlePageTypeChange = async (page: number, type: string) => {
+    let newType = findCurrentPageType.page_type || "";
+    if (!newType) return;
+    newType = validPageType.includes(newType) ? newType : PageType.NotUsed;
+
+    // 获取当前页旧的type
     let oldType =
       thumbnailList.find((item: any, index: number) => {
         let itemPageNum = getItemPage(item, index);
         return itemPageNum === page;
       })?.type || "";
 
-    // 设置新的type
-    setThumbnailPageType(page, type);
-    // 调用type更新接口
-    handlePageType(page, type, oldType);
-  };
+    console.log("######## newType", newType, "oldType", oldType);
+
+    if (oldType === newType) return;
+
+    // 更新当前页的type
+    updateThumbnailPageType(page, newType);
+
+    // 如果是quote文件类型，则不执行后面更新tags的操作
+    if (fileOperationType === FileOperationType.Quote) return;
+
+    // 更新tags中的数据
+    setPageTypeList((prev: any) => {
+      let list = [...prev];
+      let oldTypeItem = list.find((item: any) => item.type === oldType);
+      let newTypeItem = list.find((item: any) => item.type === newType);
+      let activePagesItem = list.find(
+        (item: any) => item.type === PageType.ActivePages,
+      );
+      // 页面旧类型集合数量减1
+      oldTypeItem.count =
+        (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
+      // 页面新类型集合数量加1
+      newTypeItem.count = (newTypeItem?.count || 0) + 1;
+
+      let activePages = list.filter(
+        (item: any) => validPageType.includes(item.type),
+      );
+      // 计算所有有效类型的计数之和
+      activePagesItem.count = activePages.reduce(
+        (total: number, item: any) => total + (item.count || 0),
+        0,
+      );
+
+      return [...list];
+    });
+
+  }, [page, thumbnailList]);
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -455,31 +461,19 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     debouncedZoomChange(value);
   };
 
-  const handleSafeZoomChange = (value: number) => {
-    message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`,
-    );
-    debouncedZoomChange(value - 0.1);
-  };
-
-  const handlePageChange = (value: number) => {
+  const handlePageChange = async (value: number) => {
     // 需要判断当前pdf页面上是否有裁剪区域未提交
-    pdfRef?.current?.checkAndHandleUnsavedCrops?.().then((unsaved) => {
-      if (unsaved) {
-        if (value < 1) return;
-        if (value > totalPage) return;
-        if (value === page) return;
-        setPage(value);
-        return;
-      }
-    });
+    let unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+    if (!pdfRef.current || unsaved) {
+      if (value < 1) return;
+      if (value > totalPage) return;
+      if (value === page) return;
+      setPage(value);
+      return;
+    }
   };
   const handleRotate = () => {
     pdfRef?.current?.rotatePDF?.();
-  };
-
-  const handleThumbnail = () => {
-    setShowThumbnail(!showThumbnail);
   };
 
   const handleClearAllCrop = () => {
@@ -489,18 +483,23 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     pdfRef?.current?.handleBatchDelete();
   };
 
-  const handleAppendEvidence = (evidenceList: EvidenceType[]) => {
+  const handleAppendEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+    const { evidences, page_types = [] } = evidenceResult;
+    const evidenceList = evidences || [];
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
     }
     if (!evidenceList?.length) return;
     setFileEvidence([...fileEvidence, ...evidenceList]);
+
+    handleUpdatePageType(page_types);
   };
 
-  const handleDeleteEvidence = (deleteIds: number[]) => {
+  const handleDeleteEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+    const { deleteIds = [], page_types = [] } = evidenceResult;
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -509,10 +508,13 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     setFileEvidence(
       fileEvidence.filter((item: EvidenceType) => !deleteIds.includes(item.id)),
     );
+    handleUpdatePageType(page_types);
   };
 
-  const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
+  const handleUpdateEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+    const { evidences, page_types = [] } = evidenceResult;
+    const evidenceList = evidences || [];
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -530,6 +532,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         return item;
       }),
     );
+    handleUpdatePageType(page_types);
   };
 
   const handleAddRectBox = (type: GroupType) => {
@@ -552,7 +555,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     });
   };
 
-  const handleNext = (buttonInfo: { text: string }) => {
+  const handleNext = async (buttonInfo: { text: string }) => {
     if (buttonInfo.text === ButtonText.NextFile) {
       let filterFiles = fileList.filter(
         (file: any) => file.id !== selectedFileId,
@@ -561,14 +564,23 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         (file: any) => file.status !== FileStatus.Completed,
       );
       if (nextFile) {
-        // 设置当前文件为完成状态
-        //updateFileStatus(selectedFileId, FileStatus.Completed);
-        setSelectedFileId(nextFile.id);
+        // 切换下一个文件时，先判断是否有未保存的crop
+        const unsaved =
+          await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+        if (!pdfRef?.current || unsaved) {
+          // 没有未保存的crop，切换文件
+          setSelectedFileId(nextFile.id);
+        }
       }
     } else {
       // 没有其他文件需要处理，则进行下一步
-
-      setShowAnalysisModal(true);
+      // 进行分析步骤时，判断是否有未保存的crop
+      const unsaved =
+        await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+      if (!pdfRef?.current || unsaved) {
+        // 没有未保存的crop，进入分析流程
+        setShowAnalysisModal(true);
+      }
     }
   };
 
@@ -577,6 +589,10 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     setTimeout(() => {
       setBuildLoading(false);
     }, 5000);
+  };
+
+  const handleCropsCount = (count: number) => {
+    unSavedCropsCount.current = count;
   };
 
   // 右上角按钮的相关信息
@@ -679,7 +695,6 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
                   ? QuotePageTypes
                   : []
             }
-            onChangePageType={handlePageTypeChange}
           ></Thumbnail>
         </div>
         <div className={`flex-1 flex flex-col px-6 overflow-hidden`}>
@@ -692,7 +707,6 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
                       handleAddRectBox(GroupType.FloorPlan)
                     }
                   />
-                  <ClearAllControls handleClearAll={handleClearAllCrop} />
                 </>
               ) : fileOperationType === FileOperationType.Quote ? (
                 <>
@@ -717,6 +731,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
                   />
                 </>
               ) : null}
+              <ClearAllControls handleClearAll={handleClearAllCrop} />
             </div>
             <div className="flex flex-row gap-2">
               <SelectPagesControls
@@ -739,16 +754,12 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
               zoom={zoom}
               page={page}
               allEvidence={fileEvidence}
-              showEvidenceType={true}
-              onRefreshEvidence={() => {
-                getFileEvidences();
-              }}
               onChangePage={setPage}
               onTotalPages={setTotalPage}
               onAppendEvidence={handleAppendEvidence}
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
-              onUpdateSafeZoom={handleSafeZoomChange}
+              onCropSectionsCount={handleCropsCount}
             ></PdfWrapper>
           </div>
         </div>
@@ -764,7 +775,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
         ></PreAnalysisMdal>
       )}
 
-      {fullLoading && <Spin fullscreen />}
+      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && (
         <BuildingBackground step={BuildLoadingStep.PageAnalysis} />
       )}

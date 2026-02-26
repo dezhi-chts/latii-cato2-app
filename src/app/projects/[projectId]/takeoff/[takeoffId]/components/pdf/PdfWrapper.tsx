@@ -60,6 +60,8 @@ import {
   Bounds,
   GroupShapeType,
   GroupType,
+  allPageTypes,
+  PageType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
 import { max } from "lodash";
@@ -117,20 +119,24 @@ const getResizeCursorStyle = (pointType: string) => {
 
 // 以下的框类型显示 读取按钮
 const showReadBtnGroupTypes = [GroupType.OCR];
+
 // 以下的框类型显示 确认按钮
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 
-// 以下的框类型显示 数字按钮,复制按钮
+// 以下的框类型显示 数字按钮
 const showNumBtnGroupTypes = [GroupType.Item, GroupType.WindowDoorUnitList];
 
-// 以下框类型显示下拉框
+// 以下框类型显示  复制按钮集合
+const showCopyBtnGroupTypes = [GroupType.WindowDoorUnitList, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+
+// 以下框类型显示类型下拉框
 const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupType.WindowDoorUnit, GroupType.Table, GroupType.KeyNotes];
 
 // 框类型对应的颜色
 const groupTypeColor: any = {
-  [GroupType.Item]: colorList.forumBlue,
-  [GroupType.LayerInfo]: colorList.accentIndigo,
-  [GroupType.Description]: colorList.accentGreen,
+  [GroupType.Item]: allPageTypes[PageType.Item].color,
+  [GroupType.LayerInfo]: allPageTypes[PageType.Information].color,
+  [GroupType.Description]: allPageTypes[PageType.Description].color,
 }
 
 const PdfWrapper = forwardRef(
@@ -145,9 +151,6 @@ const PdfWrapper = forwardRef(
       allEvidence,
       selectedEvidenceIds,
       typeList,
-      showEvidenceType = false,
-      onRefreshEvidence,
-      resetAdding,
       onChangePage,
       onTotalPages,
       onAppendEvidence,
@@ -402,6 +405,8 @@ const PdfWrapper = forwardRef(
         onOk: async () => {
           let deleteIds = pageEvidence.map((item) => item.id);
           batchDelete(deleteIds);
+          // 如果当前有未保存的裁剪区域，则一并删除
+          setCropSections([]);
         },
       });
     };
@@ -479,7 +484,7 @@ const PdfWrapper = forwardRef(
                 });
               }
 
-              onAppendEvidence && onAppendEvidence(res.data ?? []);
+              onAppendEvidence && onAppendEvidence(res.data);
               resolve("success");
             } else {
               reject(new Error("Evidence submit failed"));
@@ -513,7 +518,7 @@ const PdfWrapper = forwardRef(
           description: "Evidence delete successfully.",
         });
 
-        onDeleteEvidence && onDeleteEvidence(deleteIds ?? []);
+        onDeleteEvidence && onDeleteEvidence({ ...res.data, deleteIds: deleteIds ?? [] });
       } else {
         notification.error({
           message: "Error",
@@ -605,7 +610,7 @@ const PdfWrapper = forwardRef(
       };
       let res = await evidenceBatchUpdate([data]);
       if (res.status === "success") {
-        onUpdateEvidence && onUpdateEvidence(res.data ?? []);
+        onUpdateEvidence && onUpdateEvidence(res.data);
       } else {
         notification.error({
           message: "Error",
@@ -733,7 +738,6 @@ const PdfWrapper = forwardRef(
       setShowEvidence(false);
       setCropSections((prev) => []);
       setCropMode(null);
-      resetAdding && resetAdding();
     };
 
     const startDrawing = () => {
@@ -795,7 +799,6 @@ const PdfWrapper = forwardRef(
       setCropMode(null);
 
       centerIndexRef.current = 0;
-      resetAdding && resetAdding();
     };
 
     const rotatePDF = useCallback(async () => {
@@ -1062,8 +1065,6 @@ const PdfWrapper = forwardRef(
         });
       });
       setCropMode(null);
-
-      resetAdding && resetAdding();
     };
 
     const deleteCrop = (groupId: string) => {
@@ -1138,7 +1139,6 @@ const PdfWrapper = forwardRef(
       insertGroup(groupFrame);
 
       setCropMode(null);
-      resetAdding && resetAdding();
       if (operationMode !== "view") {
         // 取消默认添加时默认选中
         //setSelectedShapeId(groupFrame.id);
@@ -2256,6 +2256,8 @@ const PdfWrapper = forwardRef(
                   onClick={(e) => {
                     if (e.target === e.target.getStage()) {
                       setSelectedShapeId(null);
+                      // 当点击画布时，让所有输入框失去焦点
+                      document.activeElement?.blur();
                     }
 
                     stageClick(e);
@@ -2413,7 +2415,7 @@ const PdfWrapper = forwardRef(
                       {showNumBtnGroupTypes.includes(type) &&
                         <div className="pl-[2px] inline-block">
                           <input
-                            className="px-[2px] h-[20px] w-fit text-center outline-none text-white text-xxs rounded-md "
+                            className="h-[20px] text-center outline-none text-white text-xxs rounded-md "
                             defaultValue={item.sub_text ?? ''}
                             onBlur={(e: any) => {
                               if (e.target.value.trim() !== '') {
@@ -2422,7 +2424,7 @@ const PdfWrapper = forwardRef(
                             }}
                             style={{
                               width: 'fit-content',
-                              maxWidth: 35,
+                              maxWidth: 45,
                               backgroundColor: color
                             }}
                           />
@@ -2440,8 +2442,11 @@ const PdfWrapper = forwardRef(
                             showSelectGroupTypes.includes(type) && <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
-                              onChangeType={(type) => {
-                                updateEvidence({ ...item, type });
+                              onChangeType={async (type) => {
+                                if (type === item.type) return;
+                                setFullLoading(true);
+                                await updateEvidence({ ...item, type });
+                                setFullLoading(false);
                               }}
                             />
                           }
@@ -2461,66 +2466,68 @@ const PdfWrapper = forwardRef(
                           </Popconfirm>
                         </div>
                       </div>
-                      {showNumBtnGroupTypes.includes(type) &&
+                      {showCopyBtnGroupTypes.includes(type) &&
                         <div
-                          className="transition-all flex justify-center items-center gap-1"
+                          className="transition-all"
                           style={{
                             position: "absolute",
-                            left: width / 2 - 30 + "px",
+                            left: width / 2 - 50 + "px",
                             top:
                               maxY > stageHeight - 10
                                 ? height - 30 + "px"
                                 : height + 2 + "px",
                           }}
                         >
-                          <Popover placement="bottom"
-                            title={null}
-                            content={<div className="text-xs text-basicGray">Extend to Previous Page</div>}
-                            trigger="hover"
-                          >
-                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
-                              onClick={() => {
-                                handleCreateBox(item, 'prev');
-                              }}>
-                              <span className="-mt-[2px] text-xs">{'<'}</span>
-                            </div>
-                          </Popover>
-
-                          <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
-                            onClick={() => {
-                              handleCreateBox(item, 'center');
-                            }}>
-                            <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
-                          </div>
-
-                          <Popover placement="bottom"
-                            title={null}
-                            content={<div className="text-xs text-basicGray">Extend to Next Page</div>}
-                            trigger="hover"
-                          >
-                            <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
-                              onClick={() => {
-                                handleCreateBox(item, 'next');
-                              }}>
-                              <span className="-mt-[2px] text-xs">{'>'}</span>
-                            </div>
-                          </Popover>
-
-                          <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
-                          }}>
-                            <Popover placement="rightBottom"
-                              title={<div className="text-xs font-medium">Chain Link</div>}
-                              content={<div className="w-[300px] text-xs text-basicGray">
-                                Create Linked Box Create a new box linked to this item.
-                                <ul className="ml-3 list-disc">
-                                  <li>Use the <span className="text-black font-medium">Center button</span> to create a box on the current page.</li>
-                                  <li>Use the <span className="text-black font-medium">Previous or Next buttons</span> to create a linked box with this same label on the adjacent pages.</li>
-                                </ul>
-                              </div>}
+                          <div className="flex justify-center items-center gap-1">
+                            <Popover placement="bottom"
+                              title={null}
+                              content={<div className="text-xs text-basicGray">Extend to Previous Page</div>}
                               trigger="hover"
                             >
-                              <Image src="/assets/icons/info-white.svg" alt="plus icon" width={12} height={12} preview={false}></Image>
+                              <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
+                                onClick={() => {
+                                  handleCreateBox(item, 'prev');
+                                }}>
+                                <span className="-mt-[2px] text-xs">{'<'}</span>
+                              </div>
                             </Popover>
+
+                            <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
+                              onClick={() => {
+                                handleCreateBox(item, 'center');
+                              }}>
+                              <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
+                            </div>
+
+                            <Popover placement="bottom"
+                              title={null}
+                              content={<div className="text-xs text-basicGray">Extend to Next Page</div>}
+                              trigger="hover"
+                            >
+                              <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
+                                onClick={() => {
+                                  handleCreateBox(item, 'next');
+                                }}>
+                                <span className="-mt-[2px] text-xs">{'>'}</span>
+                              </div>
+                            </Popover>
+
+                            <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
+                            }}>
+                              <Popover placement="rightBottom"
+                                title={<div className="text-xs font-medium">Chain Link</div>}
+                                content={<div className="w-[300px] text-xs text-basicGray">
+                                  Create Linked Box Create a new box linked to this item.
+                                  <ul className="ml-3 list-disc">
+                                    <li>Use the <span className="text-black font-medium">Center button</span> to create a box on the current page.</li>
+                                    <li>Use the <span className="text-black font-medium">Previous or Next buttons</span> to create a linked box with this same label on the adjacent pages.</li>
+                                  </ul>
+                                </div>}
+                                trigger="hover"
+                              >
+                                <Image src="/assets/icons/info-white.svg" alt="plus icon" width={12} height={12} preview={false}></Image>
+                              </Popover>
+                            </div>
                           </div>
                         </div>
                       }

@@ -1,31 +1,7 @@
 import { updateDrawingIndexType } from "@/services/drawingIndexService";
-import { Checkbox, Select, notification } from "antd";
+import { Button, Checkbox, Select, notification } from "antd";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-
-
-// const LabelTypeList = [
-//   {
-//     label: "Floor Plan", // 平面图
-//     value: "Floor Plan",
-//   },
-//   {
-//     label: "Elevation", // 立面图
-//     value: "Elevation",
-//   },
-//   {
-//     label: "Schedule", // 表格页
-//     value: "Schedule",
-//   },
-//   {
-//     label: "General Notes", // 一般备注
-//     value: "General Notes",
-//   },
-//   {
-//     label: "Mix", // 混合图
-//     value: "Mix",
-//   },
-// ];
 
 const ContentView = ({
   contentData,
@@ -34,8 +10,20 @@ const ContentView = ({
   pdfTotalPages,
   isEmptyContent, // 是否数据为空
   handlePageChange, // 切换页面
-  handleDeleteIndex, // 删除索引
 }: any) => {
+  // 是否需要过滤 
+  const [isFiltered, setIsFiltered] = useState(false);
+
+  const [filteredContentData, setFilteredContentData] = useState(contentData);
+
+  useEffect(() => {
+    if (contentData?.length === 0) return;
+    if (isFiltered) {
+      setFilteredContentData(contentData.filter((item: any) => item.type !== 'Unknown' && item.type !== '' && item.type !== null));
+    } else {
+      setFilteredContentData(contentData);
+    }
+  }, [isFiltered, contentData]);
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
     setContentData((prev: any) =>
@@ -62,7 +50,7 @@ const ContentView = ({
   };
 
   const contentItem = (item: any) => {
-    let checked = item.type;
+    let checked = item.type !== 'Unknown' && item.type !== '' && item.type !== null;
     return (
       <div key={item.id} className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs">
         <div className="w-[20px]">
@@ -82,7 +70,7 @@ const ContentView = ({
           <Select
             className="w-[150px] h-[28px] text-xs"
             placeholder="Floor Plan,etc."
-            value={item.type === 'Unknown' ? null : item.type}
+            value={item.type === 'Unknown' || !item.type ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
             {drawingTypeList.map((item: any, index: number) => (
@@ -92,16 +80,16 @@ const ContentView = ({
             ))}
           </Select>
         </div>
-        <div className="mx-1 cursor-pointer" onClick={() => handleDeleteIndex(item)}>
-          <Image src="/assets/icons/delete.svg" alt="Drag" width={20} height={20}></Image>
-        </div>
       </div>
     );
   };
   return (
     <div className="pl-14 pr-6 w-full h-full flex flex-col">
-      <div className="mt-8 mb-2 text-xs text-basicGray">
-        Select Pages and respective type of content.
+      <div className="mt-8 mb-2 flex flex-row justify-between items-center">
+        <div className="text-xs text-basicGray">Select Pages and respective type of content.</div>
+        <div>
+          <Button className={`!w-[100px] ${isFiltered ? 'custom-primary-btn' : 'custom-default-btn'}`} onClick={() => setIsFiltered(!isFiltered)}>Active Pages</Button>
+        </div>
       </div>
       {
         !isEmptyContent ?
@@ -111,7 +99,7 @@ const ContentView = ({
               <div className="w-[50%] text-center">Type</div>
             </div>
             <div className="pr-2 flex-1 overflow-y-auto">
-              {contentData?.map((item: any) => contentItem(item))}
+              {filteredContentData?.map((item: any) => contentItem(item))}
             </div>
           </> :
           <div className="mt-8 text-xs">
