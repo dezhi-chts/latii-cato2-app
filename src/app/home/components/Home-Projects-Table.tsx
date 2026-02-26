@@ -10,7 +10,7 @@ import "dayjs/locale/en";
 
 dayjs.locale("en");
 
-const PAGE_SIZE = 10;
+export const PAGE_SIZE = 10;
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -39,13 +39,25 @@ const TextCell = ({ value }: { value: unknown }) => {
   );
 };
 
+type HomeProjectsTableProps = {
+  tableLoading: boolean;
+  projects: ProjectRow[];
+  selectedColumns: string[];
+  handleRemoveProject: (record: ProjectRow) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  totalPages: number;
+};
+
 const HomeProjectsTable = ({
   tableLoading,
   projects,
   selectedColumns,
   handleRemoveProject,
-}: any) => {
-  const [page, setPage] = useState(1);
+  currentPage,
+  setCurrentPage,
+  totalPages,
+}: HomeProjectsTableProps) => {
   const router = useRouter();
 
   const dynamicProperties = useMemo(() => {
@@ -161,20 +173,19 @@ const HomeProjectsTable = ({
         onRow={handleRowClick}
         loading={tableLoading}
         pagination={{
-          current: page,
+          current: currentPage,
           pageSize: PAGE_SIZE,
           showSizeChanger: false,
           showQuickJumper: false,
           itemRender: () => null,
           position: ["bottomRight"],
-          showTotal: (total) => {
-            const totalPages = Math.ceil(total / PAGE_SIZE);
+          showTotal: () => {
             return (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span>Page</span>
                 <select
-                  value={page}
-                  onChange={(e) => setPage(Number(e.target.value))}
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
                   className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
                 >
                   {Array.from({ length: totalPages }).map((_, i) => (

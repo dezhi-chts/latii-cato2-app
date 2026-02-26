@@ -7,7 +7,7 @@ import { formatUserDate, getGreetingByTime } from "@/lib/functions";
 import { Input, Segmented, Spin, Modal } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
-import HomeProjectsTable from "./components/Home-Projects-Table";
+import HomeProjectsTable, { PAGE_SIZE } from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
@@ -57,7 +57,6 @@ const Home = () => {
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
   const [filterValue, setFilterValue] = useState<string>("");
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [takeoffs, setTakeoffs] = useState<any>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     return defaultFields.map((field) => field.field_name);
@@ -67,6 +66,12 @@ const Home = () => {
   const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
   const [projectLoading, setProjectLoading] = useState<boolean>(false);
   const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
+
+  const [projectsCache, setProjectsCache] = useState<
+    Record<number, ProjectRow[]>
+  >({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const uploadFiles = useRef<any>(null);
   const projectInfo = useRef<any>(null);
@@ -96,15 +101,26 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  const getProjects = async () => {
+  const getProjects = async (page: number) => {
+    if (projectsCache[page]) {
+      return;
+    }
+
     setProjectLoading(true);
-    const response: any = await getAllProjects({ per_page: 40 });
+
+    const params = {
+      per_page: PAGE_SIZE,
+      page: currentPage,
+    };
+
+    const response: any = await getAllProjects(params);
     const projects = response?.items;
+    setTotalPages(response?.total_pages ?? 1);
     setProjectLoading(false);
     if (projects?.length > 0) {
-      setProjects(projects);
+      setProjectsCache((prev) => ({ ...prev, [page]: projects }));
     } else {
-      setProjects([]);
+      setProjectsCache((prev) => ({ ...prev, [page]: [] }));
     }
   };
 
@@ -126,7 +142,7 @@ const Home = () => {
       okText: "Yes",
       onOk: async () => {
         const res = await deleteProject(record.project_id as string);
-        getProjects();
+        getProjects(currentPage);
       },
     });
   };
@@ -143,8 +159,8 @@ const Home = () => {
   };
 
   useEffect(() => {
-    getProjects();
-  }, []);
+    getProjects(currentPage);
+  }, [currentPage]);
 
   return (
     <div className="w-full h-full">
@@ -201,10 +217,13 @@ const Home = () => {
           </div>
           {category === "Projects" ? (
             <HomeProjectsTable
-              projects={projects}
+              projects={projectsCache[currentPage]}
               selectedColumns={selectedColumns}
               tableLoading={projectLoading}
               handleRemoveProject={handleRemoveProject}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              totalPages={totalPages}
             />
           ) : (
             <HomeTakeoffsTable
