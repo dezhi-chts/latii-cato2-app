@@ -33,4 +33,8 @@ export const colorList = {
   transparent: "transparent",
   forumBlue: "#427CCE",
   loadingGray: "#D9D9D9",
+  tealDark: "#055955",
+  cyanLightActive: "#B0D5DB",
+  baseLightGray: "#F8F8F8",
+  accentOrange: "#FF931D",
 } as const;

@@ -23,26 +23,47 @@ type FileManualMergeProps = {
 };
 const FileManualMerge = ({ file }: FileManualMergeProps) => {
   return (
-    <div className="min-w-[25vw]">
+    <div className="min-w-[25vw] text-sm pt-8">
       {/*  Title */}
       <div className="flex justify-between items-center">
-        <div>
-          <p>{file.file_name}</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-base"> {file.file_name}</p>
           <div className="flex">
             <p>{file.labels_amount} Labels</p>
             <p>Type</p>
           </div>
         </div>
-        <div>
-          {!file.is_base && <p>Label match</p>}
-          <p>Base</p> {/* cambiar los estilos dependiendo si es base o no*/}
+        <div className="flex gap-4">
+          {!file.is_base && (
+            <div className=" text-xs py-1 px-2 rounded-md flex items-center justify-center gap-1 bg-accentOrange text-white">
+              <Image
+                src="/assets/icons/tag.svg"
+                alt="tag"
+                width={20}
+                height={20}
+              />
+              <span className="text-xs">Label match</span>
+            </div>
+          )}
+          <div
+            className={` text-xs py-1 px-2 rounded-md flex items-center justify-center ${
+              file.is_base
+                ? "text-tealDark bg-cyanLightActive "
+                : "text-baseGray bg-baseLight"
+            }`}
+          >
+            <span> Base</span>
+          </div>{" "}
         </div>
       </div>
       {/*  Table */}
-      <div className="w-full">
+      <div className="w-full mt-6">
         <div className="w-full flex flex-col">
-          <div className="w-1/2">Label</div>
-          <div className="w-1/2">Sublabel</div>
+          <div className="flex">
+            <div className="w-1/2">Label</div>
+            <div className="w-1/2">Sublabel</div>
+          </div>
+
           {file?.labels?.map((label) => (
             <div key={label.label} className="flex">
               <div className="w-1/2 flex">

@@ -65,10 +65,7 @@ const ManualMerge = () => {
       </div>
       <div className="w-full scrollbar-hidden flex overflow-auto gap-8">
         {files.map((file) => (
-          <FileManualMerge
-            key={file.id} // o lo que tengas único
-            file={file}
-          />
+          <FileManualMerge key={file.id} file={file} />
         ))}
       </div>
     </div>

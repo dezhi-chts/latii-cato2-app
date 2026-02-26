@@ -233,7 +233,12 @@ const ProjectsSettings = () => {
                   name: field.label,
                   required: field.required,
                   hint_text: field.has_hint_text ? field.hint : undefined,
-                  options: needsOptions ? field.metadata ?? [] : undefined, // ✅ string[]
+                  options: needsOptions
+                    ? (field.metadata ?? []).map((opt: string) => ({
+                        label: opt,
+                        value: opt,
+                      }))
+                    : undefined,
                 };
 
                 return (
