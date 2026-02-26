@@ -21,9 +21,14 @@ type MergeFile = {
 type FileManualMergeProps = {
   file: MergeFile;
 };
+
+const mergeOptions = [
+  { value: "outer", label: "Outer" },
+  { value: "base", label: "Base" },
+];
 const FileManualMerge = ({ file }: FileManualMergeProps) => {
   return (
-    <div className="min-w-[25vw] text-sm pt-8">
+    <div className="min-w-[30vw] text-sm pt-8">
       {/*  Title */}
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-1">
@@ -63,23 +68,31 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       {/*  Table */}
       <div className="w-full mt-6">
         <div className="w-full flex flex-col">
-          <div className="flex">
-            <div className="w-1/2">Label</div>
-            <div className="w-1/2">Sublabel</div>
+          <div className="flex rounded-t-md text-basicGray bg-baseLight">
+            <div className="w-1/2 flex justify-center items-center py-3">
+              Label
+            </div>
+            <div className="w-1/2 flex justify-center items-center py-3">
+              Sub-Label
+            </div>
           </div>
 
           {file?.labels?.map((label) => (
-            <div key={label.label} className="flex">
-              <div className="w-1/2 flex">
-                <Radio></Radio> <Input value={label.label} />
+            <div
+              key={label.label}
+              className="flex border-b border-r border-l border-primaryN30 "
+            >
+              <div className="w-1/2 flex justify-center items-center gap-4 border-r border-primaryN30 py-2">
+                <Radio></Radio>{" "}
+                <Input value={label.label} className="w-3/5 text-center " />
               </div>
-              <div className="w-1/2 flex">
-                <Input value={label.label} />
+              <div className="w-1/2 flex justify-center items-center gap-4 py-2">
+                <Input value={label.label} className="w-3/5 text-center " />
                 <Image
-                  src="/assets/icons/delete-table.svg"
+                  src="/assets/icons/delete-merge-item.svg"
                   alt="Delete"
-                  width={20}
-                  height={20}
+                  width={12}
+                  height={12}
                 ></Image>
               </div>
             </div>
@@ -91,7 +104,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       </p>
       {/*  Merge options */}
       <div className="w-full mt-3 flex justify-center">
-        <div className="w-4/6 flex flex-col gap-4 ">
+        <div className="w-2/3 flex flex-col gap-4 ">
           <div className="flex justify-between items-center">
             <p className="text-forumBlue-normal">Merge Type</p>
             <p className="text-grey-light-strong underline">Learn More</p>
@@ -99,24 +112,36 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           {!file.is_base && (
             <div className="flex justify-between items-center">
               <p>Label</p>
-              <Input />
+              <Select
+                className="w-2/3"
+                options={mergeOptions}
+                defaultValue="outer"
+              />
             </div>
           )}
 
           <div className="flex justify-between items-center">
             <p>Row</p>
-            <Select />
+            <Select
+              className="w-2/3"
+              options={mergeOptions}
+              defaultValue="outer"
+            />
           </div>
           <div className="flex justify-between items-center">
             <p>Column</p>
-            <Select className="w-7/12" />
+            <Select
+              className="w-2/3"
+              options={mergeOptions}
+              defaultValue="outer"
+            />
           </div>
           <div>
             <Button
               className="w-full rounded-md text-white"
               backgroundColor={"forumBlue-normal"}
             >
-              Merge All
+              {file.is_base ? "Merge All" : "Merge to Base"}
             </Button>
           </div>
         </div>

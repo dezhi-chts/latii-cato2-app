@@ -73,7 +73,14 @@ body {
   color: #ffffff;
 }
 
+/* We shouldn't use this section for styles, you can create a new css file if needed.
+For Styling we use Tailwind Library. You can find documentation on how to use here: https://tailwindcss.com/
+Use of !Important for everything is a bad programming practice, please try to avoid it.
+Our Buttons already have premade styles and the chance to add custom tailwind classes.
+*/
+
 .input-focus:focus {
+  /* Plase avoid using !important for Everything. We have Tailwind Library for styling. */
   outline: none !important;
   box-shadow: none !important;
   margin: 0 !important;
@@ -144,8 +151,8 @@ body {
 
 /* 自定义的default按钮样式 */
 .custom-default-btn {
-  width: 76px;
-  height: 28px;
+  width: 76px; /* Plase try using em or rem measures for accesibility , or our Tailwind library */
+  height: 28px; /* Plase try using em or rem measures for accesibility , or our Tailwind library */
   font-family: "Nunito Sans";
   background-color: #f8f8f8;
   border-width: 0px;
