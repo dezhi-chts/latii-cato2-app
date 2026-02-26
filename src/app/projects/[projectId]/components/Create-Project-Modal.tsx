@@ -1,24 +1,50 @@
 "use client";
-import { useRef, useState } from "react";
-import { Button, Modal, message } from "antd";
+import { useState } from "react";
+import { Button, Modal } from "antd";
 import TakeoffUpload from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
-import { type ProjectSettings, defaultProjectSettings } from "@/types/project";
 import { type UploadFile } from "antd/es/upload/interface";
+import { createProject } from "@/services/projectService";
+import { useCompany } from "@/context/CompanyContext";
+import { slugifyOptionValue } from "@/lib/functions";
 
 const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
-    ...defaultProjectSettings,
-  });
-  const projectFormRef = useRef<any>(null);
+  const [form, setForm] = useState<Record<string, any>>({});
 
-  // 创建工程
+  const { company } = useCompany();
+
   const handleProjectSubmit = async () => {
-    console.log("######### handleProjectSubmit", projectSettings);
-    if (!projectFormRef?.current?.isValidForm()) {
-      message.warning("Please fill out all required fields.");
-      return;
+    const formattedForm = formatPayload(form, company.project_attributes);
+    const response = await createProject(formattedForm);
+    if (response?.status === "success") {
+      closeModal();
     }
+  };
+
+  const formatPayload = (
+    form: Record<string, any>,
+    projectAttributes: any[],
+  ) => {
+    const attributeKeyByName = Object.fromEntries(
+      projectAttributes.map((attr) => [
+        slugifyOptionValue(attr.label),
+        attr.uuid,
+      ]),
+    ) as Record<string, string>;
+
+    const { project_name, location, ...rest } = form;
+
+    const attributes = Object.fromEntries(
+      Object.entries(rest)
+        .filter(([key]) => attributeKeyByName[key])
+        .map(([key, value]) => [attributeKeyByName[key], value ?? ""]),
+    );
+
+    return {
+      project_name,
+      location: location ?? "",
+      attributes,
+    };
   };
 
   const handleUpload = (data: {
@@ -47,7 +73,7 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
         <div className="w-[400px] flex flex-col border border-baseLightHover rounded-md overflow-hidden">
           <div className="px-5 my-4 text-lg">Start from Blank Template</div>
           <div className="px-5 py-2 overflow-y-auto">
-            <ProjectForm />
+            <ProjectForm form={form} setForm={setForm} />
           </div>
           <div className="flex-1 flex items-end justify-center">
             <Button

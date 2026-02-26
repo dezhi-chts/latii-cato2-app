@@ -28,7 +28,7 @@ export const getAllProjects = async (filterParams?: { per_page?: number }) => {
   }
 };
 
-export const createProject = async (project: ProjectSettings) => {
+export const createProject = async (project: any) => {
   const url = "/project";
 
   try {

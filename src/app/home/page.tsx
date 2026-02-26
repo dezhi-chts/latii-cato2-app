@@ -29,139 +29,6 @@ import { useCompany } from "@/context/CompanyContext";
 
 const { confirm } = Modal;
 
-export const projects: ProjectRow[] = [
-  {
-    key: "1",
-    project_name: "Project Name 1",
-    last_edit: "2026-01-20",
-    update_time: "2026-01-20",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Take Off",
-    notes:
-      "Personal Notes Added... Text long for testing purposes. Checking truncate capabilities. Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum ",
-    is_favorite: true,
-  },
-  {
-    key: "2",
-    project_name: "Bogota Street 123",
-    last_edit: "2025-11-17",
-    update_time: "2025-11-17",
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "3",
-    project_name: "Bogota Street 123",
-    last_edit: "2026-01-04",
-    update_time: "2026-01-04",
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "4",
-    project_name: "Bogota Street 123",
-    last_edit: "2025-12-20",
-    update_time: "2025-12-20",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "5",
-    project_name: "Amazing House Ranch",
-    last_edit: "2026-03-06",
-    update_time: "2026-03-06",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "6",
-    project_name: "Building Street Happy",
-    last_edit: "2026-04-10",
-    update_time: "2026-04-10",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "7",
-    project_name: "Project Name 1",
-    last_edit: "2026-01-20",
-    update_time: "2026-01-20",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "8",
-    project_name: "Bogota Street 123",
-    last_edit: "2025-11-17",
-    update_time: "2025-11-17",
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "9",
-    project_name: "Project Amazing",
-    last_edit: "2026-01-04",
-    update_time: "2026-01-04",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "10",
-    project_name: "New Rehau Office's",
-    last_edit: "2025-12-20",
-    update_time: "2025-12-20",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "11",
-    project_name: "Latii Canada Office's",
-    last_edit: "2026-03-06",
-    update_time: "2026-03-06",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-  {
-    key: "12",
-    project_name: "Latii Canada Office's",
-    last_edit: "2026-04-10",
-    update_time: "2026-04-10",
-    budget_price: 900000,
-    end_customer: "End Customer",
-    status: "Uploaded",
-    notes: "End Customer",
-    is_favorite: false,
-  },
-];
-
 const defaultFields: { field_name: string; Hint_text: string }[] = [
   {
     field_name: "project_name",
@@ -172,8 +39,8 @@ const defaultFields: { field_name: string; Hint_text: string }[] = [
     Hint_text: "Last Edit",
   },
   {
-    field_name: "operation",
-    Hint_text: "Operation",
+    field_name: "actions",
+    Hint_text: "Actions",
   },
 ];
 
@@ -200,7 +67,6 @@ const Home = () => {
   const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
   const [projectLoading, setProjectLoading] = useState<boolean>(false);
   const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false);
 
   const uploadFiles = useRef<any>(null);
   const projectInfo = useRef<any>(null);
@@ -232,7 +98,7 @@ const Home = () => {
 
   const getProjects = async () => {
     setProjectLoading(true);
-    const response: any = await getAllProjects({ per_page: 10 });
+    const response: any = await getAllProjects({ per_page: 40 });
     const projects = response?.items;
     setProjectLoading(false);
     if (projects?.length > 0) {
@@ -259,9 +125,7 @@ const Home = () => {
       title: `Are you sure to delete this project: ${record.project_name}?`,
       okText: "Yes",
       onOk: async () => {
-        setLoading(true);
         const res = await deleteProject(record.project_id as string);
-        setLoading(false);
         getProjects();
       },
     });
@@ -272,9 +136,7 @@ const Home = () => {
       title: `Are you sure to delete this takeoff: ${takeoff?.name}?`,
       okText: "Yes",
       onOk: async () => {
-        setLoading(true);
         const res = await deleteTakeOffById(takeoff?.id as string);
-        setLoading(false);
         getTakeoffs();
       },
     });

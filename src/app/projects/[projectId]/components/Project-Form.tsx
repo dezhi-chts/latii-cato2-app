@@ -31,13 +31,20 @@ const COMMIT_ON_BLUR = new Set([0, 1, 2, 8]);
 
 //TODO: Agregar validaciones a los campos que sean required.
 
-const ProjectForm = () => {
-  const [form, setForm] = useState<Record<string, any>>({});
+type ProjectFormProps = {
+  form: Record<string, any>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+};
+
+const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
   const { company } = useCompany();
   const attributes = company?.project_attributes ?? [];
 
   const commit = (label: string) => (value: any) => {
-    setForm((prev) => ({ ...prev, [label]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [label.toLowerCase().replace(" ", "_")]: value,
+    }));
   };
 
   function formatOptions(options: string[]) {

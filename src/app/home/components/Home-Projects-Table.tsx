@@ -10,7 +10,7 @@ import "dayjs/locale/en";
 
 dayjs.locale("en");
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -79,62 +79,10 @@ const HomeProjectsTable = ({
           <TextCell value={value && dayjs(value).format("MMMM D, YYYY")} />
         ),
       },
-      // {
-      //   title: (
-      //     <span className="text-xs font-semibold text-basicGray">Status</span>
-      //   ),
-      //   dataIndex: "status",
-      //   key: "status",
-      //   align: "center",
-      //   render: (status: ProjectStatus) => {
-      //     const isTakeOff = status === "Take Off";
-      //     return (
-      //       <span
-      //         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${isTakeOff
-      //           ? "bg-green-100 text-green-700"
-      //           : "bg-blue-100 text-blue-600"
-      //           }`}
-      //       >
-      //         {status}
-      //       </span>
-      //     );
-      //   },
-      // },
-      // {
-      //   title: (
-      //     <span className="text-xs font-semibold text-basicGray">Notes</span>
-      //   ),
-      //   dataIndex: "notes",
-      //   key: "notes",
-      //   align: "center",
-      //   fixed: "right",
-      //   render: (value) => <TextCell value={value} />,
-      // },
-      // {
-      //   title: "",
-      //   dataIndex: "is_favorite",
-      //   key: "is_favorite",
-      //   align: "center",
-      //   fixed: "right",
-      //   width: 60,
-      //   render: (isFavorite: boolean) => {
-      //     return <div className="" onClick={() => { }}>
-      //       {isFavorite ? (
-      //         <StarFilled className="text-gray-900 text-sm" />
-      //       ) : (
-      //         <StarOutlined className="text-gray-300 text-sm" />
-      //       )
-      //       }</div>
-      //   }
-      // },
       {
-        title: (
-          <span className="text-xs font-semibold text-basicGray">
-            Operation
-          </span>
-        ),
-        dataIndex: "operation",
-        key: "operation",
+        title: <span className="text-xs font-semibold text-basicGray"></span>,
+        dataIndex: "actions",
+        key: "actions",
         align: "center",
         width: 160,
         render: (value, record) => (
