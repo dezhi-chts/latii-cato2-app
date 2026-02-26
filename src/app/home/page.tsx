@@ -105,8 +105,8 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  const getProjects = async (page: number) => {
-    if (projectsCache[page]) {
+  const getProjects = async (page: number, force = false) => {
+    if (projectsCache[page] && !force) {
       return;
     }
 
@@ -155,7 +155,7 @@ const Home = () => {
       okText: "Yes",
       onOk: async () => {
         const res = await deleteProject(record.project_id as string);
-        getProjects(currentProjectsPage);
+        getProjects(currentProjectsPage, true);
       },
     });
   };
@@ -255,6 +255,7 @@ const Home = () => {
           <CreateProjectModal
             isOpen={showCreateProjectModal}
             closeModal={closeModal}
+            refreshProjects={() => getProjects(currentProjectsPage, true)}
             onHandleUpload={(data: any) => {
               // 关闭Create-Project-Modal弹窗
               //closeModal();

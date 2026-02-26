@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Modal } from "antd";
+import { Modal, notification } from "antd";
 import TakeoffUpload from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
 import { type UploadFile } from "antd/es/upload/interface";
@@ -12,17 +12,41 @@ import Button from "@/components/Button";
 
 type FormValues = Record<string, any>;
 
-const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
+type CreateProjectModalProps = {
+  isOpen: boolean;
+  closeModal: () => void;
+  onHandleUpload?: (data: any) => void;
+  refreshProjects: () => void;
+};
+
+const CreateProjectModal = ({
+  isOpen,
+  closeModal,
+  onHandleUpload,
+  refreshProjects,
+}: CreateProjectModalProps) => {
   const [form, setForm] = useState<Record<string, any>>({});
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const { company } = useCompany();
 
   const handleProjectSubmit = async () => {
+    setLoading(true);
     const formattedForm = formatPayload(form, company.project_attributes);
     const response = await createProject(formattedForm);
+    setLoading(false);
     if (response?.status === "success") {
+      notification.success({
+        message: "Project created successfully",
+      });
+      refreshProjects();
       closeModal();
+    } else {
+      notification.error({
+        message: "Failed to create project",
+        description: "Please check the console for more details",
+      });
     }
   };
 
@@ -116,9 +140,9 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
               }}
               className="w-32 rounded-md text-xs"
               backgroundColor="forumBlue"
-              disabled={!isFormValid}
+              disabled={!isFormValid || loading}
             >
-              Create
+              {loading ? "Creating..." : "Create"}
             </Button>
           </div>
         </div>
