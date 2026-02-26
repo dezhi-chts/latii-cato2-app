@@ -68,7 +68,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
             should_hide_overflow: !prev.should_hide_overflow,
           }));
         },
-        status.should_hide_overflow ? 300 : 0
+        status.should_hide_overflow ? 300 : 0,
       );
     }
   };
@@ -136,6 +136,8 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  console.log(project);
 
   return (
     <div
@@ -236,11 +238,11 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
         {/*</div>*/}
       </div>
       <div
-          className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${
-              status.should_hide_overflow ? "overflow-hidden" : ""
-          } transition-all duration-500 ease-in-out `}
+        className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${
+          status.should_hide_overflow ? "overflow-hidden" : ""
+        } transition-all duration-500 ease-in-out `}
       >
-        <ProjectSettings project={project} handleUpdate={handleUpdate}/>
+        <ProjectSettings project={project} handleUpdate={handleUpdate} />
       </div>
     </div>
   );

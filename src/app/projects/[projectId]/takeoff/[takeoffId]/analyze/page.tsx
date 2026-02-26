@@ -67,7 +67,7 @@ const Analyze = () => {
 
     const getProjectInfo = async () => {
         let res = await fetchProject(projectId);
-        if (res) {
+        if (res.status === 'success') {
             setProject(res);
         } else {
             notification.error({

@@ -7,16 +7,21 @@ import EmptyProject from "./components/Empty-Project";
 import { useEffect, useRef, useState } from "react";
 
 import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal";
-import { getTakeOffsByProjectId, deleteTakeOffById } from "@/services/takeOffService";
+import {
+  getTakeOffsByProjectId,
+  deleteTakeOffById,
+} from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
 import UploadFilesProgress from "./components/Upload-Files-Progress";
 import PdfParseModal from "./components/Pdf-Parse-Modal";
+import { fetchProject } from "@/services/projectService";
 
 const { confirm } = Modal;
 
 const Project = () => {
   const router = useRouter();
   const projectId = useParams().projectId;
+  const [project, setProject] = useState<any>(null);
   const [filter, setFilter] = useState<string>("");
   const [showCreateTakeOffModal, setShowCreateTakeOffModal] = useState(false);
   const [takeoffsList, setTakeoffsList] = useState<any[]>([]);
@@ -29,31 +34,40 @@ const Project = () => {
 
   useEffect(() => {
     getProjectTakeoffs();
+    getProject();
   }, [projectId]);
 
   const createQuotiiButton = (
-    <Button
-      type="primary"
-      onClick={() => setShowCreateTakeOffModal(true)}
-    >
+    <Button type="primary" onClick={() => setShowCreateTakeOffModal(true)}>
       Create Quote
     </Button>
   );
+
+  const getProject = async () => {
+    let res = await fetchProject(projectId as string);
+    if (res.status === "success") {
+      setProject(res.data ?? null);
+    } else {
+      setProject(null);
+    }
+  };
 
   const getProjectTakeoffs = async () => {
     setFullLoading(true);
     let res = await getTakeOffsByProjectId(projectId as string);
     setFullLoading(false);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       setTakeoffsList(res.data ?? []);
     } else {
       setTakeoffsList([]);
     }
-  }
+  };
 
-
-  const handleUploadFiles = async (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
-    console.log('######### handleUploadFiles', data);
+  const handleUploadFiles = async (data: {
+    archFiles: UploadFile[];
+    quoteFiles: UploadFile[];
+  }) => {
+    console.log("######### handleUploadFiles", data);
     //打开Create-Project-Takeoff-Modal弹窗
     uploadFiles.current = data;
     // 打开Upload-Files-Progress弹窗
@@ -61,8 +75,10 @@ const Project = () => {
   };
 
   const onClickTakeOff = (takeOff: any) => {
-    router.push(`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`);
-  }
+    router.push(
+      `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`,
+    );
+  };
 
   const handleRemoveTakeoff = async (takeoff: any) => {
     confirm({
@@ -74,41 +90,43 @@ const Project = () => {
         setFullLoading(false);
         getProjectTakeoffs();
       },
-    })
-  }
+    });
+  };
 
-
-  const filterTypeList = [{
-    type: 'All',
-    bgColor: 'bg-primaryN30',
-    iconBgColor: 'bg-primaryN70',
-    icontextColor: 'text-white',
-  }, {
-    type: 'Upload',
-    bgColor: 'bg-[#FF931E4C]',
-    iconBgColor: 'bg-white',
-    icontextColor: 'text-dragonOrange',
-  }, {
-    type: 'Takeoff',
-    bgColor: 'bg-[#008ECE4C]',
-    iconBgColor: 'bg-white',
-    icontextColor: 'text-kahuBlue',
-  }, {
-    type: 'Quoting',
-    bgColor: 'bg-[#F7CD4D4C]',
-    iconBgColor: 'bg-white',
-    icontextColor: 'text-[#F7CD4D]',
-  }]
+  const filterTypeList = [
+    {
+      type: "All",
+      bgColor: "bg-primaryN30",
+      iconBgColor: "bg-primaryN70",
+      icontextColor: "text-white",
+    },
+    {
+      type: "Upload",
+      bgColor: "bg-[#FF931E4C]",
+      iconBgColor: "bg-white",
+      icontextColor: "text-dragonOrange",
+    },
+    {
+      type: "Takeoff",
+      bgColor: "bg-[#008ECE4C]",
+      iconBgColor: "bg-white",
+      icontextColor: "text-kahuBlue",
+    },
+    {
+      type: "Quoting",
+      bgColor: "bg-[#F7CD4D4C]",
+      iconBgColor: "bg-white",
+      icontextColor: "text-[#F7CD4D]",
+    },
+  ];
 
   return (
     <div>
       <div className="flex flex-col gap-12 zoomed-container">
-        <Header project={{}} />
+        <Header project={project} refetchProject={getProject} />
         <div className="flex flex-col gap-8 mt-36 pl-20 ">
-          <div className="flex text-lg text-forumBlue">
-            Takeoffs & Quotiis
-          </div>
-          {takeoffsList?.length > 0 &&
+          <div className="flex text-lg text-forumBlue">Takeoffs & Quotiis</div>
+          {takeoffsList?.length > 0 && (
             <div className="flex justify-between items-center w-11/12">
               <div className="flex h-[34px] flex-row gap-5">
                 <Input
@@ -125,14 +143,21 @@ const Project = () => {
                     />
                   }
                 />
-                {
-                  filterTypeList.map((item) => (
-                    <div key={item.type} className={`w-[96px] h-[26px] text-center rounded-md ${item.bgColor} flex justify-center items-center text-xs`}>
-                      <label className="mr-2 text-ms font-light">{item.type}</label>
-                      <span className={`px-[6px] py-[1px] text-xs ${item.icontextColor} ${item.iconBgColor} rounded`}>1</span>
-                    </div>
-                  ))
-                }
+                {filterTypeList.map((item) => (
+                  <div
+                    key={item.type}
+                    className={`w-[96px] h-[26px] text-center rounded-md ${item.bgColor} flex justify-center items-center text-xs`}
+                  >
+                    <label className="mr-2 text-ms font-light">
+                      {item.type}
+                    </label>
+                    <span
+                      className={`px-[6px] py-[1px] text-xs ${item.icontextColor} ${item.iconBgColor} rounded`}
+                    >
+                      1
+                    </span>
+                  </div>
+                ))}
               </div>
               <Button
                 type="primary"
@@ -141,7 +166,7 @@ const Project = () => {
                 Create Quote
               </Button>
             </div>
-          }
+          )}
 
           <div className="w-11/12 flex flex-col gap-4 pb-10 overflow-auto pt-4 h-[80vh] scrollbar-hidden">
             {false ? (
@@ -158,23 +183,48 @@ const Project = () => {
                 //     fetchTakeOffs={() => { }}
                 //   />
                 // );
-                return <div key={index} className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30" onClick={() => onClickTakeOff(takeOff)}>
-                  <div>
-                    <Image src="/assets/cato-images/schedules-tables.png" alt="info icon" width={156} height={100} />
+                return (
+                  <div
+                    key={index}
+                    className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30"
+                    onClick={() => onClickTakeOff(takeOff)}
+                  >
+                    <div>
+                      <Image
+                        src="/assets/cato-images/schedules-tables.png"
+                        alt="info icon"
+                        width={156}
+                        height={100}
+                      />
+                    </div>
+                    <div className="ml-[50px] flex-1 flex flex-col gap-2">
+                      <div className="text-base">
+                        {takeOff?.take_off_result?.name || ""}
+                      </div>
+                      <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">
+                        takeoff
+                      </div>
+                      <div className="text-xs text-basicGray">
+                        Last edit |{" "}
+                        {takeOff?.take_off_result?.update_time || ""}
+                      </div>
+                    </div>
+                    <div
+                      className="flex justify-center items-center cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveTakeoff(takeOff.take_off_result);
+                      }}
+                    >
+                      <Image
+                        src="/assets/icons/delete.svg"
+                        alt="Delete"
+                        width={20}
+                        height={20}
+                      />
+                    </div>
                   </div>
-                  <div className="ml-[50px] flex-1 flex flex-col gap-2">
-                    <div className="text-base">{takeOff?.take_off_result?.name || ''}</div>
-                    <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">takeoff</div>
-                    <div className="text-xs text-basicGray">Last edit | {takeOff?.take_off_result?.update_time || ''}</div>
-                  </div>
-                  <div className="flex justify-center items-center cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveTakeoff(takeOff.take_off_result);
-                    }}>
-                    <Image src="/assets/icons/delete.svg" alt="Delete" width={20} height={20} />
-                  </div>
-                </div>
+                );
               })
             ) : (
               <EmptyProject createQuotiiButton={createQuotiiButton} />
@@ -189,43 +239,41 @@ const Project = () => {
           onHandleUpload={handleUploadFiles}
         />
       )}
-      {
-        showUploadProgess && (
-          <UploadFilesProgress
-            isOpen={showUploadProgess}
-            closeModal={() => setShowUploadProgess(false)}
-            uploadFilesData={uploadFiles.current}
-            syncCreateProject={false}
-            onSuccess={(data: any) => {
-              // 关闭Upload-Files-Progress弹窗
-              setShowUploadProgess(false);
-              projectInfo.current = data;
-              // 打开文件解析弹窗
-              setShowPdfParseModal(true);
-              // 刷新takeoffsList
-              getProjectTakeoffs();
-            }}
-          />
-        )
-      }
-      {
-        showPdfParseModal && (
-          <PdfParseModal
-            isOpen={showPdfParseModal}
-            closeModal={() => setShowPdfParseModal(false)}
-            data={projectInfo.current}
-            handleNext={(type: 'takeoffModal' | 'pageIndex') => {
-              // 跳转到Page-Index页面
-              //router.push(`/projects/38/takeoff/15/identification-index`);
-              router.push(`/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification-index`);
-            }}
-            handleCancel={() => {
-              // 关闭Pdf-Parse-Modal弹窗
-              setShowPdfParseModal(false);
-            }}
-          />
-        )
-      }
+      {showUploadProgess && (
+        <UploadFilesProgress
+          isOpen={showUploadProgess}
+          closeModal={() => setShowUploadProgess(false)}
+          uploadFilesData={uploadFiles.current}
+          syncCreateProject={false}
+          onSuccess={(data: any) => {
+            // 关闭Upload-Files-Progress弹窗
+            setShowUploadProgess(false);
+            projectInfo.current = data;
+            // 打开文件解析弹窗
+            setShowPdfParseModal(true);
+            // 刷新takeoffsList
+            getProjectTakeoffs();
+          }}
+        />
+      )}
+      {showPdfParseModal && (
+        <PdfParseModal
+          isOpen={showPdfParseModal}
+          closeModal={() => setShowPdfParseModal(false)}
+          data={projectInfo.current}
+          handleNext={(type: "takeoffModal" | "pageIndex") => {
+            // 跳转到Page-Index页面
+            //router.push(`/projects/38/takeoff/15/identification-index`);
+            router.push(
+              `/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification-index`,
+            );
+          }}
+          handleCancel={() => {
+            // 关闭Pdf-Parse-Modal弹窗
+            setShowPdfParseModal(false);
+          }}
+        />
+      )}
       {fullLoading && <Spin fullscreen />}
       {/* {loadingCato && (
         <BuildingBackground

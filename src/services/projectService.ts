@@ -16,6 +16,16 @@ export const fetchProjects = async (filterParams?: {
   }
 };
 
+export const fetchProject = async (id: string) => {
+  try {
+    const response = await http.get(`/project/${id}`);
+    return { data: response, status: "success" };
+  } catch (error) {
+    console.error("Error getting project:", error);
+    return { data: error, status: "error" };
+  }
+};
+
 export const getAllProjects = async (filterParams?: {
   per_page?: number;
   page?: number;
@@ -100,15 +110,6 @@ export const deleteProject = async (projectId: number | string) => {
 // ******************************************************************* //
 // ******************************************************************* //
 // ******************************************************************* //
-
-export const fetchProject = async (id: string) => {
-  try {
-    const response = await http.get(`/project/${id}`);
-    return response;
-  } catch (error) {
-    console.error("Error getting project:", error);
-  }
-};
 
 export const rotateChange = async (
   project_file_id: number,
