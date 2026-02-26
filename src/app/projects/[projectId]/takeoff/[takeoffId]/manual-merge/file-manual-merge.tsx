@@ -28,9 +28,13 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-2">
           <p className="text-base"> {file.file_name}</p>
-          <div className="flex">
-            <p>{file.labels_amount} Labels</p>
-            <p>Type</p>
+          <div className="flex gap-3">
+            <p className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs">
+              {file.labels_amount} Labels
+            </p>
+            <p className="bg-baseLightHover py-0.5 px-2 rounded-md">
+              {file.type}
+            </p>
           </div>
         </div>
         <div className="flex gap-4">
