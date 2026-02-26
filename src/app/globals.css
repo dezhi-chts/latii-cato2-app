@@ -73,6 +73,12 @@ body {
   color: #ffffff;
 }
 
+/* We shouldn't use this section for styles, you can create a new css file if needed.
+For Styling we use Tailwind Library. You can find documentation on how to use here: https://tailwindcss.com/
+Use of !Important for everything is a bad programming practice, please try to avoid it.
+Our Buttons already have premade styles and the chance to add custom tailwind classes.
+*/
+
 .input-focus:focus {
   outline: none !important;
   box-shadow: none !important;
