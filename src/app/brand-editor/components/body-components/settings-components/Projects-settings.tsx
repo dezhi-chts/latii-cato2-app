@@ -15,8 +15,7 @@ import Switch from "@/components/fields/Switch";
 import DateInput from "@/components/fields/DateInput";
 import Weblink from "@/components/fields/Link";
 import Check from "@/components/fields/Check";
-import { formatMetadataOptions } from "@/lib/functions";
-import LocationSelector from "@/components/LocationSelector";
+import Location from "@/components/fields/Location";
 
 const ProjectsSettings = () => {
   const FIELD_COMPONENTS_BY_NUMBER: Record<
@@ -32,6 +31,7 @@ const ProjectsSettings = () => {
     6: (props) => <Switch {...props} />,
     7: (props) => <DateInput {...props} />,
     8: (props) => <Weblink {...props} />,
+    9: (props) => <Location {...props} />,
   };
   type FieldOption = { label: string; value: string };
 
@@ -72,7 +72,7 @@ const ProjectsSettings = () => {
     const updatedCompany = {
       ...company,
       project_attributes: (company.project_attributes ?? []).filter(
-        (attr: any) => attr.uuid !== uuid
+        (attr: any) => attr.uuid !== uuid,
       ),
     };
 
@@ -83,7 +83,7 @@ const ProjectsSettings = () => {
     const updatedCompany = {
       ...company,
       project_attributes: (company.project_attributes ?? []).map((attr: any) =>
-        attr.uuid === uuid ? { ...attr, ...patch } : attr
+        attr.uuid === uuid ? { ...attr, ...patch } : attr,
       ),
     };
 
@@ -119,8 +119,8 @@ const ProjectsSettings = () => {
     fieldsCount <= 7
       ? { cols: 1, rows: fieldsCount }
       : fieldsCount <= 10
-      ? { cols: 2, rows: 5 }
-      : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
+        ? { cols: 2, rows: 5 }
+        : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
 
   const isWide = fieldsCount > 7;
 
@@ -244,6 +244,8 @@ const ProjectsSettings = () => {
                       }))
                     : undefined,
                   is_ranged_date: isRangedDate,
+                  height: "small",
+                  style: { maxWidth: "320px" },
                 };
 
                 return (

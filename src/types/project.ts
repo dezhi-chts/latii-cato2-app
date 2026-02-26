@@ -75,6 +75,7 @@ export type LocationSelectorProps = {
   height?: "small" | "medium";
   style?: any;
   handleOnBlur?: () => void;
+  name?: string;
 };
 
 export type QuickActionsForm = {

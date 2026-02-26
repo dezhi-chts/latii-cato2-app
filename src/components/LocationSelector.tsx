@@ -1,7 +1,7 @@
 "use client";
 import { getFullLocation } from "@/lib/functions";
 import { LocationSelectorProps } from "@/types/project";
-import { ConfigProvider, Input, Select } from "antd";
+import { Input, Select } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { State, City } from "country-state-city";
 
@@ -99,7 +99,7 @@ const LocationSelector = ({
           </p>
 
           <Select
-            className="w-3/4 border-primaryN30 [&_.ant-select-selector]:!rounded-lg text-xs h-6"
+            className="w-3/4 border-primaryN30 [&_.ant-select-selector]:!rounded-lg text-xs"
             placeholder="Select State"
             value={projectSettings?.state || undefined} // es isoCode
             onChange={(val) => {
