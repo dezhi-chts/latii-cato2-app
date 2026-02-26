@@ -30,6 +30,8 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
   } = field;
 
   const hasOptions = type === 3 || type === 4 || type === 5;
+  const isDate = type === 7;
+  const isRanged = (metadata ?? []).includes("ranged");
 
   // ✅ Local states
   const [localLabel, setLocalLabel] = useState(label ?? "");
@@ -196,17 +198,35 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         )}
         {/* HINT + REQUIRED */}
         <div className="flex items-center justify-between px-4 py-3">
-          <Checkbox
-            checked={!!has_hint_text}
-            disabled={!!is_fixed}
-            onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
-          >
-            Hint Text
-          </Checkbox>
+          <div className="flex items-center gap-4">
+            <Checkbox
+              checked={!!has_hint_text}
+              disabled={!!is_fixed}
+              onChange={(e) => onChange?.({ has_hint_text: e.target.checked })}
+            >
+              Hint Text
+            </Checkbox>
+
+            {isDate && (
+              <Checkbox
+                checked={isRanged}
+                disabled={!!is_fixed}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  const next = checked
+                    ? Array.from(new Set([...(metadata ?? []), "ranged"]))
+                    : (metadata ?? []).filter((m) => m !== "ranged");
+
+                  onChange?.({ metadata: next });
+                }}
+              >
+                Range Selection
+              </Checkbox>
+            )}
+          </div>
 
           <div className="flex items-center gap-3">
             <span className="text-sm text-neutral-700">Required</span>
-
             <Switch
               checked={!!required}
               disabled={!!is_fixed}
