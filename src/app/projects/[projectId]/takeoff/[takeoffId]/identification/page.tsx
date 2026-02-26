@@ -79,7 +79,7 @@ const validPageType = [
   PageType.Mix,
 
   PageType.Item,
-  PageType.Infomation,
+  PageType.Information,
   PageType.Description
 ];
 
@@ -493,6 +493,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     }
     if (!evidenceList?.length) return;
     setFileEvidence([...fileEvidence, ...evidenceList]);
+
     handleUpdatePageType(page_types);
   };
 

@@ -20,7 +20,7 @@ import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import { PageControls, ZoomControls } from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
-import ProjectForm from "./Project-Form";
+import ProjectFormTakeoff from "./Project-Form-Takeoff";
 
 const TabList = ({
   items,
@@ -284,7 +284,7 @@ const CreateProjectTakeoffModal = ({
 
       return {
         label: label,
-        key: file.id,
+        id: file.id,
       }
     })
   }, [fileList, selectedFileId]);
@@ -313,7 +313,7 @@ const CreateProjectTakeoffModal = ({
         <div className="mt-8 h-[80vh] flex flex-row justify-between">
           <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
             <div className="overflow-y-auto bg-white">
-              <ProjectForm
+              <ProjectFormTakeoff
                 ref={projectFormRef}
                 projectSettings={projectSettings}
                 setProjectSettings={setProjectSettings}

@@ -38,7 +38,7 @@ export enum PageType {
   All = "All",
   Unknown = "Unknown",
   Item = "Item",
-  Infomation = "Infomation",
+  Information = "Information",
   Description = "Description",
 }
 
@@ -51,7 +51,7 @@ export enum GroupType {
   DrawingIndex = "Drawing Index", // 绘图索引框
 
   Item = "Item", // 项目项框
-  LayerInfo = "Infomation", // 图层信息框
+  LayerInfo = "Information", // 图层信息框
   Description = "Description", // 描述框
   WindowDoorUnitList = "window_door_unit_list", // 窗门单元列表框
 
@@ -107,8 +107,8 @@ export const allPageTypes = {
     icon: "I",
     color: "#427CCE",
   },
-  [PageType.Infomation]: {
-    type: PageType.Infomation,
+  [PageType.Information]: {
+    type: PageType.Information,
     icon: "L",
     color: "#008080",
   },
@@ -164,13 +164,11 @@ export const ArchDrawingLabelTypes = [
         type: GroupType.WindowDoorUnit,
         icon: "W",
         color: "#5859D6",
-        color_class: "bg-indigo-50",
       },
       {
         type: GroupType.Table,
         icon: "T",
         color: "#9400D3",
-        color_class: "bg-indigo-50",
       },
     ],
   },
@@ -180,7 +178,7 @@ export const ArchDrawingLabelTypes = [
 // identification Quote文件 页面下拉类型
 export const QuotePageTypes = [
   allPageTypes[PageType.Item],
-  allPageTypes[PageType.Infomation],
+  allPageTypes[PageType.Information],
   allPageTypes[PageType.Description],
   allPageTypes[PageType.Mix],
   allPageTypes[PageType.NotUsed],

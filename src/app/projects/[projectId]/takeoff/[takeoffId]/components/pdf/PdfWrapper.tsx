@@ -135,7 +135,7 @@ const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupTyp
 // 框类型对应的颜色
 const groupTypeColor: any = {
   [GroupType.Item]: allPageTypes[PageType.Item].color,
-  [GroupType.LayerInfo]: allPageTypes[PageType.Infomation].color,
+  [GroupType.LayerInfo]: allPageTypes[PageType.Information].color,
   [GroupType.Description]: allPageTypes[PageType.Description].color,
 }
 
