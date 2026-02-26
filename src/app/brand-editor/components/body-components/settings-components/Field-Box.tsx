@@ -147,7 +147,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
             <div className="flex flex-col gap-2">
               {localOptions.map((opt, idx) => (
-                <div key={`${opt}-${idx}`} className="flex items-center gap-2">
+                <div key={`opt-${idx}`} className="flex items-center gap-2">
                   <Input
                     value={opt}
                     disabled={!!is_fixed}
@@ -156,7 +156,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
                       next[idx] = e.target.value;
                       setLocalOptions(next);
                     }}
-                    onBlur={() => commitOptions(localOptions)}
+                    onBlur={() => commitOptions([...localOptions])}
                     placeholder={`Option ${idx + 1}`}
                     className="h-9"
                   />
