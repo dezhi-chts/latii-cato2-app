@@ -21,9 +21,14 @@ type MergeFile = {
 type FileManualMergeProps = {
   file: MergeFile;
 };
+
+const mergeOptions = [
+  { value: "outer", label: "Outer" },
+  { value: "base", label: "Base" },
+];
 const FileManualMerge = ({ file }: FileManualMergeProps) => {
   return (
-    <div className="min-w-[25vw] text-sm pt-8">
+    <div className="min-w-[30vw] text-sm pt-8">
       {/*  Title */}
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-1">
@@ -63,13 +68,17 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       {/*  Table */}
       <div className="w-full mt-6">
         <div className="w-full flex flex-col">
-          <div className="flex">
-            <div className="w-1/2">Label</div>
-            <div className="w-1/2">Sublabel</div>
+          <div className="flex rounded-t-md text-basicGray bg-baseLight">
+            <div className="w-1/2 flex justify-center items-center py-3">
+              Label
+            </div>
+            <div className="w-1/2 flex justify-center items-center py-3">
+              Sub-Label
+            </div>
           </div>
 
           {file?.labels?.map((label) => (
-            <div key={label.label} className="flex">
+            <div key={label.label} className="flex py-2">
               <div className="w-1/2 flex">
                 <Radio></Radio> <Input value={label.label} />
               </div>
@@ -89,7 +98,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       <p className="pt-1 underline text-forumBlue">Edit in Detail Merge</p>
       {/*  Merge options */}
       <div className="w-full mt-3 flex justify-center">
-        <div className="w-4/6 flex flex-col gap-4 ">
+        <div className="w-2/3 flex flex-col gap-4 ">
           <div className="flex justify-between items-center">
             <p className="text-forumBlue">Merge Type</p>
             <p className="text-baseGray underline">Learn More</p>
@@ -97,24 +106,36 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           {!file.is_base && (
             <div className="flex justify-between items-center">
               <p>Label</p>
-              <Input />
+              <Select
+                className="w-2/3"
+                options={mergeOptions}
+                defaultValue="outer"
+              />
             </div>
           )}
 
           <div className="flex justify-between items-center">
             <p>Row</p>
-            <Select />
+            <Select
+              className="w-2/3"
+              options={mergeOptions}
+              defaultValue="outer"
+            />
           </div>
           <div className="flex justify-between items-center">
             <p>Column</p>
-            <Select className="w-7/12" />
+            <Select
+              className="w-2/3"
+              options={mergeOptions}
+              defaultValue="outer"
+            />
           </div>
           <div>
             <Button
               className="w-full rounded-md text-white"
               backgroundColor={"forumBlue"}
             >
-              Merge All
+              {file.is_base ? "Merge All" : "Merge to Base"}
             </Button>
           </div>
         </div>
