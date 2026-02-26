@@ -78,7 +78,7 @@ const ChatContainer = ({ isOpen }: ChatProps) => {
         <div
           className={`w-full rounded-t-xl p-4 h-[42px] cursor-pointer border-b border-b-primaryN30 flex items-center`}
         >
-          <p className="text-xs font-light  text-basicGray">Chat</p>
+          <p className="text-xs font-light  text-grey-normal">Chat</p>
         </div>
         <div className="flex flex-col gap-8 p-8 max-h-[60vh] overflow-auto scrollbar-hidden">
           {messages.map((message, index) => {
@@ -146,7 +146,7 @@ const ChatContainer = ({ isOpen }: ChatProps) => {
                   className="w-5 h-5"
                 />
               </div>
-              <p className="animate-pulse text-basicGray text-xs">
+              <p className="animate-pulse text-grey-normal text-xs">
                 Lucius is thinking...
               </p>
             </div>

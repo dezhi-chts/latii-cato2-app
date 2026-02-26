@@ -28,7 +28,7 @@ const ItemsTableSection = ({ takeOff }: any) => {
   const items = takeOff?.take_off_result?.items;
   return (
     <div className="flex flex-col gap-4 w-full pt-8">
-      <p className="text-forumBlue text-sm">Items</p>
+      <p className="text-forumBlue-normal text-sm">Items</p>
       <div className="flex justify-between w-full">
         <Input
           className="rounded-full w-80 text-xs"
@@ -48,11 +48,15 @@ const ItemsTableSection = ({ takeOff }: any) => {
           <Button
             variant="outline"
             borderColor="primaryN30"
-            className="!text-basicGray text-xs"
+            className="!text-grey-normal text-xs"
           >
             Reconcile Items
           </Button>
-          <Button variant="outline" borderColor="forumBlue" className="text-xs">
+          <Button
+            variant="outline"
+            borderColor="forumBlue-normal"
+            className="text-xs"
+          >
             Add Item
           </Button>
         </div>
@@ -85,7 +89,7 @@ export default ItemsTableSection;
 
 const Table = () => {
   return (
-    <div className="flex gap-2 text-basicGray text-xxs font-semibold text-center items-center bg-primaryN20 rounded-t-lg px-1 py-2">
+    <div className="flex gap-2 text-grey-normal text-xxs font-semibold text-center items-center bg-primaryN20 rounded-t-lg px-1 py-2">
       <Checkbox
         className={`w-[${columnsWidthPercentage.checkbox}%] flex justify-center`}
       />

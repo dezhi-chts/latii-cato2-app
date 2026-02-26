@@ -76,10 +76,10 @@ export const TakeOffCard = ({
           className="w-32 h-auto"
         />
         <div className="flex flex-col gap-3 w-96">
-          <p className="text-lg text-forumBlue">{title}</p>
+          <p className="text-lg text-forumBlue-normal">{title}</p>
           <p className="text-sm min-h-20">{description}</p>
           <p
-            className="text-xs text-basicGray underline cursor-pointer hover:opacity-80 active:opacity-60 w-fit"
+            className="text-xs text-grey-normal underline cursor-pointer hover:opacity-80 active:opacity-60 w-fit"
             onClick={() => setShowInfoModal(true)}
           >
             Not sure what to upload?
@@ -90,8 +90,8 @@ export const TakeOffCard = ({
       {files.length > 0 && (
         <div className="flex flex-col gap-4">
           <div>
-            <p className="text-xs text-forumBlue">PDFs Details</p>
-            <p className="text-xxs text-basicGray">
+            <p className="text-xs text-forumBlue-normal">PDFs Details</p>
+            <p className="text-xxs text-grey-normal">
               For an accurate takeoff, please provide the following information
               from your PDF:
             </p>

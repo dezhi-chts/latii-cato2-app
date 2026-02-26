@@ -69,7 +69,6 @@ const { confirm } = Modal;
 
 GlobalWorkerOptions.workerSrc = "/assets/js/pdf.worker.min.js";
 
-
 const getZoneBounds = (polygons: Point[]) => {
   const xs = polygons.map((p) => p.x);
   const ys = polygons.map((p) => p.y);
@@ -126,10 +125,21 @@ const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 const showNumBtnGroupTypes = [GroupType.Item, GroupType.WindowDoorUnitList];
 
 // 以下框类型显示  复制按钮集合
-const showCopyBtnGroupTypes = [GroupType.WindowDoorUnitList, GroupType.Item, GroupType.LayerInfo, GroupType.Description];
+const showCopyBtnGroupTypes = [
+  GroupType.WindowDoorUnitList,
+  GroupType.Item,
+  GroupType.LayerInfo,
+  GroupType.Description,
+];
 
 // 以下框类型显示类型下拉框
-const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupType.WindowDoorUnit, GroupType.Table, GroupType.KeyNotes];
+const showSelectGroupTypes = [
+  GroupType.FloorPlan,
+  GroupType.Elevation,
+  GroupType.WindowDoorUnit,
+  GroupType.Table,
+  GroupType.KeyNotes,
+];
 
 const PdfWrapper = forwardRef(
   (
@@ -283,7 +293,7 @@ const PdfWrapper = forwardRef(
           try {
             loadingTaskRef.current.destroy();
           } catch (error) {
-            console.error('Error destroying loading task:', error);
+            console.error("Error destroying loading task:", error);
           }
         }
       };
@@ -302,7 +312,7 @@ const PdfWrapper = forwardRef(
         try {
           loadingTaskRef.current.destroy();
         } catch (error) {
-          console.error('Error destroying previous loading task:', error);
+          console.error("Error destroying previous loading task:", error);
         }
       }
 
@@ -351,7 +361,10 @@ const PdfWrapper = forwardRef(
             try {
               loadingTaskRef.current.destroy();
             } catch (destroyError) {
-              console.error('Error destroying failed loading task:', destroyError);
+              console.error(
+                "Error destroying failed loading task:",
+                destroyError,
+              );
             }
             loadingTaskRef.current = null;
           }
@@ -433,7 +446,9 @@ const PdfWrapper = forwardRef(
 
         // 如果存在groupId，则单独提交该group，不存在则提交所有group
         if (groupId) {
-          let section = filteredCropSections.find((item) => item.id === groupId);
+          let section = filteredCropSections.find(
+            (item) => item.id === groupId,
+          );
           if (!section) {
             reject(new Error("Group not found"));
             return;
@@ -458,7 +473,7 @@ const PdfWrapper = forwardRef(
             view_box: JSON.stringify(viewport.viewBox),
             is_rotate: rotateAngle !== 0,
             rotation_angle: rotateAngle,
-            sub_text: section.sub_text ?? '',
+            sub_text: section.sub_text ?? "",
           };
         });
 
@@ -510,7 +525,8 @@ const PdfWrapper = forwardRef(
           description: "Evidence delete successfully.",
         });
 
-        onDeleteEvidence && onDeleteEvidence({ ...res.data, deleteIds: deleteIds ?? [] });
+        onDeleteEvidence &&
+          onDeleteEvidence({ ...res.data, deleteIds: deleteIds ?? [] });
       } else {
         notification.error({
           message: "Error",
@@ -540,7 +556,7 @@ const PdfWrapper = forwardRef(
 
           confirm({
             title: (
-              <p className="text-forumBlue font-normal text-base">
+              <p className="text-forumBlue-normal font-normal text-base">
                 Finish with this page?
               </p>
             ),
@@ -643,7 +659,7 @@ const PdfWrapper = forwardRef(
         };
 
         const viewport: ViewPort = page.getViewport(viewPointsOptions);
-        console.log('######### viewport', viewport);
+        console.log("######### viewport", viewport);
         // Limit the canvas size to avoid performance issues
         // if (
         //   viewport.width > MAX_CANVAS_SIZE ||
@@ -951,17 +967,17 @@ const PdfWrapper = forwardRef(
 
         pdfPolygons: currentViewportRef.current
           ? [
-            {
-              x: currentViewportRef.current.convertToPdfPoint(
-                pos.x,
-                pos.y,
-              )[0],
-              y: currentViewportRef.current.convertToPdfPoint(
-                pos.x,
-                pos.y,
-              )[1],
-            },
-          ]
+              {
+                x: currentViewportRef.current.convertToPdfPoint(
+                  pos.x,
+                  pos.y,
+                )[0],
+                y: currentViewportRef.current.convertToPdfPoint(
+                  pos.x,
+                  pos.y,
+                )[1],
+              },
+            ]
           : [],
         bounds: {
           minX: pos.x,
@@ -1098,23 +1114,23 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-          {
-            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-          },
-        ]
+            {
+              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+            },
+          ]
         : [];
 
       const groupFrame = {
@@ -1138,41 +1154,42 @@ const PdfWrapper = forwardRef(
 
       if (addingOption?.isSaveEvidence) {
         // 如果有保存参数，则直接保存成evidence
-        batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false })
+        batchSubmit({
+          showAlert: false,
+          groupInfo: groupFrame,
+          showLoading: false,
+        })
           .then(() => {
             // 保存成功
           })
-          .catch(() => {
-
-          });
+          .catch(() => {});
       }
     };
 
-    const handleCreateBox = (evid: any, type: 'center' | 'next' | 'prev') => {
-      if (type === 'center') {
+    const handleCreateBox = (evid: any, type: "center" | "next" | "prev") => {
+      if (type === "center") {
         // 在当前框的位置的下方，增加一个一样的宽度的框
         handleCenterBox(evid);
-      } else if (type === 'next') {
+      } else if (type === "next") {
         if (page < totalPages) {
           // 在下一页的头部位置增加一个一样尺寸的框，并且需要将前一页的页面滚动到头部
           createNewBoxInfo.current = {
-            type: 'next',
+            type: "next",
             evid: evid,
           };
           onChangePage && onChangePage(page + 1);
         }
-
-      } else if (type === 'prev') {
+      } else if (type === "prev") {
         if (page > 1) {
           // 在上一页的尾部位置增加一个一样尺寸的框，并且需要将后一页的页面滚动到尾部
           createNewBoxInfo.current = {
-            type: 'prev',
+            type: "prev",
             evid: evid,
           };
           onChangePage && onChangePage(page - 1);
         }
       }
-    }
+    };
 
     const handleCenterBox = (evid: any) => {
       // 获取当前框的位置和尺寸，然后在当前框的位置下方，增加一个一样的尺寸的框，但是需要注意，不能超过pdf的页面告诉，如果超过高度，则需要调整框的高度
@@ -1202,10 +1219,12 @@ const PdfWrapper = forwardRef(
       }
 
       handleAutoCreateEvid(evid, { x: minX, y: y, width, height });
-    }
+    };
 
-
-    const handlePrevOrNextBox = (info: { evid: any, type: 'prev' | 'next' }) => {
+    const handlePrevOrNextBox = (info: {
+      evid: any;
+      type: "prev" | "next";
+    }) => {
       if (!currentViewportRef.current) {
         console.log("当前视图信息不存在");
         return;
@@ -1214,7 +1233,7 @@ const PdfWrapper = forwardRef(
       const viewportHeight = viewPort.height;
 
       const { evid, type } = info;
-      if (type === 'prev') {
+      if (type === "prev") {
         // 在已经更新的页面尾部位置增加一个一样尺寸的框，并且需要将后一页的页面滚动到尾部，注意不能超过pdf的页面高度
         let { minX, minY, width, height } = getZoneBounds(
           evid.viewportPolygons,
@@ -1226,7 +1245,7 @@ const PdfWrapper = forwardRef(
         if (container) {
           container.scrollTop = container.scrollHeight;
         }
-      } else if (type === 'next') {
+      } else if (type === "next") {
         // 在已经更新的页面尾部头部增加一个一样尺寸的框
         let { minX, minY, width, height } = getZoneBounds(
           evid.viewportPolygons,
@@ -1239,10 +1258,12 @@ const PdfWrapper = forwardRef(
           container.scrollTop = 0;
         }
       }
-    }
+    };
 
-
-    const handleAutoCreateEvid = (evid: any, bounds: { x: number, y: number, width: number, height: number }) => {
+    const handleAutoCreateEvid = (
+      evid: any,
+      bounds: { x: number; y: number; width: number; height: number },
+    ) => {
       const viewPort = currentViewportRef.current;
       if (!viewPort) return;
 
@@ -1254,23 +1275,23 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-          {
-            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-          },
-          {
-            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-          },
-        ]
+            {
+              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+            },
+            {
+              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+            },
+          ]
         : [];
 
       const groupFrame = {
@@ -1281,13 +1302,17 @@ const PdfWrapper = forwardRef(
         pdfPolygons: pdfPoints,
         completed: true,
         bounds: getZoneBounds([p1, p2, p3, p4]),
-        sub_text: evid.sub_text ?? '',
+        sub_text: evid.sub_text ?? "",
       };
       // 先手动添加框到临时crop中
       insertGroup(groupFrame);
 
       // 直接保存成evidence
-      batchSubmit({ showAlert: false, groupInfo: groupFrame, showLoading: false })
+      batchSubmit({
+        showAlert: false,
+        groupInfo: groupFrame,
+        showLoading: false,
+      })
         .then(() => {
           // 保存成功
           createNewBoxInfo.current = null;
@@ -1295,7 +1320,7 @@ const PdfWrapper = forwardRef(
         .catch(() => {
           createNewBoxInfo.current = null;
         });
-    }
+    };
 
     //生成截图
     const createImage = (groupId: string) => {
@@ -2185,9 +2210,9 @@ const PdfWrapper = forwardRef(
 
         const viewPoints = Array.isArray(pdfPolygons)
           ? pdfPolygons.map((p: Point) => {
-            const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
-            return { x: px, y: py };
-          })
+              const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
+              return { x: px, y: py };
+            })
           : [];
 
         return { ...item, viewportPolygons: viewPoints };
@@ -2219,10 +2244,10 @@ const PdfWrapper = forwardRef(
               style={
                 operationMode === "edit"
                   ? {
-                    display: "grid",
-                    alignItems: "center",
-                    justifyItems: "center",
-                  }
+                      display: "grid",
+                      alignItems: "center",
+                      justifyItems: "center",
+                    }
                   : {}
               }
             >
@@ -2393,8 +2418,10 @@ const PdfWrapper = forwardRef(
                     item.viewportPolygons,
                   );
 
-                  let type = item.type ?? '';
-                  let color: string = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
+                  let type = item.type ?? "";
+                  let color: string =
+                    allPageTypes[type as keyof typeof allPageTypes]?.color ??
+                    colorList.forumBlue - normal;
                   return (
                     <div
                       key={item.id}
@@ -2404,34 +2431,39 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
-                      {showNumBtnGroupTypes.includes(type) &&
+                      {showNumBtnGroupTypes.includes(type) && (
                         <div className="pl-[2px] inline-block">
                           <input
                             className="h-[20px] text-center outline-none text-white text-xxs rounded-md "
-                            defaultValue={item.sub_text ?? ''}
+                            defaultValue={item.sub_text ?? ""}
                             onBlur={(e: any) => {
-                              if (e.target.value.trim() !== '') {
-                                updateEvidence({ ...item, sub_text: e.target.value });
+                              if (e.target.value.trim() !== "") {
+                                updateEvidence({
+                                  ...item,
+                                  sub_text: e.target.value,
+                                });
                               }
                             }}
                             style={{
-                              width: 'fit-content',
+                              width: "fit-content",
                               maxWidth: 45,
-                              backgroundColor: color
+                              backgroundColor: color,
                             }}
                           />
                         </div>
-                      }
+                      )}
                       <div
                         className="absolute flex flex-row items-center"
                         style={{
-                          left: showSelectGroupTypes.includes(type) ? (width - 68) : width - 22,
+                          left: showSelectGroupTypes.includes(type)
+                            ? width - 68
+                            : width - 22,
                           top: 4,
                         }}
                       >
                         <div className="flex items-center gap-1">
-                          {
-                            showSelectGroupTypes.includes(type) && <LabelTypesSelect
+                          {showSelectGroupTypes.includes(type) && (
+                            <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
                               onChangeType={async (type) => {
@@ -2441,7 +2473,7 @@ const PdfWrapper = forwardRef(
                                 setFullLoading(false);
                               }}
                             />
-                          }
+                          )}
                           <Popconfirm
                             title="Are you sure you want to delete this evidence?"
                             onConfirm={() => batchDelete([item.id])}
@@ -2458,7 +2490,7 @@ const PdfWrapper = forwardRef(
                           </Popconfirm>
                         </div>
                       </div>
-                      {showCopyBtnGroupTypes.includes(type) &&
+                      {showCopyBtnGroupTypes.includes(type) && (
                         <div
                           className="transition-all"
                           style={{
@@ -2471,58 +2503,113 @@ const PdfWrapper = forwardRef(
                           }}
                         >
                           <div className="flex justify-center items-center gap-1">
-                            <Popover placement="bottom"
+                            <Popover
+                              placement="bottom"
                               title={null}
-                              content={<div className="text-xs text-basicGray">Extend to Previous Page</div>}
+                              content={
+                                <div className="text-xs text-grey-normal">
+                                  Extend to Previous Page
+                                </div>
+                              }
                               trigger="hover"
                             >
-                              <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer" style={{ backgroundColor: color }}
+                              <div
+                                className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tl-md rounded-bl-md cursor-pointer"
+                                style={{ backgroundColor: color }}
                                 onClick={() => {
-                                  handleCreateBox(item, 'prev');
-                                }}>
-                                <span className="-mt-[2px] text-xs">{'<'}</span>
+                                  handleCreateBox(item, "prev");
+                                }}
+                              >
+                                <span className="-mt-[2px] text-xs">{"<"}</span>
                               </div>
                             </Popover>
 
-                            <div className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer" style={{ backgroundColor: color }}
+                            <div
+                              className="w-[28px] h-[20px] flex justify-center items-center text-white cursor-pointer"
+                              style={{ backgroundColor: color }}
                               onClick={() => {
-                                handleCreateBox(item, 'center');
-                              }}>
-                              <Image src="/assets/icons/layers-linked.svg" alt="layers-linked icon" width={15} height={15} preview={false}></Image>
+                                handleCreateBox(item, "center");
+                              }}
+                            >
+                              <Image
+                                src="/assets/icons/layers-linked.svg"
+                                alt="layers-linked icon"
+                                width={15}
+                                height={15}
+                                preview={false}
+                              ></Image>
                             </div>
 
-                            <Popover placement="bottom"
+                            <Popover
+                              placement="bottom"
                               title={null}
-                              content={<div className="text-xs text-basicGray">Extend to Next Page</div>}
+                              content={
+                                <div className="text-xs text-grey-normal">
+                                  Extend to Next Page
+                                </div>
+                              }
                               trigger="hover"
                             >
-                              <div className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer" style={{ backgroundColor: color }}
+                              <div
+                                className="w-[30px] h-[20px] flex justify-center items-center text-white rounded-tr-md rounded-br-md cursor-pointer"
+                                style={{ backgroundColor: color }}
                                 onClick={() => {
-                                  handleCreateBox(item, 'next');
-                                }}>
-                                <span className="-mt-[2px] text-xs">{'>'}</span>
+                                  handleCreateBox(item, "next");
+                                }}
+                              >
+                                <span className="-mt-[2px] text-xs">{">"}</span>
                               </div>
                             </Popover>
 
-                            <div className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer" style={{ backgroundColor: color }} onClick={() => {
-                            }}>
-                              <Popover placement="rightBottom"
-                                title={<div className="text-xs font-medium">Chain Link</div>}
-                                content={<div className="w-[300px] text-xs text-basicGray">
-                                  Create Linked Box Create a new box linked to this item.
-                                  <ul className="ml-3 list-disc">
-                                    <li>Use the <span className="text-black font-medium">Center button</span> to create a box on the current page.</li>
-                                    <li>Use the <span className="text-black font-medium">Previous or Next buttons</span> to create a linked box with this same label on the adjacent pages.</li>
-                                  </ul>
-                                </div>}
+                            <div
+                              className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+                              style={{ backgroundColor: color }}
+                              onClick={() => {}}
+                            >
+                              <Popover
+                                placement="rightBottom"
+                                title={
+                                  <div className="text-xs font-medium">
+                                    Chain Link
+                                  </div>
+                                }
+                                content={
+                                  <div className="w-[300px] text-xs text-grey-normal">
+                                    Create Linked Box Create a new box linked to
+                                    this item.
+                                    <ul className="ml-3 list-disc">
+                                      <li>
+                                        Use the{" "}
+                                        <span className="text-black font-medium">
+                                          Center button
+                                        </span>{" "}
+                                        to create a box on the current page.
+                                      </li>
+                                      <li>
+                                        Use the{" "}
+                                        <span className="text-black font-medium">
+                                          Previous or Next buttons
+                                        </span>{" "}
+                                        to create a linked box with this same
+                                        label on the adjacent pages.
+                                      </li>
+                                    </ul>
+                                  </div>
+                                }
                                 trigger="hover"
                               >
-                                <Image src="/assets/icons/info-white.svg" alt="plus icon" width={12} height={12} preview={false}></Image>
+                                <Image
+                                  src="/assets/icons/info-white.svg"
+                                  alt="plus icon"
+                                  width={12}
+                                  height={12}
+                                  preview={false}
+                                ></Image>
                               </Popover>
                             </div>
                           </div>
                         </div>
-                      }
+                      )}
                     </div>
                   );
                 })}
@@ -2537,7 +2624,9 @@ const PdfWrapper = forwardRef(
                   }
                   const { minX, minY, maxX, maxY, width, height } =
                     group.bounds;
-                  let color: string = allPageTypes[group.type as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
+                  let color: string =
+                    allPageTypes[group.type as keyof typeof allPageTypes]
+                      ?.color ?? colorList.forumBlue - normal;
                   return (
                     <div
                       key={group.id}
@@ -2550,15 +2639,17 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center gap-1"
                         style={{
-                          left: showReadBtnGroupTypes.includes(group.type) ?
-                            width - 110 :
-                            showConfirmBtnGroupTypes.includes(group.type) ? width - 90 : width - 22,
+                          left: showReadBtnGroupTypes.includes(group.type)
+                            ? width - 110
+                            : showConfirmBtnGroupTypes.includes(group.type)
+                              ? width - 90
+                              : width - 22,
                           top: 4,
                         }}
                       >
                         {showReadBtnGroupTypes.includes(group.type) && (
                           <div
-                            className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-xl whitespace-nowrap cursor-pointer"
+                            className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-xl whitespace-nowrap cursor-pointer"
                             onClick={() => {
                               // 转换成图片进行OCR识别
                               OCRRecogize(group.id);
@@ -2570,7 +2661,7 @@ const PdfWrapper = forwardRef(
 
                         {showConfirmBtnGroupTypes.includes(group.type) && (
                           <div
-                            className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue rounded-lg whitespace-nowrap cursor-pointer"
+                            className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
                             onClick={() => {
                               evidencSubmit(group.id);
                             }}
@@ -2723,7 +2814,7 @@ const ShapeWrapper = ({
   onCircleDragMove: (e: any, info: any) => void;
   onCircleDragEnd: (e: any, info: any) => void;
 }) => {
-  let color: string = colorList.forumBlue || "";
+  let color: string = colorList.forumBlue - normal || "";
   let polygons: Point[] = [];
   let bounds: any = {};
   let circlePoints: CirclePoint[] = [];
@@ -2751,15 +2842,17 @@ const ShapeWrapper = ({
     y: p.y - minY,
   }));
 
-  let pathData = [
-    `M ${relativePolygons[0].x} ${relativePolygons[0].y}`,
-    ...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
-  ].join(" ") + 'Z';
-
+  let pathData =
+    [
+      `M ${relativePolygons[0].x} ${relativePolygons[0].y}`,
+      ...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
+    ].join(" ") + "Z";
 
   if (type === "evidence") {
-    let evidType = shape.type ?? '';
-    color = allPageTypes[evidType as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
+    let evidType = shape.type ?? "";
+    color =
+      allPageTypes[evidType as keyof typeof allPageTypes]?.color ??
+      colorList.forumBlue - normal;
   }
 
   if (draggingShapeId === shape.id) {

@@ -12,7 +12,7 @@ const Header = () => {
       />
       <Divider type="vertical" className="h-16 border mx-5 border-primaryN30" />
       <div className="flex flex-col gap-3">
-        <h5 className="text-forumBlue text-xl">Knowledge Base</h5>
+        <h5 className="text-forumBlue-normal text-xl">Knowledge Base</h5>
         <p className="text-sm">
           Source all your data, teach Lucius all the knowledge.
         </p>

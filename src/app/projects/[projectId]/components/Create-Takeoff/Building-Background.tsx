@@ -27,12 +27,14 @@ export const BuildingBackground = ({
           onFinish={onFinish}
           totalDuration={totalDuration}
         />
-        <p className="text-xl text-forumBlue">Building Your Takeoff List...</p>
+        <p className="text-xl text-forumBlue-normal">
+          Building Your Takeoff List...
+        </p>
         <p className="text-center">
           Our AI is now creating your item list. This can take a few minutes, so
           feel free to step away while we handle the heavy lifting.
         </p>
-        <p className="text-sm text-basicGray">Estimated time: 2-5 minutes</p>
+        <p className="text-sm text-grey-normal">Estimated time: 2-5 minutes</p>
       </div>
     </div>
   );
@@ -91,7 +93,9 @@ const ProgressSpinner = ({
           <div
             key={i}
             className={`absolute w-3 h-3 rounded-full ${
-              i < activeDots ? "bg-forumBlue" : "bg-loadingGray animate-pulse"
+              i < activeDots
+                ? "bg-forumBlue-normal"
+                : "bg-loadingGray animate-pulse"
             }`}
             style={{ transform: `translate(${x}px, ${y}px)` }}
           />

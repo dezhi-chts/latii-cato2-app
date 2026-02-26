@@ -165,7 +165,7 @@ const QuotiiCard = ({
   const handleSendToLatii = async (
     files: any[] | null = [],
     description: string = "",
-    title: string = ""
+    title: string = "",
   ) => {
     const isSendRequest = quote?.quote_status_text === "Latii Review";
 
@@ -175,7 +175,7 @@ const QuotiiCard = ({
       "dealer",
       files,
       description,
-      title
+      title,
     );
     if (response.status === "success") {
       handleModalChange("sendToLatii", false);
@@ -199,7 +199,7 @@ const QuotiiCard = ({
     const response = await sendToLatii(
       quote?.quote_id,
       "QUOTE_ACCEPTED",
-      "dealer"
+      "dealer",
     );
     if (response.status === "success") {
       const data = response?.data?.data as any;
@@ -301,7 +301,7 @@ const QuotiiCard = ({
             <p className="truncate ...">{quote?.quote_name}</p>
           </div>
           <div>
-            <p className="text-basicGray text-sm">Version {quote?.version}</p>
+            <p className="text-grey-normal text-sm">Version {quote?.version}</p>
           </div>
           <div
             style={{
@@ -321,7 +321,7 @@ const QuotiiCard = ({
           </div>
           <p className="text-sm flex items-center gap-1">
             {getDaysAgoLabel(quote?.last_edited_time)}
-            <span className="text-xs text-basicGray">
+            <span className="text-xs text-grey-normal">
               Last edit | {formatFullDate(quote?.last_edited_time)}
             </span>
           </p>
@@ -329,24 +329,24 @@ const QuotiiCard = ({
         <div className="flex gap-4 h-full">
           <div className="flex flex-col justify-between gap-2 h-full">
             {hasBeenReviewed ? (
-              <div className="border border-neutralsN30 rounded-2xl flex flex-col items-center justify-center py-3 w-48 px-4 ">
+              <div className="border border-primaryN30 rounded-2xl flex flex-col items-center justify-center py-3 w-48 px-4 ">
                 <p className="text-sm">
                   {convertToCurrencyFormat(quote?.total_price, {
                     noDecimals: true,
                   })}
                 </p>
-                <p className="text-xs text-basicGray w-fit">Current Price</p>
+                <p className="text-xs text-grey-normal w-fit">Current Price</p>
               </div>
             ) : (
-              <div className="border border-neutralsN30 rounded-2xl flex justify-center gap-3 py-3 w-48 px-4 ">
-                <p className="text-sm text-basicGray w-fit">Price</p>
+              <div className="border border-primaryN30 rounded-2xl flex justify-center gap-3 py-3 w-48 px-4 ">
+                <p className="text-sm text-grey-normal w-fit">Price</p>
                 <div className="w-4/6">
                   <p className="text-sm">
                     {convertToCurrencyFormat(quote?.total_price, {
                       noDecimals: true,
                     })}
                   </p>
-                  <p className="text-xs text-basicGray">
+                  <p className="text-xs text-grey-normal">
                     {formatPriceRange(quote.total_price_range, {
                       withSymbol: true,
                       noDecimals: true,
@@ -356,19 +356,19 @@ const QuotiiCard = ({
               </div>
             )}
             <div className="flex gap-1 w-full">
-              <div className="border w-4/5 border-neutralsN30 rounded-xl flex items-center justify-evenly text-sm h-full ">
+              <div className="border w-4/5 border-primaryN30 rounded-xl flex items-center justify-evenly text-sm h-full ">
                 <div className="flex flex-col gap-1 items-center justify-center py-2 w-1/2">
                   <p>{quote?.items_count}</p>
-                  <p className="text-xs text-basicGray"># items</p>
+                  <p className="text-xs text-grey-normal"># items</p>
                 </div>
                 <Divider type="vertical" className="w-1 h-full m-0" />
                 <div className="flex flex-col gap-1 items-center justify-center w-1/2">
                   <p>{quote?.products_count}</p>
-                  <p className="text-xs text-basicGray">Products</p>
+                  <p className="text-xs text-grey-normal">Products</p>
                 </div>
               </div>
               <div
-                className={`border w-1/5 relative border-neutralsN30 rounded-lg flex flex-col gap-2 items-center justify-center text-sm h-full ${
+                className={`border w-1/5 relative border-primaryN30 rounded-lg flex flex-col gap-2 items-center justify-center text-sm h-full ${
                   hasFiles
                     ? "opacity-100 cursor-pointer hover:bg-primaryN20"
                     : "opacity-60 cursor-not-allowed"
@@ -387,7 +387,7 @@ const QuotiiCard = ({
                   width={14}
                   height={14}
                 />
-                <p className="text-xs text-basicGray">Files</p>
+                <p className="text-xs text-grey-normal">Files</p>
                 {Boolean(quote?.new_file_count) && (
                   <div className="absolute bg-accentIndigo rounded-full h-4 w-4 text-xs flex items-center justify-center text-white text-center -top-2 -right-1/4">
                     {quote?.new_file_count}

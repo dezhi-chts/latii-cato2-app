@@ -62,7 +62,6 @@ import IndexRectView from "./components/IndexRectView";
 import ContentView from "./components/ContentView";
 import SkipTipModal from "./components/SkipTipModal";
 
-
 import { ArchDrawingSummaryPageTypes } from "../types/evidence";
 
 const confirm = Modal.confirm;
@@ -590,7 +589,9 @@ const IdentificationIndex = ({
                   className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
                   onClick={handleRestartIndex}
                 >
-                  <span className="text-baseGray text-xs">Restart Index</span>
+                  <span className="text-grey-light-strong text-xs">
+                    Restart Index
+                  </span>
                 </div>
               )}
               <SelectPagesControls

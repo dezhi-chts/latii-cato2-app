@@ -94,7 +94,7 @@ const LocationSelector = ({
         ref={divRef}
       >
         <div className="w-full flex gap-2.5 items-center">
-          <p className="w-1/4 text-basicGray">
+          <p className="w-1/4 text-grey-normal">
             State <span className="text-accentRed">*</span>
           </p>
 
@@ -122,7 +122,7 @@ const LocationSelector = ({
           </Select>
         </div>
         <div className="w-full flex gap-2.5 items-center">
-          <p className="w-1/4 text-basicGray">
+          <p className="w-1/4 text-grey-normal">
             City <span className="text-accentRed">*</span>
           </p>
 
@@ -149,7 +149,7 @@ const LocationSelector = ({
           </Select>
         </div>
         <div className="w-full flex gap-2.5 items-center">
-          <p className="w-1/4 text-basicGray">Postal Code</p>
+          <p className="w-1/4 text-grey-normal">Postal Code</p>
           <Input
             placeholder="70001, etc."
             className="w-3/4 border-primaryN30 [&.ant-input]:!rounded-lg"
@@ -162,7 +162,7 @@ const LocationSelector = ({
           />
         </div>
         <div className="w-full flex gap-2.5 items-center">
-          <p className="w-1/4 text-basicGray">Address</p>
+          <p className="w-1/4 text-grey-normal">Address</p>
           <Input
             placeholder="6002 Westplano Park, etc."
             className="w-3/4 border-primaryN30 [&.ant-input]:!rounded-lg"

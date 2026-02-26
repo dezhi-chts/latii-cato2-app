@@ -12,7 +12,7 @@ export const FinishPopover = ({ color, image, text, category }: any) => {
     return (
       <div className="h-24 w-32 flex flex-col">
         <div className="h-14 w-full" style={{ backgroundColor: `#${color}` }} />
-        <div className="flex flex-col gap-2 h-10 w-full text-xs justify-center items-center text-center px-1 text-basicGray font-light">
+        <div className="flex flex-col gap-2 h-10 w-full text-xs justify-center items-center text-center px-1 text-grey-normal font-light">
           <p>{text}</p>
         </div>
       </div>
@@ -31,7 +31,7 @@ export const FinishPopover = ({ color, image, text, category }: any) => {
         )}
         <div className="flex flex-col justify-center px-2 font-light text-xs">
           <p className="text-basicLightGray">{category}</p>
-          <p className="text-basicGray">{formattedText}</p>
+          <p className="text-grey-normal">{formattedText}</p>
         </div>
       </div>
     );
@@ -112,7 +112,7 @@ const HardwareCard = ({
                     option.id,
                     index,
                     "hardware_color_input",
-                    true
+                    true,
                   );
                 }}
               >
@@ -123,7 +123,7 @@ const HardwareCard = ({
                   content={
                     <FinishPopover
                       image={`/assets/finish-colors/${sanitizeKey(
-                        option.name
+                        option.name,
                       )}.webp`}
                       text={option.name}
                     />
@@ -131,7 +131,7 @@ const HardwareCard = ({
                 >
                   <Image
                     src={`/assets/finish-colors/${sanitizeKey(
-                      option.name
+                      option.name,
                     )}.webp`}
                     alt={option.name}
                     width={120}
@@ -196,7 +196,7 @@ const HardwareCard = ({
                 content={
                   <FinishPopover
                     image={`/assets/finishes/${sanitizeName(
-                      option.hardware_material_text
+                      option.hardware_material_text,
                     )}/${sanitizeName(option.text)}.webp`}
                     text={option.text}
                     category={option.hardware_material_text}
@@ -206,7 +206,7 @@ const HardwareCard = ({
                 <Image
                   alt="finish"
                   src={`/assets/finishes/${sanitizeName(
-                    option.hardware_material_text
+                    option.hardware_material_text,
                   )}/${sanitizeName(option.text)}.webp`}
                   height={16}
                   width={16}
@@ -291,13 +291,13 @@ const HardwareCard = ({
     if (isItemCortizo) {
       setIsMatching(
         item?.units[0]?.hardware_finish?.selected_value === "212" &&
-          item?.units[0]?.hardware_color_input === item?.color_input
+          item?.units[0]?.hardware_color_input === item?.color_input,
       );
     } else {
       setIsMatching(
         item?.units[0]?.hardware_finish?.selected_value ===
           item?.finish_method.selected_value &&
-          item?.units[0]?.hardware_color_input === item?.color_input
+          item?.units[0]?.hardware_color_input === item?.color_input,
       );
     }
   }, [item]);
@@ -309,7 +309,7 @@ const HardwareCard = ({
       ) : (
         <div className={`flex flex-col gap-3`}>
           <div className="flex flex-col gap-3">
-            <p className="text-basicGray font-semibold text-sm">Styles</p>
+            <p className="text-grey-normal font-semibold text-sm">Styles</p>
             {isCortizo ? (
               <div className="rounded-lg border border-kahuBlue overflow-hidden w-32 h-32 flex justify-center items-center cursor-pointer">
                 <Image
@@ -338,7 +338,7 @@ const HardwareCard = ({
                             option.value,
                             index,
                             "hardware_handle_latii_style",
-                            true
+                            true,
                           );
                         }}
                       >
@@ -350,13 +350,13 @@ const HardwareCard = ({
                         />
                       </div>
                     );
-                  }
+                  },
                 )}
               </div>
             )}
           </div>
           <div className="flex flex-col gap-3">
-            <p className="text-basicGray font-semibold text-sm">Finishes</p>
+            <p className="text-grey-normal font-semibold text-sm">Finishes</p>
             <FinishRender item={item} />
             {canMatch && (
               <Checkbox
@@ -365,7 +365,7 @@ const HardwareCard = ({
                 disabled={isMatching}
                 onChange={matchToFrameFinish}
               >
-                <p className="text-xs pl-2 text-basicGray">
+                <p className="text-xs pl-2 text-grey-normal">
                   Match to Frame Finish
                 </p>
               </Checkbox>
@@ -373,14 +373,14 @@ const HardwareCard = ({
           </div>
           {Boolean(item?.units[0].hardware_fixion?.options.length) && (
             <div className="flex flex-col gap-3">
-              <p className="text-basicGray font-semibold text-sm">Fixions</p>
+              <p className="text-grey-normal font-semibold text-sm">Fixions</p>
               <Radio.Group
                 onChange={(e) => {
                   handleSelectChange(
                     e.target.value,
                     index,
                     "hardware_fixion",
-                    true
+                    true,
                   );
                 }}
                 value={item?.units[0].hardware_fixion?.selected_value}
@@ -390,18 +390,18 @@ const HardwareCard = ({
                     <Radio
                       key={value}
                       value={value}
-                      className="text-xs text-basicGray px-1"
+                      className="text-xs text-grey-normal px-1"
                     >
                       {text}
                     </Radio>
-                  )
+                  ),
                 )}
               </Radio.Group>
             </div>
           )}
           {Boolean(item?.units[0].hardware_key_yes_no?.options.length) && (
             <div className="flex flex-col gap-3">
-              <p className="text-basicGray font-semibold text-sm">Key</p>
+              <p className="text-grey-normal font-semibold text-sm">Key</p>
               <Radio.Group
                 disabled={item?.units[0].hardware_key_yes_no?.disabled}
                 onChange={(e) => {
@@ -409,7 +409,7 @@ const HardwareCard = ({
                     e.target.value,
                     index,
                     "hardware_key_yes_no",
-                    true
+                    true,
                   );
                 }}
                 value={item?.units[0].hardware_key_yes_no?.selected_value}
@@ -419,20 +419,20 @@ const HardwareCard = ({
                     <Radio
                       key={value}
                       value={value}
-                      className="text-xs text-basicGray px-1"
+                      className="text-xs text-grey-normal px-1"
                     >
                       {text}
                     </Radio>
-                  )
+                  ),
                 )}
               </Radio.Group>
             </div>
           )}
           {Boolean(
-            item?.units[0].hardware_keyed_aliked_yes_no?.options.length
+            item?.units[0].hardware_keyed_aliked_yes_no?.options.length,
           ) && (
             <div className="flex flex-col gap-3">
-              <p className="text-basicGray font-semibold text-sm">K. Alike</p>
+              <p className="text-grey-normal font-semibold text-sm">K. Alike</p>
               <Radio.Group
                 disabled={item?.units[0].hardware_keyed_aliked_yes_no?.disabled}
                 onChange={(e) => {
@@ -440,7 +440,7 @@ const HardwareCard = ({
                     e.target.value,
                     index,
                     "hardware_keyed_aliked_yes_no",
-                    true
+                    true,
                   );
                 }}
                 value={
@@ -452,11 +452,11 @@ const HardwareCard = ({
                     <Radio
                       key={value}
                       value={value}
-                      className="text-xs text-basicGray px-1"
+                      className="text-xs text-grey-normal px-1"
                     >
                       {text}
                     </Radio>
-                  )
+                  ),
                 )}
               </Radio.Group>
             </div>

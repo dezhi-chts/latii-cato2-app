@@ -10,7 +10,7 @@ const SourcesHeader = ({ handleToggle, isOpen }: SourcesHeaderProps) => {
       onClick={handleToggle}
     >
       <p
-        className={`text-xs font-light h-2.5 text-basicGray ${
+        className={`text-xs font-light h-2.5 text-grey-normal ${
           isOpen ? "" : "hidden"
         }`}
       >

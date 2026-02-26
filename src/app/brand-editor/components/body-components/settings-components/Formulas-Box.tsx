@@ -16,14 +16,14 @@ const FormulasBox = (data: FormulasBoxProps) => {
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white">
       {/* Fila gris */}
-      <div className="flex items-center gap-3 bg-baseLight p-4">
+      <div className="flex items-center gap-3 bg-grey-light p-4">
         <span>Label</span>
         <Input value={data.label} readOnly className="w-40" />
         <span>=</span>
         <Input value={data.formula} />
       </div>
       {/* Fila blanca */}
-      <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3 flex justify-between">
+      <div className="border border-t-0 border-grey-light-hover rounded-b-xl p-3 flex justify-between">
         <div>
           On Quote
           <Switch />

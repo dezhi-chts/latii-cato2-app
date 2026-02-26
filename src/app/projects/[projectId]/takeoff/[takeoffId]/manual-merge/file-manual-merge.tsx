@@ -29,17 +29,17 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
         <div className="flex flex-col gap-1">
           <p className="text-base"> {file.file_name}</p>
           <div className="flex gap-2">
-            <div className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
+            <div className="bg-grey-light-hover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
               <span>{file.labels_amount} Labels </span>
             </div>
-            <div className="bg-baseLightHover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
+            <div className="bg-grey-light-hover py-0.5 px-2 rounded-md text-xs flex justify-center items-center">
               <span>{file.type}</span>
             </div>
           </div>
         </div>
         <div className="flex gap-4">
           {!file.is_base && (
-            <div className=" text-xs py-1 px-2 rounded-md flex items-center justify-center gap-1 bg-accentOrange text-white">
+            <div className=" text-xs py-1 px-2 rounded-md flex items-center justify-center gap-1 bg-orange-normal text-white">
               <Image
                 src="/assets/icons/tag.svg"
                 alt="tag"
@@ -52,8 +52,8 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           <div
             className={` text-xs py-2 px-2 rounded-md flex items-center justify-center ${
               file.is_base
-                ? "text-tealDark bg-cyanLightActive "
-                : "text-baseGray bg-baseLight"
+                ? "text-teal-dark-active bg-cyan-light-active "
+                : "text-grey-light-strong bg-grey-light"
             }`}
           >
             <span> Base</span>
@@ -86,13 +86,15 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           ))}
         </div>
       </div>
-      <p className="pt-1 underline text-forumBlue">Edit in Detail Merge</p>
+      <p className="pt-1 underline text-forumBlue-normal">
+        Edit in Detail Merge
+      </p>
       {/*  Merge options */}
       <div className="w-full mt-3 flex justify-center">
         <div className="w-4/6 flex flex-col gap-4 ">
           <div className="flex justify-between items-center">
-            <p className="text-forumBlue">Merge Type</p>
-            <p className="text-baseGray underline">Learn More</p>
+            <p className="text-forumBlue-normal">Merge Type</p>
+            <p className="text-grey-light-strong underline">Learn More</p>
           </div>
           {!file.is_base && (
             <div className="flex justify-between items-center">
@@ -112,7 +114,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           <div>
             <Button
               className="w-full rounded-md text-white"
-              backgroundColor={"forumBlue"}
+              backgroundColor={"forumBlue-normal"}
             >
               Merge All
             </Button>

@@ -10,7 +10,7 @@ export const Footer = ({ handleClick, disabled }: FooterProps) => {
     <div className="flex justify-center">
       <Button
         color="white"
-        backgroundColor="forumBlue"
+        backgroundColor="forumBlue-normal"
         onClick={handleClick}
         className="w-80 !py-0.5"
         disabled={disabled}

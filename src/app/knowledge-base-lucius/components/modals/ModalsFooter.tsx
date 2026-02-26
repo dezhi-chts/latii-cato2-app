@@ -19,11 +19,15 @@ export const ModalsFooter = ({
         className="!py-0"
         variant="outline"
         onClick={hasData ? onDelete : onCancel}
-        borderColor={hasData ? "dragonOrange" : "basicGray"}
+        borderColor={hasData ? "dragonOrange" : "grey-normal"}
       >
         {hasData ? "Delete" : "Cancel"}
       </Button>
-      <Button className="!py-0" backgroundColor="forumBlue" disabled={disabled}>
+      <Button
+        className="!py-0"
+        backgroundColor="forumBlue-normal"
+        disabled={disabled}
+      >
         Add
       </Button>
     </div>

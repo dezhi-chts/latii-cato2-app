@@ -80,7 +80,7 @@ const validPageType = [
 
   PageType.Item,
   PageType.Information,
-  PageType.Description
+  PageType.Description,
 ];
 
 export enum ButtonText {
@@ -382,61 +382,65 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     });
   };
 
-  const handleUpdatePageType = useCallback((pageTypes: any) => {
-    const page_types = pageTypes || [];
-    let findCurrentPageType = page_types.find((item: any) => item.page_number === page);
-    if (!findCurrentPageType) {
-      return;
-    }
-
-    let newType = findCurrentPageType.page_type || "";
-    if (!newType) return;
-    newType = validPageType.includes(newType) ? newType : PageType.NotUsed;
-
-    // 获取当前页旧的type
-    let oldType =
-      thumbnailList.find((item: any, index: number) => {
-        let itemPageNum = getItemPage(item, index);
-        return itemPageNum === page;
-      })?.type || "";
-
-    console.log("######## newType", newType, "oldType", oldType);
-
-    if (oldType === newType) return;
-
-    // 更新当前页的type
-    updateThumbnailPageType(page, newType);
-
-    // 如果是quote文件类型，则不执行后面更新tags的操作
-    if (fileOperationType === FileOperationType.Quote) return;
-
-    // 更新tags中的数据
-    setPageTypeList((prev: any) => {
-      let list = [...prev];
-      let oldTypeItem = list.find((item: any) => item.type === oldType);
-      let newTypeItem = list.find((item: any) => item.type === newType);
-      let activePagesItem = list.find(
-        (item: any) => item.type === PageType.ActivePages,
+  const handleUpdatePageType = useCallback(
+    (pageTypes: any) => {
+      const page_types = pageTypes || [];
+      let findCurrentPageType = page_types.find(
+        (item: any) => item.page_number === page,
       );
-      // 页面旧类型集合数量减1
-      oldTypeItem.count =
-        (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
-      // 页面新类型集合数量加1
-      newTypeItem.count = (newTypeItem?.count || 0) + 1;
+      if (!findCurrentPageType) {
+        return;
+      }
 
-      let activePages = list.filter(
-        (item: any) => validPageType.includes(item.type),
-      );
-      // 计算所有有效类型的计数之和
-      activePagesItem.count = activePages.reduce(
-        (total: number, item: any) => total + (item.count || 0),
-        0,
-      );
+      let newType = findCurrentPageType.page_type || "";
+      if (!newType) return;
+      newType = validPageType.includes(newType) ? newType : PageType.NotUsed;
 
-      return [...list];
-    });
+      // 获取当前页旧的type
+      let oldType =
+        thumbnailList.find((item: any, index: number) => {
+          let itemPageNum = getItemPage(item, index);
+          return itemPageNum === page;
+        })?.type || "";
 
-  }, [page, thumbnailList]);
+      console.log("######## newType", newType, "oldType", oldType);
+
+      if (oldType === newType) return;
+
+      // 更新当前页的type
+      updateThumbnailPageType(page, newType);
+
+      // 如果是quote文件类型，则不执行后面更新tags的操作
+      if (fileOperationType === FileOperationType.Quote) return;
+
+      // 更新tags中的数据
+      setPageTypeList((prev: any) => {
+        let list = [...prev];
+        let oldTypeItem = list.find((item: any) => item.type === oldType);
+        let newTypeItem = list.find((item: any) => item.type === newType);
+        let activePagesItem = list.find(
+          (item: any) => item.type === PageType.ActivePages,
+        );
+        // 页面旧类型集合数量减1
+        oldTypeItem.count =
+          (oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
+        // 页面新类型集合数量加1
+        newTypeItem.count = (newTypeItem?.count || 0) + 1;
+
+        let activePages = list.filter((item: any) =>
+          validPageType.includes(item.type),
+        );
+        // 计算所有有效类型的计数之和
+        activePagesItem.count = activePages.reduce(
+          (total: number, item: any) => total + (item.count || 0),
+          0,
+        );
+
+        return [...list];
+      });
+    },
+    [page, thumbnailList],
+  );
 
   // 使用 lodash 的防抖函数来处理缩放
   const debouncedZoomChange = useCallback(
@@ -565,8 +569,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
       );
       if (nextFile) {
         // 切换下一个文件时，先判断是否有未保存的crop
-        const unsaved =
-          await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+        const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
         if (!pdfRef?.current || unsaved) {
           // 没有未保存的crop，切换文件
           setSelectedFileId(nextFile.id);
@@ -575,8 +578,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
     } else {
       // 没有其他文件需要处理，则进行下一步
       // 进行分析步骤时，判断是否有未保存的crop
-      const unsaved =
-        await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+      const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
       if (!pdfRef?.current || unsaved) {
         // 没有未保存的crop，进入分析流程
         setShowAnalysisModal(true);
@@ -649,14 +651,14 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
           style={{ width: "270px" }}
         >
           <div className="py-4 pl-10 flex flex-row ">
-            <p className="mr-2 text-sm text-baseGray">Page Labeling</p>
+            <p className="mr-2 text-sm text-grey-light-strong">Page Labeling</p>
             <Popover
               placement="rightBottom"
               title={
                 <div className="text-xxs font-medium">About Page Labeling</div>
               }
               content={
-                <div className="w-[300px] text-xxs text-baseGray">
+                <div className="w-[300px] text-xxs text-grey-light-strong">
                   Review and analyze the sections identified by CATO. You can
                   verify existing results or add new labels manually. Ensuring
                   every section is correctly labeled guarantees the most

@@ -33,9 +33,9 @@ const options: Option[] = [
   {
     label: "All",
     value: "all",
-    selected_classname: "bg-basicGray text-white",
+    selected_classname: "bg-grey-normal text-white",
     unselected_classname:
-      "text-basicGray bg-basicGray/10 hover:bg-basicGray/20",
+      "text-grey-normal bg-grey-normal/10 hover:bg-grey-normal/20",
   },
 ];
 const CategoriesRender = ({

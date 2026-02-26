@@ -25,11 +25,11 @@ const HandleButton = ({
             option.value,
             index,
             "hardware_handle_style",
-            true
+            true,
           );
       }}
     >
-      <p className="text-basicGray font-semibold">{option.text}</p>
+      <p className="text-grey-normal font-semibold">{option.text}</p>
     </div>
   );
 };
@@ -42,7 +42,7 @@ const HardwareCardsContainer = ({
   handleMultipleChanges,
 }: any) => {
   const options = item?.units?.find(
-    (unit: any) => unit?.hardware_handle_style?.options?.length > 0
+    (unit: any) => unit?.hardware_handle_style?.options?.length > 0,
   )?.hardware_handle_style?.options;
   console.log(options);
 

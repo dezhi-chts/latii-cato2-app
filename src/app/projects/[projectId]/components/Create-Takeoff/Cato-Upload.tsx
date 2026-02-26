@@ -18,7 +18,7 @@ export const CatoUpload = ({ files, setFiles }: CatoUploadProps) => {
   };
 
   return (
-    <div className="w-full flex justify-center gap-4 rounded border border-dashed border-neutralsN50 px-2 h-24 items-center">
+    <div className="w-full flex justify-center gap-4 rounded border border-dashed border-primaryN50 px-2 h-24 items-center">
       {files.map((file: UploadFile) => (
         <div key={file.uid}>
           <FilePanel
@@ -38,11 +38,11 @@ export const CatoUpload = ({ files, setFiles }: CatoUploadProps) => {
             onChange={({ fileList }) => setFiles(fileList)}
             showUploadList={false}
           >
-            <p className="text-forumBlue underline cursor-pointer hover:opacity-80 active:opacity-60">
+            <p className="text-forumBlue-normal underline cursor-pointer hover:opacity-80 active:opacity-60">
               Upload
             </p>
           </Upload>
-          <p className="text-basicGray">
+          <p className="text-grey-normal">
             Up to {maxFileLimit} files. Only PDF format is accepted.
           </p>
         </div>

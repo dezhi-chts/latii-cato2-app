@@ -52,7 +52,7 @@ const ItemFormFooter = ({
                 Number(e.target.value),
                 index,
                 "quantity",
-                false
+                false,
               );
             }}
           />
@@ -74,7 +74,7 @@ const ItemFormFooter = ({
                 e.target.value,
                 index,
                 "installation_location",
-                false
+                false,
               );
             }}
           />
@@ -88,20 +88,20 @@ const ItemFormFooter = ({
         {item?.discount < 0 && (
           <div className="text-sm">
             <p>{isUpload ? "$-" : convertToCurrencyFormat(item?.discount)}</p>
-            <p className="text-basicGray text-xs">Discount</p>
+            <p className="text-grey-normal text-xs">Discount</p>
           </div>
         )}
         <div className="text-sm">
           <p>{isUpload ? "$-" : convertToCurrencyFormat(item?.item_price)}</p>
-          <p className="text-basicGray text-xs">Per Item</p>
+          <p className="text-grey-normal text-xs">Per Item</p>
         </div>
         <div className="text-sm">
           <p>{isUpload ? "0" : Number(item?.area).toFixed(0) || 0}</p>
-          <p className="text-basicGray text-xs">sf</p>
+          <p className="text-grey-normal text-xs">sf</p>
         </div>
         <div className="text-sm">
           <p>{isUpload ? "$-" : convertToCurrencyFormat(item?.price_sqft)}</p>
-          <p className="text-basicGray text-xs">$/sq</p>
+          <p className="text-grey-normal text-xs">$/sq</p>
         </div>
         <Divider type="vertical" className=" h-10 bg-primaryN30" />
         <div className="text-sm">
@@ -109,7 +109,7 @@ const ItemFormFooter = ({
             {isUpload ? "$-" : convertToCurrencyFormat(item?.item_total_price)}
           </p>
 
-          <p className="text-basicGray text-xs">Total</p>
+          <p className="text-grey-normal text-xs">Total</p>
         </div>
       </div>
     </div>

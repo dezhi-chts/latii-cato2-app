@@ -101,7 +101,7 @@ const YourProfile = () => {
   return (
     <div className="pt-10 pl-16 flex flex-col gap-12 w-[800px]">
       <div className="flex flex-col gap-5 w-full">
-        <p className="text-basicGray text-base">General Information</p>
+        <p className="text-grey-normal text-base">General Information</p>
         <div className="flex flex-col gap-8 w-full">
           <div className="flex gap-6 w-full items-center">
             <p className="w-2/12 text-sm">
@@ -145,7 +145,7 @@ const YourProfile = () => {
         </div>
       </div>
       <div className="flex flex-col gap-5 w-full">
-        <p className="text-basicGray text-base">Password Security</p>
+        <p className="text-grey-normal text-base">Password Security</p>
         <div className="flex flex-col gap-1">
           <div className="flex gap-6 w-full items-center">
             <p className="w-2/12 text-sm">Password</p>
@@ -160,14 +160,14 @@ const YourProfile = () => {
           </div>
           <div className="flex justify-start gap-6">
             <div className="w-2/12" />
-            <p className="text-forumBlue hover:opacity-80 active:opacity-70 cursor-pointer text-xs w-5/12 text-end">
+            <p className="text-forumBlue-normal hover:opacity-80 active:opacity-70 cursor-pointer text-xs w-5/12 text-end">
               Reset Password
             </p>
           </div>
         </div>
       </div>
       <div className="flex flex-col gap-5 w-full">
-        <p className="text-basicGray text-base">Company Information</p>
+        <p className="text-grey-normal text-base">Company Information</p>
         <div className="flex flex-col gap-8 w-full">
           <div className="flex gap-6 w-full items-center">
             <p className="w-2/12 text-sm">Role</p>

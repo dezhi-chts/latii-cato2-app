@@ -12,7 +12,7 @@ export const ZoomControls = ({
   return (
     <div className="flex flex-row">
       <div
-        className="w-7 h-6 flex justify-center items-center rounded-tl-xl rounded-bl-xl bg-primaryGray cursor-pointer text-baseGray"
+        className="w-7 h-6 flex justify-center items-center rounded-tl-xl rounded-bl-xl bg-primaryN20 cursor-pointer text-grey-light-strong"
         onClick={() => {
           handleZoomChange(zoom - 0.1);
         }}
@@ -20,7 +20,7 @@ export const ZoomControls = ({
         -
       </div>
       <div
-        className="w-7 h-6 flex justify-center items-center rounded-tr-xl rounded-br-xl bg-primaryGray cursor-pointer text-baseGray"
+        className="w-7 h-6 flex justify-center items-center rounded-tr-xl rounded-br-xl bg-primaryN20 cursor-pointer text-grey-light-strong"
         style={{ marginLeft: 1 }}
         onClick={() => handleZoomChange(zoom + 0.1)}
       >
@@ -37,8 +37,8 @@ export const ZoomControls = ({
         {(zoom * 100).toFixed(0) + "%"}
       </span>
     </div>
-  )
-}
+  );
+};
 
 // 页码切换控件
 export const PageControls = ({
@@ -53,8 +53,9 @@ export const PageControls = ({
   return (
     <div className="flex gap-3 items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
       <div
-        className={`h-full py-2 w-2 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-          }`}
+        className={`h-full py-2 w-2 flex items-center justify-center ${
+          page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+        }`}
         onClick={() => handlePageChange(page - 1)}
       >
         <Image
@@ -64,12 +65,11 @@ export const PageControls = ({
           height={6}
         />
       </div>
-      <p className="text-basicGray text-xxs">Page {page}</p>
+      <p className="text-grey-normal text-xxs">Page {page}</p>
       <div
-        className={`h-full py-2 w-2 flex items-center justify-center ${page === totalPages
-          ? "cursor-default opacity-50"
-          : "cursor-pointer"
-          }`}
+        className={`h-full py-2 w-2 flex items-center justify-center ${
+          page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
+        }`}
         onClick={() => handlePageChange(page + 1)}
       >
         <Image
@@ -80,8 +80,8 @@ export const PageControls = ({
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
 // 旋转控件
 export const RotateControls = ({
@@ -91,56 +91,58 @@ export const RotateControls = ({
 }) => {
   return (
     <div
-      className={`rounded pl-3 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 bg-primaryN20 text-basicGray`}
+      className={`rounded pl-3 pr-3 py-1 flex items-center cursor-pointer hover:bg-primaryN30 transition-all duration-150 bg-primaryN20 text-grey-normal`}
       onClick={() => handleRotate()}
     >
       <p className="text-xs text-center">Rotate</p>
     </div>
-  )
-}
+  );
+};
 
 // 添加矩形框
 export const AddRectBoxControls = ({
-  theme = 'default',
+  theme = "default",
   text,
   fullWidth = false,
   handleAddRectBox,
 }: {
-  theme?: 'default' | 'primary' | 'primary-light',
-  text?: string,
-  fullWidth?: boolean,
+  theme?: "default" | "primary" | "primary-light";
+  text?: string;
+  fullWidth?: boolean;
   handleAddRectBox: () => void;
 }) => {
   const themeInfos = {
-    'default': {
-      icon: '/assets/icons/add-table.svg',
-      text: 'Add Section',
-      textColor: 'text-basicGray',
-      bgColor: 'bg-primaryN20'
+    default: {
+      icon: "/assets/icons/add-table.svg",
+      text: "Add Section",
+      textColor: "text-grey-normal",
+      bgColor: "bg-primaryN20",
     },
-    'primary': {
-      icon: '/assets/icons/add-table-white.svg',
-      text: 'Index Box',
-      textColor: 'text-white',
-      bgColor: 'bg-forumBlue'
+    primary: {
+      icon: "/assets/icons/add-table-white.svg",
+      text: "Index Box",
+      textColor: "text-white",
+      bgColor: "bg-forumBlue-normal",
     },
-    'primary-light': {
-      icon: '/assets/icons/add-table-white.svg',
-      text: 'Index Box',
-      textColor: 'text-white',
-      bgColor: 'bg-forumBlueLight'
-    }
-  }
-  const themeInfo = themeInfos[theme] || themeInfos['default']
+    "primary-light": {
+      icon: "/assets/icons/add-table-white.svg",
+      text: "Index Box",
+      textColor: "text-white",
+      bgColor: "bg-forumBlue-light",
+    },
+  };
+  const themeInfo = themeInfos[theme] || themeInfos["default"];
   return (
     <div
       className={`px-4 h-[28px] ${themeInfo.bgColor} text-white rounded-md flex justify-center items-center gap-2 cursor-pointer transition-all duration-150`}
       style={{
-        width: fullWidth ? '100%' : 'auto',
+        width: fullWidth ? "100%" : "auto",
       }}
       onClick={() => handleAddRectBox()}
     >
-      <p className={`text-xs text-center ${themeInfo.textColor}`}>{text || themeInfo.text}</p>
+      <p className={`text-xs text-center ${themeInfo.textColor}`}>
+        {text || themeInfo.text}
+      </p>
       <Image
         src={`${themeInfo.icon}`}
         alt="add item icon"
@@ -148,8 +150,8 @@ export const AddRectBoxControls = ({
         height={14}
       />
     </div>
-  )
-}
+  );
+};
 
 export const SelectPagesControls = ({
   page,
@@ -159,8 +161,9 @@ export const SelectPagesControls = ({
   return (
     <div className="flex items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
       <div
-        className={`h-full py-2 w-3 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-          }`}
+        className={`h-full py-2 w-3 flex items-center justify-center ${
+          page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+        }`}
         onClick={() => handlePageChange(page - 1)}
       >
         <Image
@@ -176,22 +179,21 @@ export const SelectPagesControls = ({
         variant="borderless"
         //suffixIcon={null}
         rootClassName="custom-select-page"
-        className="text-basicGray text-xxs"
+        className="text-grey-normal text-xxs"
         onChange={(value) => handlePageChange(Number(value))}
       >
         {Array.from({ length: totalPages }, (value, index) => (
           <Select.Option key={index + 1} value={index + 1}>
-            <div className="h-[20px] text-center text-basicGray text-[11px]">
+            <div className="h-[20px] text-center text-grey-normal text-[11px]">
               {index + 1}
             </div>
           </Select.Option>
         ))}
       </Select>
       <div
-        className={`h-full py-2 w-3 flex items-center justify-center ${page === totalPages
-          ? "cursor-default opacity-50"
-          : "cursor-pointer"
-          }`}
+        className={`h-full py-2 w-3 flex items-center justify-center ${
+          page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
+        }`}
         onClick={() => handlePageChange(page + 1)}
       >
         <Image
@@ -202,20 +204,27 @@ export const SelectPagesControls = ({
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export const ClearAllControls = ({
-  handleClearAll
-}: any) => {
+export const ClearAllControls = ({ handleClearAll }: any) => {
   return (
     <div className="w-[96px] h-[28px] flex flex-row justify-center items-center border border-primaryN30 rounded-md cursor-pointer">
-      <Image src={`/assets/icons/tag-left.svg`} alt="clear all icon" width={16} height={16}></Image>
-      <span className="ml-2 text-basicGray text-xs" onClick={() => handleClearAll()}>Clear All</span>
+      <Image
+        src={`/assets/icons/tag-left.svg`}
+        alt="clear all icon"
+        width={16}
+        height={16}
+      ></Image>
+      <span
+        className="ml-2 text-grey-normal text-xs"
+        onClick={() => handleClearAll()}
+      >
+        Clear All
+      </span>
     </div>
-
-  )
-}
+  );
+};
 
 export const ThumbnailControls = ({
   showThumbnail,
@@ -227,9 +236,16 @@ export const ThumbnailControls = ({
   onClick: () => void;
 }) => {
   return (
-    <div className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer" onClick={onClick}>
-      <Image src={`/assets/icons/thumbnail.svg`} alt="thumbnail icon" width={16} height={16}></Image>
+    <div
+      className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
+      onClick={onClick}
+    >
+      <Image
+        src={`/assets/icons/thumbnail.svg`}
+        alt="thumbnail icon"
+        width={16}
+        height={16}
+      ></Image>
     </div>
-  )
-}
-
+  );
+};

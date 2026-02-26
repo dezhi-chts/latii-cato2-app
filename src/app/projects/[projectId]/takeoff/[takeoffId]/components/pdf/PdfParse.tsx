@@ -1,35 +1,42 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import http from '@/lib/http';
-import Image from 'next/image';
-import { Button, notification } from 'antd';
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import http from "@/lib/http";
+import Image from "next/image";
+import { Button, notification } from "antd";
 import { useRouter } from "next/navigation";
 
 enum ConnectionStatus {
-  READY = 'ready',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  ERROR = 'error',
-  CANCEL = 'cancel',
-  DISCONNECTED = 'disconnected'
+  READY = "ready",
+  CONNECTING = "connecting",
+  CONNECTED = "connected",
+  ERROR = "error",
+  CANCEL = "cancel",
+  DISCONNECTED = "disconnected",
 }
 
 const PdfParse = ({
   data,
   handleNext,
-  handleCancel
+  handleCancel,
 }: {
-  data: any,
-  handleNext: (type: 'takeoffModal' | 'pageIndex') => void,
-  handleCancel: () => void
+  data: any;
+  handleNext: (type: "takeoffModal" | "pageIndex") => void;
+  handleCancel: () => void;
 }) => {
   const router = useRouter();
   // ===== 状态管理 =====
   const [fileList, setFileList] = useState<any>([]);
   const [selectedFileId, setSelectedFileId] = useState<number>(-1);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.READY);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
+    ConnectionStatus.READY,
+  );
   const [processingProgress, setProcessingProgress] = useState<number>(0);
-  const [logs, setLogs] = useState<Array<{ time: string, message: string; type: 'info' | 'success' | 'error' }>>([]);
-  const [taskInfo, setTaskInfo] = useState<{ requestId: string; sseUrl: string } | null>(null);
+  const [logs, setLogs] = useState<
+    Array<{ time: string; message: string; type: "info" | "success" | "error" }>
+  >([]);
+  const [taskInfo, setTaskInfo] = useState<{
+    requestId: string;
+    sseUrl: string;
+  } | null>(null);
   const [results, setResults] = useState<Record<string, number>>({});
 
   // 用 useRef 保存 EventSource 实例
@@ -41,10 +48,10 @@ const PdfParse = ({
 
   // 定义文件状态类型
   enum FileStatus {
-    NOT_STARTED = 'not_started',
-    PROCESSING = 'processing',
-    COMPLETED = 'completed',
-    FAILED = 'failed'
+    NOT_STARTED = "not_started",
+    PROCESSING = "processing",
+    COMPLETED = "completed",
+    FAILED = "failed",
   }
 
   // 定义文件项类型
@@ -90,7 +97,7 @@ const PdfParse = ({
       // 从第一个文件开始解析
       //handleFileClassification(list[0].id);
     }
-  }, [data])
+  }, [data]);
 
   // ===== 组件卸载时清理 =====
   useEffect(() => {
@@ -112,8 +119,8 @@ const PdfParse = ({
   }, []);
 
   // ===== 设置状态 =====
-  const apiBaseUrl = 'https://cato-service2.dev.latii.com';
-  const modelName = 'unit_detect_11x_v1'; //'unit_detect_8l_v1';
+  const apiBaseUrl = "https://cato-service2.dev.latii.com";
+  const modelName = "unit_detect_11x_v1"; //'unit_detect_8l_v1';
   const confidenceThreshold = 0.35;
   const iouThreshold = 0.45;
   const dpi = 100;
@@ -124,21 +131,24 @@ const PdfParse = ({
   const API_CONFIG = {
     baseUrl: apiBaseUrl,
     endpoints: {
-      init: '/api/sse/classify-pages-sse-init',
-      initFromProjectFile: '/api/sse/classify-pages-from-project-file-init',
-      sse: '/api/sse/classify-status'
-    }
+      init: "/api/sse/classify-pages-sse-init",
+      initFromProjectFile: "/api/sse/classify-pages-from-project-file-init",
+      sse: "/api/sse/classify-status",
+    },
   };
 
   // 辅助函数：构建完整URL
-  const buildUrl = (endpoint: string, path: string = '') => {
+  const buildUrl = (endpoint: string, path: string = "") => {
     return `${API_CONFIG.baseUrl}${endpoint}${path}`;
   };
 
   // ===== 添加日志 =====
-  const addLog = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+  const addLog = (
+    message: string,
+    type: "info" | "success" | "error" = "info",
+  ) => {
     let time = `[${new Date().toLocaleTimeString()}]`;
-    setLogs(prev => [...prev, { time, message, type }]);
+    setLogs((prev) => [...prev, { time, message, type }]);
     // 在下一次渲染后滚动到日志列表底部
     setTimeout(() => {
       if (logsRef.current) {
@@ -150,7 +160,7 @@ const PdfParse = ({
   // ===== 更新连接状态 =====
   const updateConnectionStatus = (status: ConnectionStatus) => {
     setConnectionStatus(status);
-  }
+  };
 
   // ===== 初始化任务（从项目文件） =====
   const initializeTask = async (fileId: number) => {
@@ -161,11 +171,15 @@ const PdfParse = ({
       iou_threshold: iouThreshold,
       dpi: dpi,
       enable_ai_classification: enableAiClassification,
-      max_concurrent_batches: maxConcurrentBatches
+      max_concurrent_batches: maxConcurrentBatches,
     };
 
     try {
-      const response: any = await http.post(buildUrl(API_CONFIG.endpoints.initFromProjectFile), null, { params: axiosParams });
+      const response: any = await http.post(
+        buildUrl(API_CONFIG.endpoints.initFromProjectFile),
+        null,
+        { params: axiosParams },
+      );
       if (response) {
         return response;
       }
@@ -173,126 +187,140 @@ const PdfParse = ({
     } catch (error) {
       throw new Error(`Failed to initialize task: ${(error as Error).message}`);
     }
-  }
+  };
 
-  const handleMessage = useCallback((data: any) => {
-    console.log('[SSE] Event type:', data.type);
-    switch (data.type) {
-      case 'CONNECTED': {
-        addLog('✅ Connection confirmed by server', 'success');
-        let newFileList = fileList.map((file: FileItem) => {
-          if (file.id === selectedFileId) {
-            return { ...file, status: FileStatus.PROCESSING };
+  const handleMessage = useCallback(
+    (data: any) => {
+      console.log("[SSE] Event type:", data.type);
+      switch (data.type) {
+        case "CONNECTED":
+          {
+            addLog("✅ Connection confirmed by server", "success");
+            let newFileList = fileList.map((file: FileItem) => {
+              if (file.id === selectedFileId) {
+                return { ...file, status: FileStatus.PROCESSING };
+              }
+              return file;
+            });
+            setFileList(newFileList);
           }
-          return file;
-        });
-        setFileList(newFileList);
-      }
-        break;
+          break;
 
-      case 'PROGRESS': {
-        updateProgress(data.progress, data.message);
-        addLog(data.message, data.level?.toLowerCase() || 'info');
-        let fileInfo = fileList.find((file: FileItem) => file.id === selectedFileId);
-        if (fileInfo && fileInfo.status !== FileStatus.PROCESSING) {
+        case "PROGRESS":
+          {
+            updateProgress(data.progress, data.message);
+            addLog(data.message, data.level?.toLowerCase() || "info");
+            let fileInfo = fileList.find(
+              (file: FileItem) => file.id === selectedFileId,
+            );
+            if (fileInfo && fileInfo.status !== FileStatus.PROCESSING) {
+              let newFileList = fileList.map((file: FileItem) => {
+                if (file.id === selectedFileId) {
+                  return { ...file, status: FileStatus.PROCESSING };
+                }
+                return file;
+              });
+              setFileList(newFileList);
+            }
+          }
+          break;
+
+        case "COMPLETED":
+          {
+            updateProgress(data.progress, "✅ Classification completed!");
+            addLog("✅ Classification completed!", "success");
+            updateConnectionStatus(ConnectionStatus.DISCONNECTED);
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+            }
+
+            // 完成当前文件后，查找还有其他未解析的文件吗，如果存在，则直接解析下一个，否则设置状态为完成
+            let newFileList = fileList.map((file: FileItem) => {
+              if (file.id === selectedFileId) {
+                return { ...file, status: FileStatus.COMPLETED };
+              }
+              return file;
+            });
+            setFileList(newFileList);
+
+            // 获取当前完成的文件名并显示通知
+            const completedFile = fileList.find(
+              (file: FileItem) => file.id === selectedFileId,
+            );
+            if (completedFile) {
+              notification.success({
+                message: "Success",
+                description: `File "${completedFile.name}" has been parsed successfully!`,
+              });
+            }
+
+            const nextFile = newFileList.find(
+              (file: FileItem) => file.status === FileStatus.NOT_STARTED,
+            );
+            if (nextFile) {
+              // 有下一个文件未解析，直接解析下一个
+              setSelectedFileId(nextFile.id);
+              handleFileClassification(nextFile.id);
+            } else {
+              // 已经解析完所有的文件，显示下一步按钮
+            }
+          }
+          break;
+        case "DONE":
+          addLog("ℹ️ Stream ended normally", "info");
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+          }
+          break;
+
+        case "ERROR":
+          {
+            addLog("❌ Server error: " + data.message, "error");
+            updateConnectionStatus(ConnectionStatus.ERROR);
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+            }
+            let newFileList = fileList.map((file: FileItem) => {
+              if (file.id === selectedFileId) {
+                return { ...file, status: FileStatus.FAILED };
+              }
+              return file;
+            });
+            setFileList(newFileList);
+          }
+          break;
+
+        case "CANCELLED":
+          {
+            addLog("⚠️ Task cancelled by server", "info");
+            updateConnectionStatus(ConnectionStatus.CANCEL);
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+            }
+            let newFileList = fileList.map((file: FileItem) => {
+              if (file.id === selectedFileId) {
+                return { ...file, status: FileStatus.FAILED };
+              }
+              return file;
+            });
+            setFileList(newFileList);
+          }
+          break;
+        default: {
+          console.warn("[SSE] Unknown event type:", data.type);
+          addLog(`⚠️ Unknown event type: ${data.type}`, "info");
           let newFileList = fileList.map((file: FileItem) => {
             if (file.id === selectedFileId) {
-              return { ...file, status: FileStatus.PROCESSING };
+              return { ...file, status: FileStatus.FAILED };
             }
             return file;
           });
           setFileList(newFileList);
         }
       }
-        break;
-
-      case 'COMPLETED': {
-        updateProgress(data.progress, '✅ Classification completed!');
-        addLog('✅ Classification completed!', 'success');
-        updateConnectionStatus(ConnectionStatus.DISCONNECTED);
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-
-        // 完成当前文件后，查找还有其他未解析的文件吗，如果存在，则直接解析下一个，否则设置状态为完成
-        let newFileList = fileList.map((file: FileItem) => {
-          if (file.id === selectedFileId) {
-            return { ...file, status: FileStatus.COMPLETED };
-          }
-          return file;
-        });
-        setFileList(newFileList);
-
-        // 获取当前完成的文件名并显示通知
-        const completedFile = fileList.find((file: FileItem) => file.id === selectedFileId);
-        if (completedFile) {
-          notification.success({
-            message: 'Success',
-            description: `File "${completedFile.name}" has been parsed successfully!`,
-          });
-        }
-
-        const nextFile = newFileList.find((file: FileItem) => file.status === FileStatus.NOT_STARTED);
-        if (nextFile) {
-          // 有下一个文件未解析，直接解析下一个
-          setSelectedFileId(nextFile.id);
-          handleFileClassification(nextFile.id);
-        } else {
-          // 已经解析完所有的文件，显示下一步按钮
-        }
-      }
-        break;
-      case 'DONE':
-        addLog('ℹ️ Stream ended normally', 'info');
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-        break;
-
-      case 'ERROR': {
-        addLog('❌ Server error: ' + data.message, 'error');
-        updateConnectionStatus(ConnectionStatus.ERROR);
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-        let newFileList = fileList.map((file: FileItem) => {
-          if (file.id === selectedFileId) {
-            return { ...file, status: FileStatus.FAILED };
-          }
-          return file;
-        });
-        setFileList(newFileList);
-      }
-        break;
-
-      case 'CANCELLED': {
-        addLog('⚠️ Task cancelled by server', 'info');
-        updateConnectionStatus(ConnectionStatus.CANCEL);
-        if (eventSourceRef.current) {
-          eventSourceRef.current.close();
-        }
-        let newFileList = fileList.map((file: FileItem) => {
-          if (file.id === selectedFileId) {
-            return { ...file, status: FileStatus.FAILED };
-          }
-          return file;
-        });
-        setFileList(newFileList);
-      }
-        break;
-      default: {
-        console.warn('[SSE] Unknown event type:', data.type);
-        addLog(`⚠️ Unknown event type: ${data.type}`, 'info');
-        let newFileList = fileList.map((file: FileItem) => {
-          if (file.id === selectedFileId) {
-            return { ...file, status: FileStatus.FAILED };
-          }
-          return file;
-        });
-        setFileList(newFileList);
-      }
-    }
-  }, [fileList, selectedFileId]);
+    },
+    [fileList, selectedFileId],
+  );
 
   // 在useEffect中更新handleMessageRef，确保它始终指向最新的handleMessage函数
   useEffect(() => {
@@ -322,16 +350,20 @@ const PdfParse = ({
     // 心跳检测
     heartbeatTimer = setInterval(() => {
       const elapsed = Date.now() - lastEventTime;
-      if (elapsed > 60000) { // 60秒没有收到消息
-        addLog('⚠️ No data received for 60s, connection may be stale', 'info');
+      if (elapsed > 60000) {
+        // 60秒没有收到消息
+        addLog("⚠️ No data received for 60s, connection may be stale", "info");
         cleanup(); // Stop checking after warning
       }
     }, 10000);
 
     eventSourceRef.current.onopen = () => {
       updateConnectionStatus(ConnectionStatus.CONNECTED);
-      addLog('✅ SSE connection established', 'success');
-      addLog(`ℹ️ ReadyState: ${eventSourceRef.current?.readyState} (OPEN)`, 'info');
+      addLog("✅ SSE connection established", "success");
+      addLog(
+        `ℹ️ ReadyState: ${eventSourceRef.current?.readyState} (OPEN)`,
+        "info",
+      );
       lastEventTime = Date.now();
     };
 
@@ -339,43 +371,49 @@ const PdfParse = ({
       lastEventTime = Date.now();
 
       // 调试：打印原始数据
-      console.log('[SSE] Received:', event.data);
+      console.log("[SSE] Received:", event.data);
       try {
         const data = JSON.parse(event.data);
         // 使用handleMessageRef.current调用最新的handleMessage函数
         handleMessageRef.current(data);
       } catch (error) {
-        console.error('Failed to parse SSE data:', event.data);
-        addLog('⚠️ Failed to parse event data: ' + (error instanceof Error ? error.message : String(error)), 'error');
+        console.error("Failed to parse SSE data:", event.data);
+        addLog(
+          "⚠️ Failed to parse event data: " +
+            (error instanceof Error ? error.message : String(error)),
+          "error",
+        );
       }
     };
 
-
     eventSourceRef.current.onerror = (error) => {
-      console.error('[SSE] Error event:', error);
-      console.error('[SSE] ReadyState:', eventSourceRef.current?.readyState);
-      console.error('[SSE] URL:', eventSourceRef.current?.url);
+      console.error("[SSE] Error event:", error);
+      console.error("[SSE] ReadyState:", eventSourceRef.current?.readyState);
+      console.error("[SSE] URL:", eventSourceRef.current?.url);
 
       cleanup();
 
       // ReadyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-      const stateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
-      const currentState = stateNames[eventSourceRef.current?.readyState ?? 0] || 'UNKNOWN';
+      const stateNames = ["CONNECTING", "OPEN", "CLOSED"];
+      const currentState =
+        stateNames[eventSourceRef.current?.readyState ?? 0] || "UNKNOWN";
 
-      addLog('❌ SSE connection error', 'error');
+      addLog("❌ SSE connection error", "error");
 
       if (eventSourceRef.current?.readyState === EventSource.CLOSED) {
-        addLog(`⚠️ SSE connection closed (State: ${currentState})`, 'error');
-        addLog('ℹ️ Possible causes:', 'info');
-        addLog('  1. Task completed (check if you received results)', 'info');
-        addLog('  2. Backend error (check server logs)', 'info');
-        addLog('  3. Network timeout', 'info');
-        addLog('  4. CORS issue', 'info');
+        addLog(`⚠️ SSE connection closed (State: ${currentState})`, "error");
+        addLog("ℹ️ Possible causes:", "info");
+        addLog("  1. Task completed (check if you received results)", "info");
+        addLog("  2. Backend error (check server logs)", "info");
+        addLog("  3. Network timeout", "info");
+        addLog("  4. CORS issue", "info");
 
         eventSourceRef.current?.close();
         updateConnectionStatus(ConnectionStatus.ERROR);
-      } else if (eventSourceRef.current?.readyState === EventSource.CONNECTING) {
-        addLog('🔄 SSE reconnecting...', 'info');
+      } else if (
+        eventSourceRef.current?.readyState === EventSource.CONNECTING
+      ) {
+        addLog("🔄 SSE reconnecting...", "info");
         updateConnectionStatus(ConnectionStatus.CONNECTING);
       }
     };
@@ -385,36 +423,35 @@ const PdfParse = ({
   const updateProgress = (progress: number, message: string) => {
     const percentage = Math.round(progress * 100);
     setProcessingProgress(percentage);
-  }
-
+  };
 
   // ===== 处理项目文件分类 =====
   const handleFileClassification = async (fileId: number) => {
     const id = fileId;
     if (!id || id < 1) return;
 
-    console.log('Starting classification for project file:', id);
+    console.log("Starting classification for project file:", id);
 
     updateConnectionStatus(ConnectionStatus.CONNECTING);
 
     try {
       // 初始化任务
-      addLog(`🗂️ Initializing task for project file ID: ${id}...`, 'info');
+      addLog(`🗂️ Initializing task for project file ID: ${id}...`, "info");
       const initResult = await initializeTask(id);
 
-      console.log('###### initResult', initResult);
+      console.log("###### initResult", initResult);
       // 显示任务信息
       setTaskInfo({
         requestId: initResult.request_id,
-        sseUrl: initResult.sse_url
+        sseUrl: initResult.sse_url,
       });
 
-      addLog(`✅ Task created: ${initResult.request_id}`, 'success');
+      addLog(`✅ Task created: ${initResult.request_id}`, "success");
       if (initResult.filename) {
-        addLog(`📄 File: ${initResult.filename}`, 'info');
+        addLog(`📄 File: ${initResult.filename}`, "info");
       }
       if (initResult.project_file_id) {
-        addLog(`🆔 Project File ID: ${initResult.project_file_id}`, 'info');
+        addLog(`🆔 Project File ID: ${initResult.project_file_id}`, "info");
       }
 
       // 重置进度条
@@ -422,10 +459,9 @@ const PdfParse = ({
 
       // 订阅SSE流
       connectSSE(initResult.request_id);
-
     } catch (error) {
-      console.error('Error:', error);
-      addLog(`❌ Error: ${(error as Error).message}`, 'error');
+      console.error("Error:", error);
+      addLog(`❌ Error: ${(error as Error).message}`, "error");
       updateConnectionStatus(ConnectionStatus.ERROR);
     }
   };
@@ -436,17 +472,23 @@ const PdfParse = ({
       return null;
     }
 
-    let existFailedFile = fileList.some((file: any) => file.status === FileStatus.FAILED);
+    let existFailedFile = fileList.some(
+      (file: any) => file.status === FileStatus.FAILED,
+    );
     if (existFailedFile) {
       // 存在失败的文件，则判断是否存在已完成的文件，只要有一个已完成的文件，则返回已完成
-      let existCompletedFile = fileList.some((file: any) => file.status === FileStatus.COMPLETED);
+      let existCompletedFile = fileList.some(
+        (file: any) => file.status === FileStatus.COMPLETED,
+      );
       if (existCompletedFile) {
         return FileStatus.COMPLETED;
       }
       return FileStatus.FAILED;
     }
 
-    let allFileCompleted = fileList.every((file: any) => file.status === FileStatus.COMPLETED);
+    let allFileCompleted = fileList.every(
+      (file: any) => file.status === FileStatus.COMPLETED,
+    );
     if (allFileCompleted) {
       return FileStatus.COMPLETED;
     }
@@ -458,8 +500,8 @@ const PdfParse = ({
   useEffect(() => {
     if (totalFileStatus === FileStatus.FAILED) {
       notification.error({
-        message: 'Error',
-        description: 'One or more files failed to process.',
+        message: "Error",
+        description: "One or more files failed to process.",
       });
     }
   }, [totalFileStatus]);
@@ -469,7 +511,9 @@ const PdfParse = ({
       <div className="h-full flex flex-col bg-white rounded-xl">
         <h1 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
           PDF Classification System
-          <span className="bg-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold">SSE</span>
+          <span className="bg-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+            SSE
+          </span>
         </h1>
 
         <div className="px-3 h-[30px] rounded-md text-sm flex items-center gap-2 bg-[#f8d7da] text-[#721c24]">
@@ -481,7 +525,10 @@ const PdfParse = ({
           <div className="mt-4">
             <div className="flex flex-row gap-4">
               {fileList.map((file: any, index: number) => (
-                <div key={index} className="w-32 h-20 bg-white rounded-lg shadow-md flex flex-col justify-center items-center relative">
+                <div
+                  key={index}
+                  className="w-32 h-20 bg-white rounded-lg shadow-md flex flex-col justify-center items-center relative"
+                >
                   <Image
                     className="w-8 h-8"
                     src="/assets/icons/extensions/pdf.svg"
@@ -489,22 +536,28 @@ const PdfParse = ({
                     width={25}
                     height={30}
                   />
-                  <span className="mt-1 text-gray-700 text-xs">{file.name}</span>
-                  <div className='absolute top-1 left-1'>
+                  <span className="mt-1 text-gray-700 text-xs">
+                    {file.name}
+                  </span>
+                  <div className="absolute top-1 left-1">
                     {file.status === FileStatus.NOT_STARTED && (
-                      <div className='w-4 h-4 border border-primaryN30 rounded-full'></div>
+                      <div className="w-4 h-4 border border-primaryN30 rounded-full"></div>
                     )}
                     {file.status === FileStatus.PROCESSING && (
-                      <div className='w-4 h-4  bg-accentGreen rounded-full'></div>
+                      <div className="w-4 h-4  bg-green-normal rounded-full"></div>
                     )}
                     {file.status === FileStatus.COMPLETED && (
-                      <div className='w-4 h-4 bg-accentGreen rounded-full flex items-center justify-center'>
-                        <div className=" text-white text-xxs font-sans">{'✓'}</div>
+                      <div className="w-4 h-4 bg-green-normal rounded-full flex items-center justify-center">
+                        <div className=" text-white text-xxs font-sans">
+                          {"✓"}
+                        </div>
                       </div>
                     )}
                     {file.status === FileStatus.FAILED && (
-                      <div className='w-4 h-4 bg-red-500 rounded-full flex items-center justify-center'>
-                        <div className=" text-white text-xxs font-sans">{'x'}</div>
+                      <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                        <div className=" text-white text-xxs font-sans">
+                          {"x"}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -518,19 +571,24 @@ const PdfParse = ({
         <div className="mt-2 bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="">Task ID:</span>
-            <span className="font-mono text-blue-700">{taskInfo?.requestId || ''}</span>
+            <span className="font-mono text-blue-700">
+              {taskInfo?.requestId || ""}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="">SSE URL:</span>
-            <span className="font-mono text-blue-700 text-xs truncate max-w-[60%]">{taskInfo?.sseUrl || ''}</span>
+            <span className="font-mono text-blue-700 text-xs truncate max-w-[60%]">
+              {taskInfo?.sseUrl || ""}
+            </span>
           </div>
         </div>
-
 
         <div className="flex-1 flex flex-col bg-gray-50 rounded-lg p-4 mb-4 overflow-hidden">
           <div className="flex justify-between items-center mb-4">
             <h3 className="">Processing Progress</h3>
-            <span className="font-bold text-indigo-600 text-lg">{processingProgress}%</span>
+            <span className="font-bold text-indigo-600 text-lg">
+              {processingProgress}%
+            </span>
           </div>
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
             <div
@@ -539,13 +597,15 @@ const PdfParse = ({
             ></div>
           </div>
           <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-lg p-3 overflow-hidden">
-            <div className='overflow-y-auto' ref={logsRef}>
+            <div className="overflow-y-auto" ref={logsRef}>
               {logs.map((log, index) => (
                 <div
                   key={index}
-                  className={`px-3 py-1 mb-1 rounded ${log.type === 'error' ? 'bg-red-50 border-l-3 border-red-500 text-red-600' : log.type === 'success' ? 'bg-green-50 border-l-3 border-green-500 text-green-600' : 'bg-gray-50 border-l-3 border-indigo-500 text-gray-700'}`}
+                  className={`px-3 py-1 mb-1 rounded ${log.type === "error" ? "bg-red-50 border-l-3 border-red-500 text-red-600" : log.type === "success" ? "bg-green-50 border-l-3 border-green-500 text-green-600" : "bg-gray-50 border-l-3 border-indigo-500 text-gray-700"}`}
                 >
-                  <span className="text-xs font-mono">{log.time} <span className='ml-2'>{log.message}</span></span>
+                  <span className="text-xs font-mono">
+                    {log.time} <span className="ml-2">{log.message}</span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -556,12 +616,22 @@ const PdfParse = ({
           {/** 所有文件都已经解析完成 */}
           {totalFileStatus === FileStatus.COMPLETED && (
             <div>
-              <Button className='custom-primary-btn' onClick={() => handleNext('takeoffModal')}>Next</Button>
+              <Button
+                className="custom-primary-btn"
+                onClick={() => handleNext("takeoffModal")}
+              >
+                Next
+              </Button>
             </div>
           )}
           {totalFileStatus === FileStatus.FAILED && (
             <div>
-              <Button className='custom-primary-btn' onClick={() => handleNext('pageIndex')}>Next</Button>
+              <Button
+                className="custom-primary-btn"
+                onClick={() => handleNext("pageIndex")}
+              >
+                Next
+              </Button>
             </div>
           )}
         </div>

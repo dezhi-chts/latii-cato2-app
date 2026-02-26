@@ -206,7 +206,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
         {/*      src="/assets/icons/calendar.svg"*/}
         {/*      alt="calendar icon"*/}
         {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
+        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
         {/*    <span className="font-bold">Project name </span>*/}
         {/*    {project.project_name}*/}
         {/*  </p>*/}
@@ -218,7 +218,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
         {/*    src="/assets/icons/calendar.svg"*/}
         {/*    alt="calendar icon"*/}
         {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
+        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
         {/*    <span className="font-bold">Expected Delivery </span>*/}
         {/*    {new Date(project.expected_end_date).toLocaleDateString("es-AR") ||*/}
         {/*      "..."}*/}
@@ -231,7 +231,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
         {/*    src="/assets/icons/project-likelihood.svg"*/}
         {/*    alt="award icon"*/}
         {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
+        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
         {/*    <span className="font-bold">Project Likelihood </span>*/}
         {/*    High*/}
         {/*  </p>*/}

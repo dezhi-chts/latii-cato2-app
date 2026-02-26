@@ -175,7 +175,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
 
   return (
     <div className="w-full flex flex-col gap-6 pt-10 pl-12">
-      <p className="text-forumBlue text-base">Add New User</p>
+      <p className="text-forumBlue-normal text-base">Add New User</p>
 
       <div className="flex flex-col gap-2 w-full">
         <p className="text-sm">
@@ -242,7 +242,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
         <ul className="list-disc pl-5">
           {passwordErrors.map((error, index) => {
             const isValid = error.is_valid;
-            const color = isValid ? "text-accentGreen" : "text-red-500";
+            const color = isValid ? "text-green-normal" : "text-red-500";
             return (
               <li key={index} className={`${color}`}>
                 <p className="text-xs">{error.message}</p>
@@ -254,7 +254,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
 
       <div className="flex justify-end w-9/12">
         <Button
-          backgroundColor="forumBlue"
+          backgroundColor="forumBlue-normal"
           onClick={handleCreateContact}
           disabled={disabledButton || isLoading}
           className="rounded-md w-28"

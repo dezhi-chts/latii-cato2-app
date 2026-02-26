@@ -24,11 +24,14 @@ const CreateTakeOffModal = ({
   const [takeOffFiles, setTakeOffFiles] = useState<UploadFile[]>([]);
   const [filesInfo, setFilesInfo] = useState<CatoUploadFile[]>([]);
 
-  const handleUpload = (data: { archFiles: UploadFile[], quoteFiles: UploadFile[] }) => {
-    console.log('######### handleUpload', data);
+  const handleUpload = (data: {
+    archFiles: UploadFile[];
+    quoteFiles: UploadFile[];
+  }) => {
+    console.log("######### handleUpload", data);
     //打开Create-Project-Takeoff-Modal弹窗
     onHandleUpload?.(data);
-  }
+  };
 
   return (
     <Modal
@@ -36,8 +39,8 @@ const CreateTakeOffModal = ({
       onCancel={() => setIsOpen(false)}
       title={
         <div className="py-4 flex flex-col gap-2 font-nunito">
-          <div className="text-forumBlue text-lg">Create a Quotii</div>
-          <div className="text-sm text-basicGray">
+          <div className="text-forumBlue-normal text-lg">Create a Quotii</div>
+          <div className="text-sm text-grey-normal">
             Use our AI Agent to create your quote, save time and prevent errors.
           </div>
           <div className="mt-4 text-xs">
@@ -51,7 +54,7 @@ const CreateTakeOffModal = ({
       centered
     >
       <div className="mt-8 p-2 flex flex-row justify-between font-nunito">
-        <div className="p-4 w-[300px] flex flex-col border-2 border-baseLightHover rounded-lg">
+        <div className="p-4 w-[300px] flex flex-col border-2 border-grey-light-hover rounded-lg">
           <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
             <Image
               src="/assets/cato-images/architectural-drawings-new.png"
@@ -61,16 +64,18 @@ const CreateTakeOffModal = ({
               style={{ width: "100%", height: "auto" }}
             ></Image>
           </div>
-          <div className="text-forumBlue my-4 text-lg">Blank Template</div>
-          <div className="text-sm text-basicGray">
+          <div className="text-forumBlue-normal my-4 text-lg">
+            Blank Template
+          </div>
+          <div className="text-sm text-grey-normal">
             Create a blank Quotii from zero.
           </div>
-          <div className="mt-1 text-xs text-basicGray">
+          <div className="mt-1 text-xs text-grey-normal">
             We recommend you use this for small projects.
           </div>
           <div className="flex-1 flex items-end justify-center">
             <Button
-              onClick={() => { }}
+              onClick={() => {}}
               className="w-full mt-4 mb-4 bg-[#ECF2FA]"
             >
               Create
@@ -78,7 +83,7 @@ const CreateTakeOffModal = ({
           </div>
         </div>
         <div></div>
-        <div className="p-4 w-[720px] flex flex-col border-2 border-baseLightHover rounded-lg">
+        <div className="p-4 w-[720px] flex flex-col border-2 border-grey-light-hover rounded-lg">
           <TakeoffUpload
             showUploadTipLink={false}
             onHandleUpload={handleUpload}

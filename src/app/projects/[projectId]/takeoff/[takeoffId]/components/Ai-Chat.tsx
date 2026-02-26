@@ -101,17 +101,17 @@ const AiChat = ({
             prev.map((msg, index) =>
               index === prev.length - 1
                 ? { ...msg, content: assistantMessage }
-                : msg
-            )
+                : msg,
+            ),
           );
         },
         () => {
           retrieveData();
-        }
+        },
       );
       setIsLoadingMessages(false);
     },
-    [chatId, creator, currentItemId]
+    [chatId, creator, currentItemId],
   );
 
   useEffect(() => {
@@ -179,7 +179,7 @@ const AiChat = ({
                   <p>Hello, {first_name || "[Name]"}</p>
                   <p>How can I help you today?</p>
                 </div>
-                <div className="text-sm text-basicGray ml-1 whitespace-pre-wrap ">
+                <div className="text-sm text-grey-normal ml-1 whitespace-pre-wrap ">
                   Im your AI Latii Assistant, you can ask me to do things like:
                   "change all frame material to steel and generate a new quote",
                   or questions about our brands

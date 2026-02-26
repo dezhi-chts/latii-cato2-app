@@ -179,8 +179,8 @@ const Home = () => {
     <div className="w-full h-full">
       <div className="flex items-start gap-8 pt-10 pl-12 zoomed-container flex-col w-9/12">
         <div className="flex flex-col gap-2">
-          <p className="text-baseGray text-sm ">{formatUserDate()}</p>
-          <p className="text-forumBlue text-[22px]">
+          <p className="text-grey-light-strong text-sm ">{formatUserDate()}</p>
+          <p className="text-forumBlue-normal text-[22px]">
             {getGreetingByTime()}, {first_name || "User"}
           </p>
         </div>
@@ -220,7 +220,7 @@ const Home = () => {
               </div>
 
               <Button
-                backgroundColor="forumBlue"
+                backgroundColor="forumBlue-normal"
                 className="rounded-md py-2 text-xs"
                 onClick={openModal}
               >

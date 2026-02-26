@@ -31,7 +31,7 @@ const Header = ({
   }, [takeOff]);
 
   const [takeOffName, setTakeOffName] = useState<string>(
-    takeOffData?.name || ""
+    takeOffData?.name || "",
   );
 
   const handleUpdateTakeOffName = async (name: string) => {
@@ -51,7 +51,7 @@ const Header = ({
 
   return (
     <div>
-      <div className="pt-6 pb-3 px-14 flex border-b-neutralsN50 bg-white border-b justify-between relative z-50 zoomed-container">
+      <div className="pt-6 pb-3 px-14 flex border-b-primaryN50 bg-white border-b justify-between relative z-50 zoomed-container">
         <div className="flex gap-5 items-center">
           <Link
             href={`/projects/${projectId}`}
@@ -92,7 +92,7 @@ const Header = ({
                         return sum;
                       } else {
                         let result = JSON.parse(item.result);
-                        return sum + (1 * (result?.Quantity ?? 1));
+                        return sum + 1 * (result?.Quantity ?? 1);
                       }
                     } catch (e) {}
                   }, 0)}
@@ -133,7 +133,7 @@ const Header = ({
           })}
           <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
           <Button
-            backgroundColor="forumBlue"
+            backgroundColor="forumBlue-normal"
             className="px-8"
             onClick={() => {}}
           >

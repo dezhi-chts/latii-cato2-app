@@ -4,7 +4,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
   const columns = [
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Label
         </div>
       ),
@@ -14,7 +14,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Sub_Label
         </div>
       ),
@@ -24,7 +24,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Type
         </div>
       ),
@@ -34,7 +34,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Open
         </div>
       ),
@@ -44,7 +44,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Width
         </div>
       ),
@@ -54,7 +54,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Height
         </div>
       ),
@@ -64,7 +64,7 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
     },
     {
       title: (
-        <div className="text-center text-xxs font-semibold text-basicGray">
+        <div className="text-center text-xxs font-semibold text-grey-normal">
           Area
         </div>
       ),
@@ -97,21 +97,21 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
       onCancel={closeModal}
     >
       <div className="flex flex-col gap-3 font-nunito">
-        <div className="text-sm text-forumBlue">Pre-Analysis State</div>
+        <div className="text-sm text-forumBlue-normal">Pre-Analysis State</div>
         <div className="text-xs">
           Confirm Prompt Template Before starting the pre-analysis, verify the
           prompt template Cato will use to extract your data. Please review the
           column preview below.
         </div>
         <div className="my-2 flex flex-row justify-center items-center gap-2">
-          <div className="text-xs text-forumBlue">Reading Prompt</div>
+          <div className="text-xs text-forumBlue-normal">Reading Prompt</div>
           <Popover
             placement="rightBottom"
             title={
               <div className="text-xxs font-medium">About Page Labeling</div>
             }
             content={
-              <div className="w-[300px] text-xxs text-baseGray">
+              <div className="w-[300px] text-xxs text-grey-light-strong">
                 Review and analyze the sections identified by CATO. You can
                 verify existing results or add new labels manually. Ensuring
                 every section is correctly labeled guarantees the most accurate
@@ -129,7 +129,9 @@ const PreAnalysisMdal = ({ isOpen, closeModal, handleAnalysis }: any) => {
           </Popover>
           <Select className="w-[240px] h-[26px] rounded-3xl"></Select>
         </div>
-        <div className="my-2 text-xs text-basicGray">Preview Takeoff List</div>
+        <div className="my-2 text-xs text-grey-normal">
+          Preview Takeoff List
+        </div>
         <div>
           <Table
             columns={columns}

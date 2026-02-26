@@ -117,7 +117,7 @@ const CreateProjectModal = ({
     <Modal
       open={isOpen}
       title={
-        <p className="ml-1 text-forumBlue text-lg font-normal font-nunito">
+        <p className="ml-1 text-forumBlue-normal text-lg font-normal font-nunito">
           Create New Project
         </p>
       }
@@ -127,7 +127,7 @@ const CreateProjectModal = ({
       onCancel={closeModal}
     >
       <div className="mt-8 p-2 max-h-[80vh] flex flex-row justify-between font-nunito">
-        <div className="w-[400px] flex flex-col border border-baseLightHover rounded-md overflow-hidden">
+        <div className="w-[400px] flex flex-col border border-grey-light-hover rounded-md overflow-hidden">
           <div className="px-5 my-4 text-lg">Start from Blank Template</div>
           <div className="px-5 py-2 overflow-y-auto">
             <ProjectForm form={form} setForm={setForm} />
@@ -139,14 +139,14 @@ const CreateProjectModal = ({
                 handleProjectSubmit();
               }}
               className="w-32 rounded-md text-xs"
-              backgroundColor="forumBlue"
+              backgroundColor="forumBlue-normal"
               disabled={!isFormValid || loading}
             >
               {loading ? "Creating..." : "Create"}
             </Button>
           </div>
         </div>
-        <div className="px-5 w-[720px] flex flex-col border border-baseLightHover rounded-md overflow-y-auto">
+        <div className="px-5 w-[720px] flex flex-col border border-grey-light-hover rounded-md overflow-y-auto">
           <div className="my-4 text-lg">Start from Takeoff</div>
           <div className="flex-1">
             <TakeoffUpload onHandleUpload={handleUpload} />

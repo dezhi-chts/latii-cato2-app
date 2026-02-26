@@ -81,14 +81,14 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           <span>{formatLabel(label)}</span>
         </div>
       ),
-    })
+    }),
   );
 
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white">
       {/* HEADER */}
-      <div className="flex items-center gap-3 bg-baseLight p-4">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-basicGray">
+      <div className="flex items-center gap-3 bg-grey-light p-4">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-grey-normal">
           {id + 1}
         </div>
 
@@ -141,11 +141,11 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
       </div>
 
       {/* BODY */}
-      <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3">
+      <div className="border border-t-0 border-grey-light-hover rounded-b-xl p-3">
         {/* OPTIONS (Dropdown / Radio / Checkbox) */}
         {hasOptions && (
           <div className="px-4 pb-4">
-            <p className="text-xs text-basicGray mb-2">Options</p>
+            <p className="text-xs text-grey-normal mb-2">Options</p>
 
             <div className="flex flex-col gap-2">
               {localOptions.map((opt, idx) => (
@@ -171,7 +171,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
                       setLocalOptions(next);
                       commitOptions(next);
                     }}
-                    className="px-2 text-basicGray disabled:opacity-40"
+                    className="px-2 text-grey-normal disabled:opacity-40"
                   >
                     ✕
                   </button>
@@ -180,7 +180,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
             </div>
 
             <Button
-              backgroundColor="forumBlue"
+              backgroundColor="forumBlue-normal"
               className="mt-3 rounded-md !px-3 !py-1"
               disabled={!!is_fixed}
               onClick={() => {

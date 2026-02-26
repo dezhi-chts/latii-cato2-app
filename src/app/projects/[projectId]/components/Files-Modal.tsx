@@ -89,7 +89,7 @@ const FilesModal = ({
       <div className="flex flex-col gap-3 items-center">
         <div className="self-start">
           <p className="text-primaryN900 font-semibold">Files Shared</p>
-          <p className="text-basicGray text-sm">
+          <p className="text-grey-normal text-sm">
             See all files you have shared wit Latii
           </p>
         </div>
@@ -125,7 +125,7 @@ const FilesModal = ({
                           <div className="w-2 h-2 rounded-full bg-accentIndigo" />
                         )}
                       </div>
-                      <p className="text-xs text-basicGray font-light">
+                      <p className="text-xs text-grey-normal font-light">
                         In Version {file.version}
                       </p>
                       <p className="text-basicLightGray font-light text-xs">
@@ -143,7 +143,7 @@ const FilesModal = ({
                           onClick={() =>
                             handlePreview(
                               file.file_url,
-                              isPdf ? "pdf" : "image"
+                              isPdf ? "pdf" : "image",
                             )
                           }
                         />

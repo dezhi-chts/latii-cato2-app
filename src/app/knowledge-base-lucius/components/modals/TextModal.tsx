@@ -49,7 +49,7 @@ const TextModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
         <div className="flex flex-col gap-3">
           <p className="text-xs font-light">
             Name{" "}
-            <span className="text-basicGray">
+            <span className="text-grey-normal">
               (Use this to identify the text)
             </span>
           </p>

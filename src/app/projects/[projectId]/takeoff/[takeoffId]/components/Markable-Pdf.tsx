@@ -48,12 +48,12 @@ const PDFSelector = forwardRef(
       evidences,
       refreshEvidences,
     }: PdfSelectorProps,
-    ref
+    ref,
   ) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(
-      null
+      null,
     );
     const [selection, setSelection] = useState<Selection | null>(null);
     const [isSelecting, setIsSelecting] = useState(false);
@@ -162,7 +162,7 @@ const PDFSelector = forwardRef(
         0,
         0,
         selection.width,
-        selection.height
+        selection.height,
       );
 
       const image = croppedCanvas.toDataURL("image/png");
@@ -214,7 +214,7 @@ const PDFSelector = forwardRef(
 
     const handleChangeEvidenceType = async (
       evidenceId: string,
-      type: "Item" | "Table"
+      type: "Item" | "Table",
     ) => {
       const response = await changeEvidenceType(evidenceId, type);
       if (response.status === "success") {
@@ -262,7 +262,7 @@ const PDFSelector = forwardRef(
                 }}
               >
                 <Button
-                  backgroundColor="forumBlue"
+                  backgroundColor="forumBlue-normal"
                   className="absolute -top-7"
                   onClick={() => handleSend()}
                   disabled={sendingEvidence}
@@ -300,7 +300,7 @@ const PDFSelector = forwardRef(
                     <div className="flex items-center gap-2 absolute -top-7">
                       <div className="flex items-center text-center rounded-full bg-primaryN20 overflow-hidden cursor-pointer">
                         <p
-                          className={`px-2 py-0.5 text-basicGray text-xs ${
+                          className={`px-2 py-0.5 text-grey-normal text-xs ${
                             type.name === "Item"
                               ? "bg-primaryN30"
                               : "hover:bg-primaryN30 opacity-70 hover:opacity-100"
@@ -313,7 +313,7 @@ const PDFSelector = forwardRef(
                           Item
                         </p>
                         <p
-                          className={`px-2 py-0.5 text-basicGray text-xs ${
+                          className={`px-2 py-0.5 text-grey-normal text-xs ${
                             type.name === "Table"
                               ? "bg-primaryN30"
                               : "hover:bg-primaryN30 opacity-70 hover:opacity-100"
@@ -347,7 +347,7 @@ const PDFSelector = forwardRef(
         )}
       </div>
     );
-  }
+  },
 );
 
 export default PDFSelector;

@@ -152,7 +152,7 @@ export default ProjectSettings;
 
 export const AwardLikelihoodPopover = () => {
   return (
-    <div className="text-xs text-basicGray w-60">
+    <div className="text-xs text-grey-normal w-60">
       <p className="font-semibold">Project Award Likelihood</p>
       <p>
         Select how likely it is that Latii will be awarded this project, based

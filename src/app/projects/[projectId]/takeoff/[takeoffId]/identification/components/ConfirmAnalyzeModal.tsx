@@ -27,7 +27,7 @@ const ConfirmAnalyzeModal = ({
             Back
           </Button>
           <Button
-            backgroundColor="forumBlue"
+            backgroundColor="forumBlue-normal"
             color="white"
             onClick={onConfirm}
             className="!py-0"
@@ -40,7 +40,7 @@ const ConfirmAnalyzeModal = ({
       onCancel={() => setIsOpen(false)}
     >
       <div className="flex flex-col gap-2 px-11 py-7">
-        <p className="text-forumBlue mb-2 text-base font-normal">
+        <p className="text-forumBlue-normal mb-2 text-base font-normal">
           Are you ready to Analyze these files?
         </p>
         <p className="font-light text-xs">

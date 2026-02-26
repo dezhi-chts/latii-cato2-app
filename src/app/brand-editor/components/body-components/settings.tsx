@@ -35,8 +35,8 @@ const Settings = () => {
               onClick={() => handleSelectTab(item)}
               className={`flex items-center justify-center w-32 h-8 rounded-md cursor-pointer text-xs ${
                 item.id === selectedTab.id
-                  ? "bg-forumBlueLight text-baseDark font-semibold"
-                  : "bg-white text-baseGray"
+                  ? "bg-forumBlue-light text-grey-dark font-semibold"
+                  : "bg-white text-grey-light-strong"
               }`}
             >
               {item.text}

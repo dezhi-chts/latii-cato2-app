@@ -26,7 +26,7 @@ const UploadFiles = ({
       <p className="text-sm">
         {name} {RequiredHint(required)}
       </p>
-      <div className="w-full max-w-80 h-14 flex justify-center items-center rounded-xl cursor-pointer border border-dashed border-baseDark hover:border-forumBlue hover:text-forumBlue">
+      <div className="w-full max-w-80 h-14 flex justify-center items-center rounded-xl cursor-pointer border border-dashed border-grey-dark hover:border-forumBlue-normal hover:text-forumBlue-normal">
         <Upload fileList={fileList} onChange={handleChange} showUploadList>
           {hint_text}
         </Upload>

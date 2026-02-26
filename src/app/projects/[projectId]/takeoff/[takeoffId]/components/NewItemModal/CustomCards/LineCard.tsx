@@ -12,7 +12,7 @@ const LineCard = ({
   selectedValue,
 }: CardProps) => {
   const imgSrc = `/assets/item-customization/line/${sanitizeNameForFile(
-    card.text
+    card.text,
   )}.webp`;
 
   const handleSelectedOptionChange = () => {
@@ -31,7 +31,7 @@ const LineCard = ({
           <div className="flex items-center justify-center">
             <Image src={imgSrc} alt="Card Image" width={86} height={86} />
           </div>
-          <div className="text-basicGray">
+          <div className="text-grey-normal">
             <p className="font-semibold">{card?.text}</p>
           </div>
         </div>

@@ -35,10 +35,12 @@ export const FilePanel = ({
   switchBgColor = true, // 选中时，是否切换背景颜色
   switchTextColor = false, // 选中时，是否切换文字颜色
 }: FilePanelProps) => {
-  const imageSize = flexRow ? { width: 18, height: 21 } : { width: 25, height: 30 };
+  const imageSize = flexRow
+    ? { width: 18, height: 21 }
+    : { width: 25, height: 30 };
   return (
     <div
-      className={`relative w-32 h-20 rounded flex ${flexRow ? 'flex-row' : 'flex-col'}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-baseLightHover" : ''} ${showBorder ? 'border border-baseLightHover' : ''}`}
+      className={`relative w-32 h-20 rounded flex ${flexRow ? "flex-row" : "flex-col"}  items-center justify-center p-1 ${isSelected && switchBgColor ? "bg-grey-light-hover" : ""} ${showBorder ? "border border-grey-light-hover" : ""}`}
       style={fileContainerStyle}
     >
       {canBeRemoved && handleRemove && (
@@ -56,7 +58,7 @@ export const FilePanel = ({
         height={imageSize.height}
       />
       <div
-        className={`${flexRow ? 'px-2' : 'pt-3'} break-all line-clamp-2 text-center text-[8px] ${isSelected && switchTextColor ? 'text-forumBlue' : 'text-basicGray'} `}
+        className={`${flexRow ? "px-2" : "pt-3"} break-all line-clamp-2 text-center text-[8px] ${isSelected && switchTextColor ? "text-forumBlue-normal" : "text-grey-normal"} `}
       >
         {file.name}
       </div>
@@ -81,15 +83,16 @@ export const FileItem = ({
     [FileStatus.Processing]: {
       text: "Progress",
       bgColor: "bg-[#C4D6F0]",
-      textColor: "text-forumBlue",
+      textColor: "text-forumBlue-normal",
     },
     [FileStatus.NotApplicable]: {
       text: "Not Applicable",
       bgColor: "bg-[#DCDCDC]",
-      textColor: "text-basicGray",
-    }
+      textColor: "text-grey-normal",
+    },
   };
-  const statusInfo = statusMapInfo[file.status] || statusMapInfo[FileStatus.Processing];
+  const statusInfo =
+    statusMapInfo[file.status] || statusMapInfo[FileStatus.Processing];
   return (
     <div
       className={`rounded cursor-pointer`}
@@ -100,16 +103,14 @@ export const FileItem = ({
         canBeRemoved={false}
         isSelected={selectedFileId === file.id}
         fileContainerStyle={fileContainerStyle}
-
       />
       {showStatus && (
-        <div
-          className={`my-2 h-[16px] flex items-center`}
-        >
-          <div className={`px-2 text-xxs rounded-md ${statusInfo.bgColor} ${statusInfo.textColor}`}>
+        <div className={`my-2 h-[16px] flex items-center`}>
+          <div
+            className={`px-2 text-xxs rounded-md ${statusInfo.bgColor} ${statusInfo.textColor}`}
+          >
             {statusInfo.text}
           </div>
-
         </div>
       )}
     </div>

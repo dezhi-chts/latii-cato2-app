@@ -7,7 +7,14 @@ import Image from "next/image";
 const { Option } = Select;
 const { TextArea } = Input;
 
-const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectSettings, setProjectSettings, handleAddOCRBox }: any) => {
+const FormFieldItem = ({
+  field,
+  OCRFieldName = "",
+  showOCRIcon = false,
+  projectSettings,
+  setProjectSettings,
+  handleAddOCRBox,
+}: any) => {
   const [showLocationSelector, setShowLocationSelector] = useState(false);
   const handleFieldChange = (field: string, value: any) => {
     setProjectSettings((prev: any) => ({
@@ -27,31 +34,49 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
       return (
         <div>
           <div className="flex justify-between items-center">
-            <label className="text-sm">{field.Hint_text}
+            <label className="text-sm">
+              {field.Hint_text}
               {field.required && <label className="text-red-500">*</label>}
             </label>
-            {
-              showOCRIcon && (
-                <div className="px-2 border border-primaryN30 rounded-md" onClick={() => handleAddOCRRect(field.field_name)} >
-                  <Image src={
-                    OCRFieldName === field.field_name ? '/assets/icons/ocr-text-focus.svg' : '/assets/icons/ocr-text-blur.svg'
+            {showOCRIcon && (
+              <div
+                className="px-2 border border-primaryN30 rounded-md"
+                onClick={() => handleAddOCRRect(field.field_name)}
+              >
+                <Image
+                  src={
+                    OCRFieldName === field.field_name
+                      ? "/assets/icons/ocr-text-focus.svg"
+                      : "/assets/icons/ocr-text-blur.svg"
                   }
-                    alt={field.Hint_text} width={24} height={24} className="cursor-pointer" />
-                </div>
-              )
-            }
+                  alt={field.Hint_text}
+                  width={24}
+                  height={24}
+                  className="cursor-pointer"
+                />
+              </div>
+            )}
           </div>
           <div className="py-2">
             <Input
               className="rounded-md text-sm"
               value={projectSettings[field.field_name]}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              onChange={(e) =>
+                handleFieldChange(field.field_name, e.target.value)
+              }
               placeholder={field.Hint_text}
-              suffix={field.suffixIcon && (
-                <div>
-                  <Image src={field.suffixIcon} alt={field.Hint_text} width={12} height={12} />
-                </div>
-              )}
+              suffix={
+                field.suffixIcon && (
+                  <div>
+                    <Image
+                      src={field.suffixIcon}
+                      alt={field.Hint_text}
+                      width={12}
+                      height={12}
+                    />
+                  </div>
+                )
+              }
             />
           </div>
         </div>
@@ -59,7 +84,8 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
     case FieldType.INPUT_NUMBER:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
@@ -67,7 +93,9 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
               className="rounded-md text-sm"
               type="number"
               value={projectSettings[field.field_name]}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              onChange={(e) =>
+                handleFieldChange(field.field_name, e.target.value)
+              }
               placeholder={field.Hint_text}
             />
           </div>
@@ -76,14 +104,17 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
     case FieldType.TEXTAREA:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <TextArea
               className="rounded-md text-ms"
               value={projectSettings[field.field_name]}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              onChange={(e) =>
+                handleFieldChange(field.field_name, e.target.value)
+              }
               placeholder={field.Hint_text}
               rows={4}
             />
@@ -93,7 +124,8 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
     case FieldType.DROPDOWN:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
@@ -114,7 +146,8 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
     case FieldType.CHECKBOX:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
@@ -124,7 +157,7 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
                   <Checkbox
                     key={option}
                     value={option}
-                    className="text-ms text-basicGray px-1"
+                    className="text-ms text-grey-normal px-1"
                   >
                     {option}
                   </Checkbox>
@@ -132,25 +165,27 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
               })}
             </Checkbox.Group>
           </div>
-
         </div>
       );
     case FieldType.RADIO:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <Radio.Group
               value={projectSettings[field.field_name]}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              onChange={(e) =>
+                handleFieldChange(field.field_name, e.target.value)
+              }
             >
               {field.field_options?.map((option: any) => (
                 <Radio
                   key={option}
                   value={option}
-                  className="text-ms text-basicGray px-1"
+                  className="text-ms text-grey-normal px-1"
                 >
                   {option}
                 </Radio>
@@ -158,66 +193,76 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
             </Radio.Group>
           </div>
         </div>
-      )
+      );
     case FieldType.SWITCH:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <Switch
-              className="text-ms text-basicGray px-1"
+              className="text-ms text-grey-normal px-1"
               checked={projectSettings[field.field_name]}
-              onChange={(checked) => handleFieldChange(field.field_name, checked)}
+              onChange={(checked) =>
+                handleFieldChange(field.field_name, checked)
+              }
             />
           </div>
         </div>
-      )
+      );
     case FieldType.DATE:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <DatePicker
               className="w-full"
               type="date"
-              onChange={(date, dateString) => handleFieldChange(field.field_name, dateString)}
+              onChange={(date, dateString) =>
+                handleFieldChange(field.field_name, dateString)
+              }
             />
           </div>
         </div>
-      )
+      );
     case FieldType.LINK:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <Input
               className="rounded-md text-ms"
               value={projectSettings[field.field_name]}
-              onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+              onChange={(e) =>
+                handleFieldChange(field.field_name, e.target.value)
+              }
               placeholder={field.Hint_text}
             />
           </div>
         </div>
-      )
+      );
     case FieldType.LOCATION:
       return (
         <div>
-          <label className="text-sm">{field.Hint_text}
+          <label className="text-sm">
+            {field.Hint_text}
             {field.required && <label className="text-red-500">*</label>}
           </label>
           <div className="py-2">
             <LocationSelector
               handleInputChange={(locationField: any) => (event: any) => {
-                handleFieldChange(locationField, event.target.value)
+                handleFieldChange(locationField, event.target.value);
               }}
               handleDropdownChange={(locationField: any) => (value: any) => {
-                handleFieldChange(locationField, value)
+                handleFieldChange(locationField, value);
               }}
               projectSettings={projectSettings}
               isOpen={showLocationSelector}
@@ -228,11 +273,10 @@ const FormFieldItem = ({ field, OCRFieldName = '', showOCRIcon = false, projectS
             ></LocationSelector>
           </div>
         </div>
-      )
+      );
     default:
       return null;
   }
-
 };
 
 export default FormFieldItem;

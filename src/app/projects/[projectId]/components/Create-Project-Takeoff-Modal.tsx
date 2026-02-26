@@ -7,29 +7,33 @@ import debounce from "lodash/debounce";
 import { useRouter } from "next/navigation";
 
 import { uploadFiles } from "@/services/filesService";
-import { createProject, updateProject, fetchProject } from "@/services/projectService";
+import {
+  createProject,
+  updateProject,
+  fetchProject,
+} from "@/services/projectService";
 import { getPdfAnalyseProjectInfo } from "@/services/drawingIndexService";
 import { getTakeOffById } from "@/services/takeOffService";
 
-import {
-  CreateProjectModalProps,
-  ProjectSettings,
-} from "@/types/project";
+import { CreateProjectModalProps, ProjectSettings } from "@/types/project";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 
 import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
-import { PageControls, ZoomControls } from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
+import {
+  PageControls,
+  ZoomControls,
+} from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ProjectFormTakeoff from "./Project-Form-Takeoff";
 
 const TabList = ({
   items,
   activeIndex,
-  onClick
+  onClick,
 }: {
-  items: any[],
-  activeIndex: number,
-  onClick: (index: number) => void
+  items: any[];
+  activeIndex: number;
+  onClick: (index: number) => void;
 }) => {
   return (
     <div className="w-full relative">
@@ -40,9 +44,10 @@ const TabList = ({
             className={`
               cursor-pointer rounded-md rounded-bl-none rounded-br-none 
               border border-primaryN30
-              ${activeIndex === index
-                ? "border-b-white bg-white relative z-10"
-                : "border-b-0 border-b-transparent"
+              ${
+                activeIndex === index
+                  ? "border-b-white bg-white relative z-10"
+                  : "border-b-0 border-b-transparent"
               }
             `}
             onClick={() => onClick(index)}
@@ -53,9 +58,8 @@ const TabList = ({
       </div>
       <div className="h-[0.5px] bg-primaryN30"></div>
     </div>
-  )
-}
-
+  );
+};
 
 const CreateProjectTakeoffModal = ({
   isOpen,
@@ -68,7 +72,10 @@ const CreateProjectTakeoffModal = ({
   const projectFormRef = useRef<any>(null);
   const pdfRef = useRef<PdfWrapperRefMethods>(null);
 
-  const [projectSettings, setProjectSettings] = useState<any>({ project_name: '', location: '' });
+  const [projectSettings, setProjectSettings] = useState<any>({
+    project_name: "",
+    location: "",
+  });
   const [selectedFileId, setSelectedFileId] = useState(-1);
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
@@ -76,7 +83,7 @@ const CreateProjectTakeoffModal = ({
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
 
-  const [OCRFieldName, setOCRFieldName] = useState<string>('');
+  const [OCRFieldName, setOCRFieldName] = useState<string>("");
 
   const [loading, setLoading] = useState<boolean>(false);
   const [pdfFullScreen, setPdfFullScreen] = useState<boolean>(false);
@@ -94,7 +101,6 @@ const CreateProjectTakeoffModal = ({
     getPdfAnalyseProject();
   }, [projectId]);
 
-
   const getProjectInfo = async () => {
     let res: any = await fetchProject(projectId);
     if (res) {
@@ -109,9 +115,9 @@ const CreateProjectTakeoffModal = ({
 
   const getPdfAnalyseProject = async () => {
     let res: any = await getPdfAnalyseProjectInfo(projectId);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       let info = res?.data?.data?.project_info ?? {};
-      console.log('######### info: ', info);
+      console.log("######### info: ", info);
       setProjectSettings(info ?? {});
     } else {
       notification.error({
@@ -121,11 +127,10 @@ const CreateProjectTakeoffModal = ({
     }
   };
 
-
   const getTakeOffDetails = async () => {
     setLoading(true);
     let res: any = await getTakeOffById(takeOffId as any);
-    if (res.status === 'success') {
+    if (res.status === "success") {
       setTakeoff(res?.data ?? {});
       let project_files = res?.data?.project_files ?? [];
       if (project_files?.length > 0) {
@@ -158,7 +163,7 @@ const CreateProjectTakeoffModal = ({
       setTotalPage(1);
 
       // 切换文件的时候，重置OCRFieldName
-      setOCRFieldName('');
+      setOCRFieldName("");
       // 取消pdf全屏显示
       setPdfFullScreen(false);
 
@@ -181,9 +186,9 @@ const CreateProjectTakeoffModal = ({
       {
         leading: true, // 立即执行第一次调用
         trailing: true, // 也执行 trailing 调用
-      }
+      },
     ),
-    [zoom]
+    [zoom],
   );
 
   const handleZoomChange = (value: number) => {
@@ -192,7 +197,7 @@ const CreateProjectTakeoffModal = ({
 
   const handleSafeZoomChange = (value: number) => {
     message.warning(
-      `The current scale may affect browser performance, and the previous scale will be set soon`
+      `The current scale may affect browser performance, and the previous scale will be set soon`,
     );
     debouncedZoomChange(value - 0.1);
   };
@@ -204,7 +209,7 @@ const CreateProjectTakeoffModal = ({
     if (value > 3) return;
     setPage(value);
     // 切换页码的时候，重置OCRFieldName
-    setOCRFieldName('');
+    setOCRFieldName("");
   };
 
   const handleConfirm = async () => {
@@ -216,43 +221,49 @@ const CreateProjectTakeoffModal = ({
     setLoading(true);
 
     // 更新工程信息
-    let res: any = await updateProject({ ...projectSettings, project_id: projectId, is_favorite: false });
+    let res: any = await updateProject({
+      ...projectSettings,
+      project_id: projectId,
+      is_favorite: false,
+    });
     setLoading(false);
     if (res) {
       notification.success({
         message: "Success",
-        description: 'Project updated successfully.',
+        description: "Project updated successfully.",
       });
       // 跳转到下一页
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification-index`);
+      router.push(
+        `/projects/${projectId}/takeoff/${takeOffId}/identification-index`,
+      );
     } else {
       notification.error({
         message: "Error",
-        description: 'Failed to update project.',
+        description: "Failed to update project.",
       });
     }
-  }
+  };
 
   const handleAddOCRBox = (fieldName: any) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
       setOCRFieldName(fieldName);
       setPdfFullScreen(true);
       pdfRef.current?.clearCropSections();
-      pdfRef.current?.addingRect({ type: 'OCR' });
+      pdfRef.current?.addingRect({ type: "OCR" });
     }
   };
 
   const handleOCRText = (text: string) => {
     console.log("text", text);
     if (OCRFieldName.length > 0) {
-      setOCRFieldName('');
+      setOCRFieldName("");
       setPdfFullScreen(false);
       setProjectSettings({
         ...projectSettings,
         [OCRFieldName]: text,
       });
     }
-  }
+  };
 
   const items = useMemo(() => {
     return fileList.map((file: any) => {
@@ -265,7 +276,7 @@ const CreateProjectTakeoffModal = ({
         type: "application/pdf",
         size: 0,
       };
-      let label =
+      let label = (
         <div
           className={`rounded cursor-pointer`}
           onClick={() => setSelectedFileId(file.id)}
@@ -281,12 +292,13 @@ const CreateProjectTakeoffModal = ({
             switchTextColor={true}
           />
         </div>
+      );
 
       return {
         label: label,
         id: file.id,
-      }
-    })
+      };
+    });
   }, [fileList, selectedFileId]);
 
   const activeIndex = useMemo(() => {
@@ -299,19 +311,25 @@ const CreateProjectTakeoffModal = ({
     <Modal
       open={isOpen}
       title={
-        <p className="text-forumBlue text-lg font-normal font-nunito">Create New Project</p>
+        <p className="text-forumBlue-normal text-lg font-normal font-nunito">
+          Create New Project
+        </p>
       }
       centered={true}
-      width={'85vw'}
+      width={"85vw"}
       footer={null}
       closable={false}
       onCancel={closeModal}
       maskClosable={false}
     >
       <div className="font-nunito">
-        <div className="my-2 text-xs text-baseGray">Confirm and fill all missing information to create your project.</div>
+        <div className="my-2 text-xs text-grey-light-strong">
+          Confirm and fill all missing information to create your project.
+        </div>
         <div className="mt-8 h-[80vh] flex flex-row justify-between">
-          <div className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? 'w-[0px]' : 'w-[300px]'} transition-all duration-300 ease-in-out`}>
+          <div
+            className={`max-h-[80vh] flex flex-col overflow-hidden ${pdfFullScreen ? "w-[0px]" : "w-[300px]"} transition-all duration-300 ease-in-out`}
+          >
             <div className="overflow-y-auto bg-white">
               <ProjectFormTakeoff
                 ref={projectFormRef}
@@ -319,13 +337,11 @@ const CreateProjectTakeoffModal = ({
                 setProjectSettings={setProjectSettings}
                 showOCRIcon={true}
                 OCRFieldName={OCRFieldName}
-                handleAddOCRBox={handleAddOCRBox} />
+                handleAddOCRBox={handleAddOCRBox}
+              />
             </div>
             <div className="flex-1 flex gap-4 items-end justify-center">
-              <Button
-                onClick={closeModal}
-                className="mb-4 custom-default-btn"
-              >
+              <Button onClick={closeModal} className="mb-4 custom-default-btn">
                 Cancel
               </Button>
               <Button
@@ -336,16 +352,27 @@ const CreateProjectTakeoffModal = ({
               </Button>
             </div>
           </div>
-          {
-            pdfFullScreen && <div className="flex flex-row justify-center items-center">
+          {pdfFullScreen && (
+            <div className="flex flex-row justify-center items-center">
               <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
-              <div className="cursor-pointer" onClick={() => setPdfFullScreen(false)}>
-                <Image src="/assets/icons/arrow-right-gray.svg" alt="arrow right" width={20} height={20} style={{ width: "auto", height: "auto" }}></Image>
+              <div
+                className="cursor-pointer"
+                onClick={() => setPdfFullScreen(false)}
+              >
+                <Image
+                  src="/assets/icons/arrow-right-gray.svg"
+                  alt="arrow right"
+                  width={20}
+                  height={20}
+                  style={{ width: "auto", height: "auto" }}
+                ></Image>
               </div>
             </div>
-          }
+          )}
 
-          <div className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? 'ml-1' : 'ml-10'} transition-all duration-300 ease-in-out`}>
+          <div
+            className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? "ml-1" : "ml-10"} transition-all duration-300 ease-in-out`}
+          >
             <TabList
               activeIndex={activeIndex}
               onClick={(index: number) => {
@@ -375,7 +402,7 @@ const CreateProjectTakeoffModal = ({
                 mode="edit"
                 typeList={[]}
                 pdfUrl={pdfUrl as string}
-                project_id={''}
+                project_id={""}
                 project_file_id={selectedFileId}
                 zoom={zoom}
                 page={page}

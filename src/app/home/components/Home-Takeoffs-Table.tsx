@@ -58,7 +58,7 @@ const HomeTakeoffsTable = ({
     () => [
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Take Off Name
           </span>
         ),
@@ -70,7 +70,7 @@ const HomeTakeoffsTable = ({
       },
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Project Name
           </span>
         ),
@@ -82,7 +82,7 @@ const HomeTakeoffsTable = ({
       },
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Last Edit
           </span>
         ),
@@ -93,7 +93,7 @@ const HomeTakeoffsTable = ({
       },
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Operation
           </span>
         ),

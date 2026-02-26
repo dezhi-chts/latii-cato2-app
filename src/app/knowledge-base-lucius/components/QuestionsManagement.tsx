@@ -58,7 +58,7 @@ const QuestionsManagement = ({
 
   function handleAskQuestion() {
     const currentQuestion = currentSet?.questions.find(
-      (q) => q.id === selectedQuestionId
+      (q) => q.id === selectedQuestionId,
     );
     if (currentQuestion?.text) handleSendMessage(currentQuestion?.text);
   }
@@ -66,10 +66,10 @@ const QuestionsManagement = ({
   return (
     <div className="w-[350px] border-l border-primaryN30 p-6 flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <p className="text-forumBlue font-light text-xs">
+        <p className="text-forumBlue-normal font-light text-xs">
           Question Set Management
         </p>
-        <p className="text-basicGray font-light text-xxs">
+        <p className="text-grey-normal font-light text-xxs">
           Add as many questions as needed to as CATO every time you are testing.
         </p>
       </div>
@@ -131,12 +131,12 @@ const FooterButtons = ({ handleAskQuestion }: FooterButtonsProps) => {
       <Button
         variant="outline"
         borderColor="basicLightGray"
-        className="!py-0.5 text-xs !text-basicGray font-light"
+        className="!py-0.5 text-xs !text-grey-normal font-light"
       >
         + Add Question
       </Button>
       <Button
-        backgroundColor="forumBlue"
+        backgroundColor="forumBlue-normal"
         className="!py-0.5 text-xs font-light"
         onClick={handleAskQuestion}
       >

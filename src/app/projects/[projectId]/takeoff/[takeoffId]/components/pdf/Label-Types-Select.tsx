@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Dropdown } from 'antd';
-import { DownOutlined } from '@ant-design/icons';
+import React, { useState } from "react";
+import { Dropdown } from "antd";
+import { DownOutlined } from "@ant-design/icons";
 const LabelTypesSelect = ({
   typeList,
   selectedType,
@@ -10,30 +10,37 @@ const LabelTypesSelect = ({
   selectedType: string;
   onChangeType: (type: string) => void;
 }) => {
-
   const [visible, setVisible] = useState(false);
 
   const LabelGroup = ({ item }: { item: any }) => {
     return (
       <div className="flex flex-row items-center">
-        <span className="w-[6px] h-[6px] rounded-[3px]" style={{ backgroundColor: 'transparent' }}></span>
+        <span
+          className="w-[6px] h-[6px] rounded-[3px]"
+          style={{ backgroundColor: "transparent" }}
+        ></span>
         <span className="ml-2 text-xs">{item.type}</span>
       </div>
-    )
-  }
-  const LabelItem = ({ item, isChild }: { item: any, isChild?: boolean }) => {
+    );
+  };
+  const LabelItem = ({ item, isChild }: { item: any; isChild?: boolean }) => {
     return (
-      <div className={`flex flex-row items-center hover:text-forumBlue ${isChild ? 'ml-2' : ''}`}
+      <div
+        className={`flex flex-row items-center hover:text-forumBlue-normal ${isChild ? "ml-2" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
           setVisible(false);
           onChangeType && onChangeType(item.type);
-        }}>
-        <span className="w-[6px] h-[6px] rounded-[3px]" style={{ backgroundColor: item.color }}></span>
+        }}
+      >
+        <span
+          className="w-[6px] h-[6px] rounded-[3px]"
+          style={{ backgroundColor: item.color }}
+        ></span>
         <span className="ml-2 text-xs">{item.type}</span>
       </div>
-    )
-  }
+    );
+  };
 
   const getCategoryInfo = () => {
     // 将typeList进行扁平化处理
@@ -48,15 +55,14 @@ const LabelTypesSelect = ({
       let dropdownItem: any = {};
       if (item?.children && item?.children?.length > 0) {
         dropdownItem.key = item.type;
-        dropdownItem.type = 'group';
+        dropdownItem.type = "group";
         dropdownItem.label = <LabelGroup item={item} />;
-        dropdownItem.children =
-          item.children.map((child: any) => {
-            return {
-              label: <LabelItem item={child} isChild={true} />,
-              key: child.type,
-            };
-          })
+        dropdownItem.children = item.children.map((child: any) => {
+          return {
+            label: <LabelItem item={child} isChild={true} />,
+            key: child.type,
+          };
+        });
       } else {
         dropdownItem.key = item.type;
         dropdownItem.label = <LabelItem item={item} />;
@@ -74,9 +80,9 @@ const LabelTypesSelect = ({
   return (
     <div>
       <Dropdown
-        className='cursor-pointer'
+        className="cursor-pointer"
         menu={{ items }}
-        trigger={['click']}
+        trigger={["click"]}
         open={visible}
         onOpenChange={(visible) => {
           if (visible) {
@@ -86,13 +92,19 @@ const LabelTypesSelect = ({
           }
         }}
       >
-        <div className="w-[42px] h-[18px] flex items-center justify-center rounded text-xxs text-white" style={{ backgroundColor: bgColor }}>
+        <div
+          className="w-[42px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
+          style={{ backgroundColor: bgColor }}
+        >
           <span className="ml-1">{icon}</span>
-          <DownOutlined className="ml-2" style={{ color: "white", fontSize: "10px" }} />
+          <DownOutlined
+            className="ml-2"
+            style={{ color: "white", fontSize: "10px" }}
+          />
         </div>
       </Dropdown>
     </div>
-  )
-}
+  );
+};
 
 export default LabelTypesSelect;

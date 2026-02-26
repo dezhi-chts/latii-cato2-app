@@ -42,7 +42,7 @@ const AccountSettings = () => {
   return (
     <div className="mt-10 flex flex-col gap-2 w-full">
       <div className="flex flex-col gap-1 pl-12">
-        <p className="text-xl text-forumBlue">Account Preferences</p>
+        <p className="text-xl text-forumBlue-normal">Account Preferences</p>
         <p className="text-xs text-basicGray">
           Manage your data and your team members, privacy and security.
         </p>

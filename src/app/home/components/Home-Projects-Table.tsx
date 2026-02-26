@@ -68,7 +68,7 @@ const HomeProjectsTable = ({
     () => [
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Project Name
           </span>
         ),
@@ -80,7 +80,7 @@ const HomeProjectsTable = ({
       },
       {
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             Last Edit
           </span>
         ),
@@ -92,7 +92,7 @@ const HomeProjectsTable = ({
         ),
       },
       {
-        title: <span className="text-xs font-semibold text-basicGray"></span>,
+        title: <span className="text-xs font-semibold text-grey-normal"></span>,
         dataIndex: "actions",
         key: "actions",
         align: "center",
@@ -122,7 +122,7 @@ const HomeProjectsTable = ({
     () =>
       dynamicProperties.map((property) => ({
         title: (
-          <span className="text-xs font-semibold text-basicGray">
+          <span className="text-xs font-semibold text-grey-normal">
             {getTitleFromPropertyName(property)}
           </span>
         ),

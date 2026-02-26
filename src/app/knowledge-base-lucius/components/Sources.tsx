@@ -162,19 +162,19 @@ const Sources = ({ isOpen, setIsOpen }: SourcesProps) => {
         <div className="px-8 flex flex-col gap-3">
           <Button
             variant="outline"
-            borderColor="forumBlue"
+            borderColor="forumBlue-normal"
             className="!py-0 w-full"
             onClick={() => setIsModalOpen(true)}
           >
             + Add Source
           </Button>
           {selectedCategory === "videos" && (
-            <p className="text-xs font-light text-basicGray">
+            <p className="text-xs font-light text-grey-normal">
               You can upload a maximum of 50 videos for Lucius.
             </p>
           )}
           {selectedCategory === "documents" && (
-            <p className="text-xs font-light text-basicGray text-center truncate">
+            <p className="text-xs font-light text-grey-normal text-center truncate">
               You can upload a maximum of 10 files for Lucius.
             </p>
           )}
@@ -307,7 +307,7 @@ const SourcesRender = ({
               className="h-4 w-4 hover:opacity-70"
             />
             <p
-              className="underline truncate hover:text-forumBlue"
+              className="underline truncate hover:text-forumBlue-normal"
               onClick={() => handleClick(source)}
             >
               {source.label}

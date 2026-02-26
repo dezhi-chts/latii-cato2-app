@@ -56,7 +56,7 @@ const PromptLibraryTab = () => {
       <div className="w-1/5">
         <div className="flex justify-between items-center pb-4">
           <p>All Prompts</p>
-          <Button backgroundColor="primaryGray" color="basicGray">
+          <Button backgroundColor="primaryN20" color="grey-normal">
             <div className="flex gap-2">
               <span>Review</span>
               {needReview > 0 && (
@@ -72,7 +72,7 @@ const PromptLibraryTab = () => {
             <div
               key={index}
               className={`flex justify-between items-center cursor-pointer w-full border border-primaryN30 rounded-md p-2 text-sm ${
-                selectedPrompt === index ? "bg-forumBlueLight" : ""
+                selectedPrompt === index ? "bg-forumBlue-light" : ""
               }`}
               onClick={() => setSelectedPrompt(index)}
             >

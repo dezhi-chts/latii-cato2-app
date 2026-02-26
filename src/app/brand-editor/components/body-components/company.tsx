@@ -227,7 +227,7 @@ const Company = () => {
               )}
             </div>
           </Upload>
-          <p className="text-basicGray" style={{ fontSize: "18px" }}>
+          <p className="text-grey-normal" style={{ fontSize: "18px" }}>
             {companyMsg.name}
           </p>
         </div>
@@ -317,11 +317,11 @@ const Company = () => {
       </div>
       <div className="w-full max-w-[1100px] flex flex-col gap-4 mt-28">
         <div className="flex justify-between w-full">
-          <p className="text-forumBlue">Your Team</p>
+          <p className="text-forumBlue-normal">Your Team</p>
           {isAdmin && (
             <Link href="/account-settings?tab=team-management">
               <button
-                className={`px-6 h-7 bg-forumBlueLightActive text-forumDarkBlue hover:bg-forumBlue hover:text-white text-sm transition-all duration-300 rounded-md`}
+                className={`px-6 h-7 bg-forumBlue-light-active text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-md`}
               >
                 Edit Users
               </button>

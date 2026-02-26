@@ -14,11 +14,11 @@ const NailingFinsLocation = ({
   initialOptions,
 }: any) => {
   const directions = nailingFinsOptions.map(
-    (item: { value: any }) => item.value
+    (item: { value: any }) => item.value,
   );
 
   const [selectedDirections, setSelectedDirections] = useState<string[]>(
-    initialOptions || []
+    initialOptions || [],
   );
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const NailingFinsLocation = ({
         newSelection,
         index,
         "installation_nailing_fin",
-        false
+        false,
       );
       return newSelection;
     });
@@ -102,12 +102,12 @@ const InstallationCard = ({
 }: CardProps) => {
   const [imgSrc, setImgSrc] = useState(
     `/assets/item-customization/installation/${sanitizeNameForFile(
-      card.text
-    )}.webp`
+      card.text,
+    )}.webp`,
   );
 
   const [isGlazed, setIsGlazed] = useState(
-    item?.installation_glazed.selected_value
+    item?.installation_glazed.selected_value,
   );
 
   useEffect(() => {
@@ -136,7 +136,7 @@ const InstallationCard = ({
               className="h-24"
             />
           </div>
-          <div className="text-basicGray">
+          <div className="text-grey-normal">
             <p className="font-semibold">{card?.text}</p>
           </div>
           <p className="text-basicLightGray">
@@ -147,7 +147,7 @@ const InstallationCard = ({
         <div className="w-full flex flex-col gap-4">
           {card.value === "nailing_fin" && card.value === selectedValue && (
             <div className="flex flex-col gap-2 w-full items-start">
-              <p className="text-xs text-basicGray font-semibold">Location</p>
+              <p className="text-xs text-grey-normal font-semibold">Location</p>
               <NailingFinsLocation
                 nailingFinsOptions={item?.installation_nailing_fin?.options}
                 index={index}
@@ -159,7 +159,7 @@ const InstallationCard = ({
           )}
           {card.value === selectedValue && (
             <div className="flex flex-col gap-2 w-full items-start">
-              <p className="text-xs text-basicGray font-semibold">Glazed</p>
+              <p className="text-xs text-grey-normal font-semibold">Glazed</p>
               <div
                 onClick={(e) => {
                   e.preventDefault();
@@ -173,7 +173,7 @@ const InstallationCard = ({
                       e.target.value,
                       index,
                       "installation_glazed",
-                      false
+                      false,
                     )
                   }
                 >
@@ -184,7 +184,7 @@ const InstallationCard = ({
                           "yes",
                           index,
                           "installation_glazed",
-                          false
+                          false,
                         )
                       }
                     >
@@ -198,7 +198,7 @@ const InstallationCard = ({
                           "no",
                           index,
                           "installation_glazed",
-                          false
+                          false,
                         )
                       }
                     >

@@ -140,15 +140,15 @@ const ProjectsSettings = () => {
         <div className="w-5/12 flex flex-col gap-8">
           <div className="flex justify-between items-end">
             <div className="flex flex-col gap-1">
-              <p className="text-baseDark text-base">Project Information</p>
-              <p className="text-xs text-basicGray">
+              <p className="text-grey-dark text-base">Project Information</p>
+              <p className="text-xs text-grey-normal">
                 This is the project information requested for all projects. Pick
                 up to 10 fields.
               </p>
             </div>
 
             <Button
-              backgroundColor="forumBlue"
+              backgroundColor="forumBlue-normal"
               className="rounded-md !px-4 !py-1"
               onClick={addField}
             >
@@ -193,8 +193,8 @@ const ProjectsSettings = () => {
         {/* RIGHT */}
         <div className="w-7/12">
           <div className="flex flex-col gap-1">
-            <p className="text-baseDark text-base">Preview</p>
-            <p className="text-xs text-basicGray">
+            <p className="text-grey-dark text-base">Preview</p>
+            <p className="text-xs text-grey-normal">
               This will be all available information from a project
             </p>
           </div>
@@ -205,7 +205,7 @@ const ProjectsSettings = () => {
     `}
           >
             <div className="flex gap-4 items-center pb-6">
-              <p className="text-forumBlue">Create New Project</p>
+              <p className="text-forumBlue-normal">Create New Project</p>
             </div>
 
             <div
@@ -261,7 +261,7 @@ const ProjectsSettings = () => {
 
             <div className="flex justify-end w-full mt-6 max-w-80">
               <Button
-                backgroundColor="forumBlue"
+                backgroundColor="forumBlue-normal"
                 className="rounded-md !px-4 !py-1"
               >
                 Create

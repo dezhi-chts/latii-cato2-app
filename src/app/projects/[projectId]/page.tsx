@@ -125,7 +125,9 @@ const Project = () => {
       <div className="flex flex-col gap-12 zoomed-container">
         <Header project={project} refetchProject={getProject} />
         <div className="flex flex-col gap-8 mt-36 pl-20 ">
-          <div className="flex text-lg text-forumBlue">Takeoffs & Quotiis</div>
+          <div className="flex text-lg text-forumBlue-normal">
+            Takeoffs & Quotiis
+          </div>
           {takeoffsList?.length > 0 && (
             <div className="flex justify-between items-center w-11/12">
               <div className="flex h-[34px] flex-row gap-5">
@@ -204,7 +206,7 @@ const Project = () => {
                       <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">
                         takeoff
                       </div>
-                      <div className="text-xs text-basicGray">
+                      <div className="text-xs text-grey-normal">
                         Last edit |{" "}
                         {takeOff?.take_off_result?.update_time || ""}
                       </div>

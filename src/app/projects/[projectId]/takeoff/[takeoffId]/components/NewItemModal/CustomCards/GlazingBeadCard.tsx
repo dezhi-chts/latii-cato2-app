@@ -12,11 +12,11 @@ const GlazingBeadCard = ({
   selectedValue,
 }: CardProps) => {
   const imgSrc = `/assets/item-customization/glazing-bead/images/${sanitizeName(
-    card.text
+    card.text,
   )}.webp`;
 
   const iconSrc = `/assets/item-customization/glazing-bead/icons/${sanitizeName(
-    card.text
+    card.text,
   )}.webp`;
 
   const handleSelectedOptionChange = () => {
@@ -33,7 +33,7 @@ const GlazingBeadCard = ({
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <Image src={iconSrc} alt="Card icon" width={62} height={62} />
-          <p className="text-basicGray font-semibold w-32 text-start">
+          <p className="text-grey-normal font-semibold w-32 text-start">
             {card.text}
           </p>
         </div>

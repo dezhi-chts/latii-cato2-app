@@ -31,7 +31,7 @@ const UserTable = ({
 
   return (
     <div className="w-full flex flex-col">
-      <div className="w-full rounded-t-xl bg-primaryN20 border-b border-primaryN30 flex text-basicGray text-xs text-center py-3 gap-2">
+      <div className="w-full rounded-t-xl bg-primaryN20 border-b border-primaryN30 flex text-grey-normal text-xs text-center py-3 gap-2">
         <p className="w-1/5">First Name</p>
         <p className="w-1/5">Last Name</p>
         <p className="w-1/5">Role</p>
@@ -175,7 +175,7 @@ const Row = ({
       {renderField(contact.last_name, "last_name")}
       {renderField(contact.job_title, "job_title")}
       {renderField(contact.email, "email")}
-      <p className={`${showActions ? "w-[10%]" : "w-1/5"} text-basicGray`}>
+      <p className={`${showActions ? "w-[10%]" : "w-1/5"} text-grey-normal`}>
         Owner
       </p>
       {showActions && (

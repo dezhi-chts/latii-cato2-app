@@ -100,7 +100,7 @@ const QuickActionsModal = ({
   const fetchOptions = async (
     selectedAction: Action,
     items: any[],
-    setFunction: any
+    setFunction: any,
   ) => {
     const itemIds = items.map((item) => item.id);
     try {
@@ -122,7 +122,7 @@ const QuickActionsModal = ({
       <div className="flex flex-col gap-8 p-8 text-sm min-h-[350px] zoomed-container">
         <div>
           <p className="font-semibold text-primaryN900">Quick Actions Panel</p>
-          <p className="font-light text-basicGray">
+          <p className="font-light text-grey-normal">
             *Changes will be applied to all selected items.
           </p>
         </div>
@@ -133,7 +133,7 @@ const QuickActionsModal = ({
               className={`${
                 selectedAction === action
                   ? "bg-primaryN900 text-white"
-                  : "bg-primaryN20 text-basicGray"
+                  : "bg-primaryN20 text-grey-normal"
               } rounded-full px-6 text-center capitalize py-0.5 text-sm cursor-pointer font-light hover:opacity-80`}
               onClick={() => setSelectedAction(action)}
             >
@@ -274,7 +274,7 @@ function RecursiveSelect({
 
     levels.push(
       <div key={i} className="flex items-center mb-2">
-        <p className="w-5/12 text-xs text-basicGray font-light">{typeText}</p>
+        <p className="w-5/12 text-xs text-grey-normal font-light">{typeText}</p>
         <Select
           style={{ width: 300 }}
           placeholder="Select option"
@@ -291,7 +291,7 @@ function RecursiveSelect({
             </Select.Option>
           ))}
         </Select>
-      </div>
+      </div>,
     );
   }
 
@@ -304,7 +304,7 @@ function InstallationPanel({
   setFormValues,
 }: RecursiveSelectProps) {
   const [selectedType, setSelectedType] = useState<string>(
-    data[0]?.value || ""
+    data[0]?.value || "",
   );
 
   useEffect(() => {
@@ -337,7 +337,7 @@ function InstallationPanel({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center">
-        <p className="w-4/12 text-xs text-basicGray font-light">Type</p>
+        <p className="w-4/12 text-xs text-grey-normal font-light">Type</p>
         <Select
           placeholder="Select Option"
           className="w-8/12"
@@ -364,7 +364,7 @@ function InstallationPanel({
         </div>
       </div>
       <div className="flex items-center mt-2">
-        <p className="w-4/12 text-xs text-basicGray font-light">Fixions</p>
+        <p className="w-4/12 text-xs text-grey-normal font-light">Fixions</p>
         <Radio.Group
           onChange={(e) => handleChange(e.target.value, "installation_glazed")}
           value={formValues.installation_glazed}
@@ -381,7 +381,7 @@ function InstallationPanel({
 const NailingFinsSelector = ({ onDirectionChange, formValues }: any) => {
   const directions = ["all", "top", "bottom", "left", "right"];
   const [selectedDirections, setSelectedDirections] = useState<string[]>(
-    formValues?.installation_nailing_fin || ["all"]
+    formValues?.installation_nailing_fin || ["all"],
   );
 
   const toggleDirection = (direction: string) => {
@@ -421,7 +421,7 @@ const NailingFinsSelector = ({ onDirectionChange, formValues }: any) => {
     <div className="flex gap-2 items-center">
       {directions.map((direction: string, index: Key | null | undefined) => {
         const isSelected = selectedDirections.includes(
-          direction.trim().toLowerCase()
+          direction.trim().toLowerCase(),
         );
         console.log(direction, isSelected, selectedDirections);
 

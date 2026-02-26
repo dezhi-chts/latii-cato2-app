@@ -192,7 +192,7 @@ export default function Sidebar() {
                 e.stopPropagation();
                 toggleExpand("sidebar");
               }}
-              className="h-7 w-7 rounded-full border border-baseLightHover flex items-center justify-center"
+              className="h-7 w-7 rounded-full border border-grey-light-hover flex items-center justify-center"
             >
               <Image
                 src={sidebarIcon}
@@ -206,7 +206,7 @@ export default function Sidebar() {
           <button
             className={`${
               expanded.sidebar ? "px-3.5" : " w-7 h-7 self-center"
-            } h-7 bg-forumBlueLight text-forumDarkBlue hover:bg-forumBlue hover:text-white text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
+            } h-7 bg-forumBlue-light text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
             onClick={(e) => {
               e.stopPropagation();
               setShowModal((prev) => ({ ...prev, createProject: true }));
@@ -229,7 +229,7 @@ export default function Sidebar() {
               e.stopPropagation();
               if (expanded.sidebar) toggleExpand("sidebar");
             }}
-            className={`${firstSegment === "home" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+            className={`${firstSegment === "home" ? "bg-grey-light" : ""} hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out`}
           >
             <Link href="/home">
               <div
@@ -264,7 +264,7 @@ export default function Sidebar() {
               e.stopPropagation();
               if (expanded.sidebar) toggleExpand("sidebar");
             }}
-            className="hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out"
+            className="hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out"
           >
             <Link href="/ask-lucius">
               <div
@@ -287,14 +287,14 @@ export default function Sidebar() {
           </div> */}
           {expanded.sidebar && (
             <div className="pl-2.5 pt-4 flex flex-col gap-4">
-              <p className="text-baseGray text-sm ">Management</p>
+              <p className="text-grey-light-strong text-sm ">Management</p>
               {isAdmin && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     if (expanded.sidebar) toggleExpand("sidebar");
                   }}
-                  className={`${firstSegment === "brand-editor" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+                  className={`${firstSegment === "brand-editor" ? "bg-grey-light" : ""} hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out`}
                 >
                   <Link href="/brand-editor">
                     <div
@@ -322,7 +322,7 @@ export default function Sidebar() {
                   e.stopPropagation();
                   if (expanded.sidebar) toggleExpand("sidebar");
                 }}
-                className={`${firstSegment === "brand-settings" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+                className={`${firstSegment === "brand-settings" ? "bg-grey-light" : ""} hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out`}
               >
                 <Link href="/brand-settings">
                   <div
@@ -369,7 +369,7 @@ export default function Sidebar() {
                   e.stopPropagation();
                   if (expanded.sidebar) toggleExpand("sidebar");
                 }}
-                className={`${firstSegment === "knowledge-base-cato" ? "bg-baseLight" : ""} hover:bg-baseLight rounded-md transition-all duration-150 ease-in-out`}
+                className={`${firstSegment === "knowledge-base-cato" ? "bg-grey-light" : ""} hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out`}
               >
                 <Link href="/knowledge-base-cato">
                   <div

@@ -9,7 +9,7 @@ const Header = () => {
         <p className="text-[#717171] text-lg" style={{ fontSize: "18px" }}>
           Your Company
         </p>
-        <p className="text-baseGray text-sm">
+        <p className="text-grey-light-strong text-sm">
           Save all information of your company
         </p>
       </div>

@@ -41,8 +41,8 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white">
       {/* Row 1 */}
-      <div className="flex items-center gap-3 bg-baseLight p-4">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-basicGray">
+      <div className="flex items-center gap-3 bg-grey-light p-4">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white text-xs text-grey-normal">
           {id}
         </div>
 
@@ -90,7 +90,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
         </div>
       </div>
 
-      <div className="border border-t-0 border-baseLightHover rounded-b-xl p-3">
+      <div className="border border-t-0 border-grey-light-hover rounded-b-xl p-3">
         {/* Row 2 */}
         <div className="flex items-center justify-between px-4 py-3 ">
           <Checkbox

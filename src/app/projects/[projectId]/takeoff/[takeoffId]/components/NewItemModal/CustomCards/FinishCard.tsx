@@ -49,7 +49,7 @@ const FinishCard = ({
           value: colorValue,
           field: "color_input",
           units: false,
-        }
+        },
       );
     } else {
       changesArray.push({
@@ -77,7 +77,7 @@ const FinishCard = ({
 
           <Image
             src={`/assets/item-customization/finish/${sanitizeName(
-              card.text
+              card.text,
             )}/image.webp`}
             alt="Card Image"
             width={216}
@@ -89,7 +89,7 @@ const FinishCard = ({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p className="font-semibold text-base text-basicGray text-center">
+          <p className="font-semibold text-base text-grey-normal text-center">
             {card.text}
           </p>
           <p className="text-xs text-basicLightGray text-start">
@@ -105,9 +105,9 @@ const FinishCard = ({
               <div className="flex flex-col gap-2">
                 {item?.finish_method.options?.some(
                   (opt: any) =>
-                    !Array.isArray(opt.color) || opt.color.length === 0
+                    !Array.isArray(opt.color) || opt.color.length === 0,
                 ) && (
-                  <p className="text-basicGray text-xs font-semibold text-start">
+                  <p className="text-grey-normal text-xs font-semibold text-start">
                     Finishes
                   </p>
                 )}
@@ -132,7 +132,7 @@ const FinishCard = ({
                         if (hasColors) {
                           const titleSection = !writtenTitle ? (
                             <>
-                              <p className="text-basicGray text-xs font-semibold text-start">
+                              <p className="text-grey-normal text-xs font-semibold text-start">
                                 Finishes{" "}
                                 <span className="font-normal">
                                   (Powder Coating)
@@ -239,7 +239,7 @@ const FinishOption = ({
 
   const src = option.text
     ? `/assets/finishes/${sanitizeName(card.text)}/${sanitizeName(
-        option.text
+        option.text,
       )}.webp`
     : `/assets/finish-colors/${sanitizeKey(option.name)}.webp`;
 

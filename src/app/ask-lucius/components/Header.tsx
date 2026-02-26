@@ -12,7 +12,7 @@ const Header = () => {
           width={137}
           height={27}
         />
-        <p className="text-basicGray">Last Update June 2025</p>
+        <p className="text-grey-normal">Last Update June 2025</p>
       </div>
       <Link href="/knowledge-base-lucius">
         <Button className="h-10">Knowledge Base</Button>
