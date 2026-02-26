@@ -59,10 +59,10 @@ const Header = ({
         <div className="cursor-pointer" onClick={handleBack}>
           <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
         </div>
-        <div className="ml-10 h-full flex-1 flex flex-row gap-4 items-center">
+        <div className="ml-5 h-full flex-1 flex flex-row gap-4 items-center">
           <PageIndexStepInActive />
           <PageLabelingStepActive />
-          <div className="ml-4 mr-14 flex gap-4">
+          <div className="ml-4 mr-6 flex gap-4">
             {filesData?.map((file: any, index: number) => {
               const uploadFile: UploadFile = {
                 id: file.id,

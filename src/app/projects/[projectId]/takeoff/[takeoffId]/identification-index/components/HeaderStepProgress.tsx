@@ -28,7 +28,7 @@ export const PageIndexStepActive = () => {
 
 export const PageIndexStepInActive = () => {
   return (
-    <div className="pr-14 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
+    <div className="pr-10 py-6 flex flex-row items-center gap-2 border-r border-primaryN30">
       <div
         className={`w-[16px] h-[16px] rounded-full cursor-pointer flex items-center justify-center bg-accentGreen`}
       >
@@ -54,7 +54,7 @@ export const PageIndexStepCompleted = () => {
 
 export const PageLabelingStepActive = () => {
   return (
-    <div className="pl-10 h-full flex flex-row items-center gap-2">
+    <div className="pl-6 h-full flex flex-row items-center gap-2">
       <ActiveCircle number={2} />
       <div className="text-sm text-forumBlue">Page Labeling</div>
       <div className="text-xs text-basicGray">Step 2</div>
@@ -63,7 +63,7 @@ export const PageLabelingStepActive = () => {
 };
 export const PageLabelingStepInActive = () => {
   return (
-    <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
+    <div className="px-6 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
       <InActiveCircle />
       <div className="text-sm text-baseGray">Page Labeling</div>
       <div className="text-xs text-baseGray">Step 2</div>
@@ -103,7 +103,7 @@ export const PagePreAnalysisStepActive = () => {
 };
 export const PageAnalysisStepInActive = () => {
   return (
-    <div className="px-14 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
+    <div className="px-6 py-6 flex flex-row items-center gap-2 border-l border-primaryN30">
       <InActiveCircle />
       <div className="text-sm text-baseGray">Pre-Analysis</div>
       <div className="text-xs text-baseGray">Step 3</div>
