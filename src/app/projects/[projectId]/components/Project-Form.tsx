@@ -60,8 +60,9 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
     <div className="flex flex-col gap-3">
       <ShortText
         name="Project Name"
+        hint_text="Input a recognizable name for you"
         required
-        onBlur={
+        onChange={
           ((e: any) => commit("project_name")(e?.target?.value ?? "")) as any
         }
       />

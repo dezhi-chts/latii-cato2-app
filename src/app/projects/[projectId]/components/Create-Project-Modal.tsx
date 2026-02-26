@@ -1,15 +1,20 @@
 "use client";
-import { useState } from "react";
-import { Button, Modal } from "antd";
+import { useEffect, useState } from "react";
+import { Modal } from "antd";
 import TakeoffUpload from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
 import { type UploadFile } from "antd/es/upload/interface";
 import { createProject } from "@/services/projectService";
 import { useCompany } from "@/context/CompanyContext";
-import { slugifyOptionValue } from "@/lib/functions";
+import { normalizeKey } from "@/lib/functions";
+import { Attribute } from "@/types/home";
+import Button from "@/components/Button";
+
+type FormValues = Record<string, any>;
 
 const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
   const [form, setForm] = useState<Record<string, any>>({});
+  const [isFormValid, setIsFormValid] = useState<boolean>(false);
 
   const { company } = useCompany();
 
@@ -21,15 +26,26 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
     }
   };
 
+  const handleUpload = (data: {
+    archFiles: UploadFile[];
+    quoteFiles: UploadFile[];
+  }) => {
+    console.log("######### handleUpload", data);
+    //打开Create-Project-Takeoff-Modal弹窗
+    onHandleUpload?.(data);
+  };
+
+  useEffect(() => {
+    const isValid = hasAllRequiredFields(company.project_attributes, form);
+    setIsFormValid(isValid);
+  }, [form]);
+
   const formatPayload = (
     form: Record<string, any>,
     projectAttributes: any[],
   ) => {
     const attributeKeyByName = Object.fromEntries(
-      projectAttributes.map((attr) => [
-        slugifyOptionValue(attr.label),
-        attr.uuid,
-      ]),
+      projectAttributes.map((attr) => [normalizeKey(attr.label), attr.uuid]),
     ) as Record<string, string>;
 
     const { project_name, location, ...rest } = form;
@@ -47,13 +63,30 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
     };
   };
 
-  const handleUpload = (data: {
-    archFiles: UploadFile[];
-    quoteFiles: UploadFile[];
-  }) => {
-    console.log("######### handleUpload", data);
-    //打开Create-Project-Takeoff-Modal弹窗
-    onHandleUpload?.(data);
+  const hasAllRequiredFields = (
+    attributes: Attribute[],
+    form: FormValues,
+  ): boolean => {
+    if (!form.project_name || form.project_name.trim() === "") {
+      return false;
+    }
+
+    for (const attr of attributes) {
+      if (!attr.required) continue;
+
+      const key = normalizeKey(attr.label);
+      const value = form[key];
+
+      if (
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "")
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   return (
@@ -75,10 +108,15 @@ const CreateProjectModal = ({ isOpen, closeModal, onHandleUpload }: any) => {
           <div className="px-5 py-2 overflow-y-auto">
             <ProjectForm form={form} setForm={setForm} />
           </div>
-          <div className="flex-1 flex items-end justify-center">
+          <div className="flex-1 flex items-end justify-center mb-4">
             <Button
-              onClick={handleProjectSubmit}
-              className="mb-4 custom-primary-btn"
+              onClick={() => {
+                if (!isFormValid) return;
+                handleProjectSubmit();
+              }}
+              className="w-32 rounded-md text-xs"
+              backgroundColor="forumBlue"
+              disabled={!isFormValid}
             >
               Create
             </Button>

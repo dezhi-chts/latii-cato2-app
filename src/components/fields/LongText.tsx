@@ -7,6 +7,7 @@ type LongTextProps = {
   hint_text?: string;
   value?: string;
   onBlur?: () => void;
+  onChange?: (e: any) => void;
 };
 
 const LongText = ({
@@ -15,6 +16,7 @@ const LongText = ({
   hint_text = "",
   value,
   onBlur,
+  onChange,
 }: LongTextProps) => {
   const { TextArea } = Input;
   return (
@@ -28,6 +30,7 @@ const LongText = ({
           placeholder={hint_text}
           value={value}
           onBlur={onBlur}
+          onChange={onChange}
           style={{
             resize: "none",
           }}

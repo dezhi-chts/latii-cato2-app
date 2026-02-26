@@ -278,5 +278,5 @@ export const buildMetadataOptions = (options: FieldOption[]): string[] => {
   return [JSON.stringify(options)];
 };
 
-export const slugifyOptionValue = (label: string) =>
+export const normalizeKey = (label: string) =>
   label.trim().toLowerCase().replaceAll(" ", "_");

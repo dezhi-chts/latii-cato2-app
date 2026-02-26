@@ -10,3 +10,13 @@ export type ProjectRow = {
   is_favorite: boolean;
   [key: string]: unknown;
 };
+
+export type Attribute = {
+  uuid: string;
+  type: number;
+  hint: string;
+  has_hint_text: boolean;
+  required: boolean;
+  label: string;
+  metadata: string[];
+};

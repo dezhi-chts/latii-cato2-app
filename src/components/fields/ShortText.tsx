@@ -7,6 +7,7 @@ type ShortTextProps = {
   hint_text?: string;
   value?: string;
   onBlur?: () => void;
+  onChange?: (e: any) => void;
 };
 
 const ShortText = ({
@@ -15,6 +16,7 @@ const ShortText = ({
   hint_text = "",
   value,
   onBlur,
+  onChange,
 }: ShortTextProps) => {
   return (
     <div className="flex flex-col gap-2">
@@ -26,6 +28,7 @@ const ShortText = ({
         className="max-w-80"
         value={value}
         onBlur={onBlur}
+        onChange={onChange}
       />
     </div>
   );

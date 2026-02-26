@@ -9,6 +9,7 @@ type NumbersProps = {
   hint_text?: string;
   value?: string;
   onBlur?: () => void;
+  onChange?: (e: any) => void;
 };
 
 const Numbers = ({
@@ -17,6 +18,7 @@ const Numbers = ({
   hint_text = "",
   value,
   onBlur,
+  onChange,
 }: NumbersProps) => {
   return (
     <div className="flex flex-col gap-2">
@@ -28,6 +30,7 @@ const Numbers = ({
         className="w-full max-w-80"
         value={value}
         onBlur={onBlur}
+        onChange={onChange}
         controls={false}
       />
     </div>
