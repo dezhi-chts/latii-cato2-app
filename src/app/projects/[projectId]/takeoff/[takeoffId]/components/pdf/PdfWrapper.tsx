@@ -64,7 +64,6 @@ import {
   PageType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
-import { max } from "lodash";
 
 const { confirm } = Modal;
 
@@ -131,13 +130,6 @@ const showCopyBtnGroupTypes = [GroupType.WindowDoorUnitList, GroupType.Item, Gro
 
 // 以下框类型显示类型下拉框
 const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupType.WindowDoorUnit, GroupType.Table, GroupType.KeyNotes];
-
-// 框类型对应的颜色
-const groupTypeColor: any = {
-  [GroupType.Item]: allPageTypes[PageType.Item].color,
-  [GroupType.LayerInfo]: allPageTypes[PageType.Information].color,
-  [GroupType.Description]: allPageTypes[PageType.Description].color,
-}
 
 const PdfWrapper = forwardRef(
   (
@@ -2402,7 +2394,7 @@ const PdfWrapper = forwardRef(
                   );
 
                   let type = item.type ?? '';
-                  let color: string = groupTypeColor[type] ?? colorList.forumBlue;
+                  let color: string = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
                   return (
                     <div
                       key={item.id}
@@ -2545,7 +2537,7 @@ const PdfWrapper = forwardRef(
                   }
                   const { minX, minY, maxX, maxY, width, height } =
                     group.bounds;
-                  let color: string = groupTypeColor[group.type] ?? colorList.forumBlue;
+                  let color: string = allPageTypes[group.type as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
                   return (
                     <div
                       key={group.id}
@@ -2766,25 +2758,8 @@ const ShapeWrapper = ({
 
 
   if (type === "evidence") {
-    try {
-      let evidType = shape.type ?? '';
-      if (groupTypeColor[evidType]) {
-        color = groupTypeColor[evidType];
-      } else {
-        if (typeList && typeList?.length > 0) {
-          // 扁平化处理typeList
-          const flatTypeList = typeList.flatMap((item) => {
-            return item?.children?.length > 0 ? item.children : [item];
-          });
-          let typeColor = flatTypeList.find((item) => item.type === evidType)?.color;
-          if (typeColor) {
-            color = typeColor;
-          }
-        }
-      }
-    } catch (error) {
-
-    }
+    let evidType = shape.type ?? '';
+    color = allPageTypes[evidType as keyof typeof allPageTypes]?.color ?? colorList.forumBlue;
   }
 
   if (draggingShapeId === shape.id) {

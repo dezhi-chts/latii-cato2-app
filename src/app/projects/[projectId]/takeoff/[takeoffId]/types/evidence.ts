@@ -117,6 +117,21 @@ export const allPageTypes = {
     icon: "D",
     color: "#2A5773",
   },
+  [PageType.Unknown]: {
+    type: PageType.Unknown,
+    icon: "N",
+    color: "#A3A3A3",
+  },
+  [GroupType.WindowDoorUnit]: {
+    type: GroupType.WindowDoorUnit,
+    icon: "W",
+    color: "#5859D6",
+  },
+  [GroupType.Table]: {
+    type: GroupType.Table,
+    icon: "T",
+    color: "#9400D3",
+  },
 };
 // identification-index summary页面类型
 export const ArchDrawingSummaryPageTypes = [
@@ -125,11 +140,7 @@ export const ArchDrawingSummaryPageTypes = [
   allPageTypes[PageType.Schedule],
   allPageTypes[PageType.KeyNotes],
   allPageTypes[PageType.Mix],
-  {
-    type: PageType.Unknown,
-    icon: "?",
-    color: "#717171",
-  },
+  allPageTypes[PageType.Unknown],
 ];
 
 // identification 所有标签类型
@@ -160,16 +171,8 @@ export const ArchDrawingLabelTypes = [
   {
     ...allPageTypes[PageType.Schedule],
     children: [
-      {
-        type: GroupType.WindowDoorUnit,
-        icon: "W",
-        color: "#5859D6",
-      },
-      {
-        type: GroupType.Table,
-        icon: "T",
-        color: "#9400D3",
-      },
+      allPageTypes[GroupType.WindowDoorUnit],
+      allPageTypes[GroupType.Table],
     ],
   },
   allPageTypes[PageType.KeyNotes],
