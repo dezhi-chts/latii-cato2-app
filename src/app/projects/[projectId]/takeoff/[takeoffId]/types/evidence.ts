@@ -37,6 +37,9 @@ export enum PageType {
   NotUsed = "Not Used",
   All = "All",
   Unknown = "Unknown",
+  Item = "Item",
+  Infomation = "Infomation",
+  Description = "Description",
 }
 
 /** 框所代表的label类型 */
@@ -48,7 +51,7 @@ export enum GroupType {
   DrawingIndex = "Drawing Index", // 绘图索引框
 
   Item = "Item", // 项目项框
-  LayerInfo = "Layer Info", // 图层信息框
+  LayerInfo = "Infomation", // 图层信息框
   Description = "Description", // 描述框
   WindowDoorUnitList = "window_door_unit_list", // 窗门单元列表框
 
@@ -98,6 +101,21 @@ export const allPageTypes = {
   [PageType.All]: {
     type: PageType.All,
     color: "#717171",
+  },
+  [PageType.Item]: {
+    type: PageType.Item,
+    icon: "I",
+    color: "#427CCE",
+  },
+  [PageType.Infomation]: {
+    type: PageType.Infomation,
+    icon: "L",
+    color: "#008080",
+  },
+  [PageType.Description]: {
+    type: PageType.Description,
+    icon: "D",
+    color: "#2A5773",
   },
 };
 // identification-index summary页面类型
@@ -160,7 +178,13 @@ export const ArchDrawingLabelTypes = [
 ];
 
 // identification Quote文件 页面下拉类型
-export const QuotePageTypes = [allPageTypes[PageType.NotUsed]];
+export const QuotePageTypes = [
+  allPageTypes[PageType.Item],
+  allPageTypes[PageType.Infomation],
+  allPageTypes[PageType.Description],
+  allPageTypes[PageType.Mix],
+  allPageTypes[PageType.NotUsed],
+];
 
 //矩形/多边形框
 export interface GroupFrame {
@@ -194,6 +218,14 @@ export interface EvidenceType {
   page_height_pdf: number; //pdf页面高度
 
   evidence_url: string; //图片URL
+}
+
+// 增，删，改 矩形框后返回的所有结构
+export interface EvidenceResult {
+  evidences: EvidenceType[]; //新增/更新的evidence
+  deleted_count: number; // 删除的矩形框数量
+  page_types: { page_number: number; page_type: string }[]; //页面分类结果
+  deleteIds?: number[]; //删除的矩形框id
 }
 
 //pdf viewport
@@ -264,9 +296,9 @@ export interface PdfWrapperProps {
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
   onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
-  onAppendEvidence?: (evidenceList: EvidenceType[]) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新
-  onDeleteEvidence?: (evidenceIds: number[]) => void; // 删除evidence后，刷新evidence列表，进行增量刷新
-  onUpdateEvidence?: (evidenceList: EvidenceType[]) => void; // 更新evidence后，刷新evidence列表，进行增量刷新
+  onAppendEvidence?: (evidenceResult: EvidenceResult) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新
+  onDeleteEvidence?: (evidenceResult: EvidenceResult) => void; // 删除evidence后，刷新evidence列表，进行增量刷新
+  onUpdateEvidence?: (evidenceResult: EvidenceResult) => void; // 更新evidence后，刷新evidence列表，进行增量刷新
   onCropSectionsCount?: (count: number) => void; // 截图区域数量变化时，通知父组件
   onUpdateSafeZoom?: (zoom: number) => void; // 更新安全缩放比例
   onSuccessOCRText?: (text: string) => void; // OCR识别成功后，通知父组件

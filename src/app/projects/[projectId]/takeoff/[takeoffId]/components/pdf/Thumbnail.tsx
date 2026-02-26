@@ -132,19 +132,12 @@ const Thumbnail = ({
     }
   }, [page, showThumbnail]);
 
-  const onChangePage = (page: number) => {
-    if (typeof pdfRef !== "undefined") {
-      pdfRef?.current
-        ?.checkAndHandleUnsavedCrops?.()
-        .then((unsaved: boolean) => {
-          if (unsaved) {
-            setPage(page);
-          }
-        });
-      return;
+  const onChangePage = async (page: number) => {
+    let unSaved = await pdfRef?.current
+      ?.checkAndHandleUnsavedCrops?.()
+    if (!pdfRef?.current || unSaved) {
+      setPage(page);
     }
-
-    setPage(page);
   }
 
   const getItemPage = (item: any, index: number) => {
@@ -156,7 +149,9 @@ const Thumbnail = ({
   }
 
   const pageTypeInfo = (info: any) => {
-    let category = categoryList.find((item) => item.type === info.type);
+    let category = categoryList.find((item) => {
+      return item.type === info.type || item.type.toUpperCase() === info.type?.toUpperCase()
+    });
     if (!category) return {};
     return category || {};
   }

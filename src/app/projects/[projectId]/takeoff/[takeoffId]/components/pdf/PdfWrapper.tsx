@@ -60,6 +60,8 @@ import {
   Bounds,
   GroupShapeType,
   GroupType,
+  allPageTypes,
+  PageType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
 import { max } from "lodash";
@@ -132,9 +134,9 @@ const showSelectGroupTypes = [GroupType.FloorPlan, GroupType.Elevation, GroupTyp
 
 // 框类型对应的颜色
 const groupTypeColor: any = {
-  [GroupType.Item]: colorList.forumBlue,
-  [GroupType.LayerInfo]: colorList.accentIndigo,
-  [GroupType.Description]: colorList.accentGreen,
+  [GroupType.Item]: allPageTypes[PageType.Item].color,
+  [GroupType.LayerInfo]: allPageTypes[PageType.Infomation].color,
+  [GroupType.Description]: allPageTypes[PageType.Description].color,
 }
 
 const PdfWrapper = forwardRef(
@@ -403,6 +405,8 @@ const PdfWrapper = forwardRef(
         onOk: async () => {
           let deleteIds = pageEvidence.map((item) => item.id);
           batchDelete(deleteIds);
+          // 如果当前有未保存的裁剪区域，则一并删除
+          setCropSections([]);
         },
       });
     };
@@ -480,7 +484,7 @@ const PdfWrapper = forwardRef(
                 });
               }
 
-              onAppendEvidence && onAppendEvidence(res.data ?? []);
+              onAppendEvidence && onAppendEvidence(res.data);
               resolve("success");
             } else {
               reject(new Error("Evidence submit failed"));
@@ -514,7 +518,7 @@ const PdfWrapper = forwardRef(
           description: "Evidence delete successfully.",
         });
 
-        onDeleteEvidence && onDeleteEvidence(deleteIds ?? []);
+        onDeleteEvidence && onDeleteEvidence({ ...res.data, deleteIds: deleteIds ?? [] });
       } else {
         notification.error({
           message: "Error",
@@ -606,7 +610,7 @@ const PdfWrapper = forwardRef(
       };
       let res = await evidenceBatchUpdate([data]);
       if (res.status === "success") {
-        onUpdateEvidence && onUpdateEvidence(res.data ?? []);
+        onUpdateEvidence && onUpdateEvidence(res.data);
       } else {
         notification.error({
           message: "Error",
@@ -2438,8 +2442,11 @@ const PdfWrapper = forwardRef(
                             showSelectGroupTypes.includes(type) && <LabelTypesSelect
                               typeList={typeList as any}
                               selectedType={type}
-                              onChangeType={(type) => {
-                                updateEvidence({ ...item, type });
+                              onChangeType={async (type) => {
+                                if (type === item.type) return;
+                                setFullLoading(true);
+                                await updateEvidence({ ...item, type });
+                                setFullLoading(false);
                               }}
                             />
                           }

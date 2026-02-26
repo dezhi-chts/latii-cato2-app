@@ -40,6 +40,7 @@ import {
 } from "@/services/drawingIndexService";
 
 import {
+  EvidenceResult,
   EvidenceType,
   FileOperationType,
   FileStatus,
@@ -346,8 +347,10 @@ const IdentificationIndex = ({
     });
   };
 
-  const handleAppendEvidence = (evidenceList: EvidenceType[]) => {
+  const handleAppendEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
+    const { evidences } = evidenceResult;
+    const evidenceList = evidences || [];
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -356,8 +359,9 @@ const IdentificationIndex = ({
     setFileEvidence([...fileEvidence, ...evidenceList]);
   };
 
-  const handleDeleteEvidence = (deleteIds: number[]) => {
+  const handleDeleteEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
+    const { deleteIds = [] } = evidenceResult;
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
@@ -372,7 +376,7 @@ const IdentificationIndex = ({
     setFullLoading(true);
     let res: any = await evidenceBatchDelete(deleteIds);
     if (res.status === "success") {
-      handleDeleteEvidence(deleteIds);
+      handleDeleteEvidence({ deleteIds } as any);
     } else {
       notification.error({
         message: "Error",
@@ -382,8 +386,11 @@ const IdentificationIndex = ({
     setFullLoading(false);
   };
 
-  const handleUpdateEvidence = (evidenceList: EvidenceType[]) => {
+  const handleUpdateEvidence = (evidenceResult: EvidenceResult) => {
     // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
+    const { evidences } = evidenceResult;
+    const evidenceList = evidences || [];
+
     if (!evidenceIsLoaded.current) {
       getFileEvidences();
       return;
