@@ -78,17 +78,21 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
           </div>
 
           {file?.labels?.map((label) => (
-            <div key={label.label} className="flex py-2">
-              <div className="w-1/2 flex">
-                <Radio></Radio> <Input value={label.label} />
+            <div
+              key={label.label}
+              className="flex border-b border-r border-l border-primaryN30 "
+            >
+              <div className="w-1/2 flex justify-center items-center gap-4 border-r border-primaryN30 py-2">
+                <Radio></Radio>{" "}
+                <Input value={label.label} className="w-3/5 text-center " />
               </div>
-              <div className="w-1/2 flex">
-                <Input value={label.label} />
+              <div className="w-1/2 flex justify-center items-center gap-4 py-2">
+                <Input value={label.label} className="w-3/5 text-center " />
                 <Image
-                  src="/assets/icons/delete-table.svg"
+                  src="/assets/icons/delete-merge-item.svg"
                   alt="Delete"
-                  width={20}
-                  height={20}
+                  width={12}
+                  height={12}
                 ></Image>
               </div>
             </div>
