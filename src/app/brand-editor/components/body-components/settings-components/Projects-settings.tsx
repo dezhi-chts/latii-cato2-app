@@ -16,6 +16,7 @@ import DateInput from "@/components/fields/DateInput";
 import Weblink from "@/components/fields/Link";
 import Check from "@/components/fields/Check";
 import { formatMetadataOptions } from "@/lib/functions";
+import LocationSelector from "@/components/LocationSelector";
 
 const ProjectsSettings = () => {
   const FIELD_COMPONENTS_BY_NUMBER: Record<
