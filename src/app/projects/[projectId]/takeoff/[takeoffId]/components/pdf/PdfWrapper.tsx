@@ -967,17 +967,17 @@ const PdfWrapper = forwardRef(
 
         pdfPolygons: currentViewportRef.current
           ? [
-              {
-                x: currentViewportRef.current.convertToPdfPoint(
-                  pos.x,
-                  pos.y,
-                )[0],
-                y: currentViewportRef.current.convertToPdfPoint(
-                  pos.x,
-                  pos.y,
-                )[1],
-              },
-            ]
+            {
+              x: currentViewportRef.current.convertToPdfPoint(
+                pos.x,
+                pos.y,
+              )[0],
+              y: currentViewportRef.current.convertToPdfPoint(
+                pos.x,
+                pos.y,
+              )[1],
+            },
+          ]
           : [],
         bounds: {
           minX: pos.x,
@@ -1114,23 +1114,23 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-            {
-              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-            },
-          ]
+          {
+            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+          },
+        ]
         : [];
 
       const groupFrame = {
@@ -1162,7 +1162,7 @@ const PdfWrapper = forwardRef(
           .then(() => {
             // 保存成功
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     };
 
@@ -1275,23 +1275,23 @@ const PdfWrapper = forwardRef(
 
       const pdfPoints = viewPort
         ? [
-            {
-              x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-              y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-              y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-              y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-            },
-            {
-              x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-              y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-            },
-          ]
+          {
+            x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+            y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+            y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+            y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+          },
+          {
+            x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+            y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+          },
+        ]
         : [];
 
       const groupFrame = {
@@ -2210,9 +2210,9 @@ const PdfWrapper = forwardRef(
 
         const viewPoints = Array.isArray(pdfPolygons)
           ? pdfPolygons.map((p: Point) => {
-              const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
-              return { x: px, y: py };
-            })
+            const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
+            return { x: px, y: py };
+          })
           : [];
 
         return { ...item, viewportPolygons: viewPoints };
@@ -2244,10 +2244,10 @@ const PdfWrapper = forwardRef(
               style={
                 operationMode === "edit"
                   ? {
-                      display: "grid",
-                      alignItems: "center",
-                      justifyItems: "center",
-                    }
+                    display: "grid",
+                    alignItems: "center",
+                    justifyItems: "center",
+                  }
                   : {}
               }
             >
@@ -2420,8 +2420,7 @@ const PdfWrapper = forwardRef(
 
                   let type = item.type ?? "";
                   let color: string =
-                    allPageTypes[type as keyof typeof allPageTypes]?.color ??
-                    colorList.forumBlue - normal;
+                    allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
                   return (
                     <div
                       key={item.id}
@@ -2564,7 +2563,7 @@ const PdfWrapper = forwardRef(
                             <div
                               className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
                               style={{ backgroundColor: color }}
-                              onClick={() => {}}
+                              onClick={() => { }}
                             >
                               <Popover
                                 placement="rightBottom"
@@ -2626,7 +2625,7 @@ const PdfWrapper = forwardRef(
                     group.bounds;
                   let color: string =
                     allPageTypes[group.type as keyof typeof allPageTypes]
-                      ?.color ?? colorList.forumBlue - normal;
+                      ?.color ?? colorList["forumBlue-normal"];
                   return (
                     <div
                       key={group.id}
@@ -2814,7 +2813,7 @@ const ShapeWrapper = ({
   onCircleDragMove: (e: any, info: any) => void;
   onCircleDragEnd: (e: any, info: any) => void;
 }) => {
-  let color: string = colorList.forumBlue - normal || "";
+  let color: string = colorList["forumBlue-normal"];
   let polygons: Point[] = [];
   let bounds: any = {};
   let circlePoints: CirclePoint[] = [];
@@ -2852,7 +2851,7 @@ const ShapeWrapper = ({
     let evidType = shape.type ?? "";
     color =
       allPageTypes[evidType as keyof typeof allPageTypes]?.color ??
-      colorList.forumBlue - normal;
+      colorList["forumBlue-normal"];
   }
 
   if (draggingShapeId === shape.id) {
