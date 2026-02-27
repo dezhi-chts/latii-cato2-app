@@ -688,7 +688,7 @@ const PageLabeling = ({ showHeader = true }: { showHeader?: boolean }) => {
             size={
               fileOperationType === FileOperationType.Quote
                 ? "larger"
-                : "normal"
+                : "default"
             }
             categoryList={
               fileOperationType === FileOperationType.ArchitectureDrawing

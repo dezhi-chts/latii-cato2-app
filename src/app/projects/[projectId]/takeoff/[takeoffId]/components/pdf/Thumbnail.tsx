@@ -12,7 +12,7 @@ const LazyImage = ({
 }: {
   src: string;
   alt: string;
-  size: "normal" | "larger"; // 缩略图大小
+  size: "default" | "larger"; // 缩略图大小
   onError: (e: React.SyntheticEvent<HTMLImageElement>) => void;
 }) => {
   const imgRef = useRef<HTMLImageElement>(null);
@@ -49,7 +49,7 @@ const LazyImage = ({
     <div
       className="w-full relative overflow-hidden"
       style={{
-        height: size === "normal" ? "100px" : "160px",
+        height: size === "default" ? "100px" : "160px",
       }}
     >
       {!loaded && (
@@ -58,9 +58,8 @@ const LazyImage = ({
       <img
         ref={imgRef}
         alt={alt}
-        className={`w-full h-full object-top transition-opacity duration-300 ${
-          loaded ? "opacity-100" : "opacity-0"
-        }`}
+        className={`w-full h-full object-top transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"
+          }`}
         onError={onError}
         loading="lazy"
       />
@@ -85,7 +84,7 @@ interface ThumbnailProps {
   fixed?: boolean; // 是否固定位置
   showCategory?: boolean; // 是否显示分类
   showShadow?: boolean; // 是否显示阴影
-  size?: "normal" | "larger"; // 缩略图大小
+  size?: "default" | "larger"; // 缩略图大小
   categoryList?: any[]; // 页面分类
 }
 
@@ -98,7 +97,7 @@ const Thumbnail = ({
   setPage,
   fixed = false, // 是否固定位置
   showCategory = false, // 是否显示分类
-  size = "normal", // 缩略图大小
+  size = "default", // 缩略图大小
   categoryList = [], // 页面分类
   showShadow = true, // 是否显示阴影
 }: ThumbnailProps) => {
@@ -192,13 +191,12 @@ const Thumbnail = ({
                 <div
                   id={`thumbnail-page-${itemPageNum}`}
                   key={info.s3_key}
-                  className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${
-                    itemPageNum === page
-                      ? "border-forumBlue-normal"
-                      : "border-transparent hover:border-forumBlue-normal/50"
-                  }`}
+                  className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
+                    ? "border-forumBlue-normal"
+                    : "border-transparent hover:border-forumBlue-normal/50"
+                    }`}
                   style={{
-                    height: size === "normal" ? "150px" : "220px",
+                    height: size === "default" ? "150px" : "220px",
                   }}
                   onClick={() => onChangePage(itemPageNum)}
                 >
