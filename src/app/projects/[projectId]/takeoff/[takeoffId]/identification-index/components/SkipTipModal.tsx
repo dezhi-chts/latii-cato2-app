@@ -73,7 +73,7 @@ const SkipTipModal = ({
             />
           </Button>
           <Button
-            className="custom-default-btn !bg-[#FF931D] !text-white"
+            className="custom-default-btn !bg-[#FF931D] !text-white hover:!bg-[#FF931D]"
             onClick={handleSkip}
           >
             Skip

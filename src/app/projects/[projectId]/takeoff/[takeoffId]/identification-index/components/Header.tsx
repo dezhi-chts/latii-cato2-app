@@ -84,7 +84,7 @@ const Header = ({
           <PageAnalysisStepInActive />
         </div>
         <Button
-          className="custom-primary-btn w-[102px] h-[26px]"
+          className={`custom-primary-btn w-[102px] h-[26px]`}
           onClick={() => handleNext(nextButtonInfo)}
           disabled={nextButtonInfo?.disabled}
         >
