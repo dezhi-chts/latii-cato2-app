@@ -380,7 +380,7 @@ const PdfParse = ({
         console.error("Failed to parse SSE data:", event.data);
         addLog(
           "⚠️ Failed to parse event data: " +
-            (error instanceof Error ? error.message : String(error)),
+          (error instanceof Error ? error.message : String(error)),
           "error",
         );
       }
@@ -509,102 +509,160 @@ const PdfParse = ({
   return (
     <div className="w-full h-full p-4 overflow-hidden font-nunito">
       <div className="h-full flex flex-col bg-white rounded-xl">
-        <h1 className="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+        <h1 className="text-lg text-forumBlue-normal mb-3 flex items-center gap-2">
           PDF Classification System
-          <span className="bg-indigo-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+          <span className="bg-forumBlue-normal text-white px-2 py-0.5 rounded-full text-xxs">
             SSE
           </span>
         </h1>
 
-        <div className="px-3 h-[30px] rounded-md text-sm flex items-center gap-2 bg-[#f8d7da] text-[#721c24]">
-          SSE Connection Status: <span>{connectionStatus}</span>
+        <div className="px-3 h-[28px] rounded-md text-xs flex items-center gap-2 bg-grey-light text-grey-normal border border-primaryN30">
+          SSE Connection Status: <span className="text-forumBlue-normal">{connectionStatus}</span>
         </div>
 
         {/** 文件列表  */}
         {fileList.length > 0 && (
           <div className="mt-4">
-            <div className="flex flex-row gap-4">
-              {fileList.map((file: any, index: number) => (
-                <div
-                  key={index}
-                  className="w-32 h-20 bg-white rounded-lg shadow-md flex flex-col justify-center items-center relative"
-                >
-                  <Image
-                    className="w-8 h-8"
-                    src="/assets/icons/extensions/pdf.svg"
-                    alt="file pdf icon"
-                    width={25}
-                    height={30}
-                  />
-                  <span className="mt-1 text-gray-700 text-xs">
-                    {file.name}
-                  </span>
-                  <div className="absolute top-1 left-1">
-                    {file.status === FileStatus.NOT_STARTED && (
-                      <div className="w-4 h-4 border border-primaryN30 rounded-full"></div>
-                    )}
-                    {file.status === FileStatus.PROCESSING && (
-                      <div className="w-4 h-4  bg-green-normal rounded-full"></div>
-                    )}
-                    {file.status === FileStatus.COMPLETED && (
-                      <div className="w-4 h-4 bg-green-normal rounded-full flex items-center justify-center">
-                        <div className=" text-white text-xxs font-sans">
-                          {"✓"}
+            <div className="flex flex-row gap-3 flex-wrap">
+              {fileList.map((file: any, index: number) => {
+                const getCardStyle = () => {
+                  switch (file.status) {
+                    case FileStatus.NOT_STARTED:
+                      return "bg-grey-light border-primaryN30 opacity-60";
+                    case FileStatus.PROCESSING:
+                      return "bg-forumBlue-light/10 border-forumBlue-normal";
+                    case FileStatus.COMPLETED:
+                      return "bg-green-normal/10 border-green-normal";
+                    case FileStatus.FAILED:
+                      return "bg-red-50 border-red-400";
+                    default:
+                      return "bg-grey-light border-primaryN30";
+                  }
+                };
+
+                const getStatusIcon = () => {
+                  switch (file.status) {
+                    case FileStatus.NOT_STARTED:
+                      return (
+                        <div className="w-4 h-4 border-2 border-primaryN30 rounded-full flex items-center justify-center">
+                          <span className="text-[8px] text-grey-normal">−</span>
                         </div>
-                      </div>
-                    )}
-                    {file.status === FileStatus.FAILED && (
-                      <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
-                        <div className=" text-white text-xxs font-sans">
-                          {"x"}
+                      );
+                    case FileStatus.PROCESSING:
+                      return (
+                        <div className="w-4 h-4 bg-forumBlue-normal rounded-full flex items-center justify-center animate-pulse">
+                          <div className="w-2 h-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    case FileStatus.COMPLETED:
+                      return (
+                        <div className="w-4 h-4 bg-green-normal rounded-full flex items-center justify-center">
+                          <span className="text-white text-[10px]">✓</span>
+                        </div>
+                      );
+                    case FileStatus.FAILED:
+                      return (
+                        <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-[10px]">!</span>
+                        </div>
+                      );
+                  }
+                };
+
+                const getStatusText = () => {
+                  switch (file.status) {
+                    case FileStatus.NOT_STARTED:
+                      return "Pending";
+                    case FileStatus.PROCESSING:
+                      return "Processing";
+                    case FileStatus.COMPLETED:
+                      return "Completed";
+                    case FileStatus.FAILED:
+                      return "Failed";
+                  }
+                };
+
+                const getTextColor = () => {
+                  switch (file.status) {
+                    case FileStatus.NOT_STARTED:
+                      return "text-grey-normal";
+                    case FileStatus.PROCESSING:
+                      return "text-forumBlue-normal";
+                    case FileStatus.COMPLETED:
+                      return "text-green-normal";
+                    case FileStatus.FAILED:
+                      return "text-red-500";
+                  }
+                };
+
+                return (
+                  <div
+                    key={index}
+                    className={`w-28 rounded-md border-2 flex flex-col p-2 relative transition-all duration-300 ${getCardStyle()}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {getStatusIcon()}
+                      <span className={`text-[10px] ${getTextColor()}`}>
+                        {getStatusText()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Image
+                        className="w-4 h-4 flex-shrink-0"
+                        src="/assets/icons/extensions/pdf.svg"
+                        alt="pdf"
+                        width={16}
+                        height={16}
+                      />
+                      <span className="text-grey-normal text-xxs truncate">
+                        {file.name}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* Task Information */}
-        <div className="mt-2 bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg mb-4">
+        <div className="mt-3 bg-grey-light border border-primaryN30 p-3 rounded-md mb-3">
           <div className="flex justify-between items-center mb-2">
-            <span className="">Task ID:</span>
-            <span className="font-mono text-blue-700">
+            <span className="text-xs text-grey-normal">Task ID:</span>
+            <span className="font-mono text-forumBlue-normal text-xs truncate max-w-[70%]">
               {taskInfo?.requestId || ""}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="">SSE URL:</span>
-            <span className="font-mono text-blue-700 text-xs truncate max-w-[60%]">
+            <span className="text-xs text-grey-normal">SSE URL:</span>
+            <span className="font-mono text-forumBlue-normal text-xs truncate max-w-[70%]">
               {taskInfo?.sseUrl || ""}
             </span>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col bg-gray-50 rounded-lg p-4 mb-4 overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="">Processing Progress</h3>
-            <span className="font-bold text-indigo-600 text-lg">
+        <div className="flex-1 flex flex-col bg-grey-light rounded-md p-3 mb-3 overflow-hidden border border-primaryN30">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs text-grey-normal">Processing Progress</h3>
+            <span className="text-forumBlue-normal text-sm">
               {processingProgress}%
             </span>
           </div>
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
+          <div className="w-full h-1.5 bg-white rounded-full overflow-hidden mb-3 border border-primaryN30">
             <div
-              className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
+              className="h-full bg-forumBlue-normal"
               style={{ width: `${processingProgress}%` }}
             ></div>
           </div>
-          <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-lg p-3 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-white rounded-md p-2 overflow-hidden border border-primaryN30">
             <div className="overflow-y-auto" ref={logsRef}>
               {logs.map((log, index) => (
                 <div
                   key={index}
-                  className={`px-3 py-1 mb-1 rounded ${log.type === "error" ? "bg-red-50 border-l-3 border-red-500 text-red-600" : log.type === "success" ? "bg-green-50 border-l-3 border-green-500 text-green-600" : "bg-gray-50 border-l-3 border-indigo-500 text-gray-700"}`}
+                  className={`px-2 py-1 mb-1 rounded text-xxs ${log.type === "error" ? "bg-red-50 text-red-600" : log.type === "success" ? "bg-green-50 text-green-600" : "text-grey-normal"}`}
                 >
-                  <span className="text-xs font-mono">
-                    {log.time} <span className="ml-2">{log.message}</span>
+                  <span className="font-mono">
+                    {log.time} <span className="ml-1">{log.message}</span>
                   </span>
                 </div>
               ))}
