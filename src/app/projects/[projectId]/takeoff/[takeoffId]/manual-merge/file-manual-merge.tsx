@@ -77,7 +77,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       {/*  Table */}
       <div className="w-full mt-6">
         <div className="w-full flex flex-col">
-          <div className="flex rounded-t-md text-basicGray bg-basicGray">
+          <div className="flex rounded-t-md text-grey-normal bg-grey-light">
             <div className="w-1/2 flex justify-center items-center py-3">
               Label
             </div>
