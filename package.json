@@ -21,6 +21,10 @@
     "@next/font": "^14.2.15",
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
+    "@react-pdf-viewer/page-navigation": "^3.12.0",
+    "@react-pdf-viewer/scroll-mode": "^3.12.0",
+    "@react-pdf-viewer/thumbnail": "^3.12.0",
+    "@react-pdf-viewer/zoom": "^3.12.0",
     "antd": "^5.24.1",
     "axios": "^1.8.4",
     "canvas": "^3.0.1",
@@ -38,8 +42,6 @@
     "react-draggable": "^4.5.0",
     "react-konva": "^18.2.10",
     "react-markdown": "^10.1.0",
-    "react-pdf": "^10.2.0",
-    "react-pdf-viewer": "^0.1.0",
     "react-use-websocket": "^4.13.0"
   },
   "devDependencies": {
