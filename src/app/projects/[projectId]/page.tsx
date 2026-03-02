@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Header from "./components/Header";
-import { Input, Spin, Button, Modal } from "antd";
+import { Input, Spin, Modal } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import EmptyProject from "./components/Empty-Project";
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +15,8 @@ import { useParams, useRouter } from "next/navigation";
 import UploadFilesProgress from "./components/Upload-Files-Progress";
 import PdfParseModal from "./components/Pdf-Parse-Modal";
 import { fetchProject } from "@/services/projectService";
+import Button from "@/components/Button";
+import { formatDateLong, getDaysAgoLabel } from "@/lib/functions";
 
 const { confirm } = Modal;
 
@@ -38,7 +40,11 @@ const Project = () => {
   }, [projectId]);
 
   const createQuotiiButton = (
-    <Button type="primary" onClick={() => setShowCreateTakeOffModal(true)}>
+    <Button
+      backgroundColor="forumBlue-normal"
+      className="rounded-md w-32"
+      onClick={() => setShowCreateTakeOffModal(true)}
+    >
       Create Quote
     </Button>
   );
@@ -122,7 +128,7 @@ const Project = () => {
 
   return (
     <div>
-      <div className="flex flex-col gap-12 zoomed-container">
+      <div className="flex flex-col gap-12 zoomed-container font-nunito">
         <Header project={project} refetchProject={getProject} />
         <div className="flex flex-col gap-8 mt-36 pl-20 ">
           <div className="flex text-lg text-forumBlue-normal">
@@ -130,7 +136,7 @@ const Project = () => {
           </div>
           {takeoffsList?.length > 0 && (
             <div className="flex justify-between items-center w-11/12">
-              <div className="flex h-[34px] flex-row gap-5">
+              <div className="flex h-[34px] flex-row gap-5 items-center">
                 <Input
                   className="w-[400px] h-full rounded-3xl"
                   placeholder="Project Name, Status, Client and More."
@@ -161,12 +167,7 @@ const Project = () => {
                   </div>
                 ))}
               </div>
-              <Button
-                type="primary"
-                onClick={() => setShowCreateTakeOffModal(true)}
-              >
-                Create Quote
-              </Button>
+              {createQuotiiButton}
             </div>
           )}
 
@@ -175,16 +176,9 @@ const Project = () => {
               <Spin />
             ) : takeoffsList?.length > 0 ? (
               takeoffsList.map((takeOff: any, index: number) => {
-                // const name = takeOff?.take_off_result?.name || "";
-                // if (!name.toLowerCase().includes(filter.toLowerCase()))
-                //   return null;
-                // return (
-                //   <TakeOffCard
-                //     key={index}
-                //     takeOff={takeOff}
-                //     fetchTakeOffs={() => { }}
-                //   />
-                // );
+                const name = takeOff?.take_off_result?.name || "";
+                if (!name.toLowerCase().includes(filter.toLowerCase()))
+                  return null;
                 return (
                   <div
                     key={index}
@@ -203,12 +197,22 @@ const Project = () => {
                       <div className="text-base">
                         {takeOff?.take_off_result?.name || ""}
                       </div>
-                      <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light">
-                        takeoff
+                      <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light text-sm flex items-center justify-center">
+                        Takeoff
                       </div>
+
                       <div className="text-xs text-grey-normal">
-                        Last edit |{" "}
-                        {takeOff?.take_off_result?.update_time || ""}
+                        <p>
+                          <span className="font-bold text-black">
+                            {getDaysAgoLabel(
+                              takeOff?.take_off_result?.update_time || "",
+                            )}{" "}
+                          </span>
+                          Last edit |{" "}
+                          {formatDateLong(
+                            takeOff?.take_off_result?.update_time || "",
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div

@@ -280,3 +280,13 @@ export const buildMetadataOptions = (options: FieldOption[]): string[] => {
 
 export const normalizeKey = (label: string) =>
   label.trim().toLowerCase().replaceAll(" ", "_");
+
+export function formatDateLong(dateString: string): string {
+  const date = new Date(dateString);
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
