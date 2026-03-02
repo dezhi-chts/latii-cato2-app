@@ -29,10 +29,11 @@ const mergeOptions = [
   { value: "base", label: "Base" },
 ];
 const FileManualMerge = ({ file }: FileManualMergeProps) => {
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isLearnMoreModalOpen, setIsLearnMoreModalOpen] =
+    useState<boolean>(false);
 
   const handleCancel = () => {
-    setIsModalOpen(false);
+    setIsLearnMoreModalOpen(false);
   };
 
   return (
@@ -117,14 +118,14 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
             <p className="text-forumBlue-normal">Merge Type</p>
             <p
               className="text-grey-light-strong underline cursor-pointer"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsLearnMoreModalOpen(true)}
             >
               Learn More
             </p>
           </div>
           <LearnMoreModal
-            isOpen={isModalOpen}
-            setIsOpen={setIsModalOpen}
+            isOpen={isLearnMoreModalOpen}
+            setIsOpen={setIsLearnMoreModalOpen}
             handleCancel={handleCancel}
           />
           {!file.is_base && (
