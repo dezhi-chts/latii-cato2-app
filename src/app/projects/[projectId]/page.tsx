@@ -17,6 +17,7 @@ import PdfParseModal from "./components/Pdf-Parse-Modal";
 import { fetchProject } from "@/services/projectService";
 import Button from "@/components/Button";
 import { formatDateLong, getDaysAgoLabel } from "@/lib/functions";
+import Link from "next/link";
 
 const { confirm } = Modal;
 
@@ -78,12 +79,6 @@ const Project = () => {
     uploadFiles.current = data;
     // 打开Upload-Files-Progress弹窗
     setShowUploadProgess(true);
-  };
-
-  const onClickTakeOff = (takeOff: any) => {
-    router.push(
-      `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`,
-    );
   };
 
   const handleRemoveTakeoff = async (takeoff: any) => {
@@ -180,56 +175,57 @@ const Project = () => {
                 if (!name.toLowerCase().includes(filter.toLowerCase()))
                   return null;
                 return (
-                  <div
+                  <Link
                     key={index}
-                    className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30"
-                    onClick={() => onClickTakeOff(takeOff)}
+                    href={`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-index`}
                   >
-                    <div>
-                      <Image
-                        src="/assets/cato-images/schedules-tables.png"
-                        alt="info icon"
-                        width={156}
-                        height={100}
-                      />
-                    </div>
-                    <div className="ml-[50px] flex-1 flex flex-col gap-2">
-                      <div className="text-base">
-                        {takeOff?.take_off_result?.name || ""}
+                    <div className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30 cursor-pointer hover:bg-primaryN10 transition-all duration-150">
+                      <div>
+                        <Image
+                          src="/assets/cato-images/schedules-tables.png"
+                          alt="info icon"
+                          width={156}
+                          height={100}
+                        />
                       </div>
-                      <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light text-sm flex items-center justify-center">
-                        Takeoff
-                      </div>
+                      <div className="ml-[50px] flex-1 flex flex-col gap-2">
+                        <div className="text-base">
+                          {takeOff?.take_off_result?.name || ""}
+                        </div>
+                        <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light text-sm flex items-center justify-center">
+                          Takeoff
+                        </div>
 
-                      <div className="text-xs text-grey-normal">
-                        <p>
-                          <span className="font-bold text-black">
-                            {getDaysAgoLabel(
+                        <div className="text-xs text-grey-normal">
+                          <p>
+                            <span className="font-bold text-black">
+                              {getDaysAgoLabel(
+                                takeOff?.take_off_result?.update_time || "",
+                              )}{" "}
+                            </span>
+                            Last edit |{" "}
+                            {formatDateLong(
                               takeOff?.take_off_result?.update_time || "",
-                            )}{" "}
-                          </span>
-                          Last edit |{" "}
-                          {formatDateLong(
-                            takeOff?.take_off_result?.update_time || "",
-                          )}
-                        </p>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className="flex justify-center items-center cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveTakeoff(takeOff.take_off_result);
+                        }}
+                      >
+                        <Image
+                          src="/assets/icons/delete.svg"
+                          alt="Delete"
+                          width={20}
+                          height={20}
+                        />
                       </div>
                     </div>
-                    <div
-                      className="flex justify-center items-center cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveTakeoff(takeOff.take_off_result);
-                      }}
-                    >
-                      <Image
-                        src="/assets/icons/delete.svg"
-                        alt="Delete"
-                        width={20}
-                        height={20}
-                      />
-                    </div>
-                  </div>
+                  </Link>
                 );
               })
             ) : (
