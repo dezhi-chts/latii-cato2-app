@@ -3,6 +3,8 @@
 import Button from "@/components/Button";
 import { Input, Radio, Select } from "antd";
 import Image from "next/image";
+import LearnMoreModal from "./components/learn-more-modal";
+import { useState } from "react";
 
 type Label = {
   label: string;
@@ -27,6 +29,12 @@ const mergeOptions = [
   { value: "base", label: "Base" },
 ];
 const FileManualMerge = ({ file }: FileManualMergeProps) => {
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+
+  const handleCancel = () => {
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="min-w-[30vw] text-sm pt-8">
       {/*  Title */}
@@ -68,7 +76,7 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
       {/*  Table */}
       <div className="w-full mt-6">
         <div className="w-full flex flex-col">
-          <div className="flex rounded-t-md text-basicGray bg-baseLight">
+          <div className="flex rounded-t-md text-basicGray bg-basicGray">
             <div className="w-1/2 flex justify-center items-center py-3">
               Label
             </div>
@@ -107,8 +115,18 @@ const FileManualMerge = ({ file }: FileManualMergeProps) => {
         <div className="w-2/3 flex flex-col gap-4 ">
           <div className="flex justify-between items-center">
             <p className="text-forumBlue-normal">Merge Type</p>
-            <p className="text-grey-light-strong underline">Learn More</p>
+            <p
+              className="text-grey-light-strong underline cursor-pointer"
+              onClick={() => setIsModalOpen(true)}
+            >
+              Learn More
+            </p>
           </div>
+          <LearnMoreModal
+            isOpen={isModalOpen}
+            setIsOpen={setIsModalOpen}
+            handleCancel={handleCancel}
+          />
           {!file.is_base && (
             <div className="flex justify-between items-center">
               <p>Label</p>
