@@ -9,16 +9,28 @@ type modalProps = {
   handleCancel: any;
 };
 const LearnMoreModal = (props: modalProps) => {
+  const footer: React.ReactNode = (
+    <div className="flex">
+      <Button
+        onClick={() => props.setIsOpen(false)}
+        className="bg-grey-light text-grey-dark rounded-md hover:bg-grey-light-hover" // revisar el hover con tomi
+        color="grey-dark"
+        backgroundColor="grey-light"
+      >
+        Close
+      </Button>
+    </div>
+  );
   return (
     <Modal
       closable={{ "aria-label": "Custom Close Button" }}
       open={props.isOpen}
       onCancel={props.handleCancel}
-      footer={null} //agregar footer con el boton de close
-      width={1000}
+      footer={footer}
+      width={1400}
     >
-      <h1 className="mb-4 text-forumBlue text-lg">Merging Types</h1>
-      <div className="flex gap-4">
+      <h1 className="mb-4 text-forumBlue-normal text-lg ">Merging Types</h1>
+      <div className="flex gap-8 pb-8">
         {/* Types */}
         <div className="w-1/4 flex flex-col gap-3">
           <p>
@@ -55,15 +67,15 @@ const LearnMoreModal = (props: modalProps) => {
         </div>
         {/* Preview Examples */}
         <div>
-          <p>Preview Examples</p>
+          <p className="mb-4 text-forumBlue-normal">Preview Examples</p>
           <div className="flex flex-col gap-2">
-            <div>
+            <div className="flex justify-between w-[15vw]">
               <span>Row</span>
-              <Select />
+              <Select className="w-40" />
             </div>
-            <div>
+            <div className="flex justify-between w-[15vw]">
               <span>Column</span>
-              <Select />
+              <Select className="w-40" />
             </div>
           </div>
           <Divider />
