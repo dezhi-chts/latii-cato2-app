@@ -122,7 +122,7 @@ const showReadBtnGroupTypes = [GroupType.OCR];
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 
 // 以下的框类型显示 数字按钮
-const showNumBtnGroupTypes = [GroupType.Item, GroupType.WindowDoorUnitList];
+const showNumBtnGroupTypes: GroupType[] = [/*GroupType.Item, GroupType.WindowDoorUnitList*/];
 
 // 以下框类型显示  复制按钮集合
 const showCopyBtnGroupTypes = [
@@ -2252,10 +2252,11 @@ const PdfWrapper = forwardRef(
               }
             >
               <div
+                className="border border-x-primaryN30"
                 style={{
                   position: "relative",
-                  width: stageWidth + "px",
-                  height: stageHeight + "px",
+                  width: (stageWidth + 2) + "px",
+                  height: (stageHeight + 2) + "px",
                 }}
               >
                 <canvas ref={pdfCanvas} />
