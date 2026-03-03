@@ -2,12 +2,14 @@
 
 import Button from "@/components/Button";
 import { Divider, Modal, Select } from "antd";
+import LearnMoreTable from "./learn-more-table";
 
 type modalProps = {
   isOpen: boolean;
   setIsOpen: any;
   handleCancel: any;
 };
+
 const LearnMoreModal = (props: modalProps) => {
   const footer: React.ReactNode = (
     <div className="flex">
@@ -80,7 +82,7 @@ const LearnMoreModal = (props: modalProps) => {
           </div>
           <Divider />
           {/* tablas */}
-          <div></div>
+          <LearnMoreTable />
         </div>
       </div>
     </Modal>
