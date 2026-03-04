@@ -11,6 +11,7 @@ interface ColumnViewProps {
 }
 
 const SortableItem = ({ field, onChange, checked }: any) => {
+  if (field.field_name === "actions") return null;
   const disable = field.field_name.includes("_name");
   return (
     <div

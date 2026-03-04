@@ -1,4 +1,4 @@
-import { ProjectRow } from "@/types/home";
+import { Attribute, ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
 import { ConfigProvider, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -7,6 +7,7 @@ import { getTitleFromPropertyName } from "@/lib/functions";
 import Image from "next/image";
 import dayjs from "dayjs";
 import "dayjs/locale/en";
+import { useCompany } from "@/context/CompanyContext";
 
 dayjs.locale("en");
 
@@ -60,9 +61,41 @@ const HomeProjectsTable = ({
 }: HomeProjectsTableProps) => {
   const router = useRouter();
 
-  const dynamicProperties = useMemo(() => {
-    return [];
-  }, [projects]);
+  const { company } = useCompany();
+
+  const dynamicColumns: ColumnsType<ProjectRow> = useMemo(() => {
+    const attributeIds = [
+      ...new Set(
+        projects?.flatMap((p) => Object.keys(p.attributes ?? {})) ?? [],
+      ),
+    ];
+
+    const columns = (attributeIds ?? []).map((attrId) => {
+      const attr = company?.project_attributes?.find(
+        (a: Attribute) => a.uuid === attrId,
+      );
+
+      const label = attr?.label ?? attrId;
+
+      return {
+        title: (
+          <span className="text-xs font-semibold text-grey-normal">
+            {label}
+          </span>
+        ),
+        dataIndex: ["attributes", attrId],
+        key: attrId,
+        align: "center" as const,
+
+        render: (_: any, record: any) => {
+          const value = record.attributes?.[attrId] ?? "-";
+          return <TextCell value={value} />;
+        },
+      };
+    });
+
+    return columns;
+  }, [projects, company.project_attributes]);
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -118,26 +151,11 @@ const HomeProjectsTable = ({
     [],
   );
 
-  const dynamicColumns: ColumnsType<ProjectRow> = useMemo(
-    () =>
-      dynamicProperties.map((property) => ({
-        title: (
-          <span className="text-xs font-semibold text-grey-normal">
-            {getTitleFromPropertyName(property)}
-          </span>
-        ),
-        dataIndex: property,
-        key: property,
-        align: "center" as const,
-        render: (value) => <TextCell value={value} />,
-      })),
-    [dynamicProperties],
-  );
-
-  const allColumns = useMemo(
-    () => [...defaultColumns, ...dynamicColumns],
-    [defaultColumns, dynamicColumns],
-  );
+  const allColumns = useMemo(() => {
+    const actions = defaultColumns[defaultColumns.length - 1];
+    const defaultWithoutActions = defaultColumns.slice(0, -1);
+    return [...defaultWithoutActions, ...dynamicColumns, actions];
+  }, [defaultColumns, dynamicColumns]);
 
   const columns = useMemo(() => {
     if (!selectedColumns || selectedColumns.length === 0) {

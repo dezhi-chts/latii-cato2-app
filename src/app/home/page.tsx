@@ -29,6 +29,11 @@ import { useCompany } from "@/context/CompanyContext";
 
 const { confirm } = Modal;
 
+type Field = {
+  field_name: string;
+  Hint_text: string;
+};
+
 const defaultFields: { field_name: string; Hint_text: string }[] = [
   {
     field_name: "project_name",
@@ -38,16 +43,25 @@ const defaultFields: { field_name: string; Hint_text: string }[] = [
     field_name: "update_time",
     Hint_text: "Last Edit",
   },
-  {
-    field_name: "actions",
-    Hint_text: "Actions",
-  },
 ];
+const actionsField = {
+  field_name: "actions",
+  Hint_text: "Actions",
+};
 
 type Category = "Projects" | "Take Offs";
 
 const Home = () => {
   const router = useRouter();
+
+  const { company } = useCompany();
+
+  const dynamicFields = company.project_attributes.map((attr) => ({
+    field_name: attr.uuid,
+    Hint_text: attr.label,
+  }));
+
+  const allFields = [...defaultFields, ...dynamicFields, actionsField];
 
   const { first_name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] =
@@ -57,10 +71,7 @@ const Home = () => {
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
   const [filterValue, setFilterValue] = useState<string>("");
-  const [takeoffs, setTakeoffs] = useState<any>([]);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
-    return defaultFields.map((field) => field.field_name);
-  });
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
   const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
   const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
@@ -175,6 +186,10 @@ const Home = () => {
     getProjects(currentProjectsPage);
   }, [currentProjectsPage]);
 
+  useEffect(() => {
+    setSelectedColumns(allFields.map((field) => field.field_name));
+  }, [company.project_attributes]);
+
   return (
     <div className="w-full h-full">
       <div className="flex items-start gap-8 pt-10 pl-12 zoomed-container flex-col w-9/12">
@@ -272,7 +287,7 @@ const Home = () => {
           <ColumnView
             open={showColumnView}
             onClose={() => setShowColumnView(false)}
-            columns={defaultFields}
+            columns={allFields}
             onColumnsChange={handleColumnsChange}
             selectedColumns={selectedColumns}
           />
