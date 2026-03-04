@@ -31,8 +31,9 @@ export const getAllProjects = async (filterParams?: {
   page?: number;
   order_by?: "project_id" | "project_name" | "update_time";
   order?: "asc" | "desc";
+  project_name?: string;
 }) => {
-  const url = `/project/list?page=${filterParams?.page || 1}&per_page=${filterParams?.per_page || "10"}&order_by=${filterParams?.order_by || "project_id"}&order=${filterParams?.order || "desc"}`;
+  const url = `/project/list?page=${filterParams?.page || 1}&project_name=${filterParams?.project_name || ""}&per_page=${filterParams?.per_page || "10"}&order_by=${filterParams?.order_by || "project_id"}&order=${filterParams?.order || "desc"}`;
 
   try {
     const response = await http.get(url);

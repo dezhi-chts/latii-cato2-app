@@ -4,7 +4,7 @@ import { useUser } from "@/context/UserContext";
 import { useEffect, useRef, useState } from "react";
 import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
-import { Input, Segmented, Spin, Modal } from "antd";
+import { Input, Segmented, Modal } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 import HomeProjectsTable, { PAGE_SIZE } from "./components/Home-Projects-Table";
@@ -28,11 +28,6 @@ import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
 import { useCompany } from "@/context/CompanyContext";
 
 const { confirm } = Modal;
-
-type Field = {
-  field_name: string;
-  Hint_text: string;
-};
 
 const defaultFields: { field_name: string; Hint_text: string }[] = [
   {
@@ -71,6 +66,7 @@ const Home = () => {
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
   const [filterValue, setFilterValue] = useState<string>("");
+  const [debouncedFilter, setDebouncedFilter] = useState(filterValue);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
   const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
@@ -116,7 +112,7 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  const getProjects = async (page: number, force = false) => {
+  const getProjects = async (page: number, force = false, filter = "") => {
     if (projectsCache[page] && !force) {
       return;
     }
@@ -126,6 +122,7 @@ const Home = () => {
     const params = {
       per_page: PAGE_SIZE,
       page: currentProjectsPage,
+      project_name: filter,
     };
 
     const response: any = await getAllProjects(params);
@@ -190,6 +187,15 @@ const Home = () => {
     setSelectedColumns(allFields.map((field) => field.field_name));
   }, [company.project_attributes]);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedFilter(filterValue), 500);
+    return () => clearTimeout(t);
+  }, [filterValue]);
+
+  useEffect(() => {
+    getProjects(1, true, debouncedFilter);
+  }, [debouncedFilter]);
+
   return (
     <div className="w-full h-full">
       <div className="flex items-start gap-8 pt-10 pl-12 zoomed-container flex-col w-9/12">
@@ -206,6 +212,7 @@ const Home = () => {
                 className="min-w-[400px] w-[20vw] rounded-xl"
                 allowClear
                 value={filterValue}
+                disabled={category !== "Projects"}
                 onChange={(e) => handleValueChange(e.target.value)}
                 prefix={
                   <Image
