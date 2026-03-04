@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PAGE_SIZE } from "./Home-Projects-Table";
+import dayjs from "dayjs";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -89,7 +90,9 @@ const HomeTakeoffsTable = ({
         dataIndex: "update_time",
         key: "update_time",
         align: "center",
-        render: (value) => <TextCell value={value} />,
+        render: (value) => (
+          <TextCell value={value && dayjs(value).format("MMMM D, YYYY")} />
+        ),
       },
       {
         title: (
