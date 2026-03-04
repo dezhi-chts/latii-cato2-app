@@ -26,15 +26,8 @@ export const fetchProject = async (id: string) => {
   }
 };
 
-export const getAllProjects = async (filterParams?: {
-  per_page?: number;
-  page?: number;
-  order_by?: "project_id" | "project_name" | "update_time";
-  order?: "asc" | "desc";
-  project_name?: string;
-}) => {
-  const url = `/project/list?page=${filterParams?.page || 1}&project_name=${filterParams?.project_name || ""}&per_page=${filterParams?.per_page || "10"}&order_by=${filterParams?.order_by || "project_id"}&order=${filterParams?.order || "desc"}`;
-
+export const getAllProjects = async () => {
+  const url = `/project/all`;
   try {
     const response = await http.get(url);
     return response;

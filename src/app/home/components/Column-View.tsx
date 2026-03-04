@@ -12,10 +12,10 @@ interface ColumnViewProps {
 
 const SortableItem = ({ field, onChange, checked }: any) => {
   if (field.field_name === "actions") return null;
-  const disable = field.field_name.includes("_name");
+  const isDisabled = field.field_name === "project_name";
   return (
     <div
-      className={`px-2 w-full h-[30px] flex flex-row items-center rounded-md ${disable ? "bg-primaryN20" : ""}`}
+      className={`px-2 w-full h-[30px] flex flex-row items-center rounded-md ${isDisabled ? "bg-primaryN20" : ""}`}
     >
       <div className="pr-4">
         <Image
@@ -28,14 +28,15 @@ const SortableItem = ({ field, onChange, checked }: any) => {
       <div className="flex-1 text-sm">{field?.Hint_text}</div>
       <div className="text-right">
         <Checkbox
+          disabled={isDisabled}
           value={field.field_name}
           checked={checked}
           onChange={() => {
-            if (disable) return;
+            if (isDisabled) return;
             onChange(field.field_name);
           }}
           className="text-sm flex-1"
-        ></Checkbox>
+        />
       </div>
     </div>
   );

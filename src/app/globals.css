@@ -102,13 +102,10 @@ Our Buttons already have premade styles and the chance to add custom tailwind cl
 }
 
 /* Checkbox global styles */
-.ant-checkbox-checked .ant-checkbox-inner {
+.ant-checkbox:not(.ant-checkbox-disabled).ant-checkbox-checked
+  .ant-checkbox-inner {
   background-color: #427cce !important;
   border-color: #427cce !important;
-}
-
-.ant-checkbox-inner {
-  border-color: #98a1b0 !important;
 }
 
 .custom-select-page .ant-select-selector {

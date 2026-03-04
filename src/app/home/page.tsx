@@ -66,7 +66,6 @@ const Home = () => {
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
   const [filterValue, setFilterValue] = useState<string>("");
-  const [debouncedFilter, setDebouncedFilter] = useState(filterValue);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
   const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
@@ -74,9 +73,8 @@ const Home = () => {
   const [projectLoading, setProjectLoading] = useState<boolean>(false);
   const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
 
-  const [projectsCache, setProjectsCache] = useState<
-    Record<number, ProjectRow[]>
-  >({});
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([]);
   const [currentProjectsPage, setCurrentProjectsPage] = useState(1);
   const [totalProjectPages, setTotalProjectPages] = useState(1);
 
@@ -112,28 +110,13 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  const getProjects = async (page: number, force = false, filter = "") => {
-    if (projectsCache[page] && !force) {
-      return;
-    }
-
+  const getProjects = async () => {
     setProjectLoading(true);
-
-    const params = {
-      per_page: PAGE_SIZE,
-      page: currentProjectsPage,
-      project_name: filter,
-    };
-
-    const response: any = await getAllProjects(params);
-    const projects = response?.items;
-    setTotalProjectPages(response?.total_pages ?? 1);
+    const response: any = await getAllProjects();
+    const projects = response;
+    setTotalProjectPages(Math.ceil(response?.length / PAGE_SIZE));
     setProjectLoading(false);
-    if (projects?.length > 0) {
-      setProjectsCache((prev) => ({ ...prev, [page]: projects }));
-    } else {
-      setProjectsCache((prev) => ({ ...prev, [page]: [] }));
-    }
+    setProjects(projects);
   };
 
   const getTakeoffs = async (page: number) => {
@@ -163,7 +146,7 @@ const Home = () => {
       okText: "Yes",
       onOk: async () => {
         const res = await deleteProject(record.project_id as string);
-        getProjects(currentProjectsPage, true);
+        getProjects();
       },
     });
   };
@@ -180,21 +163,20 @@ const Home = () => {
   };
 
   useEffect(() => {
-    getProjects(currentProjectsPage);
-  }, [currentProjectsPage]);
-
-  useEffect(() => {
     setSelectedColumns(allFields.map((field) => field.field_name));
   }, [company.project_attributes]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedFilter(filterValue), 500);
-    return () => clearTimeout(t);
-  }, [filterValue]);
+    getProjects();
+  }, []);
 
   useEffect(() => {
-    getProjects(1, true, debouncedFilter);
-  }, [debouncedFilter]);
+    setFilteredProjects(
+      projects.filter((project) =>
+        project.project_name.toLowerCase().includes(filterValue.toLowerCase()),
+      ),
+    );
+  }, [projects, filterValue]);
 
   return (
     <div className="w-full h-full">
@@ -212,7 +194,6 @@ const Home = () => {
                 className="min-w-[400px] w-[20vw] rounded-xl"
                 allowClear
                 value={filterValue}
-                disabled={category !== "Projects"}
                 onChange={(e) => handleValueChange(e.target.value)}
                 prefix={
                   <Image
@@ -252,7 +233,7 @@ const Home = () => {
           </div>
           {category === "Projects" ? (
             <HomeProjectsTable
-              projects={projectsCache[currentProjectsPage]}
+              projects={filteredProjects}
               selectedColumns={selectedColumns}
               tableLoading={projectLoading}
               handleRemoveProject={handleRemoveProject}
@@ -277,7 +258,7 @@ const Home = () => {
           <CreateProjectModal
             isOpen={showCreateProjectModal}
             closeModal={closeModal}
-            refreshProjects={() => getProjects(currentProjectsPage, true)}
+            refreshProjects={getProjects}
             onHandleUpload={(data: any) => {
               // 关闭Create-Project-Modal弹窗
               //closeModal();
