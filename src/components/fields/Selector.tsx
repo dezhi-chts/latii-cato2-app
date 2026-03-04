@@ -8,6 +8,7 @@ type SelectorProps = {
   hint_text?: string;
   options?: Option[];
   onChange?: () => void;
+  value?: string;
 };
 
 const Selector = ({
@@ -16,6 +17,7 @@ const Selector = ({
   hint_text = "",
   options = [],
   onChange,
+  value,
 }: SelectorProps) => {
   return (
     <div className="flex flex-col gap-2">
@@ -23,6 +25,7 @@ const Selector = ({
         {name} {RequiredHint(required)}
       </p>
       <Select
+        defaultValue={value}
         placeholder={hint_text}
         className="max-w-80"
         options={options}

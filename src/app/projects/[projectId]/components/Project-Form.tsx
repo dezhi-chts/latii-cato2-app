@@ -12,7 +12,7 @@ import Switch from "@/components/fields/Switch";
 import { useCompany } from "@/context/CompanyContext";
 import React, { useState } from "react";
 
-const FIELD_COMPONENTS_BY_NUMBER: Record<
+export const FIELD_COMPONENTS_BY_NUMBER: Record<
   number,
   (props: any) => React.ReactNode
 > = {
@@ -27,9 +27,7 @@ const FIELD_COMPONENTS_BY_NUMBER: Record<
   8: (props) => <Weblink {...props} />,
 };
 
-const COMMIT_ON_BLUR = new Set([0, 1, 2, 8]);
-
-//TODO: Agregar validaciones a los campos que sean required.
+export const COMMIT_ON_BLUR = new Set([0, 1, 2, 8]);
 
 type ProjectFormProps = {
   form: Record<string, any>;

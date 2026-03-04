@@ -1,164 +1,119 @@
-import type { ProjectSettings } from "@/types/project";
-import { ConfigProvider, DatePicker, Input, Popover, Select } from "antd";
+import { useCompany } from "@/context/CompanyContext";
+import { Input } from "antd";
 import { useEffect, useState } from "react";
-import dayjs, { Dayjs } from "dayjs";
-import LocationSelector from "@/components/LocationSelector";
-import Image from "next/image";
-import request from "@/lib/http";
+import { COMMIT_ON_BLUR, FIELD_COMPONENTS_BY_NUMBER } from "./Project-Form";
+import RequiredHint from "@/components/fields/RequiredHint";
 
 type ProjectSettingsProps = {
-  project: ProjectSettings;
-  handleUpdate: (settings: ProjectSettings) => void;
-};
-
-export type DealerProjectAward = {
-  create_time: string;
-  create_user: string;
-  dict_label: string;
-  dict_type: string;
-  dict_value: string;
-  id: number;
-  status: number;
-  update_time: string;
-  update_user: string;
+  project: any;
+  handleUpdate: (settings: any) => void;
 };
 
 const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
-  const { TextArea } = Input;
+  const [settings, setSettings] = useState<any>({
+    project_name: project?.project_name,
+    is_favorite: false,
+    project_desc: "",
+    attributes: project?.attributes,
+  });
 
-  const [settings, setSettings] = useState<ProjectSettings>(project);
-  const [showLocationSelector, setShowLocationSelector] = useState(false);
-  const [likelihoods, setLikelihoods] = useState<DealerProjectAward[]>([]);
+  const { company } = useCompany();
+  const attributes = company?.project_attributes ?? [];
 
   useEffect(() => {
     setSettings(project);
   }, [project]);
 
-  const handleInputChange =
-    <K extends keyof ProjectSettings>(field: K) =>
-    (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setSettings((prev) => ({
-        ...prev,
-        [field]: event.target.value as ProjectSettings[K],
-      }));
-    };
+  const handleInputChange = (field: string, value: string) => {
+    const fieldId = attributes.find((attr) => attr.label === field)?.uuid;
 
-  const handleDropdownChange =
-    <K extends keyof ProjectSettings>(field: K) =>
-    (value: ProjectSettings[K]) => {
-      setSettings((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-    };
+    setSettings((prev: any) => ({
+      ...prev,
+      attributes: {
+        ...prev.attributes,
+        [fieldId]: value,
+      },
+    }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    const newSettings = { ...settings, is_favorite: false };
+    newSettings[field] = value;
+    setSettings(newSettings);
+    handleUpdate(newSettings);
+  };
 
   const updateProject = () => {
-    handleUpdate(settings);
+    const formattedSettings = {
+      ...settings,
+      is_favorite: false,
+    };
+    handleUpdate(formattedSettings);
   };
 
-  // ✅ FIX: ahora actualiza y envía el valor nuevo inmediatamente
-  const handleDateChange = (value: Dayjs | null) => {
-    const newDate = value ? value.format("YYYY-MM-DD") : "";
-    setSettings((prev) => {
-      const updated = { ...prev, expected_end_date: newDate };
-      handleUpdate(updated);
-      return updated;
-    });
-  };
+  function formatOptions(options: string[]) {
+    if (!options.length) return [];
+    const formatted = options.map((option: string) => ({
+      value: option,
+      label: option,
+    }));
+    return formatted;
+  }
 
   return (
-    <div className="py-8 flex gap-12">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col w-[300px] gap-2">
-          <p>
-            Project Name <span className="text-accentRed">*</span>
-          </p>
+    <div className="py-4 flex">
+      <div className="flex gap-6 flex-col flex-wrap max-h-[200px]">
+        <div className="flex flex-col w-80 gap-2">
+          <p className="text-sm">Project Name {RequiredHint(true)}</p>
           <Input
             placeholder="Input a recognizable name for you"
-            className="rounded-full"
+            className="rounded-md"
             value={settings?.project_name}
-            onChange={handleInputChange("project_name")}
+            onChange={(e) => handleInputChange("project_name", e.target.value)}
             onBlur={updateProject}
           />
         </div>
-        {/*<div className="flex flex-col w-[300px] gap-2">*/}
-        {/*  <p>*/}
-        {/*    End Customer <span className="text-basicLightGray">(Optional)</span>*/}
-        {/*  </p>*/}
-        {/*  <Input*/}
-        {/*    placeholder="Input your end customer"*/}
-        {/*    className="rounded-full"*/}
-        {/*    value={settings?.customer || ""}*/}
-        {/*    onChange={handleInputChange("customer")}*/}
-        {/*    onBlur={updateProject}*/}
-        {/*  />*/}
-        {/*</div>*/}
-      </div>
 
-      {/*<div className="flex flex-col gap-8">*/}
-      {/*  <div className="flex flex-col w-[300px] gap-2">*/}
-      {/*    <p>*/}
-      {/*      Primary Location <span className="text-accentRed">*</span>*/}
-      {/*    </p>*/}
-      {/*    <LocationSelector*/}
-      {/*      onClose={() => setShowLocationSelector(false)}*/}
-      {/*      handleInputChange={handleInputChange}*/}
-      {/*      handleDropdownChange={handleDropdownChange}*/}
-      {/*      updateProject={updateProject}*/}
-      {/*      projectSettings={settings}*/}
-      {/*      isOpen={showLocationSelector}*/}
-      {/*      setIsOpen={setShowLocationSelector}*/}
-      {/*      selectorClassName="-top-[60px] py-0 pt-3 pb-3 w-[320px] -left-1"*/}
-      {/*    />*/}
-      {/*  </div>*/}
+        {attributes.map((attr: any) => {
+          if (!attr?.label) return null;
 
-      {/*  <div className="flex flex-col w-[300px] gap-2">*/}
-      {/*    <p>*/}
-      {/*      Client Expected Delivery Date{" "}*/}
-      {/*      <span className="text-accentRed">*</span>*/}
-      {/*    </p>*/}
-      {/*    <DatePicker*/}
-      {/*      placeholder="Select a date"*/}
-      {/*      className="rounded-full"*/}
-      {/*      onChange={handleDateChange}*/}
-      {/*      value={*/}
-      {/*        settings?.expected_end_date*/}
-      {/*          ? dayjs(settings?.expected_end_date)*/}
-      {/*          : null*/}
-      {/*      }*/}
-      {/*    />*/}
-      {/*  </div>*/}
-      {/*</div>*/}
+          const Component = FIELD_COMPONENTS_BY_NUMBER[attr?.type];
+          if (!Component) return null;
 
-      <div className="flex flex-col w-[400px] gap-8 ">
-        <div className="flex flex-col gap-2 w-full">
-          <p>Project Description</p>
-          <TextArea
-            placeholder="Any additional notes, descriptions for your project"
-            className="rounded-xl"
-            rows={4}
-            value={settings?.project_desc || ""}
-            onChange={handleInputChange("project_desc")}
-            onBlur={updateProject}
-            style={{ resize: "none" }}
-          />
-        </div>
+          const options = attr?.metadata ?? [];
+          const formattedOptions = formatOptions(options);
+          const isNumber = attr?.type === 2;
+          const value = settings?.attributes?.[attr?.uuid];
+          const isBlur = COMMIT_ON_BLUR.has(attr?.type);
+
+          return (
+            <div key={attr.uuid} className="w-80">
+              <Component
+                name={attr.label}
+                required={attr.required}
+                hint_text={attr.has_hint_text ? attr.hint : undefined}
+                options={formattedOptions}
+                value={value}
+                {...(isBlur
+                  ? {
+                      onChange: (e: any) => {
+                        const value = isNumber
+                          ? e.toString()
+                          : (e.target.value ?? "");
+                        handleInputChange(attr.label, value);
+                      },
+                      onBlur: () => updateProject(),
+                    }
+                  : {
+                      onChange: (v: any) => handleSelectChange(attr.label, v),
+                    })}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
 export default ProjectSettings;
-
-export const AwardLikelihoodPopover = () => {
-  return (
-    <div className="text-xs text-grey-normal w-60">
-      <p className="font-semibold">Project Award Likelihood</p>
-      <p>
-        Select how likely it is that Latii will be awarded this project, based
-        on pricing fit, client communication, and whether the project seems
-        viable from your perspective.
-      </p>
-    </div>
-  );
-};

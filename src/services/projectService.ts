@@ -69,7 +69,7 @@ export const togglePinProject = async (
   }
 };
 
-export const toggleFavoriteProject = async (project: ProjectSettings) => {
+export const toggleFavoriteProject = async (project: any) => {
   try {
     const previousValue = project.is_favorite;
     const newValue = !previousValue;
@@ -82,7 +82,7 @@ export const toggleFavoriteProject = async (project: ProjectSettings) => {
   }
 };
 
-export const updateProject = async (project: ProjectSettings) => {
+export const updateProject = async (project: any) => {
   try {
     const response = await http.put(`/project/${project.project_id}`, project);
     return response;

@@ -104,7 +104,6 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
     if (!updatedProject?.project_id) return;
     await updateProject(updatedProject);
     await refetchProject();
-    // await refetchProjects();
   };
 
   const ref = useRef<HTMLDivElement>(null);
@@ -136,8 +135,6 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  console.log(project);
 
   return (
     <div
@@ -198,45 +195,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
           />
         )}
       </div>
-      <div className="flex items-center gap-10">
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*      height={20}*/}
-        {/*      width={20}*/}
-        {/*      src="/assets/icons/calendar.svg"*/}
-        {/*      alt="calendar icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Project name </span>*/}
-        {/*    {project.project_name}*/}
-        {/*  </p>*/}
-        {/*</div>*/}
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*    height={20}*/}
-        {/*    width={20}*/}
-        {/*    src="/assets/icons/calendar.svg"*/}
-        {/*    alt="calendar icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Expected Delivery </span>*/}
-        {/*    {new Date(project.expected_end_date).toLocaleDateString("es-AR") ||*/}
-        {/*      "..."}*/}
-        {/*  </p>*/}
-        {/*</div>*/}
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*    height={20}*/}
-        {/*    width={20}*/}
-        {/*    src="/assets/icons/project-likelihood.svg"*/}
-        {/*    alt="award icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-grey-normal flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Project Likelihood </span>*/}
-        {/*    High*/}
-        {/*  </p>*/}
-        {/*</div>*/}
-      </div>
+
       <div
         className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${
           status.should_hide_overflow ? "overflow-hidden" : ""
