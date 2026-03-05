@@ -3,10 +3,11 @@
 import Button from "@/components/Button";
 import { boxesColors } from "@/lib/constants";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddBoxTypeModal from "./Add-Box-Type-Modal";
 import { getBoxTypes } from "@/services/drawingIndexService";
 import { useCompany } from "@/context/CompanyContext";
+import { Input } from "antd";
 
 type BoxType = {
   id: number | string;
@@ -26,6 +27,7 @@ const BoxesType = () => {
   const { company } = useCompany();
 
   const [boxes, setBoxes] = useState<BoxType[]>([]);
+  const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,7 +35,6 @@ const BoxesType = () => {
   const handleOpenAddModal = () => setIsAddModalOpen(true);
 
   const handleOkAddModal = () => {
-    // acá después podés crear la box y refrescar
     console.log("ok add modal");
   };
 
@@ -57,6 +58,18 @@ const BoxesType = () => {
     fetchBoxes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
+
+  const filteredBoxes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return boxes;
+
+    return boxes.filter((b) => {
+      const name = b?.name?.toLowerCase() ?? "";
+      const sp = b?.search_prompt?.toLowerCase() ?? "";
+      const ap = b?.analysis_prompt?.toLowerCase() ?? "";
+      return name.includes(q) || sp.includes(q) || ap.includes(q);
+    });
+  }, [boxes, search]);
 
   return (
     <div className="w-full h-full text-xs pr-20 pb-10">
@@ -85,7 +98,22 @@ const BoxesType = () => {
         </Button>
       </div>
 
-      <div className="mb-4">search bar</div>
+      <div className="mb-4">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="min-w-[400px] w-[20vw] rounded-xl"
+          allowClear
+          prefix={
+            <Image
+              src="/assets/icons/search.svg"
+              alt="Search"
+              width={12}
+              height={12}
+            />
+          }
+        />
+      </div>
 
       <div className="w-full">
         {/* encabezados */}
@@ -101,8 +129,12 @@ const BoxesType = () => {
           <div className="py-6 text-grey-normal text-center">
             Loading box types...
           </div>
+        ) : filteredBoxes.length === 0 ? (
+          <div className="py-6 text-grey-normal text-center">
+            No box types found.
+          </div>
         ) : (
-          boxes.map((box) => (
+          filteredBoxes.map((box) => (
             <div
               key={`${box.id}-${box.name}`}
               className="w-full flex py-6 border-b border-primaryN30"
