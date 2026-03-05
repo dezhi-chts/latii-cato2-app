@@ -606,7 +606,7 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
             ></Thumbnail>
           </div>
         </div>
-        <div className={`flex-1 flex flex-col px-6 gap-10 overflow-hidden`}>
+        <div className={`flex-1 flex flex-col pl-10 gap-6 overflow-hidden`}>
           {fileOperationType === FileOperationType.ArchitectureDrawing && (
             <DrawingTagsView
               pageTypeTags={pageTypeList}

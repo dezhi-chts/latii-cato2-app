@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Modal, notification } from "antd";
-import TakeoffUpload from "./Create-Takeoff/Takeoff-Upload";
+import TakeoffUpload, { ArchitecturalDrawingModal } from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
 import { type UploadFile } from "antd/es/upload/interface";
 import { createProject } from "@/services/projectService";
@@ -9,6 +9,8 @@ import { useCompany } from "@/context/CompanyContext";
 import { normalizeKey } from "@/lib/functions";
 import { Attribute } from "@/types/home";
 import Button from "@/components/Button";
+
+import Image from "next/image";
 
 type FormValues = Record<string, any>;
 
@@ -28,6 +30,7 @@ const CreateProjectModal = ({
   const [form, setForm] = useState<Record<string, any>>({});
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showDrawingModal, setShowDrawingModal] = useState<boolean>(false);
 
   const { company } = useCompany();
 
@@ -147,11 +150,37 @@ const CreateProjectModal = ({
           </div>
         </div>
         <div className="px-5 w-[720px] flex flex-col border border-grey-light-hover rounded-md overflow-y-auto">
-          <div className="my-4 text-lg">Start from Takeoff</div>
+          {/* <div className="my-4 text-lg">Start from Takeoff</div> */}
+          <div className="flex flex-row justify-between">
+            <div>
+              <div className="pt-2 flex flex-row items-center">
+                <div className="flex flex-row gap-2"><Image className="-ml-[24px]" src="/assets/icons/cato-quote.svg" alt="takeoff icon" width={170} height={56} ></Image></div>
+                <div className="-ml-[30px] mt-[4px] flex flex-row gap-2">
+                  <div className="w-[1px] h-[30px] bg-primaryN30"></div>
+                  <div className="text-[22px] text-grey-light-strong">Takeoffs</div>
+                </div>
+              </div>
+              <div className="mb-5 text-sm text-grey-normal">Use our AI Agent to create your quote, save time and prevent errors.</div>
+            </div>
+            <div
+              className="mt-5 text-xs text-center text-grey-normal underline cursor-pointer"
+              onClick={() => {
+                setShowDrawingModal(true);
+              }}
+            >
+              Not sure what to upload?
+            </div>
+          </div>
           <div className="flex-1">
-            <TakeoffUpload onHandleUpload={handleUpload} />
+            <TakeoffUpload onHandleUpload={handleUpload} showUploadTipLink={false} />
           </div>
         </div>
+        {showDrawingModal && (
+          <ArchitecturalDrawingModal
+            isOpen={showDrawingModal}
+            setIsOpen={setShowDrawingModal}
+          />
+        )}
       </div>
     </Modal>
   );

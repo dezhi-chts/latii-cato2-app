@@ -8,7 +8,7 @@ const DrawingTagsView = ({
   setCurrentType: (type: string) => void;
 }) => {
   return (
-    <div className="ml-10 mt-6 flex flex-row gap-3">
+    <div className="mt-6 flex flex-row gap-3">
       {pageTypeTags.map((item) => {
         const primaryColor = item?.color || "#717171";
         const bgColor = primaryColor + "1A";
