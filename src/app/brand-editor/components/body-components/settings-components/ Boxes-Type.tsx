@@ -8,6 +8,7 @@ import AddBoxTypeModal from "./Add-Box-Type-Modal";
 import { useCompany } from "@/context/CompanyContext";
 import { Input } from "antd";
 import {
+  createBoxType,
   deleteBoxType,
   getBoxTypes,
   updateBoxType,
@@ -68,8 +69,24 @@ const BoxesType = () => {
   const handleAddModalCancel = () => setIsAddModalOpen(false);
   const handleOpenAddModal = () => setIsAddModalOpen(true);
 
-  const handleOkAddModal = () => {
-    console.log("ok add modal");
+  const handleOkAddModal = async (data: {
+    name: string;
+    description: string;
+    color: string;
+    search_prompt: string;
+    analysis_prompt: string;
+  }) => {
+    if (!company?.id) return;
+
+    const res = await createBoxType(company.id.toString(), data);
+
+    if (res?.status === "success") {
+      setIsAddModalOpen(false);
+      await fetchBoxes();
+    } else {
+      console.error("Create box type failed:", res?.data);
+      // si después querés, lo mostramos lindo en UI
+    }
   };
 
   const fetchBoxes = async () => {
