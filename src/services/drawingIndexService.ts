@@ -115,3 +115,66 @@ export const deleteDrawingIndex = async (drawingIndexId: string | number) => {
     return { data: null, status: "error" };
   }
 };
+
+export const getBoxTypes = async (company_id: string) => {
+  try {
+    const url = `/box_types/list?company_id=${company_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting box type list:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const createBoxType = async (
+  company_id: string,
+  data: {
+    name: string;
+    description: string;
+    color: string;
+    search_prompt: string;
+    analysis_prompt: string;
+  },
+) => {
+  try {
+    const url = `/box_types/create/${company_id}`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error creating box type:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const updateBoxType = async (
+  company_id: string,
+  box_id: string,
+  data: {
+    name: string;
+    description: string;
+    color: string;
+    search_prompt: string;
+    analysis_prompt: string;
+  },
+) => {
+  try {
+    const url = `/box_types/update/${company_id}/${box_id}`;
+    const response = await http.put(url, data);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    return { data: error?.response?.data || null, status: "error" };
+  }
+};
+
+export const deleteBoxType = async (company_id: string, box_id: string) => {
+  try {
+    const url = `/box_types/delete/${company_id}/${box_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error deleting box type:", error);
+    console.error("Error response:", error?.response?.data);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+};

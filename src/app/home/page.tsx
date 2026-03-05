@@ -307,9 +307,9 @@ const Home = () => {
                 setShowCreateProjectTakeOffModal(true);
               } else if (type === "pageIndex") {
                 // 跳转到Page-Index页面
-                //router.push(`/projects/38/takeoff/15/identification-index`);
+                //router.push(`/projects/38/takeoff/15/identification-new`);
                 router.push(
-                  `/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification-index`,
+                  `/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification-new`,
                 );
               }
             }}
@@ -328,8 +328,8 @@ const Home = () => {
             }}
             projectId={projectInfo.current?.project_id ?? null}
             takeOffId={projectInfo.current?.take_off_id ?? null}
-            //projectId={'38'}
-            //takeOffId={'15'}
+          //projectId={'38'}
+          //takeOffId={'15'}
           />
         )}
       </div>
