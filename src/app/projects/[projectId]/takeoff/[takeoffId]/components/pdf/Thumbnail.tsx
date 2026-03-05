@@ -207,7 +207,7 @@ const Thumbnail = ({
                       </p>
                       {showCategory && (
                         <div
-                          className="w-[42px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
+                          className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
                           style={{ backgroundColor: color }}
                         >
                           <span>{icon}</span>

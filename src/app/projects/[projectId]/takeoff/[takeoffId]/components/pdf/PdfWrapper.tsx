@@ -62,8 +62,10 @@ import {
   GroupType,
   allPageTypes,
   PageType,
+  FileOperationType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
+import { ArchDrawingLabelTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
 const { confirm } = Modal;
 
@@ -122,7 +124,7 @@ const showReadBtnGroupTypes = [GroupType.OCR];
 const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 
 // 以下的框类型显示 数字按钮
-const showNumBtnGroupTypes: GroupType[] = [/*GroupType.Item, GroupType.WindowDoorUnitList*/];
+const showNumBtnGroupTypes: GroupType[] = [GroupType.Item, GroupType.WindowDoorUnitList];
 
 // 以下框类型显示  复制按钮集合
 const showCopyBtnGroupTypes = [
@@ -153,6 +155,7 @@ const PdfWrapper = forwardRef(
       allEvidence,
       selectedEvidenceIds,
       typeList,
+      pdfOperationType = FileOperationType.ArchitectureDrawing,
       onChangePage,
       onTotalPages,
       onAppendEvidence,
@@ -2302,6 +2305,7 @@ const PdfWrapper = forwardRef(
                           draggingShapeId={draggingShapeId}
                           itemEvidences={itemEvidences}
                           typeList={typeList}
+                          pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(evid.id);
                           }}
@@ -2365,6 +2369,8 @@ const PdfWrapper = forwardRef(
                           selectedShapeId={selectedShapeId}
                           draggingShapeId={draggingShapeId}
                           itemEvidences={itemEvidences}
+                          typeList={typeList}
+                          pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(crop.id);
                           }}
@@ -2420,8 +2426,27 @@ const PdfWrapper = forwardRef(
                   );
 
                   let type = item.type ?? "";
-                  let color: string =
-                    allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
+                  let color: string = colorList['forumBlue-normal'];
+
+                  // 是否显示复制按钮框
+                  let showCopyBtn = false;
+                  // 是否显示类型选择下拉框
+                  let showSelectGroup = false;
+                  if (showSelectGroupTypes.includes(type) && pdfOperationType === FileOperationType.ArchitectureDrawing) {
+                    // ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
+                    showSelectGroup = true;
+                    color = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
+                  } else if (pdfOperationType === FileOperationType.Quote) {
+                    // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+                    let findType = typeList?.find(
+                      (box: any) => box.name === type,
+                    );
+                    if (findType) {
+                      showCopyBtn = true;
+                      color = findType.color || colorList['forumBlue-normal'];
+                    }
+                  }
+
                   return (
                     <div
                       key={item.id}
@@ -2455,16 +2480,16 @@ const PdfWrapper = forwardRef(
                       <div
                         className="absolute flex flex-row items-center"
                         style={{
-                          left: showSelectGroupTypes.includes(type)
+                          left: showSelectGroup
                             ? width - 68
                             : width - 22,
                           top: 4,
                         }}
                       >
                         <div className="flex items-center gap-1">
-                          {showSelectGroupTypes.includes(type) && (
+                          {showSelectGroup && (
                             <LabelTypesSelect
-                              typeList={typeList as any}
+                              typeList={ArchDrawingLabelTypes as any}
                               selectedType={type}
                               onChangeType={async (type) => {
                                 if (type === item.type) return;
@@ -2490,7 +2515,7 @@ const PdfWrapper = forwardRef(
                           </Popconfirm>
                         </div>
                       </div>
-                      {showCopyBtnGroupTypes.includes(type) && (
+                      {/*showCopyBtnGroupTypes.includes(type)*/ showCopyBtn && (
                         <div
                           className="transition-all"
                           style={{
@@ -2791,6 +2816,7 @@ const ShapeWrapper = ({
   draggingShapeId,
   itemEvidences,
   typeList,
+  pdfOperationType,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -2806,6 +2832,7 @@ const ShapeWrapper = ({
   draggingShapeId: string | null;
   itemEvidences: EvidenceType[] | null;
   typeList?: any[];
+  pdfOperationType: FileOperationType;
   onDragStart: () => void;
   onDragMove: (x: number, y: number) => void;
   onDragEnd: () => void;
@@ -2850,9 +2877,18 @@ const ShapeWrapper = ({
 
   if (type === "evidence") {
     let evidType = shape.type ?? "";
-    color =
-      allPageTypes[evidType as keyof typeof allPageTypes]?.color ??
-      colorList["forumBlue-normal"];
+    if (showSelectGroupTypes.includes(evidType as any) && pdfOperationType === FileOperationType.ArchitectureDrawing) {
+      // ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
+      color = allPageTypes[evidType as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
+    } else if (pdfOperationType === FileOperationType.Quote) {
+      // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+      let findType = typeList?.find(
+        (box: any) => box.name === evidType,
+      );
+      if (findType) {
+        color = findType.color || colorList['forumBlue-normal'];
+      }
+    }
   }
 
   if (draggingShapeId === shape.id) {

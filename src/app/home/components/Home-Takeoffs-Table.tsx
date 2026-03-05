@@ -140,7 +140,7 @@ const HomeTakeoffsTable = ({
     (record: ProjectRow) => ({
       onClick: () =>
         router.push(
-          `/projects/${record.project_id}/takeoff/${record.id}/identification-index`,
+          `/projects/${record.project_id}/takeoff/${record.id}/identification-new`,
         ),
       className: "cursor-pointer hover:bg-gray-50",
     }),

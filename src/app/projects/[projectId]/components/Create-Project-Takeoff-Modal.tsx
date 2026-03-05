@@ -44,10 +44,9 @@ const TabList = ({
             className={`
               cursor-pointer rounded-md rounded-bl-none rounded-br-none 
               border border-primaryN30
-              ${
-                activeIndex === index
-                  ? "border-b-white bg-white relative z-10"
-                  : "border-b-0 border-b-transparent"
+              ${activeIndex === index
+                ? "border-b-white bg-white relative z-10"
+                : "border-b-0 border-b-transparent"
               }
             `}
             onClick={() => onClick(index)}
@@ -234,7 +233,7 @@ const CreateProjectTakeoffModal = ({
       });
       // 跳转到下一页
       router.push(
-        `/projects/${projectId}/takeoff/${takeOffId}/identification-index`,
+        `/projects/${projectId}/takeoff/${takeOffId}/identification-new`,
       );
     } else {
       notification.error({

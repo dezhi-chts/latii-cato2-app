@@ -290,6 +290,7 @@ export interface PdfWrapperProps {
   project_id: number | string;
   project_file_id: number;
   pdfUrl: string;
+  pdfOperationType?: FileOperationType;
   page: number;
   zoom: number;
   allEvidence: EvidenceType[]; //当前文件所有的evidence
