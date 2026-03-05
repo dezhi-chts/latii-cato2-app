@@ -44,7 +44,6 @@ type HomeProjectsTableProps = {
   tableLoading: boolean;
   projects: ProjectRow[];
   selectedColumns: string[];
-  handleRemoveProject: (record: ProjectRow) => void;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   totalPages: number;
@@ -55,7 +54,6 @@ const HomeProjectsTable = ({
   tableLoading,
   projects,
   selectedColumns,
-  handleRemoveProject,
   currentPage,
   setCurrentPage,
   totalPages,

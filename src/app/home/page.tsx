@@ -4,7 +4,7 @@ import { useUser } from "@/context/UserContext";
 import { useEffect, useRef, useState } from "react";
 import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
-import { Input, Segmented, Modal } from "antd";
+import { Input, Segmented, Modal, notification } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 import HomeProjectsTable, { PAGE_SIZE } from "./components/Home-Projects-Table";
@@ -164,8 +164,22 @@ const Home = () => {
   };
 
   const handleFavoriteClick = async (project: any) => {
-    await toggleFavoriteProject(project);
-    await getProjects();
+    const response: any = await toggleFavoriteProject(project);
+    if (response.status === "success") {
+      await getProjects();
+    } else {
+      const errorMessage = response.data.response.data.detail;
+      const isRequiredAttributeError =
+        /^Attribute [0-9a-fA-F-]+ is required$/.test(errorMessage);
+
+      notification.error({
+        message: "Error toggling favorite",
+        description: isRequiredAttributeError
+          ? "This project has empty required fields. Please fill them first."
+          : "",
+        duration: 5,
+      });
+    }
   };
 
   useEffect(() => {
@@ -242,7 +256,6 @@ const Home = () => {
               projects={filteredProjects}
               selectedColumns={selectedColumns}
               tableLoading={projectLoading}
-              handleRemoveProject={handleRemoveProject}
               currentPage={currentProjectsPage}
               setCurrentPage={setCurrentProjectsPage}
               totalPages={totalProjectPages}

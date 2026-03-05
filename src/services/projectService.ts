@@ -69,9 +69,10 @@ export const toggleFavoriteProject = async (project: any) => {
     const newProject = { ...project, is_favorite: newValue };
 
     const response = await updateProject(newProject);
-    return response;
+    return { data: response, status: "success" };
   } catch (error) {
     console.error("Error toggling favorite:", error);
+    return { data: error, status: "error" };
   }
 };
 
@@ -81,6 +82,7 @@ export const updateProject = async (project: any) => {
     return response;
   } catch (error) {
     console.error("Error updating project:", error);
+    throw error;
   }
 };
 

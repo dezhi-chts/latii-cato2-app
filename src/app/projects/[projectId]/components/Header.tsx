@@ -46,13 +46,27 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
     if (field === "is_favorite") {
       const newValue = !status.is_favorite;
 
-      await toggleFavoriteProject(project);
-      await refetchProjects();
+      const response: any = await toggleFavoriteProject(project);
 
-      setStatus((prev) => ({
-        ...prev,
-        is_favorite: newValue,
-      }));
+      if (response.status === "success") {
+        await refetchProjects();
+        setStatus((prev) => ({
+          ...prev,
+          is_favorite: newValue,
+        }));
+      } else {
+        const errorMessage = response.data.response.data.detail;
+        const isRequiredAttributeError =
+          /^Attribute [0-9a-fA-F-]+ is required$/.test(errorMessage);
+
+        notification.error({
+          message: "Error toggling favorite",
+          description: isRequiredAttributeError
+            ? "This project has empty required fields. Please fill them first."
+            : "",
+          duration: 5,
+        });
+      }
     } else {
       setStatus((prev) => ({
         ...prev,
