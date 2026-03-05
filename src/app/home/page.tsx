@@ -18,6 +18,7 @@ import {
   fetchProjects,
   deleteProject,
   getAllProjects,
+  toggleFavoriteProject,
 } from "@/services/projectService";
 import {
   deleteTakeOffById,
@@ -162,6 +163,11 @@ const Home = () => {
     });
   };
 
+  const handleFavoriteClick = async (project: any) => {
+    await toggleFavoriteProject(project);
+    await getProjects();
+  };
+
   useEffect(() => {
     setSelectedColumns(allFields.map((field) => field.field_name));
   }, [company.project_attributes]);
@@ -240,6 +246,7 @@ const Home = () => {
               currentPage={currentProjectsPage}
               setCurrentPage={setCurrentProjectsPage}
               totalPages={totalProjectPages}
+              handleFavoriteClick={handleFavoriteClick}
             />
           ) : (
             <HomeTakeoffsTable
@@ -328,8 +335,8 @@ const Home = () => {
             }}
             projectId={projectInfo.current?.project_id ?? null}
             takeOffId={projectInfo.current?.take_off_id ?? null}
-          //projectId={'38'}
-          //takeOffId={'15'}
+            //projectId={'38'}
+            //takeOffId={'15'}
           />
         )}
       </div>

@@ -48,6 +48,7 @@ type HomeProjectsTableProps = {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   totalPages: number;
+  handleFavoriteClick: (record: any) => void;
 };
 
 const HomeProjectsTable = ({
@@ -58,6 +59,7 @@ const HomeProjectsTable = ({
   currentPage,
   setCurrentPage,
   totalPages,
+  handleFavoriteClick,
 }: HomeProjectsTableProps) => {
   const router = useRouter();
 
@@ -130,22 +132,29 @@ const HomeProjectsTable = ({
         key: "actions",
         align: "center",
         width: 160,
-        render: (value, record) => (
-          <div
-            className="w-full flex justify-center items-center cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveProject(record);
-            }}
-          >
-            <Image
-              src="/assets/icons/delete.svg"
-              alt="Delete"
-              width={20}
-              height={20}
-            />
-          </div>
-        ),
+        render: (value, record) => {
+          const isFavorite = record.is_favorite;
+          const imgSrc = isFavorite
+            ? "/assets/icons/favorite-filled.svg"
+            : "/assets/icons/favorite.svg";
+          return (
+            <div
+              className="w-full flex justify-center items-center cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFavoriteClick(record);
+              }}
+            >
+              <Image
+                src={imgSrc}
+                alt="Favorite Icon"
+                width={20}
+                height={20}
+                className="w-6 h-6"
+              />
+            </div>
+          );
+        },
       },
     ],
     [],
