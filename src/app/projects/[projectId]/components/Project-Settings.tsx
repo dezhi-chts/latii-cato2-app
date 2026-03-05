@@ -12,7 +12,7 @@ type ProjectSettingsProps = {
 const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
   const [settings, setSettings] = useState<any>({
     project_name: project?.project_name,
-    is_favorite: false,
+    is_favorite: project?.is_favorite,
     project_desc: "",
     attributes: project?.attributes,
   });
@@ -37,18 +37,35 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    const newSettings = { ...settings, is_favorite: false };
-    newSettings[field] = value;
+    const fieldId = attributes.find((attr) => attr.label === field)?.uuid;
+    if (!fieldId) return;
+
+    const newSettings = {
+      ...settings,
+      attributes: {
+        ...settings.attributes,
+        [fieldId]: value,
+      },
+    };
     setSettings(newSettings);
+    if (isThereEmptyRequiredFields(newSettings)) return;
     handleUpdate(newSettings);
   };
 
   const updateProject = () => {
-    const formattedSettings = {
-      ...settings,
-      is_favorite: false,
-    };
-    handleUpdate(formattedSettings);
+    if (isThereEmptyRequiredFields(settings)) return;
+    handleUpdate(settings);
+  };
+
+  const isThereEmptyRequiredFields = (newSettings: any) => {
+    const requiredFields = attributes.filter((attr) => attr.required);
+    const requiredFieldsValues = requiredFields.map(
+      (attr) => newSettings?.attributes?.[attr.uuid],
+    );
+
+    const hasEmptyFields = requiredFieldsValues.some((value) => !value);
+
+    return hasEmptyFields;
   };
 
   function formatOptions(options: string[]) {
@@ -108,6 +125,11 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
                       onChange: (v: any) => handleSelectChange(attr.label, v),
                     })}
               />
+              {attr.required && !value && (
+                <p className="text-red-normal pt-1 text-xs">
+                  * This field can't be empty
+                </p>
+              )}
             </div>
           );
         })}
