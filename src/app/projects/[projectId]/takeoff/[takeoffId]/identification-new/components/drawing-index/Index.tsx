@@ -413,7 +413,7 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
             ></IndexRectView>
           )}
         </div>
-        <div className={`flex-1 flex flex-col pl-6 pt-4 overflow-hidden`}>
+        <div className={`flex-1 flex flex-col pl-12 pt-4 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
               {showContentView && (
