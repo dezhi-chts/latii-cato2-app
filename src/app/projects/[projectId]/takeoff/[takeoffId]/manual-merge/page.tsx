@@ -2,8 +2,14 @@
 
 import Button from "@/components/Button";
 import FileManualMerge from "./file-manual-merge";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import Header from "./components/Header";
 
 const ManualMerge = () => {
+  const projectId = useParams().projectId;
+  const takeoffId = useParams().takeoffId;
+
   const files = [
     {
       id: 1,
@@ -58,14 +64,35 @@ const ManualMerge = () => {
   ];
 
   return (
-    <div className="ml-20 mt-20 w-[80vw]">
-      <div className="flex">
-        <Button>Review Items</Button>
-        <Button>Compare</Button>
+    <div className="w-full">
+      <Header />
+      <div className="flex justify-between px-20 pt-8">
+        <div className="flex flex-col gap-1">
+          <p className="text-forumBlue-normal">Multi File Merger</p>
+          <p className="text-xs text-grey-normal">
+            Review the merge methods for your file merge.
+          </p>
+        </div>
+        <div className="flex gap-3 text-xs">
+          <Button backgroundColor="primaryN20" className="!rounded-md">
+            <p className="text-grey-normal">Item Compare</p>
+          </Button>
+          <Link
+            href={`/projects/${projectId}/takeoff/${takeoffId}/manual-merge/item-review`}
+          >
+            <Button backgroundColor="primaryN20" className="!rounded-md">
+              <p className="text-grey-normal">General Review Items</p>
+            </Button>
+          </Link>
+        </div>
       </div>
-      <div className="w-full scrollbar-hidden flex overflow-auto gap-8">
-        {files.map((file) => (
-          <FileManualMerge key={file.id} file={file} />
+      <div className="scrollbar-hidden flex overflow-auto gap-20 px-20">
+        {files.map((file, index) => (
+          <FileManualMerge
+            key={file.id}
+            file={file}
+            isFirstFile={index === 0}
+          />
         ))}
       </div>
     </div>

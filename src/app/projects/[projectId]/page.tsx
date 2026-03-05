@@ -31,6 +31,7 @@ const Project = () => {
   const [fullLoading, setFullLoading] = useState(false);
   const [showUploadProgess, setShowUploadProgess] = useState(false);
   const [showPdfParseModal, setShowPdfParseModal] = useState(false);
+  const [selectedType, setSelectedType] = useState(["All"]);
 
   const uploadFiles = useRef<any>(null);
   const projectInfo = useRef<any>(null);
@@ -57,6 +58,23 @@ const Project = () => {
     } else {
       setProject(null);
     }
+  };
+
+  const changeType = (type: string) => {
+    setSelectedType((prev) => {
+      if (type === "All") return ["All"];
+
+      const next = prev.includes("All") ? [] : [...prev];
+
+      const idx = next.indexOf(type);
+      if (idx >= 0) {
+        next.splice(idx, 1);
+        return next.length ? next : ["All"];
+      }
+
+      next.push(type);
+      return next;
+    });
   };
 
   const getProjectTakeoffs = async () => {
@@ -97,27 +115,21 @@ const Project = () => {
   const filterTypeList = [
     {
       type: "All",
-      bgColor: "bg-primaryN30",
+      bgColor: "bg-primaryN30 hover:bg-primaryN50",
       iconBgColor: "bg-primaryN70",
       icontextColor: "text-white",
     },
     {
       type: "Upload",
-      bgColor: "bg-[#FF931E4C]",
+      bgColor: "bg-[#FF931E2B] hover:bg-[#FF931E4B]",
       iconBgColor: "bg-white",
       icontextColor: "text-dragonOrange",
     },
     {
       type: "Takeoff",
-      bgColor: "bg-[#008ECE4C]",
+      bgColor: "bg-[#008ECE2B] hover:bg-[#008ECE4B]",
       iconBgColor: "bg-white",
       icontextColor: "text-kahuBlue",
-    },
-    {
-      type: "Quoting",
-      bgColor: "bg-[#F7CD4D4C]",
-      iconBgColor: "bg-white",
-      icontextColor: "text-[#F7CD4D]",
     },
   ];
 
@@ -125,15 +137,13 @@ const Project = () => {
     <div>
       <div className="flex flex-col gap-12 zoomed-container font-nunito">
         <Header project={project} refetchProject={getProject} />
-        <div className="flex flex-col gap-8 mt-36 pl-20 ">
-          <div className="flex text-lg text-forumBlue-normal">
-            Takeoffs & Quotiis
-          </div>
+        <div className="flex flex-col gap-8 mt-44 pl-20 ">
+          <div className="flex text-lg text-forumBlue-normal">Takeoffs</div>
           {takeoffsList?.length > 0 && (
             <div className="flex justify-between items-center w-11/12">
               <div className="flex h-[34px] flex-row gap-5 items-center">
                 <Input
-                  className="w-[400px] h-full rounded-3xl"
+                  className="w-[400px] h-full rounded-xl"
                   placeholder="Project Name, Status, Client and More."
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
@@ -146,21 +156,24 @@ const Project = () => {
                     />
                   }
                 />
-                {filterTypeList.map((item) => (
-                  <div
-                    key={item.type}
-                    className={`w-[96px] h-[26px] text-center rounded-md ${item.bgColor} flex justify-center items-center text-xs`}
-                  >
-                    <label className="mr-2 text-ms font-light">
-                      {item.type}
-                    </label>
-                    <span
-                      className={`px-[6px] py-[1px] text-xs ${item.icontextColor} ${item.iconBgColor} rounded`}
+                {filterTypeList.map((item) => {
+                  const isActive = selectedType.includes(item.type);
+                  const dynamicStyles = `${isActive ? "border-forumBlue-normal" : "border-transparent"} ${item.bgColor}`;
+                  return (
+                    <div
+                      key={item.type}
+                      className={`${dynamicStyles} px-4 h-[26px] text-center rounded-md border gap-2 flex justify-center items-center text-xs cursor-pointer`}
+                      onClick={() => changeType(item.type)}
                     >
-                      1
-                    </span>
-                  </div>
-                ))}
+                      <p className="pt-0.5">{item.type}</p>
+                      <p
+                        className={`px-1.5 pt-0.5 text-xs ${item.icontextColor} ${item.iconBgColor} rounded`}
+                      >
+                        1
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
               {createQuotiiButton}
             </div>
@@ -172,6 +185,7 @@ const Project = () => {
             ) : takeoffsList?.length > 0 ? (
               takeoffsList.map((takeOff: any, index: number) => {
                 const name = takeOff?.take_off_result?.name || "";
+                console.log(takeOff);
                 if (!name.toLowerCase().includes(filter.toLowerCase()))
                   return null;
                 return (

@@ -25,7 +25,7 @@ const Selector = ({
         {name} {RequiredHint(required)}
       </p>
       <Select
-        defaultValue={value}
+        value={value}
         placeholder={hint_text}
         className="max-w-80"
         options={options}
