@@ -3,11 +3,12 @@
 import Button from "@/components/Button";
 import { boxesColors } from "@/lib/constants";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AddBoxTypeModal from "./Add-Box-Type-Modal";
-import { getBoxTypes } from "@/services/drawingIndexService";
+
 import { useCompany } from "@/context/CompanyContext";
 import { Input } from "antd";
+import { deleteBoxType, getBoxTypes } from "@/services/drawingIndexService";
 
 type BoxType = {
   id: number | string;
@@ -30,6 +31,11 @@ const BoxesType = () => {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
+
+  // Para detectar click afuera del menú (se lo asignamos SOLO al menú abierto)
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleAddModalCancel = () => setIsAddModalOpen(false);
   const handleOpenAddModal = () => setIsAddModalOpen(true);
@@ -59,6 +65,31 @@ const BoxesType = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
+  // ✅ Cerrar menú al click afuera + ESC
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (!openMenuId) return;
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenuId(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside, true);
+    document.addEventListener("touchstart", handleClickOutside, true);
+    document.addEventListener("keydown", handleEsc);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("touchstart", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [openMenuId]);
+
   const filteredBoxes = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return boxes;
@@ -70,6 +101,26 @@ const BoxesType = () => {
       return name.includes(q) || sp.includes(q) || ap.includes(q);
     });
   }, [boxes, search]);
+
+  const handleDelete = async (boxId: number | string) => {
+    if (!company?.id) return;
+
+    setDeletingId(boxId);
+    setOpenMenuId(null);
+
+    const prev = boxes;
+    setBoxes((cur) => cur.filter((b) => b.id !== boxId));
+
+    try {
+      await deleteBoxType(company.id, boxId);
+    } catch (e) {
+      console.error(e);
+      // rollback si falla
+      setBoxes(prev);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="w-full h-full text-xs pr-20 pb-10">
@@ -154,14 +205,70 @@ const BoxesType = () => {
 
               <div className="w-4/12 px-2">{box?.search_prompt ?? ""}</div>
 
-              <div className="w-5/12 px-2 flex justify-between items-center">
+              <div className="w-5/12 px-2 flex justify-between items-center relative">
                 <p className="w-11/12">{box?.analysis_prompt ?? ""}</p>
-                <Image
-                  src="/assets/icons/three-dots.svg"
-                  alt=""
-                  width={20}
-                  height={10}
-                />
+
+                <div
+                  className="relative"
+                  ref={openMenuId === box.id ? menuRef : null}
+                >
+                  {/* Trigger: puntitos */}
+                  <button
+                    type="button"
+                    className="w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primaryN20"
+                    onClick={() =>
+                      setOpenMenuId(openMenuId === box.id ? null : box.id)
+                    }
+                    aria-label="Open actions"
+                  >
+                    <Image
+                      src="/assets/icons/three-dots.svg"
+                      alt=""
+                      width={60}
+                      height={20}
+                      className="opacity-80"
+                    />
+                  </button>
+
+                  {/* Popover */}
+                  {openMenuId === box.id && (
+                    <div className="absolute right-0 top-11 bg-white border border-primaryN30 rounded-xl shadow-md flex items-center gap-2 px-2 py-1 z-10">
+                      {/* Edit (ejemplo) */}
+                      <button
+                        type="button"
+                        className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-primaryN20 cursor-pointer"
+                        aria-label="Edit"
+                        onClick={() => {
+                          // TODO: tu action edit
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        <Image
+                          src="/assets/icons/edit.svg"
+                          alt=""
+                          width={15}
+                          height={15}
+                        />
+                      </button>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-primaryN20 cursor-pointer disabled:opacity-50"
+                        aria-label="Delete"
+                        disabled={deletingId === box.id}
+                        onClick={() => handleDelete(box.id)}
+                      >
+                        <Image
+                          src="/assets/icons/delete.svg"
+                          alt=""
+                          width={15}
+                          height={15}
+                        />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))
