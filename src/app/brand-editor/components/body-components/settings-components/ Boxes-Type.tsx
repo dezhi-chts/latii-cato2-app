@@ -1,7 +1,9 @@
 "use client";
 
 import Button from "@/components/Button";
+import { boxesColors } from "@/lib/constants";
 import Image from "next/image";
+import { useState } from "react";
 const BoxesType = () => {
   const boxes = [
     {
@@ -84,6 +86,16 @@ const BoxesType = () => {
     },
   ];
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState<Boolean>(false);
+
+  const handleAddModalCancel = () => {
+    setIsAddModalOpen(false);
+  };
+
+  const handleOpenAddModal = () => {
+    setIsAddModalOpen(true);
+  };
+
   return (
     <div className="w-full h-full  text-xs pr-20">
       {/* titles */}
@@ -115,10 +127,15 @@ const BoxesType = () => {
             key={`${box.id}-${box.name}`}
             className="w-full flex py-6 border-b border-primaryN30"
           >
-            <div className="w-2/12 text-center">{box.name}</div>
-            <div className="w-1/12 text-center">Color</div>
-            <div className="w-4/12 ">{box.search_prompt}</div>
-            <div className="w-5/12 flex space-between items-center">
+            <div className="w-2/12 text-center">{box?.name}</div>
+            <div className="w-1/12 flex justify-center items-center">
+              <div
+                className="w-4 h-4 rounded-full "
+                style={{ backgroundColor: boxesColors[box?.color] }}
+              />
+            </div>
+            <div className="w-4/12 px-2 ">{box.search_prompt}</div>
+            <div className="w-5/12 px-2 flex space-between items-center">
               <p className="w-11/12"> {box.analysis_prompt}</p>
               <Image
                 src="/assets/icons/three-dots.svg"

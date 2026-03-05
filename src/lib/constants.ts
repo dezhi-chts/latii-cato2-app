@@ -1,4 +1,4 @@
-const boxesColors = {
+export const boxesColors: Record<string, string> = {
   blue: "#3563A5", //forumBlue
   green: "#009447", //accents
   orange: "#FF931D",
