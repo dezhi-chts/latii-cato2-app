@@ -232,7 +232,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
               return (
                 <div key={key} className="flex gap-2 text-sm text-grey-normal">
                   <span className="font-bold ">{title}</span>
-                  <span>{String(value)}</span>
+                  <span className="max-w-32 truncate">{String(value)}</span>
                 </div>
               );
             })}
