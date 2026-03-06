@@ -424,11 +424,13 @@ const PdfWrapper = forwardRef(
       groupId = null, //根据id查找查找并保存group
       groupInfo = null, // 根据group信息直接保存group
       showLoading = true,
+      addActiveShape = false, //是否保存完成后，自动添加选中功能
     }: {
       showAlert?: boolean;
       groupId?: string | null;
       groupInfo?: GroupFrame | null;
       showLoading?: boolean;
+      addActiveShape?: boolean; //是否保存完成后，自动添加选中功能
     }): Promise<string> => {
       return new Promise((resolve, reject) => {
         if (!currentViewportRef.current) {
@@ -495,6 +497,12 @@ const PdfWrapper = forwardRef(
               }
 
               onAppendEvidence && onAppendEvidence(res.data);
+              // 如果需要添加选中功能，则添加
+              if (addActiveShape) {
+                if (res?.data?.evidences?.length === 1) {
+                  setSelectedShapeId(res?.data?.evidences?.[0]?.id);
+                }
+              }
               resolve("success");
             } else {
               reject(new Error("Evidence submit failed"));
@@ -1161,9 +1169,11 @@ const PdfWrapper = forwardRef(
           showAlert: false,
           groupInfo: groupFrame,
           showLoading: false,
+          addActiveShape: true
         })
           .then(() => {
-            // 保存成功
+            // 保存成功后，添加默认选中功能
+
           })
           .catch(() => { });
       }
@@ -2438,6 +2448,9 @@ const PdfWrapper = forwardRef(
                     color = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
                   } else if (pdfOperationType === FileOperationType.Quote) {
                     // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+                    if (type === GroupType.WindowDoorUnitList) {
+                      type = GroupType.Item;
+                    }
                     let findType = typeList?.find(
                       (box: any) => box.name === type,
                     );
@@ -2882,6 +2895,9 @@ const ShapeWrapper = ({
       color = allPageTypes[evidType as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
     } else if (pdfOperationType === FileOperationType.Quote) {
       // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+      if (evidType === GroupType.WindowDoorUnitList) {
+        evidType = GroupType.Item;
+      }
       let findType = typeList?.find(
         (box: any) => box.name === evidType,
       );

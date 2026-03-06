@@ -85,7 +85,7 @@ interface ThumbnailProps {
   showCategory?: boolean; // 是否显示分类
   showShadow?: boolean; // 是否显示阴影
   size?: "default" | "larger"; // 缩略图大小
-  categoryList?: any[]; // 页面分类
+  categoryList?: { type: string, color: string, icon: string }[]; // 页面分类
 }
 
 const Thumbnail = ({

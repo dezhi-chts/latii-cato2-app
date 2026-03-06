@@ -543,6 +543,23 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
     return file.operation_type || "";
   }, [fileList, selectedFileId]);
 
+  const thumbnailBoxTypeList = useMemo(() => {
+    if (fileOperationType === FileOperationType.ArchitectureDrawing) {
+      return ArchDrawingPageTypes;
+    }
+    if (fileOperationType === FileOperationType.Quote) {
+      if (boxTypeList?.length > 0) {
+        // 转换下文件类型
+        return boxTypeList.map((item: any) => ({
+          ...item,
+          type: item.name || "",
+          icon: typeof item?.name === 'string' && item?.name?.length > 0 ? item.name[0].toUpperCase() : "",
+        }));
+      }
+    }
+    return [];
+  }, [fileOperationType, boxTypeList]);
+
   return (
     <div
       className={`w-full flex flex-col relative h-[100vh]`}
@@ -589,20 +606,14 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
               data={filterThumbnailList}
               page={page}
               setPage={setPage}
-              showCategory={fileOperationType === FileOperationType.ArchitectureDrawing}
+              showCategory={true}
               showShadow={false}
               size={
                 fileOperationType === FileOperationType.Quote
                   ? "larger"
                   : "default"
               }
-              categoryList={
-                fileOperationType === FileOperationType.ArchitectureDrawing
-                  ? ArchDrawingPageTypes
-                  : fileOperationType === FileOperationType.Quote
-                    ? QuotePageTypes
-                    : []
-              }
+              categoryList={thumbnailBoxTypeList}
             ></Thumbnail>
           </div>
         </div>

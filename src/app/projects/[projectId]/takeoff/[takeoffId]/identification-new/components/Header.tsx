@@ -84,8 +84,8 @@ const Header = ({
   const allFilesCompleted = filesData.every((file: any) => file.status === FileStatus.Completed) || isFileMergeStep;
 
   const handleClickFile = async (file: any) => {
-    // if (selectedFileId === file.id) return;
-    // onChangeFile(file.id);
+    if (selectedFileId === file.id) return;
+    onChangeFile(file.id);
   }
 
   const handleBack = () => {

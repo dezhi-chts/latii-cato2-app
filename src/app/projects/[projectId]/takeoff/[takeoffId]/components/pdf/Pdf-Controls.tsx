@@ -12,7 +12,7 @@ export const ZoomControls = ({
   return (
     <div className="flex flex-row">
       <div
-        className="w-7 h-6 flex justify-center items-center rounded-tl-xl rounded-bl-xl bg-primaryN20 cursor-pointer text-grey-light-strong"
+        className="w-[28px] h-[28px] flex justify-center items-center rounded-tl-xl rounded-bl-xl bg-grey-light cursor-pointer text-grey-normal text-sm"
         onClick={() => {
           handleZoomChange(zoom - 0.1);
         }}
@@ -20,18 +20,18 @@ export const ZoomControls = ({
         -
       </div>
       <div
-        className="w-7 h-6 flex justify-center items-center rounded-tr-xl rounded-br-xl bg-primaryN20 cursor-pointer text-grey-light-strong"
-        style={{ marginLeft: 1 }}
+        className="w-[28px] h-[28px] flex justify-center items-center rounded-tr-xl rounded-br-xl bg-grey-light cursor-pointer text-grey-normal text-sm"
+        style={{ marginLeft: 2 }}
         onClick={() => handleZoomChange(zoom + 0.1)}
       >
         +
       </div>
 
       <span
-        className="ml-4 flex items-center justify-center rounded-md text-center text-basicDarkGray text-[10px] border border-solid border-primaryN30"
+        className="ml-2 flex items-center justify-center rounded-md text-center text-grey-normal text-[10px] border border-solid border-primaryN30"
         style={{
-          width: 54,
-          height: 24,
+          width: 52,
+          height: 28,
         }}
       >
         {(zoom * 100).toFixed(0) + "%"}
@@ -53,9 +53,8 @@ export const PageControls = ({
   return (
     <div className="flex gap-3 items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
       <div
-        className={`h-full py-2 w-2 flex items-center justify-center ${
-          page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-        }`}
+        className={`h-full py-2 w-2 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+          }`}
         onClick={() => handlePageChange(page - 1)}
       >
         <Image
@@ -67,9 +66,8 @@ export const PageControls = ({
       </div>
       <p className="text-grey-normal text-xxs">Page {page}</p>
       <div
-        className={`h-full py-2 w-2 flex items-center justify-center ${
-          page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
-        }`}
+        className={`h-full py-2 w-2 flex items-center justify-center ${page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
+          }`}
         onClick={() => handlePageChange(page + 1)}
       >
         <Image
@@ -161,9 +159,8 @@ export const SelectPagesControls = ({
   return (
     <div className="flex items-center rounded-lg border border-primaryN30 overflow-hidden px-1">
       <div
-        className={`h-full py-2 w-3 flex items-center justify-center ${
-          page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
-        }`}
+        className={`h-full py-2 w-3 flex items-center justify-center ${page === 1 ? "cursor-default opacity-50" : "cursor-pointer"
+          }`}
         onClick={() => handlePageChange(page - 1)}
       >
         <Image
@@ -191,9 +188,8 @@ export const SelectPagesControls = ({
         ))}
       </Select>
       <div
-        className={`h-full py-2 w-3 flex items-center justify-center ${
-          page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
-        }`}
+        className={`h-full py-2 w-3 flex items-center justify-center ${page === totalPages ? "cursor-default opacity-50" : "cursor-pointer"
+          }`}
         onClick={() => handlePageChange(page + 1)}
       >
         <Image
