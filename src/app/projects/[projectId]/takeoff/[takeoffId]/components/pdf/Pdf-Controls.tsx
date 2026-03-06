@@ -233,7 +233,7 @@ export const ThumbnailControls = ({
 }) => {
   return (
     <div
-      className="w-[25px] h-[24px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
+      className="w-[28px] h-[28px] flex flex-row justify-center items-center bg-grey-light rounded-md cursor-pointer"
       onClick={onClick}
     >
       <Image

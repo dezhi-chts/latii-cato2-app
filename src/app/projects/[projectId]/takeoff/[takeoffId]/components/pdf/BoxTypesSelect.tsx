@@ -25,7 +25,7 @@ const BoxTypesSelect = ({
   };
 
   const LabelItem = ({ item, isChild }: { item: any; isChild?: boolean }) => {
-    const isDefault = isSystemDefault(item.name);
+    const isDefault = item.is_system_default === 1 || item.is_system_default === true;  //isSystemDefault(item.name);
 
     return (
       <div

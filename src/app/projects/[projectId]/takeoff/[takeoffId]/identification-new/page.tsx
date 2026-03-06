@@ -94,6 +94,15 @@ const PageLabeling = () => {
     }
   }, [showContentView]);
 
+  useEffect(() => {
+    if (fileViewStep === FileViewStep.Second) {
+      // 如果切换到second view界面，且此时boxTypeList为空，则需要重新获取box type list
+      if (boxTypeList?.length === 0) {
+        getBoxTypeList();
+      }
+    }
+  }, [fileViewStep]);
+
   const getTakeOffDetails = async () => {
     setFullLoading(true);
     let res: any = await getTakeOffById(takeOffId as any);

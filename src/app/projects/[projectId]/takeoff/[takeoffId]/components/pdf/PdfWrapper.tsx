@@ -65,6 +65,7 @@ import {
   FileOperationType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
+import EditableSubText from "./EditableSubText";
 import { ArchDrawingLabelTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
 const { confirm } = Modal;
@@ -2446,11 +2447,15 @@ const PdfWrapper = forwardRef(
                   let showCopyBtn = false;
                   // 是否显示类型选择下拉框
                   let showSelectGroup = false;
+                  // 是否显示左上角的按钮
+                  let showNumBtn = false;
+
                   if (showSelectGroupTypes.includes(type) && pdfOperationType === FileOperationType.ArchitectureDrawing) {
                     // ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
                     showSelectGroup = true;
                     color = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
                   } else if (pdfOperationType === FileOperationType.Quote) {
+                    showNumBtn = true;
                     // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
                     if (type === GroupType.WindowDoorUnitList) {
                       type = GroupType.Item;
@@ -2473,26 +2478,19 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
-                      {showNumBtnGroupTypes.includes(type) && (
-                        <div className="pl-[2px] inline-block">
-                          <input
-                            className="h-[20px] text-center outline-none text-white text-xxs rounded-md "
-                            defaultValue={item.sub_text ?? ""}
-                            onBlur={(e: any) => {
-                              if (e.target.value.trim() !== "") {
-                                updateEvidence({
-                                  ...item,
-                                  sub_text: e.target.value,
-                                });
-                              }
-                            }}
-                            style={{
-                              width: "fit-content",
-                              maxWidth: 45,
-                              backgroundColor: color,
-                            }}
-                          />
-                        </div>
+                      {showNumBtn && (
+                        <EditableSubText
+                          value={item.sub_text ?? ""}
+                          color={color}
+                          onChange={(value: string) => {
+                            if (value.trim() !== "") {
+                              updateEvidence({
+                                ...item,
+                                sub_text: value,
+                              });
+                            }
+                          }}
+                        />
                       )}
                       <div
                         className="absolute flex flex-row items-center"
