@@ -97,14 +97,18 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
             onChange={({ fileList }) => setFiles(fileList)}
             showUploadList={false}
           >
-            <p className="text-forumBlue-normal underline cursor-pointer hover:opacity-80 active:opacity-60">
+            <p className={`${files.length === 0 ? "text-forumBlue-normal" : "text-grey-light-strong"} underline cursor-pointer hover:opacity-80 active:opacity-60`}>
               Upload
             </p>
           </Upload>
-          <p className="text-grey-light-strong text-center">
-            Up to 2 files. Only the PDF format is accepted. Maximum weight of
-            00MG
-          </p>
+          {
+            files.length === 0 && (
+              <p className="text-grey-light-strong text-center">
+                Up to 2 files. Only the PDF format is accepted. Maximum weight of
+                00MG
+              </p>
+            )
+          }
         </div>
       )}
     </div>
@@ -164,7 +168,7 @@ export const ArchitecturalUpload = ({
 }: UploadBoxProps) => {
   return (
     <div className="h-full p-4 border border-grey-light-hover rounded-lg">
-      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+      {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/architectural-drawings-new.png"
           alt="Architectural"
@@ -172,8 +176,8 @@ export const ArchitecturalUpload = ({
           height={100}
           style={{ width: "100%", height: "auto" }}
         ></Image>
-      </div>
-      <div className="text-forumBlue-normal my-4 text-base">
+      </div>}
+      <div className="text-forumBlue-normal my-2 text-base">
         Architectural Drawings
       </div>
 
@@ -196,7 +200,7 @@ export const QuoteUpload = ({
 }: UploadBoxProps) => {
   return (
     <div className="h-full p-4 border border-grey-light-hover rounded-lg">
-      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+      {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
           alt="Quote"
@@ -204,8 +208,8 @@ export const QuoteUpload = ({
           height={100}
           style={{ width: "100%", height: "auto" }}
         ></Image>
-      </div>
-      <div className="text-forumBlue-normal my-4 text-base">Quote Lists</div>
+      </div>}
+      <div className="text-forumBlue-normal my-2 text-base">Quote Lists</div>
       <UploadBox files={files} setFiles={setFiles} />
       {files.length > 0 && (
         <HingeMode

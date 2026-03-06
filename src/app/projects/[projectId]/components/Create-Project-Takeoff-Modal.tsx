@@ -18,7 +18,6 @@ import { getTakeOffById } from "@/services/takeOffService";
 import { CreateProjectModalProps, ProjectSettings } from "@/types/project";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 
-import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import {
   PageControls,
@@ -42,7 +41,7 @@ const TabList = ({
           <div
             key={item.id}
             className={`
-              cursor-pointer rounded-md rounded-bl-none rounded-br-none 
+              px-2 py-1 cursor-pointer rounded-md rounded-bl-none rounded-br-none 
               border border-primaryN30
               ${activeIndex === index
                 ? "border-b-white bg-white relative z-10"
@@ -56,6 +55,23 @@ const TabList = ({
         ))}
       </div>
       <div className="h-[0.5px] bg-primaryN30"></div>
+    </div>
+  );
+};
+
+export const FilePanel = ({
+  file,
+  isSelected = false,
+}: any) => {
+  return (
+    <div
+      className={`relative w-[94px] h-[34px] flex flex-col items-center justify-center p-1`}
+    >
+      <div
+        className={`break-all line-clamp-2 text-center text-[8px] ${isSelected ? "text-forumBlue-normal" : "text-grey-normal"} `}
+      >
+        {file.name}
+      </div>
     </div>
   );
 };
@@ -282,13 +298,7 @@ const CreateProjectTakeoffModal = ({
         >
           <FilePanel
             file={uploadFile}
-            canBeRemoved={false}
-            textClassName="text-xs"
-            flexRow={false}
-            showBorder={false}
             isSelected={uploadFile.id === selectedFileId}
-            switchBgColor={false}
-            switchTextColor={true}
           />
         </div>
       );
