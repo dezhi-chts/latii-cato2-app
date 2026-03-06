@@ -11,7 +11,7 @@ const DrawingTagsView = ({
     <div className="mt-6 flex flex-row gap-3">
       {pageTypeTags.map((item) => {
         const primaryColor = item?.color || "#717171";
-        const bgColor = primaryColor + "1A";
+        const bgColor = primaryColor + "26";
         const miniBtnColor =
           item?.type !== "All" ? primaryColor + "B3" : primaryColor;
         const typeTextColor =

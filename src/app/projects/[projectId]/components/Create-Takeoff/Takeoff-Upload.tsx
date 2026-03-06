@@ -41,9 +41,8 @@ export const UploadFileList = ({
   return (
     <div
       key={file.uid}
-      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${
-        !isSelected && "border border-grey-light-hover"
-      }`}
+      className={`relative w-32 h-24 rounded flex flex-col items-center justify-center p-1 ${!isSelected && "border border-grey-light-hover"
+        }`}
     >
       {canBeRemoved && handleRemove && (
         <div
@@ -98,14 +97,18 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
             onChange={({ fileList }) => setFiles(fileList)}
             showUploadList={false}
           >
-            <p className="text-forumBlue-normal underline cursor-pointer hover:opacity-80 active:opacity-60">
+            <p className={`${files.length === 0 ? "text-forumBlue-normal" : "text-grey-light-strong"} underline cursor-pointer hover:opacity-80 active:opacity-60`}>
               Upload
             </p>
           </Upload>
-          <p className="text-grey-light-strong text-center">
-            Up to 2 files. Only the PDF format is accepted. Maximum weight of
-            00MG
-          </p>
+          {
+            files.length === 0 && (
+              <p className="text-grey-light-strong text-center">
+                Up to 2 files. Only the PDF format is accepted. Maximum weight of
+                00MG
+              </p>
+            )
+          }
         </div>
       )}
     </div>
@@ -130,7 +133,7 @@ export const HingeMode = ({ onChangeHinegeStatus }: HingeModeProps) => {
       </p>
       <div className="flex gap-4">
         <div
-          className={`w-[65px] h-[78px] ${hingeStatus === "1" ? "bg-primaryN20" : ""} rounded-md cursor-pointer flex flex-col items-center justify-center`}
+          className={`w-[65px] h-[78px] border border-primaryN30 ${hingeStatus === "1" ? "bg-primaryN20" : ""} rounded-md cursor-pointer flex flex-col items-center justify-center`}
           onClick={() => handleHingeStatusChange("1")}
         >
           <Image
@@ -164,8 +167,8 @@ export const ArchitecturalUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-20 border border-grey-light-hover rounded-lg">
-      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+    <div className="h-full p-4 border border-grey-light-hover rounded-lg">
+      {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/architectural-drawings-new.png"
           alt="Architectural"
@@ -173,8 +176,8 @@ export const ArchitecturalUpload = ({
           height={100}
           style={{ width: "100%", height: "auto" }}
         ></Image>
-      </div>
-      <div className="text-forumBlue-normal my-4 text-base">
+      </div>}
+      <div className="text-forumBlue-normal my-2 text-base">
         Architectural Drawings
       </div>
 
@@ -196,8 +199,8 @@ export const QuoteUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="p-4 pb-20 border border-grey-light-hover rounded-lg">
-      <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
+    <div className="h-full p-4 border border-grey-light-hover rounded-lg">
+      {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
           alt="Quote"
@@ -205,8 +208,8 @@ export const QuoteUpload = ({
           height={100}
           style={{ width: "100%", height: "auto" }}
         ></Image>
-      </div>
-      <div className="text-forumBlue-normal my-4 text-base">Quote Lists</div>
+      </div>}
+      <div className="text-forumBlue-normal my-2 text-base">Quote Lists</div>
       <UploadBox files={files} setFiles={setFiles} />
       {files.length > 0 && (
         <HingeMode
@@ -314,9 +317,9 @@ const TakeoffUpload = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col justify-between">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="">
+    <div className="w-full h-[600px] flex flex-col justify-between">
+      <div className="h-[460px] grid grid-cols-2 gap-4">
+        <div className="h-full">
           <ArchitecturalUpload
             files={archFiles}
             setFiles={setArchFiles}
@@ -325,7 +328,7 @@ const TakeoffUpload = ({
             }}
           />
         </div>
-        <div>
+        <div className="h-full">
           <QuoteUpload
             files={quoteFiles}
             setFiles={setQuoteFiles}
@@ -345,7 +348,7 @@ const TakeoffUpload = ({
           Not sure what to upload?
         </div>
       )}
-      <div className="flex-1 flex items-end justify-center">
+      <div className="flex items-end justify-center">
         <Button className="mt-4 mb-4 custom-primary-btn" onClick={handleUpload}>
           Create
         </Button>

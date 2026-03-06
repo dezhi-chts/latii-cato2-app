@@ -65,6 +65,7 @@ import {
   FileOperationType,
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
+import EditableSubText from "./EditableSubText";
 import { ArchDrawingLabelTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
 const { confirm } = Modal;
@@ -424,11 +425,13 @@ const PdfWrapper = forwardRef(
       groupId = null, //根据id查找查找并保存group
       groupInfo = null, // 根据group信息直接保存group
       showLoading = true,
+      addActiveShape = false, //是否保存完成后，自动添加选中功能
     }: {
       showAlert?: boolean;
       groupId?: string | null;
       groupInfo?: GroupFrame | null;
       showLoading?: boolean;
+      addActiveShape?: boolean; //是否保存完成后，自动添加选中功能
     }): Promise<string> => {
       return new Promise((resolve, reject) => {
         if (!currentViewportRef.current) {
@@ -495,6 +498,12 @@ const PdfWrapper = forwardRef(
               }
 
               onAppendEvidence && onAppendEvidence(res.data);
+              // 如果需要添加选中功能，则添加
+              if (addActiveShape) {
+                if (res?.data?.evidences?.length === 1) {
+                  setSelectedShapeId(res?.data?.evidences?.[0]?.id);
+                }
+              }
               resolve("success");
             } else {
               reject(new Error("Evidence submit failed"));
@@ -1152,7 +1161,7 @@ const PdfWrapper = forwardRef(
       setCropMode(null);
       if (operationMode !== "view") {
         // 取消默认添加时默认选中
-        //setSelectedShapeId(groupFrame.id);
+        setSelectedShapeId(groupFrame.id);
       }
 
       if (addingOption?.isSaveEvidence) {
@@ -1161,9 +1170,11 @@ const PdfWrapper = forwardRef(
           showAlert: false,
           groupInfo: groupFrame,
           showLoading: false,
+          addActiveShape: true
         })
           .then(() => {
-            // 保存成功
+            // 保存成功后，添加默认选中功能
+
           })
           .catch(() => { });
       }
@@ -2308,6 +2319,8 @@ const PdfWrapper = forwardRef(
                           pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(evid.id);
+                            // 设置新的选中元素
+                            setSelectedShapeId(evid.id);
                           }}
                           onDragMove={(x, y) => {
                             dragEvidenceMoveByOffset(evid.id, x, y);
@@ -2373,6 +2386,8 @@ const PdfWrapper = forwardRef(
                           pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(crop.id);
+                            // 设置新的选中元素
+                            setSelectedShapeId(crop.id);
                           }}
                           onDragMove={(x, y) => {
                             dragCropMoveByOffset(crop.id, x, y);
@@ -2432,12 +2447,19 @@ const PdfWrapper = forwardRef(
                   let showCopyBtn = false;
                   // 是否显示类型选择下拉框
                   let showSelectGroup = false;
+                  // 是否显示左上角的按钮
+                  let showNumBtn = false;
+
                   if (showSelectGroupTypes.includes(type) && pdfOperationType === FileOperationType.ArchitectureDrawing) {
                     // ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
                     showSelectGroup = true;
                     color = allPageTypes[type as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
                   } else if (pdfOperationType === FileOperationType.Quote) {
+                    showNumBtn = true;
                     // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+                    if (type === GroupType.WindowDoorUnitList) {
+                      type = GroupType.Item;
+                    }
                     let findType = typeList?.find(
                       (box: any) => box.name === type,
                     );
@@ -2456,26 +2478,19 @@ const PdfWrapper = forwardRef(
                         top: minY,
                       }}
                     >
-                      {showNumBtnGroupTypes.includes(type) && (
-                        <div className="pl-[2px] inline-block">
-                          <input
-                            className="h-[20px] text-center outline-none text-white text-xxs rounded-md "
-                            defaultValue={item.sub_text ?? ""}
-                            onBlur={(e: any) => {
-                              if (e.target.value.trim() !== "") {
-                                updateEvidence({
-                                  ...item,
-                                  sub_text: e.target.value,
-                                });
-                              }
-                            }}
-                            style={{
-                              width: "fit-content",
-                              maxWidth: 45,
-                              backgroundColor: color,
-                            }}
-                          />
-                        </div>
+                      {showNumBtn && (
+                        <EditableSubText
+                          value={item.sub_text ?? ""}
+                          color={color}
+                          onChange={(value: string) => {
+                            if (value.trim() !== "") {
+                              updateEvidence({
+                                ...item,
+                                sub_text: value,
+                              });
+                            }
+                          }}
+                        />
                       )}
                       <div
                         className="absolute flex flex-row items-center"
@@ -2707,14 +2722,10 @@ const PdfWrapper = forwardRef(
                             width={15}
                             height={15}
                             preview={false}
-                            style={{
-                              margin: 0,
-                              padding: 0,
-                            }}
                           />
                         </div>
                       </div>
-                      <div
+                      {/* <div
                         className="transition-all"
                         style={{
                           position: "absolute",
@@ -2763,7 +2774,7 @@ const PdfWrapper = forwardRef(
                         >
                           <span className="inline-block">+</span>
                         </div>
-                      </div>
+                      </div> */}
                     </div>
                   );
                 })}
@@ -2882,6 +2893,9 @@ const ShapeWrapper = ({
       color = allPageTypes[evidType as keyof typeof allPageTypes]?.color ?? colorList['forumBlue-normal'];
     } else if (pdfOperationType === FileOperationType.Quote) {
       // Quote文件类型，需要按照boxTypeList中的type来显示颜色，并且需要显示复制按钮
+      if (evidType === GroupType.WindowDoorUnitList) {
+        evidType = GroupType.Item;
+      }
       let findType = typeList?.find(
         (box: any) => box.name === evidType,
       );

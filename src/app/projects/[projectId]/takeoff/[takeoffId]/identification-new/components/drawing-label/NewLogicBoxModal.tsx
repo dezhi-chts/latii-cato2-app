@@ -22,7 +22,6 @@ interface NewLogicBoxModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   editData?: BoxTypeData | null;
-  isNameEditable?: boolean;
 }
 
 const colorOptions = [
@@ -113,7 +112,6 @@ export default function NewLogicBoxModal({
   const [showExamplesModal, setShowExamplesModal] = useState(false);
 
   const isEditMode = !!editData?.id;
-  const isNameEditable = !isEditMode || (editData?.name && !SYSTEM_DEFAULT_TYPES.includes(editData.name));
 
   useEffect(() => {
     if (isOpen && editData) {
@@ -208,7 +206,6 @@ export default function NewLogicBoxModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="rounded-md border-primaryN30"
-              disabled={!isNameEditable}
             />
           </div>
           <div className="flex-1">

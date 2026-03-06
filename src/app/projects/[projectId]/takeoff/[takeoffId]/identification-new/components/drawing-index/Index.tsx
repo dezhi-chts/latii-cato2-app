@@ -387,7 +387,7 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
   };
 
   return (
-    <div className={`w-full flex flex-col relative h-[100vh]}`}>
+    <div className={`w-full h-full flex flex-col relative`}>
 
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
@@ -418,19 +418,14 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
             <div className="flex items-center gap-2">
               {showContentView && (
                 <div
-                  className="w-[122px] h-[28px] flex flex-row justify-center items-center bg-primaryN20 rounded-md cursor-pointer"
+                  className="w-[180px] h-[28px] flex flex-row justify-center items-center bg-grey-light rounded-md cursor-pointer"
                   onClick={handleRestartIndex}
                 >
-                  <span className="text-grey-light-strong text-xs">
-                    Restart Index
+                  <span className="text-grey-dark text-xs">
+                    Reset to Manual Selection
                   </span>
                 </div>
               )}
-              <SelectPagesControls
-                page={page}
-                totalPages={totalPage}
-                handlePageChange={handlePageChange}
-              />
               <ThumbnailControls
                 showThumbnail={showThumbnail}
                 setShowThumbnail={setShowThumbnail}
@@ -440,6 +435,11 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
               />
             </div>
             <div className="flex flex-row gap-2">
+              <SelectPagesControls
+                page={page}
+                totalPages={totalPage}
+                handlePageChange={handlePageChange}
+              />
               <ZoomControls zoom={zoom} handleZoomChange={handleZoomChange} />
             </div>
           </div>
