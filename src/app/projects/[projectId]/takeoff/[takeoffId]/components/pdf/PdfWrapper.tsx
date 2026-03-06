@@ -1160,7 +1160,7 @@ const PdfWrapper = forwardRef(
       setCropMode(null);
       if (operationMode !== "view") {
         // 取消默认添加时默认选中
-        //setSelectedShapeId(groupFrame.id);
+        setSelectedShapeId(groupFrame.id);
       }
 
       if (addingOption?.isSaveEvidence) {
@@ -2318,6 +2318,8 @@ const PdfWrapper = forwardRef(
                           pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(evid.id);
+                            // 设置新的选中元素
+                            setSelectedShapeId(evid.id);
                           }}
                           onDragMove={(x, y) => {
                             dragEvidenceMoveByOffset(evid.id, x, y);
@@ -2383,6 +2385,8 @@ const PdfWrapper = forwardRef(
                           pdfOperationType={pdfOperationType}
                           onDragStart={() => {
                             setDraggingShapeId(crop.id);
+                            // 设置新的选中元素
+                            setSelectedShapeId(crop.id);
                           }}
                           onDragMove={(x, y) => {
                             dragCropMoveByOffset(crop.id, x, y);
@@ -2720,14 +2724,10 @@ const PdfWrapper = forwardRef(
                             width={15}
                             height={15}
                             preview={false}
-                            style={{
-                              margin: 0,
-                              padding: 0,
-                            }}
                           />
                         </div>
                       </div>
-                      <div
+                      {/* <div
                         className="transition-all"
                         style={{
                           position: "absolute",
@@ -2776,7 +2776,7 @@ const PdfWrapper = forwardRef(
                         >
                           <span className="inline-block">+</span>
                         </div>
-                      </div>
+                      </div> */}
                     </div>
                   );
                 })}

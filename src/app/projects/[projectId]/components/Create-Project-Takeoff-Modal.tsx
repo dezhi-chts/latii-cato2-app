@@ -262,7 +262,7 @@ const CreateProjectTakeoffModal = ({
   const handleAddOCRBox = (fieldName: any) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
       setOCRFieldName(fieldName);
-      setPdfFullScreen(true);
+      //setPdfFullScreen(true);
       pdfRef.current?.clearCropSections();
       pdfRef.current?.addingRect({ type: "OCR" });
     }
@@ -272,7 +272,7 @@ const CreateProjectTakeoffModal = ({
     console.log("text", text);
     if (OCRFieldName.length > 0) {
       setOCRFieldName("");
-      setPdfFullScreen(false);
+      //  setPdfFullScreen(false);
       setProjectSettings({
         ...projectSettings,
         [OCRFieldName]: text,
@@ -361,7 +361,7 @@ const CreateProjectTakeoffModal = ({
               </Button>
             </div>
           </div>
-          {pdfFullScreen && (
+          {/* {pdfFullScreen && (
             <div className="flex flex-row justify-center items-center">
               <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
               <div
@@ -377,7 +377,7 @@ const CreateProjectTakeoffModal = ({
                 ></Image>
               </div>
             </div>
-          )}
+          )} */}
 
           <div
             className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? "ml-1" : "ml-10"} transition-all duration-300 ease-in-out`}
