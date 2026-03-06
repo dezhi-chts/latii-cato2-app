@@ -18,7 +18,6 @@ import { getTakeOffById } from "@/services/takeOffService";
 import { CreateProjectModalProps, ProjectSettings } from "@/types/project";
 import { PdfWrapperRefMethods } from "../takeoff/[takeoffId]/types/evidence";
 
-import { FilePanel } from "../takeoff/[takeoffId]/identification-index/components/FileList";
 import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import {
   PageControls,
@@ -42,7 +41,7 @@ const TabList = ({
           <div
             key={item.id}
             className={`
-              cursor-pointer rounded-md rounded-bl-none rounded-br-none 
+              px-2 py-1 cursor-pointer rounded-md rounded-bl-none rounded-br-none 
               border border-primaryN30
               ${activeIndex === index
                 ? "border-b-white bg-white relative z-10"
@@ -56,6 +55,23 @@ const TabList = ({
         ))}
       </div>
       <div className="h-[0.5px] bg-primaryN30"></div>
+    </div>
+  );
+};
+
+export const FilePanel = ({
+  file,
+  isSelected = false,
+}: any) => {
+  return (
+    <div
+      className={`relative w-[94px] h-[34px] flex flex-col items-center justify-center p-1`}
+    >
+      <div
+        className={`break-all line-clamp-2 text-center text-[8px] ${isSelected ? "text-forumBlue-normal" : "text-grey-normal"} `}
+      >
+        {file.name}
+      </div>
     </div>
   );
 };
@@ -246,7 +262,7 @@ const CreateProjectTakeoffModal = ({
   const handleAddOCRBox = (fieldName: any) => {
     if (pdfRef.current && pdfRef.current?.addingRect) {
       setOCRFieldName(fieldName);
-      setPdfFullScreen(true);
+      //setPdfFullScreen(true);
       pdfRef.current?.clearCropSections();
       pdfRef.current?.addingRect({ type: "OCR" });
     }
@@ -256,7 +272,7 @@ const CreateProjectTakeoffModal = ({
     console.log("text", text);
     if (OCRFieldName.length > 0) {
       setOCRFieldName("");
-      setPdfFullScreen(false);
+      //  setPdfFullScreen(false);
       setProjectSettings({
         ...projectSettings,
         [OCRFieldName]: text,
@@ -282,13 +298,7 @@ const CreateProjectTakeoffModal = ({
         >
           <FilePanel
             file={uploadFile}
-            canBeRemoved={false}
-            textClassName="text-xs"
-            flexRow={false}
-            showBorder={false}
             isSelected={uploadFile.id === selectedFileId}
-            switchBgColor={false}
-            switchTextColor={true}
           />
         </div>
       );
@@ -351,7 +361,7 @@ const CreateProjectTakeoffModal = ({
               </Button>
             </div>
           </div>
-          {pdfFullScreen && (
+          {/* {pdfFullScreen && (
             <div className="flex flex-row justify-center items-center">
               <div className="ml-4 w-[1px] h-full bg-primaryN30"></div>
               <div
@@ -367,7 +377,7 @@ const CreateProjectTakeoffModal = ({
                 ></Image>
               </div>
             </div>
-          )}
+          )} */}
 
           <div
             className={`flex-1 flex flex-col overflow-hidden ${pdfFullScreen ? "ml-1" : "ml-10"} transition-all duration-300 ease-in-out`}

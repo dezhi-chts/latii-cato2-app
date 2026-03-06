@@ -4,7 +4,7 @@ import { DownOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import Image from "next/image";
 
 // 系统默认类型，不允许修改名称和删除
-const SYSTEM_DEFAULT_TYPES = ["Item", "Table", "Context information"];
+const SYSTEM_DEFAULT_TYPES = ["Item", "Table", "Context Information", "Key Notes"];
 
 const BoxTypesSelect = ({
   typeList,
@@ -20,11 +20,12 @@ const BoxTypesSelect = ({
   const [visible, setVisible] = useState(false);
 
   const isSystemDefault = (name: string) => {
+    console.log("isSystemDefault", name);
     return SYSTEM_DEFAULT_TYPES.includes(name);
   };
 
   const LabelItem = ({ item, isChild }: { item: any; isChild?: boolean }) => {
-    const isDefault = isSystemDefault(item.name);
+    const isDefault = item.is_system_default === 1 || item.is_system_default === true;  //isSystemDefault(item.name);
 
     return (
       <div
@@ -37,21 +38,23 @@ const BoxTypesSelect = ({
       >
         <div className="flex flex-row items-center">
           <span
-            className="w-[6px] h-[6px] rounded-[3px]"
+            className="w-[10px] h-[10px] rounded-full"
             style={{ backgroundColor: item.color || '#717171' }}
           ></span>
           <span className="ml-2 text-xs">{item.name}</span>
         </div>
         <div className="flex items-center gap-1">
-          <EditOutlined
-            className="text-xs text-grey-normal hover:text-forumBlue-normal"
-            onClick={(e) => {
-              e.stopPropagation();
-              setVisible(false);
-              onEditType?.(item);
-            }}
-          />
-          {!isDefault && onDeleteType && (
+          {!isDefault &&
+            <EditOutlined
+              className="text-xs text-grey-normal hover:text-forumBlue-normal"
+              onClick={(e) => {
+                e.stopPropagation();
+                setVisible(false);
+                onEditType?.(item);
+              }}
+            />
+          }
+          {!isDefault && (
             <Popconfirm
               title="Delete Logic Box"
               description={`Are you sure you want to delete "${item.name}"?`}

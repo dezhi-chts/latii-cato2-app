@@ -94,6 +94,15 @@ const PageLabeling = () => {
     }
   }, [showContentView]);
 
+  useEffect(() => {
+    if (fileViewStep === FileViewStep.Second) {
+      // 如果切换到second view界面，且此时boxTypeList为空，则需要重新获取box type list
+      if (boxTypeList?.length === 0) {
+        getBoxTypeList();
+      }
+    }
+  }, [fileViewStep]);
+
   const getTakeOffDetails = async () => {
     setFullLoading(true);
     let res: any = await getTakeOffById(takeOffId as any);
@@ -146,13 +155,16 @@ const PageLabeling = () => {
     // 切换文件, 判断当前是否有未保存的crop，如果有则显示提示框并且保存
     const unsaved = await drawingLabelRef?.current?.getUnsavedCrops?.();
     if (!drawingLabelRef.current || unsaved) {
-      handleFileStatus(selectedFileId, fileId, false);
+      // 判断fileId的文件是否是已完成状态，已完成的文件才可以点击，未完成的文件不允许点击
+      const file = fileList.find((file: any) => file.id === fileId);
+      if (file?.status === FileStatus.Completed) {
+        handleFileStatus(selectedFileId, fileId);
+      }
     }
   }
 
-  const handleFileStatus = (oldFileId: number, newFileId: number, isChangeOldFile = true) => {
+  const handleFileStatus = (oldFileId: number, newFileId: number) => {
     setSelectedFileId(newFileId);
-
     setFileList(prev => {
       return prev.map((file: any) => {
         if (file.id === oldFileId) {
@@ -171,7 +183,7 @@ const PageLabeling = () => {
 
     let fileInfo = fileList.find((file: any) => file.id === newFileId);
     if (fileInfo?.operation_type === FileOperationType.ArchitectureDrawing) {
-      setFileViewStep(FileViewStep.IndexSummary);
+      setFileViewStep(fileInfo.status === FileStatus.Completed ? FileViewStep.Second : FileViewStep.IndexSummary);
     } else if (fileInfo?.operation_type === FileOperationType.Quote) {
       setFileViewStep(FileViewStep.Second);
     }
@@ -374,7 +386,6 @@ const PageLabeling = () => {
           closeModal={() => setShowAnalysisModal(false)}
           handleAnalysis={() => {
             setShowAnalysisModal(false);
-            handleAnalysis();
           }}
         ></PreAnalysisMdal>
       )}

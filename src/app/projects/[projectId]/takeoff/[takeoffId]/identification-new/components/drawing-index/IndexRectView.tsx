@@ -47,16 +47,22 @@ const IndexRectView = ({
         </div>
       </div>
 
-      <div className="mt-4 text-xs text-grey-normal">
-        Select the Page Index and label examples to improve CATO’s accuracy.
+      <div className="mt-2 mb-10 text-xs text-grey-normal">
+        Define the areas CATO needs to read for determine the Index of your File.
       </div>
       <div>
-        <div className="mt-6 flex flex-row justify-between items-center">
+        <div className="mt-8 flex flex-row justify-between items-center">
           <div className="flex flex-row">
-            <div className="w-[16px] h-[16px] rounded-full bg-grey-light-strong text-xxs text-white flex justify-center items-center">
-              <span>1</span>
-            </div>
-            <span className="ml-2 text-xs text-grey-normal">
+            {
+              indexBoxList.length === 0 ?
+                <div className="w-[16px] h-[16px] rounded-full bg-grey-normal text-xxs text-white flex justify-center items-center">
+                  <span>1</span>
+                </div> : <div className="w-[16px] h-[16px] rounded-full bg-green-normal text-xxs text-white flex justify-center items-center">
+                  <span className="font-sans">{"✓"}</span>
+                </div>
+            }
+
+            <span className="ml-2 text-xs">
               Define Index Area
             </span>
           </div>
@@ -67,8 +73,8 @@ const IndexRectView = ({
             Learn More
           </div>
         </div>
-        <div className="mt-2 flex flex-row">
-          <span className="ml-5 text-xs">
+        <div className="ml-5 mt-2 mb-5 flex flex-row">
+          <span className="text-xs text-grey-normal">
             Add a box around the entire Index or Table of Contents.
           </span>
         </div>
@@ -77,8 +83,8 @@ const IndexRectView = ({
           {indexBoxList.map((item: any, index: number) => {
             return (
               <div key={item.id}>
-                <div className="pr-2 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-white bg-primaryN50">
-                  <div className="flex-1 text-center">
+                <div className="px-4 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-grey-normal bg-grey-light">
+                  <div className="flex-1">
                     Page Index {index + 1}
                   </div>
                   <div>
@@ -104,7 +110,7 @@ const IndexRectView = ({
             );
           })}
         </div>
-        <div className="mx-4 my-4 flex flex-row justify-center">
+        <div className="mx-4 my-3 flex flex-row justify-center">
           <AddRectBoxControls
             theme={cropsCount > 0 ? "primary-light" : "primary"}
             fullWidth={true}
@@ -117,10 +123,15 @@ const IndexRectView = ({
       <div>
         <div className="mt-6 flex flex-row justify-between items-center">
           <div className="flex flex-row">
-            <div className="w-[16px] h-[16px] rounded-full bg-grey-light-strong text-xxs text-white flex justify-center items-center">
-              <span>2</span>
-            </div>
-            <span className="ml-2 text-xs text-grey-normal">
+            {
+              labelList.length === 0 ?
+                <div className="w-[16px] h-[16px] rounded-full bg-grey-normal text-xxs text-white flex justify-center items-center">
+                  <span>2</span>
+                </div> : <div className="w-[16px] h-[16px] rounded-full bg-green-normal text-xxs text-white flex justify-center items-center">
+                  <span className="font-sans">{"✓"}</span>
+                </div>
+            }
+            <span className="ml-2 text-xs">
               Identify label Format
             </span>
           </div>
@@ -133,18 +144,18 @@ const IndexRectView = ({
         </div>
         {true && (
           <>
-            <div className="mt-2 flex flex-row">
-              <span className="ml-5 text-xs">
+            <div className="ml-5 mt-2 mb-5 flex flex-row">
+              <span className="text-xs text-grey-normal">
                 Add a box around the entire Index or Table of Contents.
               </span>
             </div>
             {/** index rect box  */}
-            <div className="my-2 mx-4">
+            <div className="my-2 mx-4 flex flex-col gap-2">
               {labelList.map((item: any, index: number) => {
                 return (
                   <div key={item.id}>
-                    <div className="pr-2 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-white bg-primaryN50">
-                      <div className="flex-1 text-center">
+                    <div className="px-4 w-full h-[30px] flex items-center justify-between rounded-full text-xs text-grey-normal bg-grey-light">
+                      <div className="flex-1">
                         Label {index + 1}
                       </div>
                       <div>
@@ -170,7 +181,7 @@ const IndexRectView = ({
                 );
               })}
             </div>
-            <div className="my-2 mx-4 flex flex-row justify-center">
+            <div className="mx-4 my-3 flex flex-row justify-center">
               <AddRectBoxControls
                 theme={cropsCount > 0 ? "primary-light" : "primary"}
                 text="Label"

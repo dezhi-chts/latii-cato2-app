@@ -50,6 +50,7 @@ import {
   ArchDrawingAllPageTags,
   ArchDrawingPageTypes,
   ArchDrawingLabelTypes,
+  allPageTypes,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
 const { confirm } = Modal;
@@ -61,15 +62,12 @@ enum BuildLoadingStep {
 }
 
 const validPageType = [
+  // Arch Drawing 文件类型有效的page type
   PageType.FloorPlan,
   PageType.Elevation,
   PageType.Schedule,
   PageType.KeyNotes,
   PageType.Mix,
-
-  PageType.Item,
-  PageType.Information,
-  PageType.Description,
 ];
 
 export enum ButtonText {
@@ -357,11 +355,17 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
 
   const handleUpdatePageType = useCallback(
     (pageTypes: any) => {
+      console.log('########## pageTypes', pageTypes)
       const page_types = pageTypes || [];
       let findCurrentPageType = page_types.find(
         (item: any) => item.page_number === page,
       );
       if (!findCurrentPageType) {
+        return;
+      }
+      // 如果是Quote文件，则直接更新当前页的type，不需要其他操作
+      if (fileOperationType === FileOperationType.Quote) {
+        updateThumbnailPageType(page, findCurrentPageType.page_type || "");
         return;
       }
 
@@ -543,12 +547,29 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
     return file.operation_type || "";
   }, [fileList, selectedFileId]);
 
+  const thumbnailBoxTypeList = useMemo(() => {
+    if (fileOperationType === FileOperationType.ArchitectureDrawing) {
+      return ArchDrawingPageTypes;
+    }
+    if (fileOperationType === FileOperationType.Quote) {
+      if (boxTypeList?.length > 0) {
+        // 转换下文件类型
+        let list = boxTypeList.map((item: any) => ({
+          ...item,
+          type: item.name || "",
+          icon: typeof item?.name === 'string' && item?.name?.length > 0 ? item.name[0].toUpperCase() : "",
+        }));
+        list.push(allPageTypes[PageType.Mix]);
+        return list;
+      }
+    }
+    return [];
+  }, [fileOperationType, boxTypeList]);
+
   return (
-    <div
-      className={`w-full flex flex-col relative h-[100vh]`}
-    >
+    <div className={`w-full h-full flex flex-col relative`}>
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
-        <div className="pl-4 flex flex-col">
+        <div className="pl-4 mb-2 flex flex-col">
           <div className="mt-4 mb-4 pl-10 flex flex-row gap-4">
             <div className="mt-1 w-[18px] h-[18px] rounded-full bg-[#C4D6F0] text-xs text-forumBlue-normal-active flex items-center justify-center">{fileOperationType === FileOperationType.ArchitectureDrawing ? "B" : "A"}</div>
             <div className="">
@@ -581,7 +602,7 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
               <div className="mt-1 text-xs text-grey-normal">Review labeled zones in your file.</div>
             </div>
           </div>
-          <div className="w-[280px] h-full border-r border-primaryN30">
+          <div className="flex-1 w-[280px] border-r border-primaryN30 overflow-hidden">
             <Thumbnail
               pdfRef={pdfRef}
               showThumbnail={showThumbnail}
@@ -589,24 +610,18 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
               data={filterThumbnailList}
               page={page}
               setPage={setPage}
-              showCategory={fileOperationType === FileOperationType.ArchitectureDrawing}
+              showCategory={true}
               showShadow={false}
               size={
                 fileOperationType === FileOperationType.Quote
                   ? "larger"
                   : "default"
               }
-              categoryList={
-                fileOperationType === FileOperationType.ArchitectureDrawing
-                  ? ArchDrawingPageTypes
-                  : fileOperationType === FileOperationType.Quote
-                    ? QuotePageTypes
-                    : []
-              }
+              categoryList={thumbnailBoxTypeList}
             ></Thumbnail>
           </div>
         </div>
-        <div className={`flex-1 flex flex-col pl-10 gap-6 overflow-hidden`}>
+        <div className={`flex-1 flex flex-col pl-14 gap-6 overflow-hidden`}>
           {fileOperationType === FileOperationType.ArchitectureDrawing && (
             <DrawingTagsView
               pageTypeTags={pageTypeList}

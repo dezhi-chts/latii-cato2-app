@@ -85,7 +85,7 @@ interface ThumbnailProps {
   showCategory?: boolean; // 是否显示分类
   showShadow?: boolean; // 是否显示阴影
   size?: "default" | "larger"; // 缩略图大小
-  categoryList?: any[]; // 页面分类
+  categoryList?: { type: string, color: string, icon: string }[]; // 页面分类
 }
 
 const Thumbnail = ({
@@ -151,8 +151,7 @@ const Thumbnail = ({
   const pageTypeInfo = (info: any) => {
     let category = categoryList.find((item) => {
       return (
-        item.type === info.type ||
-        item.type.toUpperCase() === info.type?.toUpperCase()
+        item.type === info.type
       );
     });
     if (!category) return {};
@@ -176,10 +175,10 @@ const Thumbnail = ({
         />
       </div> */}
       <div
-        className={`w-full h-full pb-8 overflow-y-auto relative  ${showShadow ? "shadow-inner" : ""}`}
+        className={`w-full h-full py-2 overflow-y-auto relative  ${showShadow ? "shadow-inner" : ""}`}
         ref={scrollContainerRef}
       >
-        <div className="py-6 flex flex-col gap-4 min-h-full items-center">
+        <div className="flex flex-col gap-4 min-h-full items-center">
           {data?.length > 0 &&
             data.map((info, index) => {
               let itemPageNum = getItemPage(info, index);
