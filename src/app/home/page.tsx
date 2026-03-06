@@ -7,7 +7,7 @@ import { formatUserDate, getGreetingByTime } from "@/lib/functions";
 import { Input, Segmented, Modal, notification } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
-import HomeProjectsTable, { PAGE_SIZE } from "./components/Home-Projects-Table";
+import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
@@ -77,7 +77,6 @@ const Home = () => {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([]);
   const [currentProjectsPage, setCurrentProjectsPage] = useState(1);
-  const [totalProjectPages, setTotalProjectPages] = useState(1);
 
   const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
   const [currentTakeoffsPage, setCurrentTakeoffsPage] = useState(1);
@@ -115,7 +114,6 @@ const Home = () => {
     setProjectLoading(true);
     const response: any = await getAllProjects();
     const projects = response;
-    setTotalProjectPages(Math.ceil(response?.length / PAGE_SIZE));
     setProjectLoading(false);
     setProjects(projects);
   };
@@ -125,7 +123,7 @@ const Home = () => {
       return;
     }
     const params = {
-      per_page: PAGE_SIZE,
+      per_page: 10,
       page: currentTakeoffsPage,
     };
 
@@ -211,7 +209,7 @@ const Home = () => {
           <div className="flex items-center justify-between w-full">
             <div className="flex gap-4">
               <Input
-                className="min-w-[400px] w-[20vw] rounded-xl"
+                className="min-w-[400px] w-[20vw] rounded-md"
                 allowClear
                 value={filterValue}
                 onChange={(e) => handleValueChange(e.target.value)}
@@ -251,6 +249,7 @@ const Home = () => {
               </Button>
             </div>
           </div>
+
           {category === "Projects" ? (
             <HomeProjectsTable
               projects={filteredProjects}
@@ -258,7 +257,6 @@ const Home = () => {
               tableLoading={projectLoading}
               currentPage={currentProjectsPage}
               setCurrentPage={setCurrentProjectsPage}
-              totalPages={totalProjectPages}
               handleFavoriteClick={handleFavoriteClick}
             />
           ) : (
@@ -348,8 +346,8 @@ const Home = () => {
             }}
             projectId={projectInfo.current?.project_id ?? null}
             takeOffId={projectInfo.current?.take_off_id ?? null}
-          //projectId={'01KJCBT5ATKTMR3ZXPJGQBKBV4'}
-          //takeOffId={'156'}
+            //projectId={'01KJCBT5ATKTMR3ZXPJGQBKBV4'}
+            //takeOffId={'156'}
           />
         )}
       </div>
