@@ -66,18 +66,6 @@ const HomeProjectsTable = ({
   const [tableHeight, setTableHeight] = useState(DEFAULT_TABLE_HEIGHT);
   const [hasTableBeenResized, setHasTableBeenResized] = useState(false);
 
-  const multipliedProjects = useMemo(
-    () => [
-      ...projects,
-      ...projects,
-      ...projects,
-      ...projects,
-      ...projects,
-      ...projects,
-    ],
-    [projects],
-  );
-
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
@@ -114,14 +102,14 @@ const HomeProjectsTable = ({
   }, [tableHeight]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(multipliedProjects.length / pageSize));
-  }, [multipliedProjects.length, pageSize]);
+    return Math.max(1, Math.ceil(projects.length / pageSize));
+  }, [projects.length, pageSize]);
 
   const paginatedProjects = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
-    return multipliedProjects.slice(start, end);
-  }, [multipliedProjects, currentPage, pageSize]);
+    return projects.slice(start, end);
+  }, [projects, currentPage, pageSize]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -132,8 +120,7 @@ const HomeProjectsTable = ({
   const dynamicColumns: ColumnsType<ProjectRow> = useMemo(() => {
     const attributeIds = [
       ...new Set(
-        multipliedProjects?.flatMap((p) => Object.keys(p.attributes ?? {})) ??
-          [],
+        projects?.flatMap((p) => Object.keys(p.attributes ?? {})) ?? [],
       ),
     ];
 
@@ -159,7 +146,7 @@ const HomeProjectsTable = ({
         },
       };
     });
-  }, [multipliedProjects, company?.project_attributes]);
+  }, [projects, company?.project_attributes]);
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -247,11 +234,11 @@ const HomeProjectsTable = ({
   );
 
   return (
-    <div className="w-full mt-4">
+    <div className="w-full my-4">
       <div
         ref={containerRef}
         className={`overflow-hidden rounded-lg border border-primaryN30 [&_.ant-table-tbody>tr>td]:border-b-primaryN30 ${paginatedProjects.length === pageSize ? "border-b-0" : ""}`}
-        style={{ height: "100vh" }}
+        style={{ height: "90vh" }}
       >
         <ConfigProvider
           theme={{
