@@ -72,6 +72,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
     email: "",
     password: "",
   });
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const [touchedEmail, setTouchedEmail] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -238,11 +239,15 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
           size="large"
           value={form.password}
           onChange={handleChange}
+          onFocus={() => setIsPasswordFocused(true)}
+          // onBlur={() => setIsPasswordFocused(false)}
         />
-        <ul className="list-disc pl-5">
+        <ul
+          className={`list-disc pl-5 ${isPasswordFocused ? "" : "opacity-0"}`}
+        >
           {passwordErrors.map((error, index) => {
             const isValid = error.is_valid;
-            const color = isValid ? "text-green-normal" : "text-red-500";
+            const color = isValid ? "text-green-normal" : "text-grey-normal";
             return (
               <li key={index} className={`${color}`}>
                 <p className="text-xs">{error.message}</p>
