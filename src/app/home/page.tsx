@@ -198,7 +198,7 @@ const Home = () => {
 
   return (
     <div className="w-full h-full">
-      <div className="flex items-start gap-8 pt-10 pl-12 zoomed-container flex-col w-9/12">
+      <div className="flex items-start gap-8 pt-10 px-12 zoomed-container flex-col w-full">
         <div className="flex flex-col gap-2">
           <p className="text-grey-light-strong text-sm ">{formatUserDate()}</p>
           <p className="text-forumBlue-normal text-[22px]">
