@@ -125,7 +125,7 @@ const ProjectsSettings = () => {
   const isWide = fieldsCount > 7;
 
   return (
-    <div className="flex gap-20 mb-10 mt-[-20px]">
+    <div className="flex gap-20 mb-10 mt-[-20px] zoomed-container">
       <ConfigProvider
         theme={{
           components: {
@@ -158,24 +158,10 @@ const ProjectsSettings = () => {
 
           <div className="overflow-auto max-h-[65vh] scrollbar-hidden">
             <div className="flex flex-col gap-6">
-              <FieldBox
-                id={0}
-                uuid="project-name-fixed"
-                label="Project Name"
-                type={0}
-                required
-                has_hint_text={false}
-                hint=""
-                metadata={[]}
-                onDelete={() => {}}
-                onDuplicate={() => {}}
-                onChange={() => {}}
-                is_fixed={true}
-              />
               {company?.project_attributes?.map((field: any, index: number) => (
                 <FieldBox
                   key={field.uuid ?? `${field.type}-${field.label}-${index}`}
-                  id={index + 1}
+                  id={index}
                   {...field}
                   onDelete={deleteField}
                   onDuplicate={() => field.uuid && duplicateField(field.uuid)}

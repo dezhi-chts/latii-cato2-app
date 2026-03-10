@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import ProjectsSettings from "./settings-components/Projects-settings";
-import QuoteSettings from "./settings-components/Quote-settings";
 import BoxesType from "./settings-components/ Boxes-Type";
 
 const Settings = () => {

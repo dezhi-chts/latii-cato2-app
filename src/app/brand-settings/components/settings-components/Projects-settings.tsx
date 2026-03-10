@@ -11,7 +11,7 @@ import DateInput from "@/components/fields/DateInput";
 import Switch from "@/components/fields/Switch";
 import { ProjectInputTypesOptions } from "@/types/settings";
 import Weblink from "@/components/fields/Link";
-import Checkbox from "@/components/fields/Checkbox";
+import Checkbox from "@/components/fields/Check";
 import Radio from "@/components/fields/Radio";
 import Location from "@/components/fields/Location";
 import UploadFiles from "@/components/fields/UploadFiles";
