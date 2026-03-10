@@ -233,7 +233,7 @@ export default function Sidebar() {
           >
             <Link href="/home">
               <div
-                className={`flex gap-2 rounded-xl ${
+                className={`flex gap-3 rounded-xl ${
                   showInitialStyles ? "" : " justify-start"
                 } h-8 w-10 items-center pl-2.5 cursor-pointer`}
               >
@@ -268,7 +268,7 @@ export default function Sidebar() {
           >
             <Link href="/ask-lucius">
               <div
-                className={`flex gap-2 rounded-xl ${
+                className={`flex gap-3 rounded-xl ${
                   showInitialStyles ? "" : " justify-start"
                 } h-8 w-10 items-center pl-2.5 cursor-pointer`}
               >
@@ -298,7 +298,7 @@ export default function Sidebar() {
                 >
                   <Link href="/brand-editor">
                     <div
-                      className={`flex gap-2 ${
+                      className={`flex gap-3 ${
                         showInitialStyles ? "" : "justify-start"
                       } h-8 min-w-10 items-center cursor-pointer`}
                     >
@@ -326,7 +326,7 @@ export default function Sidebar() {
               >
                 <Link href="/brand-settings">
                   <div
-                    className={`flex gap-2 ${
+                    className={`flex gap-3 ${
                       showInitialStyles ? "" : "justify-start"
                     } h-8 min-w-10 items-center cursor-pointer`}
                   >
@@ -338,7 +338,7 @@ export default function Sidebar() {
                       className="w-4 h-4 ml-2"
                     />
                     <p className="whitespace-nowrap text-black text-sm">
-                      {expanded.sidebar && "Settings"}
+                      {expanded.sidebar && "Project Settings"}
                     </p>
                   </div>
                 </Link>
@@ -347,7 +347,7 @@ export default function Sidebar() {
               {/* For now, Lucius Knowledge Base has been removed from the sidebar. Don't delete the code below, it's just commented out. */}
               {/* <Link href="/knowledge-base-lucius">
                 <div
-                  className={`flex gap-2 rounded-xl ${
+                  className={`flex gap-3 rounded-xl ${
                     showInitialStyles ? "" : " justify-start"
                   } h-8 w-10 items-center pl-1 cursor-pointer`}
                 >
@@ -396,10 +396,10 @@ export default function Sidebar() {
         </div>
 
         <div
-          className="flex flex-col pl-3 gap-3 text-sm w-full"
+          className="flex flex-col pl-3 gap-3 text-sm w-full mb-6"
           onClick={(e) => e.stopPropagation()}
         >
-          <div
+          {/* <div
             className={`flex items-center cursor-pointer hover:underline w-fit relative ${
               expanded.sidebar && "gap-2"
             }`}
@@ -418,7 +418,7 @@ export default function Sidebar() {
               />
             </Tooltip>
             <span> {expanded.sidebar ? "Support" : ""} </span>
-          </div>
+          </div> */}
           <div
             className={`flex items-center cursor-pointer hover:underline w-fit relative ${
               expanded.sidebar && "gap-2"
@@ -449,9 +449,6 @@ export default function Sidebar() {
       <CreateProjectModal
         isOpen={showModal.createProject}
         closeModal={() => {
-          setShowModal((prev) => ({ ...prev, createProject: false }));
-        }}
-        onSuccess={() => {
           setShowModal((prev) => ({ ...prev, createProject: false }));
         }}
       />

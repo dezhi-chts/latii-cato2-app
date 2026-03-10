@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Modal, notification } from "antd";
-import TakeoffUpload, { ArchitecturalDrawingModal } from "./Create-Takeoff/Takeoff-Upload";
+import TakeoffUpload, {
+  ArchitecturalDrawingModal,
+} from "./Create-Takeoff/Takeoff-Upload";
 import ProjectForm from "./Project-Form";
 import { type UploadFile } from "antd/es/upload/interface";
 import { createProject } from "@/services/projectService";
@@ -18,7 +20,7 @@ type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onHandleUpload?: (data: any) => void;
-  refreshProjects: () => void;
+  refreshProjects?: () => void;
 };
 
 const CreateProjectModal = ({
@@ -43,7 +45,7 @@ const CreateProjectModal = ({
       notification.success({
         message: "Project created successfully",
       });
-      refreshProjects();
+      if (refreshProjects) refreshProjects();
       closeModal();
     } else {
       notification.error({
@@ -154,13 +156,26 @@ const CreateProjectModal = ({
           <div className="flex flex-row justify-between">
             <div>
               <div className="pt-2 flex flex-row items-center">
-                <div className="flex flex-row gap-2"><Image className="-ml-[24px]" src="/assets/icons/cato-quote.svg" alt="takeoff icon" width={170} height={56} ></Image></div>
+                <div className="flex flex-row gap-2">
+                  <Image
+                    className="-ml-[24px]"
+                    src="/assets/icons/cato-quote.svg"
+                    alt="takeoff icon"
+                    width={170}
+                    height={56}
+                  ></Image>
+                </div>
                 <div className="-ml-[30px] mt-[4px] flex flex-row gap-2">
                   <div className="w-[1px] h-[30px] bg-primaryN30"></div>
-                  <div className="text-[22px] text-grey-light-strong">Takeoffs</div>
+                  <div className="text-[22px] text-grey-light-strong">
+                    Takeoffs
+                  </div>
                 </div>
               </div>
-              <div className="mb-5 text-sm text-grey-normal">Use our AI Agent to create your quote, save time and prevent errors.</div>
+              <div className="mb-5 text-sm text-grey-normal">
+                Use our AI Agent to create your quote, save time and prevent
+                errors.
+              </div>
             </div>
             <div
               className="mt-5 text-xs text-center text-grey-normal underline cursor-pointer"
@@ -172,7 +187,10 @@ const CreateProjectModal = ({
             </div>
           </div>
           <div className="flex-1">
-            <TakeoffUpload onHandleUpload={handleUpload} showUploadTipLink={false} />
+            <TakeoffUpload
+              onHandleUpload={handleUpload}
+              showUploadTipLink={false}
+            />
           </div>
         </div>
         {showDrawingModal && (
