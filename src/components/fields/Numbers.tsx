@@ -32,6 +32,15 @@ const Numbers = ({
         onBlur={onBlur}
         onChange={onChange}
         controls={false}
+        onKeyDown={(e) => {
+          if (
+            !/[0-9.-]/.test(e.key) &&
+            e.key !== "Backspace" &&
+            e.key !== "Tab"
+          ) {
+            e.preventDefault();
+          }
+        }}
       />
     </div>
   );
