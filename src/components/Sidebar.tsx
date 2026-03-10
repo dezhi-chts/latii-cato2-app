@@ -373,7 +373,7 @@ export default function Sidebar() {
               >
                 <Link href="/knowledge-base-cato">
                   <div
-                    className={`flex gap-1 rounded-xl ${
+                    className={`flex gap-2 rounded-xl ${
                       showInitialStyles ? "" : " justify-start"
                     } h-8 w-10 items-center pl-1 cursor-pointer`}
                   >
