@@ -43,19 +43,13 @@ import {
   SelectPagesControls,
   ThumbnailControls,
 } from "../components/pdf/Pdf-Controls";
-import BuildingBackground from "../identification-new/components/BuildingBackground";
+import BuildingBackground, { BuildLoadingStep } from "../identification-new/components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import SkipTipModal from "./components/SkipTipModal";
 
 import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
 
 const confirm = Modal.confirm;
-
-export enum BuildLoadingStep {
-  PageLabel = "page-label",
-  PageMerge = "page-merge",
-  PageTakeOff = "page-takeoff",
-}
 
 export interface IdentIndexRef {
 }

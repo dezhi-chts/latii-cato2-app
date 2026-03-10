@@ -50,16 +50,10 @@ import {
   PdfWrapperRefMethods, ArchDrawingSummaryPageTypes
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
-import BuildingBackground from "../identification-new/components/BuildingBackground";
+import BuildingBackground, { BuildLoadingStep } from "../identification-new/components/BuildingBackground";
 import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
 
 const confirm = Modal.confirm;
-
-export enum BuildLoadingStep {
-  PageLabel = "page-label",
-  PageMerge = "page-merge",
-  PageTakeOff = "page-takeoff",
-}
 
 export interface IdentificationSummaryRef {
 }
