@@ -7,7 +7,7 @@ export type UserDataForUpdate = {
   current_password?: string;
 };
 
-export type passwordChangeData = {
+export type PasswordChangeData = {
   current_password: string;
   new_password: string;
 };

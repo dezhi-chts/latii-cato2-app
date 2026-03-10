@@ -54,8 +54,9 @@ const TeamMembers = () => {
   };
 
   useEffect(() => {
+    if (!company_id) return;
     fetchCompanyContacts();
-  }, []);
+  }, [company_id]);
 
   return (
     <div className="pl-16 flex flex-col gap-12 w-full">

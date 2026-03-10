@@ -1,5 +1,5 @@
 import { http } from "@/lib/http";
-import { passwordChangeData, UserDataForUpdate } from "@/types/user";
+import { PasswordChangeData, UserDataForUpdate } from "@/types/user";
 import qs from "qs";
 
 export const fetchUser = async (username: string) => {
@@ -45,7 +45,7 @@ export const updateUser = async (data: UserDataForUpdate) => {
     return { status: "error", data: error };
   }
 };
-export const changePassword = async (data: passwordChangeData) => {
+export const changePassword = async (data: PasswordChangeData) => {
   const url = "/admin/dealer/user";
 
   try {

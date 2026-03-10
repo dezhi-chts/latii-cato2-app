@@ -87,7 +87,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
     if (!savedUser?.username) return;
 
-    const { companyId, projectAttributes } = await getCompanyInfo();
+    const { companyId, projectAttributes, companyName } =
+      await getCompanyInfo();
 
     const isAdmin = await isUserAdmin();
     let first_name = "Guest";
@@ -102,7 +103,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       first_name: first_name,
       last_name: last_name,
       email: savedUser.email,
-      company: null,
+      company: companyName,
       company_contact: null,
       company_id: companyId,
       force_logout: false,
@@ -121,6 +122,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return {
         companyId: response?.data.id || null,
         projectAttributes: response?.data.project_attributes || [],
+        companyName: response?.data.name || "",
       };
     } catch (error) {
       console.log("Error fetching company id:", error);
