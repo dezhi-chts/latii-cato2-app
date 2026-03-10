@@ -43,14 +43,14 @@ const AccountSettings = () => {
 
   return (
     <div className="mt-10 flex flex-col gap-2 w-full">
-      <div className="flex flex-col gap-1 pl-12 border-b border-grey-light-hover pb-6 mb-4">
-        <p className="text-xl text-forumBlue-normal">Account Preferences</p>
-        <p className="text-xs text-grey-normal">
+      <div className="flex flex-col gap-1 pl-24 border-b border-grey-light-hover py-6 fixed bg-white top-0 left-0 w-full z-40">
+        <p className="text-2xl text-forumBlue-normal">Account Preferences</p>
+        <p className="text-[13px] text-grey-normal">
           Manage your data and your team members, privacy and security.
         </p>
       </div>
 
-      <div className="flex pl-12 gap-2">
+      <div className="flex pl-12 gap-2 pt-20">
         {items.map((item: any) => {
           return (
             <div
