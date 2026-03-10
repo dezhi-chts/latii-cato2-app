@@ -19,6 +19,7 @@ import { getContactsByCompanyId } from "@/services/contactsService";
 import { useUser } from "@/context/UserContext";
 import Link from "next/link";
 import { ProjectSettings } from "@/types/project";
+import EditUsersModal from "./edit-users-modal";
 
 type Location = {
   state: string;
@@ -60,6 +61,8 @@ const Company = () => {
   const [showLocationSelector, setShowLocationSelector] = useState(false);
   const [usersData, setUsersData] = useState<Contact[] | null>(null);
   const { company_id = 0, isAdmin } = useUser();
+
+  const [editUsersModalOpen, setEditUsersModalOpen] = useState(false);
 
   useEffect(() => {
     getCompanyMsg();
@@ -190,20 +193,20 @@ const Company = () => {
             beforeUpload={beforeUpload}
             customRequest={uploadFile}
           >
-            <div className="h-28 w-28 flex cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[#e8e8e8]">
+            <div className="h-20 w-20 flex cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[#e8e8e8]">
               {companyMsg?.photo_url ? (
-                <div className="relative h-28 w-28 rounded-xl overflow-hidden group cursor-pointer flex items-center justify-center ">
+                <div className="relative h-20 w-20 rounded-xl overflow-hidden group cursor-pointer flex items-center justify-center ">
                   <Image
                     src={companyMsg?.photo_url}
                     key={companyMsg?.photo_url}
                     alt="upload photo icon"
                     width={80}
                     height={80}
-                    className="w-16 rounded-xl transition-opacity duration-300 group-hover:opacity-80 "
+                    className="w-20 rounded-xl transition-opacity duration-300 group-hover:opacity-80 "
                   />
 
                   <div
-                    className="absolute h-28 w-28 inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    className="absolute h-20 w-20 inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     style={{ background: "rgba(0,0,0,.3)" }}
                   >
                     <Image
@@ -319,13 +322,12 @@ const Company = () => {
         <div className="flex justify-between w-full">
           <p className="text-forumBlue-normal">Your Team</p>
           {isAdmin && (
-            <Link href="/account-settings?tab=team-management">
-              <button
-                className={`px-6 h-7 bg-forumBlue-light-active text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-md`}
-              >
-                Edit Users
-              </button>
-            </Link>
+            <button
+              className={`px-6 h-7 bg-forumBlue-light-active text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-md`}
+              onClick={() => setEditUsersModalOpen(true)}
+            >
+              Edit Users
+            </button>
           )}
         </div>
         <UserTable
@@ -334,6 +336,10 @@ const Company = () => {
           showActions={false}
         />
       </div>
+      <EditUsersModal
+        open={editUsersModalOpen}
+        onClose={() => setEditUsersModalOpen(false)}
+      />
     </div>
   );
 };
