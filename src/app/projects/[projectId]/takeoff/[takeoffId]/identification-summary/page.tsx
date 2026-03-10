@@ -39,9 +39,7 @@ import {
   SelectPagesControls,
   ThumbnailControls,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
-import IndexRectView from "./IndexRectView";
-import ContentView from "./ContentView";
-import SkipTipModal from "./SkipTipModal";
+import ContentView from "./components/ContentView";
 
 import {
   EvidenceResult,
@@ -52,28 +50,22 @@ import {
   PdfWrapperRefMethods, ArchDrawingSummaryPageTypes
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
-import BuildingBackground from "../BuildingBackground";
+import BuildingBackground from "../identification-new/components/BuildingBackground";
+import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
 
 const confirm = Modal.confirm;
 
-export interface IdentificationIndexRef {
-  recognizeDrawingIndexData: () => Promise<void>;
+export enum BuildLoadingStep {
+  PageLabel = "page-label",
+  PageMerge = "page-merge",
+  PageTakeOff = "page-takeoff",
 }
 
-const IdentificationIndex = forwardRef<IdentificationIndexRef, {
-  fileList: any[];
-  setFileList: (fileList: any[] | ((prev: any[]) => any[])) => void;
-  selectedFileId: number;
-  showContentView: boolean;
-  setShowContentView: (show: boolean) => void;
-  onChangeIndexBox: (indexBoxList: any[], labelList: any[]) => void;
+export interface IdentificationSummaryRef {
+}
+
+const IdentSummary = forwardRef<IdentificationSummaryRef, {
 }>(({
-  fileList,
-  setFileList,
-  selectedFileId,
-  showContentView,
-  setShowContentView,
-  onChangeIndexBox,
 }, ref) => {
   const router = useRouter();
   const projectId = useParams().projectId;
@@ -95,20 +87,22 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [contentData, setContentData] = useState<any>([]);
   const [indexBoxList, setIndexBoxList] = useState<any>([]);
+  const [labelList, setLabelList] = useState<any>([]);
   const [drawingTypeList, setDrawingTypeList] = useState<any>(
     ArchDrawingSummaryPageTypes,
   );
-  const [labelList, setLabelList] = useState<any>([]);
   const [cropsCount, setCropsCount] = useState<number>(0);
   const [isEmptyContent, setIsEmptyContent] = useState<boolean>(false);
 
-  const skipType = useRef<any>(null);
   const evidenceIsLoaded = useRef<boolean>(false);
-  const onChangeIndexBoxRef = useRef(onChangeIndexBox);
 
-  useEffect(() => {
-    onChangeIndexBoxRef.current = onChangeIndexBox;
-  }, [onChangeIndexBox]);
+  const {
+    fileList,
+    setFileList,
+    selectedFileId,
+    setSelectedFileId,
+    setFileViewStep
+  } = useTakeoff();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -124,7 +118,6 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
   }, []);
 
   useImperativeHandle(ref, () => ({
-    recognizeDrawingIndexData,
   }));
 
   // 获取当前文件的evidence，并按照type进行分类
@@ -177,8 +170,6 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
       //获取file evidence
       getFileEvidences();
 
-      // 显示目录内容
-      setShowContentView(true);
       getDrawingIndexData();
     }
     return;
@@ -198,34 +189,6 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
     );
   }, [fileEvidence]);
 
-  useEffect(() => {
-    onChangeIndexBoxRef.current(indexBoxList, labelList);
-  }, [indexBoxList, labelList]);
-
-  const recognizeDrawingIndexData = async () => {
-    setBuildLoading(true);
-
-    let res: any = await recognizeDrawingIndex(
-      projectId as string,
-      selectedFileId as number,
-    );
-    setBuildLoading(false);
-
-    if (res.status === "success") {
-      notification.success({
-        message: "Success",
-        description: "Drawing index recognized successfully",
-      });
-      // 识别成功后重新获取drawing index数据
-      setShowContentView(true);
-      getDrawingIndexData();
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to recognize drawing index",
-      });
-    }
-  };
 
   const getDrawingIndexData = async () => {
     setContentData([]);
@@ -291,141 +254,42 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
     });
   };
 
-  const handleAppendEvidence = (evidenceResult: EvidenceResult) => {
-    // 如果evidence 数据还未加载完成，则不允许手动追加，需要先加载完成，否则会导致数据不一致
-    const { evidences } = evidenceResult;
-    const evidenceList = evidences || [];
-    if (!evidenceIsLoaded.current) {
-      getFileEvidences();
-      return;
-    }
-    if (!evidenceList?.length) return;
-    setFileEvidence([...fileEvidence, ...evidenceList]);
-  };
-
-  const handleDeleteEvidence = (evidenceResult: EvidenceResult) => {
-    // 如果evidence 数据还未加载完成，则不允许手动删除，需要先加载完成，否则会导致数据不一致
-    const { deleteIds = [] } = evidenceResult;
-    if (!evidenceIsLoaded.current) {
-      getFileEvidences();
-      return;
-    }
-    if (!deleteIds?.length) return;
-    setFileEvidence((prev: any) => {
-      return prev.filter((item: EvidenceType) => !deleteIds.includes(item.id));
-    });
-  };
-
-  const deleteEvidence = async (deleteIds: number[]) => {
-    setFullLoading(true);
-    let res: any = await evidenceBatchDelete(deleteIds);
-    if (res.status === "success") {
-      handleDeleteEvidence({ deleteIds } as any);
-    } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to delete evidence",
-      });
-    }
-    setFullLoading(false);
-  };
-
-  const handleUpdateEvidence = (evidenceResult: EvidenceResult) => {
-    // 如果evidence 数据还未加载完成，则不允许手动更新，需要先加载完成，否则会导致数据不一致
-    const { evidences } = evidenceResult;
-    const evidenceList = evidences || [];
-
-    if (!evidenceIsLoaded.current) {
-      getFileEvidences();
-      return;
-    }
-    if (!evidenceList?.length) return;
-    setFileEvidence(
-      fileEvidence.map((item: EvidenceType) => {
-        // 找到需要更新的item
-        let updateItem = evidenceList.find(
-          (evid: EvidenceType) => evid.id === item.id,
-        );
-        if (updateItem) {
-          return { ...updateItem };
-        }
-        return item;
-      }),
-    );
-  };
-
-  const handleAddRectBox = (type: string) => {
-    if (pdfRef.current && pdfRef.current?.addingRect) {
-      pdfRef.current?.addingRect({ type: type });
-    }
-  };
-
   const handleCropsCount = (count: number) => {
     // 如果当前页面有未处理的crop
     setCropsCount(count);
   };
 
-  const updateFileStatus = (fileId: number, status: FileStatus) => {
-    // 设置当前文件状态未undo
-    setFileList((prev: any) => {
-      return prev.map((item: any) => {
-        if (item.id === fileId) {
-          return {
-            ...item,
-            status: status,
-          };
-        }
-        return item;
-      });
-    });
-  };
-
   const handleRestartIndex = () => {
-    setShowContentView(false);
-    // 设置当前文件状态为processing
-    updateFileStatus(selectedFileId, FileStatus.Processing);
+    setFileViewStep(FileViewStep.IndexDrawing);
   };
 
   return (
     <div className={`w-full h-full flex flex-col relative`}>
-
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
-          style={{ width: showContentView ? "500px" : "340px" }}
+          style={{ width: "500px" }}
         >
-          {showContentView ? (
-            <ContentView
-              contentData={contentData}
-              setContentData={setContentData}
-              drawingTypeList={drawingTypeList}
-              isEmptyContent={isEmptyContent}
-              pdfTotalPages={totalPage}
-              handlePageChange={handlePageChange}
-            />
-          ) : (
-            <IndexRectView
-              indexBoxList={indexBoxList}
-              labelList={labelList}
-              cropsCount={cropsCount}
-              handleAddRectBox={handleAddRectBox}
-              handleDeleteEvidence={deleteEvidence}
-            ></IndexRectView>
-          )}
+          <ContentView
+            contentData={contentData}
+            setContentData={setContentData}
+            drawingTypeList={drawingTypeList}
+            isEmptyContent={isEmptyContent}
+            pdfTotalPages={totalPage}
+            handlePageChange={handlePageChange}
+          />
         </div>
         <div className={`flex-1 flex flex-col pl-12 pt-4 overflow-hidden`}>
           <div className="h-[60px] flex flex-row justify-between items-center">
             <div className="flex items-center gap-2">
-              {showContentView && (
-                <div
-                  className="w-[180px] h-[28px] flex flex-row justify-center items-center bg-grey-light rounded-md cursor-pointer"
-                  onClick={handleRestartIndex}
-                >
-                  <span className="text-grey-dark text-xs">
-                    Reset to Manual Selection
-                  </span>
-                </div>
-              )}
+              <div
+                className="w-[180px] h-[28px] flex flex-row justify-center items-center bg-grey-light rounded-md cursor-pointer"
+                onClick={handleRestartIndex}
+              >
+                <span className="text-grey-dark text-xs">
+                  Reset to Manual Selection
+                </span>
+              </div>
               <ThumbnailControls
                 showThumbnail={showThumbnail}
                 setShowThumbnail={setShowThumbnail}
@@ -456,9 +320,6 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
               page={page}
               allEvidence={fileEvidence}
               onTotalPages={setTotalPage}
-              onAppendEvidence={handleAppendEvidence}
-              onDeleteEvidence={handleDeleteEvidence}
-              onUpdateEvidence={handleUpdateEvidence}
               onCropSectionsCount={handleCropsCount}
             ></PdfWrapper>
           </div>
@@ -478,30 +339,13 @@ const IdentificationIndex = forwardRef<IdentificationIndexRef, {
           ></Thumbnail>
         </div>
       </div>
-      {showSkipModal && (
-        <SkipTipModal
-          isOpen={showSkipModal}
-          closeModal={() => {
-            setShowSkipModal(false);
-          }}
-          skipType={skipType.current}
-          handleAddRectBox={(type: string) => {
-            setShowSkipModal(false);
-            cropsCount === 0 && handleAddRectBox(type);
-          }}
-          handleSkip={() => {
-            setShowSkipModal(false);
-            recognizeDrawingIndexData();
-          }}
-        />
-      )}
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && <BuildingBackground step={'page-label'} />}
     </div>
   );
 });
 
-IdentificationIndex.displayName = "IdentificationIndex";
+IdentSummary.displayName = "IdentSummary";
 
-// 为自定义 Select 选项添加必要的全局样式
-export default IdentificationIndex;
+
+export default IdentSummary;

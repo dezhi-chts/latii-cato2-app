@@ -26,10 +26,12 @@ import {
 import LoadingScreen from "@/components/loading-screen";
 import Header from "./components/Header";
 import BuildingBackground from "./components/BuildingBackground";
-import DrawingIndex from "./components/drawing-index/Index";
-import DrawingLabel from "./components/drawing-label/Index";
+import PreAnalysisMdal from "./components/PreAnalysisMdal";
+import IdentIndex from "../identification-index/page";
+import IdentSummary from "../identification-summary/page";
+import IdentLabel from "../identification-label/page";
 import ManualMerge from "../manual-merge/page";
-import PreAnalysisMdal from "./components/drawing-label/PreAnalysisMdal";
+import { useTakeoff, TakeoffProvider, FileViewStep } from "@/context/TakeoffContext";
 
 
 const { confirm } = Modal;
@@ -49,33 +51,36 @@ export enum ButtonText {
   CreateTakeoff = "Create Takeoff",
 }
 
-// 文件视图步骤
-export enum FileViewStep {
-  IndexDrawing = "IndexDrawing",
-  IndexSummary = "IndexSummary",
-  Second = "Second",
-  FileMerge = "FileMerge"
-}
-
-const PageLabeling = () => {
+const PageLabelingContent = () => {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
 
-  const [selectedFileId, setSelectedFileId] = useState<number>(-1);
-  const [takeOff, setTakeOff] = useState<any>();
+  //const [selectedFileId, setSelectedFileId] = useState<number>(-1);
+  //const [takeOff, setTakeOff] = useState<any>();
 
-  const [fileList, setFileList] = useState<any>([]);
+  //const [fileList, setFileList] = useState<any>([]);
   const [fullLoading, setFullLoading] = useState<boolean>(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
-  const [fileViewStep, setFileViewStep] = useState<FileViewStep | ''>('');
-  const [indexBox, setIndexBox] = useState<{ indexBoxList: any[], labelList: any[] }>({ indexBoxList: [], labelList: [] });
+  //const [fileViewStep, setFileViewStep] = useState<FileViewStep | ''>('');
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
-  const [showContentView, setShowContentView] = useState<boolean>(true);
   const [boxTypeList, setBoxTypeList] = useState<any>([]);
   const { company_id } = useUser();
 
+  const {
+    selectedFileId,
+    setSelectedFileId,
+    fileList,
+    setFileList,
+    takeOff,
+    setTakeOff,
+    fileViewStep,
+    setFileViewStep,
+    indexBoxCount,
+  } = useTakeoff();
+
   const drawingIndexRef = useRef<any>(null);
+  const drawingSummaryRef = useRef<any>(null);
   const drawingLabelRef = useRef<any>(null);
   const buildingStep = useRef('');
 
@@ -86,13 +91,6 @@ const PageLabeling = () => {
     }
   }, [takeOffId, company_id]);
 
-  useEffect(() => {
-    if (showContentView) {
-      setFileViewStep(FileViewStep.IndexSummary);
-    } else {
-      setFileViewStep(FileViewStep.IndexDrawing);
-    }
-  }, [showContentView]);
 
   useEffect(() => {
     if (fileViewStep === FileViewStep.Second) {
@@ -231,6 +229,7 @@ const PageLabeling = () => {
         setBuildLoading(true);
         setTimeout(() => {
           setBuildLoading(false);
+          setSelectedFileId(-1);
           setFileViewStep(FileViewStep.FileMerge);
         }, 5000);
       }
@@ -245,18 +244,61 @@ const PageLabeling = () => {
 
   // 处理返回按钮的点击事件
   const handleBack = useCallback(() => {
-    if (fileOperationType === FileOperationType.ArchitectureDrawing) {
-      if (fileViewStep === FileViewStep.Second) {
+    if (fileViewStep === FileViewStep.IndexDrawing) {
+      // 如果是index视图，则返回到summary视图
+      setFileViewStep(FileViewStep.IndexSummary);
+    } else if (fileViewStep === FileViewStep.Second) {
+      if (fileOperationType === FileOperationType.ArchitectureDrawing) {
+        // 如果是label视图，则返回到summary视图
         setFileViewStep(FileViewStep.IndexSummary);
-        setShowContentView(true);
-      } else if (fileViewStep === FileViewStep.IndexDrawing) {
-        setFileViewStep(FileViewStep.IndexSummary);
-        setShowContentView(true);
       } else {
-        router.push(`/home`);
+        // 判断当前文件的前面是否存在其他文件，如果存在其他文件，则切换到其他文件
+        // 如果文件是已完成状态，则切换到label视图，如果是Arch Drawing文件，且未完成状态，则切换到summary视图
+        let findIndex = fileList.findIndex((file: any) => file.id === selectedFileId);
+        if (findIndex > 0) {
+          let prevFile = fileList[findIndex - 1];
+          if (prevFile.status === FileStatus.Completed) {
+            setSelectedFileId(prevFile.id);
+            setFileViewStep(FileViewStep.Second);
+          } else if (prevFile.operation_type === FileOperationType.ArchitectureDrawing) {
+            setSelectedFileId(prevFile.id);
+            setFileViewStep(FileViewStep.IndexSummary);
+          }
+          // 更新文件状态为processing
+          setFileList((prev: any[]) => {
+            return prev.map((file: any) => {
+              if (file.id === prevFile.id) {
+                // 下一个文件状态更改为操作中
+                return { ...file, status: FileStatus.Processing };
+              } else if (file.id === selectedFileId) {
+                // 上一个文件状态更改为未完成
+                return { ...file, status: FileStatus.Uploaded };
+              }
+              return file;
+            });
+          });
+        } else {
+          // 如果前面没有文件可以返回了，则直接执行goBack
+          router.back();
+        }
       }
+    } else if (fileViewStep === FileViewStep.FileMerge) {
+      // 如果是合并视图，返回的时候，返回最后一个文件
+      let lastFile = fileList[fileList.length - 1];
+      setSelectedFileId(lastFile.id);
+      setFileViewStep(lastFile.status === FileStatus.Completed ? FileViewStep.Second : FileViewStep.IndexSummary);
+      // 更新文件状态为processing
+      setFileList((prev: any[]) => {
+        return prev.map((file: any) => {
+          if (file.id === lastFile.id) {
+            return { ...file, status: FileStatus.Processing };
+          }
+          return file;
+        });
+      });
     } else {
-      router.push(`/home`);
+      // 其他情况执行 goBack
+      router.back();
     }
   }, [fileViewStep, selectedFileId]);
 
@@ -268,7 +310,7 @@ const PageLabeling = () => {
     const otherFilesComplete = fileList
       .filter((file: any) => file.id !== selectedFileId)
       .every((file: any) => file.status === FileStatus.Completed);
-    const hasUnsavedCrops = indexBox.indexBoxList.length === 0 && indexBox.labelList.length === 0;
+    const hasUnsavedCrops = indexBoxCount === 0;
 
     // FileMerge 步骤：显示 Create Takeoff
     if (fileViewStep === FileViewStep.FileMerge) {
@@ -320,13 +362,13 @@ const PageLabeling = () => {
     }
 
     return { text: ButtonText.NextStep, disabled: false };
-  }, [fileList, selectedFileId, fileViewStep, indexBox]);
+  }, [fileList, selectedFileId, fileViewStep, indexBoxCount]);
 
 
   const fileOperationType = useMemo(() => {
     if (!fileList.length) return "";
     let file = fileList.find((file: any) => file.id === selectedFileId);
-    return file.operation_type || "";
+    return file?.operation_type || "";
   }, [fileList, selectedFileId]);
 
   return (
@@ -345,32 +387,21 @@ const PageLabeling = () => {
       />
       <div className="flex-1 flex overflow-hidden">
         {
-          fileOperationType === FileOperationType.ArchitectureDrawing
-          && (fileViewStep === FileViewStep.IndexDrawing || fileViewStep === FileViewStep.IndexSummary)
-          &&
-          <DrawingIndex
+          fileViewStep === FileViewStep.IndexDrawing &&
+          <IdentIndex
             ref={drawingIndexRef}
-            fileList={fileList}
-            setFileList={setFileList}
-            selectedFileId={selectedFileId}
-            onChangeIndexBox={(indexBoxList, labelList) => setIndexBox({ indexBoxList, labelList })}
-            showContentView={showContentView}
-            setShowContentView={setShowContentView}
-          >
-          </DrawingIndex>
+          />
+        }
+        {
+          fileViewStep === FileViewStep.IndexSummary &&
+          <IdentSummary
+            ref={drawingSummaryRef}
+          />
         }
         {fileViewStep === FileViewStep.Second &&
-          <DrawingLabel
+          <IdentLabel
             ref={drawingLabelRef}
-            fileList={fileList}
-            setFileList={setFileList}
-            selectedFileId={selectedFileId}
-            setSelectedFileId={setSelectedFileId}
-            setShowAnalysisModal={setShowAnalysisModal}
-            boxTypeList={boxTypeList}
-            onRefreshBoxTypeList={getBoxTypeList}
-          >
-          </DrawingLabel>
+          />
         }
         {fileViewStep === FileViewStep.FileMerge &&
           <ManualMerge></ManualMerge>
@@ -393,4 +424,7 @@ const PageLabeling = () => {
   );
 };
 
+const PageLabeling = () => {
+  return <PageLabelingContent />;
+};
 export default PageLabeling;

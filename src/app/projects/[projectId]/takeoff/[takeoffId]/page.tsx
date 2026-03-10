@@ -2,12 +2,13 @@
 
 import { JSX, useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
-import IdentificationIndex, { ButtonText } from "./identification-index/page";
+import IdentificationIndex from "./identification-index/page";
+import { ButtonText } from "./identification-new/page";
 import { FileOperationType, FileStatus } from "./types/evidence";
 import { notification } from "antd";
 import { getTakeOffById } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
-import PageLabeling from "./identification/page";
+import PageLabeling from "./identification-label/page";
 
 export type StepName =
   | "identification-index"
@@ -115,11 +116,11 @@ const Quotii = () => {
       />
       <div className="relative h-[90vh]">
         <div className={activeIndex === 0 ? "block h-full" : "hidden"}>
-          <IdentificationIndex showHeader={false} />
+          <IdentificationIndex />
         </div>
 
         <div className={activeIndex === 1 ? "block h-full" : "hidden"}>
-          <PageLabeling showHeader={false} />
+          <PageLabeling />
         </div>
       </div>
     </div>
