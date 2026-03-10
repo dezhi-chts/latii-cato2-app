@@ -30,7 +30,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
   const itemFileId = useRef("");
   // dynamicFields 动态字段
   const [dynamicFields, setDynamicFields] = useState<Array<{ name: string }>>(
-    [],
+    []
   );
   const [editingCell, setEditingCell] = useState<{
     rowId: number;
@@ -79,7 +79,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
                   let result = record.result;
                   try {
                     let item = tableData.find(
-                      (item: any) => item.id === record.id,
+                      (item: any) => item.id === record.id
                     );
                     if (item) {
                       result = JSON.stringify({
@@ -143,7 +143,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
         return "";
       }
     },
-    [editingCell],
+    [editingCell]
   );
 
   const defaultColumns: ColumnsType<LabelItem> = [
@@ -170,7 +170,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
                   return prev.map((item: any) =>
                     item.id === record.id
                       ? { ...item, is_checked: state }
-                      : item,
+                      : item
                   );
                 });
                 //调用API更改is_checked
@@ -270,7 +270,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
       if (!takeOff) return;
       setTableLoading(true);
       const res = await getFieldsByTemplateId(
-        takeOff?.take_off_result?.template_id,
+        takeOff?.take_off_result?.template_id
       );
       if (res.status === "success") {
         setDynamicFields(res.data);
@@ -406,7 +406,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
             onClick={() => {
               if (takeOff?.reconcile_candidate_count?.[selectedFileId] >= 0) {
                 router.push(
-                  `/projects/${projectId}/takeoff/${takeOffId}/items-merge?_fId=${selectedFileId}`,
+                  `/projects/${projectId}/takeoff/${takeOffId}/items-merge?_fId=${selectedFileId}`
                 );
               }
             }}
@@ -418,8 +418,8 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
                 style={{
                   backgroundColor:
                     takeOff?.reconcile_candidate_count?.[selectedFileId] > 0
-                      ? colorList.grey - normal
-                      : colorList.green - normal,
+                      ? "grey"
+                      : "green",
                 }}
               >
                 {takeOff?.reconcile_candidate_count?.[selectedFileId] || 0}
