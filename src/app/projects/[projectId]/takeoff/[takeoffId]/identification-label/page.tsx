@@ -35,7 +35,7 @@ import {
   AddRectBoxControls,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
-import BuildingBackground from "../identification-new/components/BuildingBackground";
+import BuildingBackground, { BuildLoadingStep } from "../identification-new/components/BuildingBackground";
 import NewLogicBoxModal from "./components/NewLogicBoxModal";
 
 import {
@@ -57,12 +57,6 @@ import { useTakeoff } from "@/context/TakeoffContext";
 
 
 const { confirm } = Modal;
-
-enum BuildLoadingStep {
-  PageAnalysis = "page-analyze",
-  PageLabel = "page-label",
-  PageIndex = "page-index",
-}
 
 const validPageType = [
   // Arch Drawing 文件类型有效的page type

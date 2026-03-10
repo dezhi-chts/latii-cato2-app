@@ -25,7 +25,7 @@ import {
 
 import LoadingScreen from "@/components/loading-screen";
 import Header from "./components/Header";
-import BuildingBackground from "./components/BuildingBackground";
+import BuildingBackground, { BuildLoadingStep } from "./components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 import IdentIndex from "../identification-index/page";
 import IdentSummary from "../identification-summary/page";
@@ -35,12 +35,6 @@ import { useTakeoff, TakeoffProvider, FileViewStep } from "@/context/TakeoffCont
 
 
 const { confirm } = Modal;
-
-enum BuildLoadingStep {
-  PageLabel = "page-label",
-  PageMerge = "page-merge",
-  PageTakeOff = "page-takeoff",
-}
 
 export enum ButtonText {
   NextFile = "Next File",
@@ -64,7 +58,6 @@ const PageLabelingContent = () => {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   //const [fileViewStep, setFileViewStep] = useState<FileViewStep | ''>('');
   const [showAnalysisModal, setShowAnalysisModal] = useState<boolean>(false);
-  const [boxTypeList, setBoxTypeList] = useState<any>([]);
   const { company_id } = useUser();
 
   const {
@@ -87,19 +80,9 @@ const PageLabelingContent = () => {
   useEffect(() => {
     if (takeOffId && company_id) {
       getTakeOffDetails();
-      getBoxTypeList();
     }
   }, [takeOffId, company_id]);
 
-
-  useEffect(() => {
-    if (fileViewStep === FileViewStep.Second) {
-      // 如果切换到second view界面，且此时boxTypeList为空，则需要重新获取box type list
-      if (boxTypeList?.length === 0) {
-        getBoxTypeList();
-      }
-    }
-  }, [fileViewStep]);
 
   const getTakeOffDetails = async () => {
     setFullLoading(true);
@@ -132,20 +115,6 @@ const PageLabelingContent = () => {
       });
     }
     setFullLoading(false);
-  };
-  const getBoxTypeList = async () => {
-    if (!company_id) return;
-    let res: any = await getBoxTypes(company_id.toString());
-    if (res.status === "success") {
-      let boxTypes = res?.data ?? [];
-      // 为每个 box type 添加 company_id
-      boxTypes = boxTypes.map((item: any) => ({
-        ...item,
-        company_id: company_id.toString(),
-      }));
-      setBoxTypeList(boxTypes);
-    } else {
-    }
   };
 
   const handleChangeFile = async (fileId: number) => {

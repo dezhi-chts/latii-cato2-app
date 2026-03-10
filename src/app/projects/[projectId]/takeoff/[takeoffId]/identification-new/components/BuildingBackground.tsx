@@ -220,6 +220,11 @@ const BuildingBackgroundOld = ({ step }: { step: string }) => {
   );
 };
 
+export enum BuildLoadingStep {
+  PageLabel = "page-label",
+  PageMerge = "page-merge",
+  PageTakeOff = "page-takeoff",
+}
 
 const BuildingBackground = ({ step }: { step: string }) => {
   const stepMap: any = {
