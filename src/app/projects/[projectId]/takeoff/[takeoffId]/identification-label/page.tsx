@@ -34,9 +34,9 @@ import {
   ClearAllControls,
   AddRectBoxControls,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
-import DrawingTagsView from "./DrawingTagsView";
-import BuildingBackground from "../BuildingBackground";
-import NewLogicBoxModal from "./NewLogicBoxModal";
+import DrawingTagsView from "./components/DrawingTagsView";
+import BuildingBackground from "../identification-new/components/BuildingBackground";
+import NewLogicBoxModal from "./components/NewLogicBoxModal";
 
 import {
   EvidenceType,
@@ -52,6 +52,9 @@ import {
   ArchDrawingLabelTypes,
   allPageTypes,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
+import { useUser } from "@/context/UserContext";
+import { useTakeoff } from "@/context/TakeoffContext";
+
 
 const { confirm } = Modal;
 
@@ -75,27 +78,12 @@ export enum ButtonText {
   Complete = "Complete",
 }
 
-export interface IdentificationSecondRef {
+export interface IdentLabelRef {
   pdfRef: React.RefObject<PdfWrapperRefMethods | null>;
 }
 
-const IdentificationSecond = forwardRef<IdentificationSecondRef, {
-  fileList: any[];
-  setFileList: (fileList: any[]) => void;
-  selectedFileId: number;
-  setSelectedFileId: (selectedFileId: number) => void;
-  setShowAnalysisModal: (showAnalysisModal: boolean) => void;
-  boxTypeList: any[];
-  onRefreshBoxTypeList?: () => void;
-}>(({
-  fileList,
-  setFileList,
-  selectedFileId,
-  setShowAnalysisModal,
-  setSelectedFileId,
-  boxTypeList,
-  onRefreshBoxTypeList,
-}, ref) => {
+const IdentLabel = forwardRef<IdentLabelRef, {
+}>((any, ref) => {
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
@@ -105,7 +93,6 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
     getUnsavedCrops,
   }));
 
-  const [takeOff, setTakeOff] = useState<any>();
   const [pdfUrl, setPdfUrl] = useState<string>();
   const [zoom, setZoom] = useState(1);
   const [page, setPage] = useState(1);
@@ -130,9 +117,30 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
 
   const evidenceIsLoaded = useRef<boolean>(false);
   const unSavedCropsCount = useRef<number>(0);
+  const { company_id } = useUser();
+  const [boxTypeList, setBoxTypeList] = useState<any>([]);
+  const { fileList, setFileList, selectedFileId, setSelectedFileId } = useTakeoff();
 
+  useEffect(() => {
+    getBoxTypeList();
+  }, [company_id])
+
+  const getBoxTypeList = async () => {
+    if (!company_id) return;
+    let res: any = await getBoxTypes(company_id.toString());
+    if (res.status === "success") {
+      let boxTypes = res?.data ?? [];
+      // 为每个 box type 添加 company_id
+      boxTypes = boxTypes.map((item: any) => ({
+        ...item,
+        company_id: company_id.toString(),
+      }));
+      setBoxTypeList(boxTypes);
+    } else {
+    }
+  };
   const handleNewLogicBoxSuccess = () => {
-    onRefreshBoxTypeList?.();
+    getBoxTypeList();
     setEditBoxTypeData(null);
   };
 
@@ -148,7 +156,7 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
 
     if (result.status === "success") {
       message.success("Logic Box deleted successfully");
-      onRefreshBoxTypeList?.();
+      getBoxTypeList();
     } else {
       const errorMsg = typeof result?.data === 'string'
         ? result?.data
@@ -279,7 +287,6 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
   };
 
   useEffect(() => {
-    console.log("selectedFileId", selectedFileId);
     if (selectedFileId === -1) return;
 
     // 没有crop需要保存
@@ -355,7 +362,6 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
 
   const handleUpdatePageType = useCallback(
     (pageTypes: any) => {
-      console.log('########## pageTypes', pageTypes)
       const page_types = pageTypes || [];
       let findCurrentPageType = page_types.find(
         (item: any) => item.page_number === page,
@@ -544,7 +550,7 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
   const fileOperationType = useMemo(() => {
     if (!fileList.length) return "";
     let file = fileList.find((file: any) => file.id === selectedFileId);
-    return file.operation_type || "";
+    return file?.operation_type || "";
   }, [fileList, selectedFileId]);
 
   const thumbnailBoxTypeList = useMemo(() => {
@@ -711,6 +717,6 @@ const IdentificationSecond = forwardRef<IdentificationSecondRef, {
   );
 });
 
-IdentificationSecond.displayName = "IdentificationSecond";
+IdentLabel.displayName = "IdentLabel";
 
-export default IdentificationSecond;
+export default IdentLabel;

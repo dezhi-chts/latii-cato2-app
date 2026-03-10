@@ -65,7 +65,7 @@ const ManualMerge = () => {
 
   return (
     <div className="w-full">
-      <Header />
+      {/* <Header /> */}
       <div className="flex justify-between px-20 pt-8">
         <div className="flex flex-col gap-1">
           <p className="text-forumBlue-normal">Multi File Merger</p>
