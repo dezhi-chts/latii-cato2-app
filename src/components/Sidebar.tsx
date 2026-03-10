@@ -168,7 +168,7 @@ export default function Sidebar() {
           loadingExpansion ? "w-[340px] px-9" : "w-16"
         } 
       ${!expanded.sidebar && "cursor-pointer"}
-      top-0 z-[9999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-black transition-all linear duration-700 font-nunito`}
+      top-0 z-[999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-black transition-all linear duration-700 font-nunito`}
         ref={sidebarRef}
         onClick={() => {
           !expanded.sidebar && toggleExpand("sidebar");
