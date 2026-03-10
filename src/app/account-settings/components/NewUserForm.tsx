@@ -174,6 +174,10 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
     setDisabledButton(!requiredOk || hasErrors);
   }, [form, touchedEmail]);
 
+  const areTherePasswordErrors = Object.values(passwordErrors).some(
+    (error) => !error.is_valid,
+  );
+
   return (
     <div className="w-full flex flex-col gap-6 pt-10 pl-12">
       <p className="text-forumBlue-normal text-base">Add New User</p>
@@ -243,7 +247,7 @@ const NewUserForm = ({ refreshContacts }: { refreshContacts: () => void }) => {
           // onBlur={() => setIsPasswordFocused(false)}
         />
         <ul
-          className={`list-disc pl-5 ${isPasswordFocused ? "" : "opacity-0"}`}
+          className={`list-disc pl-5 ${isPasswordFocused && areTherePasswordErrors ? "" : "opacity-0"}`}
         >
           {passwordErrors.map((error, index) => {
             const isValid = error.is_valid;
