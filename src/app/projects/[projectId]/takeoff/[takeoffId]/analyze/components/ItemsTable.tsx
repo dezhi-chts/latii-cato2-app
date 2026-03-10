@@ -376,33 +376,61 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
 
   return (
     <div className="flex flex-col gap-4 w-full pt-8">
-      <p className="text-forumBlue-normal text-sm">Items</p>
       <div className="flex justify-between w-full">
-        <Input
-          className="rounded-full w-80 text-xs"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          prefix={
-            <Image
-              src="/assets/icons/search.svg"
-              alt="search icon"
-              width={11}
-              height={11}
-            />
-          }
-          onBlur={(e) => {
-            filterItems(e.target.value);
-          }}
-          onPressEnter={(e: any) => {
-            filterItems(e.target.value);
-          }}
-        />
+        <div className="flex gap-3 items-center">
+          <Input
+            className="rounded-md w-64 text-xs"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            prefix={
+              <Image
+                src="/assets/icons/search.svg"
+                alt="search icon"
+                width={11}
+                height={11}
+              />
+            }
+            onBlur={(e) => {
+              filterItems(e.target.value);
+            }}
+            onPressEnter={(e: any) => {
+              filterItems(e.target.value);
+            }}
+          />
+          <Button
+            color="grey-normal"
+            backgroundColor="white"
+            borderColor="grey-light-hover"
+            className=" rounded-md !text-grey-normal"
+            variant="outline"
+          >
+            Show All
+          </Button>
+          <Button
+            color="grey-normal"
+            backgroundColor="white"
+            borderColor="grey-light-hover"
+            className=" rounded-md !text-grey-normal"
+            variant="outline"
+          >
+            Columns
+          </Button>
+          <Button
+            color="grey-normal"
+            backgroundColor="white"
+            borderColor="grey-light-hover"
+            className=" rounded-md !text-grey-normal"
+            variant="outline"
+          >
+            Quick Edit
+          </Button>
+        </div>
 
         <div className="flex gap-2">
           <Button
             variant="outline"
             borderColor="primaryN30"
-            className="!text-grey-normal text-xs"
+            className="!text-grey-normal text-xs rounded-md"
             onClick={() => {
               if (takeOff?.reconcile_candidate_count?.[selectedFileId] >= 0) {
                 router.push(
@@ -412,7 +440,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
             }}
           >
             <div className="flex items-center justify-center">
-              <span>Reconcile Items</span>
+              <span>Reconcile </span>
               <span
                 className="ml-1 px-[8px] py-[1px] rounded-2xl inline-block text-white text-sm"
                 style={{

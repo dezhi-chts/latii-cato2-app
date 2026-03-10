@@ -14,6 +14,7 @@ export const colorList = {
   primaryN200: "#6B788E",
   primaryN400: "#013249",
   primaryN900: "#091E42",
+  white: "#FFFFFF",
   neutralsN600: "#354764",
   neutralsN40: "#DFE2E6",
   kahuBlue: "#008ECE",

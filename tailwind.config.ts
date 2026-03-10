@@ -209,6 +209,7 @@ export default {
         neutralsN40: "#DFE2E6",
         kahuBlue: "#008ECE",
         disarmBlue: "#006C9B;",
+        white: "#FFFFFF",
         dragonOrange: "#FF931E",
         accentRed: "#FE3C30",
         accentBananas: "#F6CE4C",
