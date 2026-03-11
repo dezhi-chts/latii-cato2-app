@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AddBoxTypeModal from "./Add-Box-Type-Modal";
 import { useCompany } from "@/context/CompanyContext";
-import { Input } from "antd";
+import { Input, Tooltip } from "antd";
 import {
   createBoxType,
   deleteBoxType,
@@ -18,7 +18,7 @@ type BoxType = {
   id: number | string;
   name: string;
   description?: string;
-  color?: keyof typeof boxesColors | string;
+  color?: string;
   search_prompt?: string;
   analysis_prompt?: string;
   is_deleted?: boolean;
@@ -26,6 +26,7 @@ type BoxType = {
   update_time?: string;
   update_user?: string;
   create_user?: string;
+  is_system_default: boolean;
 };
 
 type EditingDraft = {
@@ -36,7 +37,26 @@ type EditingDraft = {
   analysis_prompt: string;
 };
 
-const colorOptions = Object.keys(boxesColors) as (keyof typeof boxesColors)[];
+const colorOptions = Object.entries(boxesColors).map(([name, hex]) => ({
+  name,
+  hex,
+}));
+
+const formatColorName = (value: string) =>
+  value
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getColorNameByHex = (hex?: string) => {
+  if (!hex) return "";
+
+  const found = colorOptions.find(
+    (color) => color.hex.toLowerCase() === hex.toLowerCase()
+  );
+
+  return found ? formatColorName(found.name) : hex;
+};
 
 const BoxesType = () => {
   const { company } = useCompany();
@@ -46,24 +66,18 @@ const BoxesType = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Menú 3 puntitos
   const [openMenuId, setOpenMenuId] = useState<number | string | null>(null);
-  // Menú colores (por fila)
   const [openColorId, setOpenColorId] = useState<number | string | null>(null);
 
-  // Delete / Update loading
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [updatingId, setUpdatingId] = useState<number | string | null>(null);
 
-  // Inline edit
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [draft, setDraft] = useState<EditingDraft | null>(null);
 
-  // Refs para click-afueras (asignamos solo al menú abierto)
   const actionsRef = useRef<HTMLDivElement | null>(null);
   const colorsRef = useRef<HTMLDivElement | null>(null);
 
-  // Para evitar doble update si blur/disparos rápidos
   const lastUpdateKeyRef = useRef<string>("");
 
   const handleAddModalCancel = () => setIsAddModalOpen(false);
@@ -85,7 +99,6 @@ const BoxesType = () => {
       await fetchBoxes();
     } else {
       console.error("Create box type failed:", res?.data);
-      // si después querés, lo mostramos lindo en UI
     }
   };
 
@@ -110,7 +123,6 @@ const BoxesType = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
-  // ✅ Cerrar menús al click afuera + ESC
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node;
@@ -162,7 +174,6 @@ const BoxesType = () => {
     });
   }, [boxes, search]);
 
-  // ✅ Mejora 1: delete snapshot correcto (sin stale)
   const handleDelete = async (boxId: number | string) => {
     if (!company?.id) return;
 
@@ -178,8 +189,6 @@ const BoxesType = () => {
 
     try {
       await deleteBoxType(company.id, boxId);
-      // ✅ Mejora 2 opcional: sync con backend
-      // await fetchBoxes();
     } catch (e) {
       console.error(e);
       setBoxes(prevSnapshot);
@@ -196,7 +205,7 @@ const BoxesType = () => {
     setDraft({
       name: box?.name ?? "",
       description: box?.description ?? "",
-      color: (box?.color as string) ?? "",
+      color: box?.color ?? "",
       search_prompt: box?.search_prompt ?? "",
       analysis_prompt: box?.analysis_prompt ?? "",
     });
@@ -211,14 +220,12 @@ const BoxesType = () => {
   const commitUpdate = async (boxId: number | string, next: EditingDraft) => {
     if (!company?.id) return;
 
-    // evita calls idénticas seguidas
     const key = `${boxId}|${JSON.stringify(next)}`;
     if (lastUpdateKeyRef.current === key) return;
     lastUpdateKeyRef.current = key;
 
     setUpdatingId(boxId);
 
-    // optimistic update de UI (solo en esa fila)
     const prevSnapshot = boxes;
     setBoxes((cur) => cur.map((b) => (b.id === boxId ? { ...b, ...next } : b)));
 
@@ -231,9 +238,6 @@ const BoxesType = () => {
 
       if (res?.status !== "success") {
         setBoxes(prevSnapshot);
-      } else {
-        // opcional: sync si querés estar 100% con backend
-        // await fetchBoxes();
       }
     } catch (e) {
       console.error(e);
@@ -266,14 +270,18 @@ const BoxesType = () => {
     }
   };
 
-  const handlePickColor = async (boxId: number | string, color: string) => {
-    if (!draft) return;
+  const handlePickColor = async (boxId: number | string, colorHex: string) => {
+    setDraft((currentDraft) => {
+      if (!currentDraft) return currentDraft;
 
-    const next = { ...draft, color };
-    setDraft(next);
+      const next = { ...currentDraft, color: colorHex };
+
+      void commitUpdate(boxId, next);
+
+      return next;
+    });
+
     setOpenColorId(null);
-
-    await commitUpdate(boxId, next);
   };
 
   return (
@@ -284,7 +292,6 @@ const BoxesType = () => {
         onOk={handleOkAddModal}
       />
 
-      {/* titles */}
       <div className="flex justify-between items-center w-full mb-8">
         <div className="flex flex-col gap-1">
           <p className="text-base text-grey-base-dark">Box Information</p>
@@ -321,7 +328,6 @@ const BoxesType = () => {
       </div>
 
       <div className="w-full">
-        {/* encabezados */}
         <div className="w-full flex bg-primaryN20 border-b border-b-primaryN30 text-grey-normal py-3 rounded-t-md">
           <div className="w-2/12 text-center">Logic Name</div>
           <div className="w-1/12 text-center">Color</div>
@@ -329,7 +335,6 @@ const BoxesType = () => {
           <div className="w-5/12 text-center">Analysis Prompt</div>
         </div>
 
-        {/* contenido */}
         {isLoading ? (
           <div className="py-6 text-grey-normal text-center">
             Loading box types...
@@ -342,13 +347,15 @@ const BoxesType = () => {
           filteredBoxes.map((box) => {
             const isEditing = editingId === box.id;
             const isUpdating = updatingId === box.id;
+            const currentColor = isEditing
+              ? draft?.color ?? "#A3A3A3"
+              : box?.color ?? "#A3A3A3";
 
             return (
               <div
                 key={`${box.id}-${box.name}`}
                 className="w-full flex py-6 border-b border-primaryN30"
               >
-                {/* Name */}
                 <div className="w-2/12 px-2 flex items-center justify-center">
                   {isEditing ? (
                     <Input
@@ -367,66 +374,66 @@ const BoxesType = () => {
                   )}
                 </div>
 
-                {/* Color */}
                 <div className="w-1/12 flex justify-center items-center">
                   {isEditing ? (
                     <div
                       className="relative"
                       ref={openColorId === box.id ? colorsRef : null}
                     >
-                      <button
-                        type="button"
-                        className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-primaryN20"
-                        onClick={() =>
-                          setOpenColorId(openColorId === box.id ? null : box.id)
-                        }
-                        aria-label="Pick color"
-                      >
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{
-                            backgroundColor:
-                              boxesColors?.[
-                                (draft?.color as keyof typeof boxesColors) ??
-                                  (box?.color as keyof typeof boxesColors)
-                              ] ?? "#A3A3A3",
-                          }}
-                        />
-                      </button>
+                      <Tooltip title={getColorNameByHex(currentColor)}>
+                        <button
+                          type="button"
+                          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-primaryN20"
+                          onClick={() =>
+                            setOpenColorId(
+                              openColorId === box.id ? null : box.id
+                            )
+                          }
+                          aria-label="Pick color"
+                        >
+                          <div
+                            className="w-4 h-4 rounded-full"
+                            style={{
+                              backgroundColor: currentColor,
+                            }}
+                          />
+                        </button>
+                      </Tooltip>
 
                       {openColorId === box.id && (
                         <div className="absolute right-0 top-11 bg-white border border-primaryN30 rounded-xl shadow-md z-10 p-2 flex flex-wrap gap-2 w-[160px]">
-                          {colorOptions.map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              title={c}
-                              className="w-9 h-9 rounded-xl hover:bg-primaryN20 flex items-center justify-center"
-                              onClick={() => handlePickColor(box.id, c)}
-                            >
-                              <div
-                                className="w-4 h-4 rounded-full"
-                                style={{ backgroundColor: boxesColors[c] }}
-                              />
-                            </button>
+                          {colorOptions.map(({ name, hex }) => (
+                            <Tooltip key={name} title={formatColorName(name)}>
+                              <button
+                                type="button"
+                                className="w-9 h-9 rounded-xl hover:bg-primaryN20 flex items-center justify-center"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  void handlePickColor(box.id, hex);
+                                }}
+                              >
+                                <div
+                                  className="w-4 h-4 rounded-full"
+                                  style={{ backgroundColor: hex }}
+                                />
+                              </button>
+                            </Tooltip>
                           ))}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{
-                        backgroundColor:
-                          boxesColors?.[
-                            box?.color as keyof typeof boxesColors
-                          ] ?? "#A3A3A3",
-                      }}
-                    />
+                    <Tooltip title={getColorNameByHex(box?.color)}>
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{
+                          backgroundColor: box?.color ?? "#A3A3A3",
+                        }}
+                      />
+                    </Tooltip>
                   )}
                 </div>
 
-                {/* Search Prompt */}
                 <div className="w-4/12 px-2 flex items-center">
                   {isEditing ? (
                     <Input
@@ -445,7 +452,6 @@ const BoxesType = () => {
                   )}
                 </div>
 
-                {/* Analysis Prompt + actions */}
                 <div className="w-5/12 px-2 flex justify-between items-center relative">
                   <div className="w-11/12">
                     {isEditing ? (
@@ -465,28 +471,29 @@ const BoxesType = () => {
                     )}
                   </div>
 
-                  {/* actions menu */}
                   <div
                     className="relative"
                     ref={openMenuId === box.id ? actionsRef : null}
                   >
-                    <button
-                      type="button"
-                      className="w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primaryN20"
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === box.id ? null : box.id)
-                      }
-                      aria-label="Open actions"
-                      disabled={isUpdating || deletingId === box.id}
-                    >
-                      <Image
-                        src="/assets/icons/three-dots.svg"
-                        alt=""
-                        width={60}
-                        height={20}
-                        className="opacity-80"
-                      />
-                    </button>
+                    {!box.is_system_default && (
+                      <button
+                        type="button"
+                        className="w-10 h-10 flex items-center justify-center rounded-lg cursor-pointer hover:bg-primaryN20"
+                        onClick={() =>
+                          setOpenMenuId(openMenuId === box.id ? null : box.id)
+                        }
+                        aria-label="Open actions"
+                        disabled={isUpdating || deletingId === box.id}
+                      >
+                        <Image
+                          src="/assets/icons/three-dots.svg"
+                          alt=""
+                          width={60}
+                          height={20}
+                          className="opacity-80"
+                        />
+                      </button>
+                    )}
 
                     {openMenuId === box.id && (
                       <div className="absolute right-0 top-11 bg-white border border-primaryN30 rounded-xl shadow-md flex items-center gap-2 px-2 py-1 z-10">
@@ -523,7 +530,6 @@ const BoxesType = () => {
                   </div>
                 </div>
 
-                {/* mini feedback opcional */}
                 {isEditing && (
                   <button
                     type="button"
