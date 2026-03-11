@@ -3,6 +3,8 @@
 import { Input, Modal, Select } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { boxesColors } from "@/lib/constants";
+import Button from "@/components/Button";
+import ExploreExamplesModal from "./Explore-Examples-Modal";
 
 type CreateBoxTypeData = {
   name: string;
@@ -20,6 +22,8 @@ type ModalProps = {
 
 const AddBoxTypeModal = (props: ModalProps) => {
   const { TextArea } = Input;
+  const [isExploreExamplesModalOpen, setIsExploreExamplesModalOpen] =
+    useState<boolean>(false);
 
   const [form, setForm] = useState<CreateBoxTypeData>({
     name: "",
@@ -90,19 +94,48 @@ const AddBoxTypeModal = (props: ModalProps) => {
     ),
   }));
 
+  const footer = (
+    <div className="flex justify-between">
+      <div>
+        <p
+          className="underline text-grey-normal cursor-pointer"
+          onClick={() => setIsExploreExamplesModalOpen(true)}
+        >
+          Explore Examples
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          className="rounded-md"
+          onClick={props.handleCancel}
+          backgroundColor="grey-light"
+          color="grey-dark"
+        >
+          Cancel
+        </Button>
+        <Button
+          disabled={!isValid}
+          backgroundColor="forumBlue-normal"
+          className=" rounded-md bg-forumBlue-normal text-white border-none hover:bg-forumBlue-normal disabled:opacity-70 disabled:text-white"
+          onClick={handleOk}
+        >
+          Create
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <Modal
       open={props.isOpen}
       onCancel={props.handleCancel}
       onOk={handleOk}
-      okButtonProps={{
-        disabled: !isValid,
-        loading: submitting,
-        className:
-          "bg-forumBlue-normal text-white border-none hover:bg-forumBlue-normal disabled:opacity-70 disabled:text-white",
-      }}
-      okText="Create"
+      footer={footer}
     >
+      <ExploreExamplesModal
+        isOpen={isExploreExamplesModalOpen}
+        handleCancel={() => setIsExploreExamplesModalOpen(false)}
+      />
       <div className="flex flex-col gap-7">
         {/* titulo y subtitulo */}
         <div className="flex flex-col gap-2">
