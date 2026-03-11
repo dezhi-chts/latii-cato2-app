@@ -35,16 +35,6 @@ const ProjectsSettings = () => {
   };
   type FieldOption = { label: string; value: string };
 
-  const parseMetadataOptions = (metadata?: any[]): FieldOption[] => {
-    try {
-      const raw = metadata?.[0];
-      if (!raw || typeof raw !== "string") return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
   const { company, refreshCompany } = useCompany();
 
   const scrollDiv = useRef<HTMLDivElement | null>(null);

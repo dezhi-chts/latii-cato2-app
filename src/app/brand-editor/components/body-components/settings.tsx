@@ -26,7 +26,7 @@ const Settings = () => {
   };
   return (
     <div className="w-full h-full pl-6">
-      <div className="flex gap-2 justify-start">
+      <div className="flex gap-2 justify-start sticky top-[110px] pt-8 w-full bg-white z-50">
         {tabs.map((item: any) => {
           return (
             <div
