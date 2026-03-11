@@ -97,11 +97,21 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
           const Component = FIELD_COMPONENTS_BY_NUMBER[attr?.type];
           if (!Component) return null;
 
-          const options = attr?.metadata ?? [];
-          const formattedOptions = formatOptions(options);
           const isNumber = attr?.type === 2;
           const value = settings?.attributes?.[attr?.uuid];
           const isBlur = COMMIT_ON_BLUR.has(attr?.type);
+
+          const metadata = attr?.metadata ?? [];
+
+          const hasOptions = metadata.length > 0;
+
+          const options = hasOptions ? JSON.parse(metadata[0]) : [];
+
+          console.log(options);
+
+          const isMultiple = metadata.length > 1 && metadata[1] === "multiple";
+
+          const isRadio = attr.type === 5;
 
           return (
             <div key={attr.uuid} className="w-80">
@@ -109,8 +119,9 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
                 name={attr.label}
                 required={attr.required}
                 hint_text={attr.has_hint_text ? attr.hint : undefined}
-                options={formattedOptions}
+                options={options}
                 value={value}
+                is_multiple={isMultiple}
                 {...(isBlur
                   ? {
                       onChange: (e: any) => {
@@ -122,7 +133,11 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
                       onBlur: () => updateProject(),
                     }
                   : {
-                      onChange: (v: any) => handleSelectChange(attr.label, v),
+                      onChange: (v: any) =>
+                        handleSelectChange(
+                          attr.label,
+                          isRadio ? v.target.value : v,
+                        ),
                     })}
               />
               {attr.required && !value && (

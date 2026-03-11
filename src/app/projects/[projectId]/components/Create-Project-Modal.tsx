@@ -82,7 +82,10 @@ const CreateProjectModal = ({
     const attributes = Object.fromEntries(
       Object.entries(rest)
         .filter(([key]) => attributeKeyByName[key])
-        .map(([key, value]) => [attributeKeyByName[key], value ?? ""]),
+        .map(([key, value]) => [
+          attributeKeyByName[key],
+          Array.isArray(value) ? JSON.stringify(value) : (value ?? ""),
+        ]),
     );
 
     return {

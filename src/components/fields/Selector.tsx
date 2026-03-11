@@ -21,6 +21,17 @@ const Selector = ({
   value,
   is_multiple = false,
 }: SelectorProps) => {
+  const tryToParseValue = (value: any) => {
+    try {
+      const newValue = JSON.parse(value);
+      if (Array.isArray(newValue)) {
+        return newValue;
+      }
+    } catch (error) {
+      return value;
+    }
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
@@ -28,7 +39,7 @@ const Selector = ({
       </p>
       <Select
         mode={is_multiple ? "multiple" : undefined}
-        value={value}
+        value={tryToParseValue(value)}
         placeholder={hint_text}
         className="max-w-80"
         options={options}

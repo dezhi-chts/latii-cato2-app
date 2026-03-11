@@ -119,7 +119,18 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdate = async (updatedProject: any) => {
     if (!updatedProject?.project_id) return;
-    await updateProject(updatedProject);
+
+    const normalizedProject = {
+      ...updatedProject,
+      attributes: Object.fromEntries(
+        Object.entries(updatedProject.attributes ?? {}).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? JSON.stringify(value) : value,
+        ]),
+      ),
+    };
+
+    await updateProject(normalizedProject);
     await refetchProject();
   };
 
@@ -229,10 +240,25 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
             .map(([key, value]) => {
               const title = getTitleByAttribueId(key);
 
+              let displayValue = value;
+
+              if (Array.isArray(value)) {
+                displayValue = value.join(", ");
+              } else if (typeof value === "string" && value.startsWith("[")) {
+                try {
+                  const parsed = JSON.parse(value);
+                  if (Array.isArray(parsed)) {
+                    displayValue = parsed.join(", ");
+                  }
+                } catch {}
+              }
+
               return (
                 <div key={key} className="flex gap-2 text-sm text-grey-normal">
                   <span className="font-bold ">{title}</span>
-                  <span className="max-w-32 truncate">{String(value)}</span>
+                  <span className="max-w-32 truncate">
+                    {String(displayValue)}
+                  </span>
                 </div>
               );
             })}

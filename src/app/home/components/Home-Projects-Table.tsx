@@ -142,6 +142,20 @@ const HomeProjectsTable = ({
         align: "center" as const,
         render: (_: unknown, record: any) => {
           const value = record.attributes?.[attrId] ?? "-";
+
+          if (Array.isArray(value)) {
+            return <TextCell value={value.join(", ")} />;
+          }
+
+          if (typeof value === "string" && value.startsWith("[")) {
+            try {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) {
+                return <TextCell value={parsed.join(", ")} />;
+              }
+            } catch {}
+          }
+
           return <TextCell value={value} />;
         },
       };
