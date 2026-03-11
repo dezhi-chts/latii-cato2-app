@@ -9,6 +9,7 @@ type SelectorProps = {
   options?: Option[];
   onChange?: () => void;
   value?: string;
+  is_multiple?: boolean;
 };
 
 const Selector = ({
@@ -18,6 +19,7 @@ const Selector = ({
   options = [],
   onChange,
   value,
+  is_multiple = false,
 }: SelectorProps) => {
   return (
     <div className="flex flex-col gap-2">
@@ -25,6 +27,7 @@ const Selector = ({
         {name} {RequiredHint(required)}
       </p>
       <Select
+        mode={is_multiple ? "multiple" : undefined}
         value={value}
         placeholder={hint_text}
         className="max-w-80"

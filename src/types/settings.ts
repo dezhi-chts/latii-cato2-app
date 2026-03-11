@@ -20,7 +20,7 @@ export type ProjectField = {
   is_fixed: boolean;
   has_hint_text?: boolean;
   hint?: string;
-  metadata: String[];
+  metadata: string[];
 };
 
 export type FormulasBox = {

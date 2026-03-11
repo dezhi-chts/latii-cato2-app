@@ -31,14 +31,13 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
   const hasOptions = type === 3 || type === 4 || type === 5;
   const isDate = type === 7;
-  const isRanged = (metadata ?? []).includes("ranged");
+  const isRanged = metadata?.[0] === "ranged";
+  const isMultiple = metadata?.[1] === "multiple";
 
-  // ✅ Local states
   const [localLabel, setLocalLabel] = useState(label ?? "");
   const [localHint, setLocalHint] = useState(hint ?? "");
   const [localOptions, setLocalOptions] = useState<string[]>(metadata ?? []);
 
-  // ✅ Sync when backend refreshes
   useEffect(() => {
     setLocalLabel(label ?? "");
   }, [label]);
@@ -48,10 +47,16 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
   }, [hint]);
 
   useEffect(() => {
-    setLocalOptions(metadata ?? []);
+    try {
+      const parsed = JSON.parse(metadata?.[0] ?? "[]");
+      console.log(parsed);
+      const options = parsed?.map((o: any) => o.value);
+      setLocalOptions(options ?? []);
+    } catch (error) {
+      console.log(error);
+    }
   }, [metadata]);
 
-  // ✅ Commit helpers
   const commitLabel = () => {
     if (localLabel !== (label ?? "")) {
       onChange?.({ label: localLabel });

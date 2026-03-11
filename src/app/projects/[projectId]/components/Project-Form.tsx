@@ -10,7 +10,7 @@ import Selector from "@/components/fields/Selector";
 import ShortText from "@/components/fields/ShortText";
 import Switch from "@/components/fields/Switch";
 import { useCompany } from "@/context/CompanyContext";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export const FIELD_COMPONENTS_BY_NUMBER: Record<
   number,
@@ -38,21 +38,50 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
   const { company } = useCompany();
   const attributes = company?.project_attributes ?? [];
 
+  const getFieldKey = (label: string) =>
+    label.toLowerCase().replaceAll(" ", "_");
+
   const commit = (label: string) => (value: any) => {
     setForm((prev) => ({
       ...prev,
-      [label.toLowerCase().replace(" ", "_")]: value,
+      [getFieldKey(label)]: value,
     }));
   };
 
+  useEffect(() => {
+    console.log(form);
+  }, [form]);
+
   function formatOptions(options: string[]) {
-    if (!options.length) return [];
+    if (!Array.isArray(options) || !options?.length) return [];
     const formatted = options.map((option: string) => ({
       value: option,
       label: option,
     }));
     return formatted;
   }
+
+  useEffect(() => {
+    setForm((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const attr of attributes) {
+        if (!attr?.label || attr.type !== 5) continue;
+
+        const key = getFieldKey(attr.label);
+        const options = formatOptions(attr?.metadata ?? []);
+        const firstValue = options[0]?.value;
+
+        if (prev[key] === undefined && firstValue !== undefined) {
+          next[key] = firstValue;
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [attributes]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -72,8 +101,15 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
 
         const isBlur = COMMIT_ON_BLUR.has(attr.type);
 
-        const options = attr?.metadata ?? [];
-        const formattedOptions = formatOptions(options);
+        const metadata = attr?.metadata ?? [];
+
+        const hasOptions = metadata.length > 0;
+
+        const options = hasOptions ? JSON.parse(metadata[0]) : [];
+
+        const isMultiple = metadata.length > 1 && metadata[1] === "multiple";
+
+        const isRadio = attr.type === 5;
 
         return (
           <Component
@@ -81,15 +117,17 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
             name={attr.label}
             required={attr.required}
             hint_text={attr.has_hint_text ? attr.hint : undefined}
-            options={formattedOptions}
+            options={options}
+            is_multiple={isMultiple}
             {...(isBlur
               ? {
                   onBlur: (e: any) =>
                     commit(attr.label)(e?.target?.value ?? ""),
                 }
               : {
-                  value: form[attr.label],
-                  onChange: (v: any) => commit(attr.label)(v),
+                  value: form[getFieldKey(attr.label)],
+                  onChange: (v: any) =>
+                    commit(attr.label)(isRadio ? v.target.value : v),
                 })}
           />
         );
