@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Button from "@/components/Button";
 import { FieldBox } from "./Field-Box";
-import { ConfigProvider, Divider } from "antd";
+import { ConfigProvider, Divider, Tooltip } from "antd";
 import { useCompany } from "@/context/CompanyContext";
 import { updateCompanyByCompanyId } from "@/services/companyService";
 import ShortText from "@/components/fields/ShortText";
@@ -47,9 +47,16 @@ const ProjectsSettings = () => {
   };
   const { company, refreshCompany } = useCompany();
 
+  const scrollDiv = useRef<HTMLDivElement | null>(null);
+
   const fieldsCount = company?.project_attributes?.length ?? 0;
 
+  const waitForRender = () =>
+    new Promise((resolve) => requestAnimationFrame(() => resolve(true)));
+
   const addField = async () => {
+    if (fieldsCount >= 10) return;
+
     const newAttribute = {
       type: 0,
       hint: "",
@@ -66,6 +73,15 @@ const ProjectsSettings = () => {
 
     await updateCompanyByCompanyId(company.id, updatedCompany);
     await refreshCompany();
+    await waitForRender();
+    scrollToBottom();
+  };
+
+  const scrollToBottom = () => {
+    scrollDiv.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
   };
 
   const deleteField = async (uuid: string) => {
@@ -147,15 +163,22 @@ const ProjectsSettings = () => {
               </p>
             </div>
 
-            <Button
-              backgroundColor="forumBlue-normal"
-              className="rounded-md !px-4 !py-1"
-              onClick={addField}
+            <Tooltip
+              title={fieldsCount >= 10 ? "Maximum 10 fields" : ""}
+              placement="top"
             >
-              + Add Field
-            </Button>
+              <div>
+                <Button
+                  backgroundColor="forumBlue-normal"
+                  className="rounded-md !px-4 !py-1"
+                  onClick={addField}
+                  disabled={fieldsCount >= 10}
+                >
+                  + Add Field
+                </Button>
+              </div>
+            </Tooltip>
           </div>
-
           <div className="overflow-auto max-h-[65vh] scrollbar-hidden">
             <div className="flex flex-col gap-6">
               {company?.project_attributes?.map((field: any, index: number) => (
@@ -171,6 +194,7 @@ const ProjectsSettings = () => {
                 />
               ))}
             </div>
+            <div ref={scrollDiv} />
           </div>
         </div>
 
