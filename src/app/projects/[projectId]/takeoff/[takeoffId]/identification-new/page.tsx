@@ -15,7 +15,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getTakeOffById } from "@/services/takeOffService";
-import { getBoxTypes } from "@/services/drawingIndexService";
 import { useUser } from "@/context/UserContext";
 
 import {
@@ -70,6 +69,9 @@ const PageLabelingContent = () => {
     fileViewStep,
     setFileViewStep,
     indexBoxCount,
+    loadFromStorage,
+    clearStorage,
+    mergeFileStatus
   } = useTakeoff();
 
   const drawingIndexRef = useRef<any>(null);
@@ -83,6 +85,47 @@ const PageLabelingContent = () => {
     }
   }, [takeOffId, company_id]);
 
+  const [isPageRefresh, setIsPageRefresh] = useState(false);
+  const [isClearStorage, setIsClearStorage] = useState(true);
+
+  useEffect(() => {
+    // 步骤1：监听页面卸载前的事件（刷新/关闭标签页都会触发）
+    const handleBeforeUnload = () => {
+      // 存入sessionStorage，标记"页面即将刷新"
+      sessionStorage.setItem('isRefreshing', 'true');
+      // 注：sessionStorage 仅在当前标签页有效，关闭标签页后会清空，适合区分刷新
+    };
+
+    // 步骤2：页面加载时校验标记
+    const checkRefresh = () => {
+      const isRefreshing = sessionStorage.getItem('isRefreshing');
+      console.log('isRefreshing', isRefreshing);
+      if (isRefreshing === 'true') {
+        // 说明是刷新行为
+        setIsPageRefresh(true);
+        // 清空标记，避免下次加载误判
+        sessionStorage.removeItem('isRefreshing');
+      } else {
+        // 首次加载/路由跳转
+        setIsPageRefresh(false);
+      }
+    };
+
+    // 绑定事件
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    // 页面加载完成后校验
+    checkRefresh();
+
+    // 组件卸载时解绑事件（避免内存泄漏）
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (isClearStorage) {
+        // 组件卸载时清除sessionStorage标记
+        clearStorage();
+      }
+    };
+  }, []);
+
 
   const getTakeOffDetails = async () => {
     setFullLoading(true);
@@ -91,16 +134,40 @@ const PageLabelingContent = () => {
       let project_files = res?.data?.project_files ?? [];
       setTakeOff(res?.data ?? {});
       if (project_files?.length > 0) {
-        // 将第一个文件状态设置为处理中
-        const updatedFiles = project_files.map((file: any, index: number) =>
-          index === 0 ? { ...file, status: FileStatus.Processing } : file,
-        );
-        setFileList(updatedFiles);
-        setSelectedFileId(project_files[0].id); // 设置默认选中文件ID
-        if (project_files[0].operation_type === FileOperationType.ArchitectureDrawing) {
-          setFileViewStep(FileViewStep.IndexSummary);
-        } else if (project_files[0].operation_type === FileOperationType.Quote) {
-          setFileViewStep(FileViewStep.Second);
+        let loadedFiles = loadFromStorage();
+        if (loadedFiles?.fileList?.length > 0) {
+          // 将本地保存的文件状态同步到项目文件状态
+          let list = mergeFileStatus(project_files);
+          setFileList(list);
+
+          // 检查是否所有文件都已完成
+          const allCompleted = list.every((file: any) => file.status === FileStatus.Completed);
+          if (allCompleted) {
+            // 如果所有文件都已完成，不设置选中文件id，设置为合并页面
+            setSelectedFileId(-1);
+            setFileViewStep(FileViewStep.FileMerge);
+          } else {
+            // 检查是否只有一个文件为处理中
+            const processFiles = list.filter((file: any) => file.status === FileStatus.Processing);
+            if (processFiles.length === 1) {
+              // 如果只有一个处理中的文件，设置为选中文件
+              const processFile = processFiles[0];
+              setSelectedFileId(processFile.id);
+              setFileViewStep(processFile.operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
+            } else {
+              // 其他情况默认设置第一个文件为当前操作文件
+              setSelectedFileId(project_files[0].id);
+              setFileViewStep(project_files[0].operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
+            }
+          }
+        } else {
+          // 如果loadedFiles?.fileList为空，取第一个文件的设置逻辑
+          const updatedFiles = project_files.map((file: any, index: number) =>
+            index === 0 ? { ...file, status: FileStatus.Processing } : file,
+          );
+          setFileList(updatedFiles);
+          setSelectedFileId(project_files[0].id);
+          setFileViewStep(project_files[0].operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
         }
       } else {
         notification.error({
