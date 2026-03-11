@@ -151,7 +151,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
       title: <div className="text-center text-xs text-grey-normal">State</div>,
       dataIndex: "state",
       width: 60,
-      fixed: "left",
+      fixed: "right",
       align: "center",
       render: (_: any, record: any, index: number) => {
         return (
@@ -194,14 +194,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
         );
       },
     },
-    {
-      title: <div className="text-center text-xs text-grey-normal">#</div>,
-      dataIndex: "number",
-      width: 50,
-      fixed: "left",
-      align: "center",
-      render: (_: any, record: any, index: number) => index + 1,
-    },
+
     {
       title: <div className="text-center text-xs text-grey-normal">Label</div>,
       dataIndex: "label",
@@ -467,6 +460,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
           pagination={false}
           size="small"
           rowSelection={rowSelection as any}
+          className="border-l-forum-blue"
           scroll={{
             x: "max-content",
             y: "calc(100vh - 300px)", // 保留垂直滚动功能
