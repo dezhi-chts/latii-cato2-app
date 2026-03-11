@@ -98,7 +98,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           disabled={!!is_fixed}
           onChange={(e) => setLocalLabel(e.target.value)}
           onBlur={commitLabel}
-          placeholder="Project Name"
+          placeholder="Add a section name"
           className="rounded-md px-3 h-8 w-60 font-normal"
         />
 
