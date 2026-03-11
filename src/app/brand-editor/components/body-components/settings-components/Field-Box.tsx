@@ -7,11 +7,43 @@ import { Checkbox, Input, Select, Switch } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 
+type FieldOption = {
+  label: string;
+  value: string;
+};
+
 const formatLabel = (label: string) =>
   label
     ?.replaceAll("_", " ")
     .toLowerCase()
     .replace(/^\w/, (c) => c.toUpperCase());
+
+const parseOptionsFromMetadata = (metadata?: string[]): string[] => {
+  const raw = metadata?.[0];
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((opt: any) => String(opt?.label ?? opt?.value ?? ""));
+  } catch {
+    return [];
+  }
+};
+
+const serializeOptionsToMetadata = (
+  options: string[],
+  extraFlags: string[] = []
+): string[] => {
+  const parsedOptions: FieldOption[] = options.map((opt) => ({
+    label: opt,
+    value: opt,
+  }));
+
+  return [JSON.stringify(parsedOptions), ...extraFlags];
+};
 
 export const FieldBox = (field: ProjectFieldBoxProps) => {
   const {
@@ -30,15 +62,18 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
   } = field;
 
   const hasOptions = type === 3 || type === 4 || type === 5;
+  const supportsMultiple = type === 3 || type === 4;
   const isDate = type === 7;
+
+  const isMultiple = (metadata ?? []).includes("multiple");
   const isRanged = (metadata ?? []).includes("ranged");
 
-  // ✅ Local states
   const [localLabel, setLocalLabel] = useState(label ?? "");
   const [localHint, setLocalHint] = useState(hint ?? "");
-  const [localOptions, setLocalOptions] = useState<string[]>(metadata ?? []);
+  const [localOptions, setLocalOptions] = useState<string[]>(
+    hasOptions ? parseOptionsFromMetadata(metadata) : []
+  );
 
-  // ✅ Sync when backend refreshes
   useEffect(() => {
     setLocalLabel(label ?? "");
   }, [label]);
@@ -48,10 +83,14 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
   }, [hint]);
 
   useEffect(() => {
-    setLocalOptions(metadata ?? []);
-  }, [metadata]);
+    if (hasOptions) {
+      setLocalOptions(parseOptionsFromMetadata(metadata));
+      return;
+    }
 
-  // ✅ Commit helpers
+    setLocalOptions([]);
+  }, [metadata, hasOptions]);
+
   const commitLabel = () => {
     if (localLabel !== (label ?? "")) {
       onChange?.({ label: localLabel });
@@ -64,8 +103,24 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
     }
   };
 
-  const commitOptions = (next: string[]) => {
-    onChange?.({ metadata: next });
+  const commitOptions = (nextOptions: string[]) => {
+    const extraFlags = supportsMultiple && isMultiple ? ["multiple"] : [];
+    onChange?.({
+      metadata: serializeOptionsToMetadata(nextOptions, extraFlags),
+    });
+  };
+
+  const toggleMultiple = (checked: boolean) => {
+    const extraFlags = checked ? ["multiple"] : [];
+    onChange?.({
+      metadata: serializeOptionsToMetadata(localOptions, extraFlags),
+    });
+  };
+
+  const toggleRanged = (checked: boolean) => {
+    onChange?.({
+      metadata: checked ? ["ranged"] : [],
+    });
   };
 
   const inputTypeOptions = Object.entries(FIELD_TYPE_MAP).map(
@@ -81,7 +136,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           <span>{formatLabel(label)}</span>
         </div>
       ),
-    }),
+    })
   );
 
   return (
@@ -92,7 +147,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           {id + 1}
         </div>
 
-        {/* LABEL */}
         <Input
           value={localLabel}
           disabled={!!is_fixed}
@@ -102,7 +156,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           className="rounded-md px-3 h-8 w-60 font-normal"
         />
 
-        {/* TYPE */}
         <Select
           value={type}
           disabled={!!is_fixed}
@@ -111,7 +164,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           className="w-52 rounded-md h-8 font-normal"
         />
 
-        {/* ACTIONS */}
         {!is_fixed && (
           <div className="ml-auto flex items-center gap-3 mr-3">
             <button
@@ -142,7 +194,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
 
       {/* BODY */}
       <div className="border border-t-0 border-grey-light-hover rounded-b-xl p-3">
-        {/* OPTIONS (Dropdown / Radio / Checkbox) */}
         {hasOptions && (
           <div className="px-4 pb-4">
             <p className="text-xs text-grey-normal mb-2">Options</p>
@@ -196,7 +247,7 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
             </Button>
           </div>
         )}
-        {/* HINT + REQUIRED */}
+
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-4">
             <Checkbox
@@ -207,18 +258,21 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
               Hint Text
             </Checkbox>
 
+            {supportsMultiple && (
+              <Checkbox
+                checked={isMultiple}
+                disabled={!!is_fixed}
+                onChange={(e) => toggleMultiple(e.target.checked)}
+              >
+                Multiple Select
+              </Checkbox>
+            )}
+
             {isDate && (
               <Checkbox
                 checked={isRanged}
                 disabled={!!is_fixed}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  const next = checked
-                    ? Array.from(new Set([...(metadata ?? []), "ranged"]))
-                    : (metadata ?? []).filter((m) => m !== "ranged");
-
-                  onChange?.({ metadata: next });
-                }}
+                onChange={(e) => toggleRanged(e.target.checked)}
               >
                 Range Selection
               </Checkbox>
@@ -235,7 +289,6 @@ export const FieldBox = (field: ProjectFieldBoxProps) => {
           </div>
         </div>
 
-        {/* HINT INPUT */}
         {has_hint_text && (
           <div className="px-4 pb-4">
             <Input

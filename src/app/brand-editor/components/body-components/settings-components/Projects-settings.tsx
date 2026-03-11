@@ -17,6 +17,11 @@ import Weblink from "@/components/fields/Link";
 import Check from "@/components/fields/Check";
 import Location from "@/components/fields/Location";
 
+type FieldOption = {
+  label: string;
+  value: string;
+};
+
 const ProjectsSettings = () => {
   const FIELD_COMPONENTS_BY_NUMBER: Record<
     number,
@@ -33,7 +38,6 @@ const ProjectsSettings = () => {
     8: (props) => <Weblink {...props} />,
     9: (props) => <Location {...props} />,
   };
-  type FieldOption = { label: string; value: string };
 
   const { company, refreshCompany } = useCompany();
 
@@ -43,6 +47,35 @@ const ProjectsSettings = () => {
 
   const waitForRender = () =>
     new Promise((resolve) => requestAnimationFrame(() => resolve(true)));
+
+  const parseOptionsFromMetadata = (metadata?: string[]): FieldOption[] => {
+    const raw = metadata?.[0];
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed.map((opt: any) => ({
+        label: String(opt?.label ?? opt?.value ?? ""),
+        value: String(opt?.value ?? opt?.label ?? ""),
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  const hasMultipleFlag = (metadata?: string[]) => {
+    return metadata?.includes("multiple") ?? false;
+  };
+
+  const scrollToBottom = () => {
+    scrollDiv.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  };
 
   const addField = async () => {
     if (fieldsCount >= 10) return;
@@ -58,7 +91,10 @@ const ProjectsSettings = () => {
 
     const updatedCompany = {
       ...company,
-      project_attributes: [...(company.project_attributes ?? []), newAttribute],
+      project_attributes: [
+        ...(company?.project_attributes ?? []),
+        newAttribute,
+      ],
     };
 
     await updateCompanyByCompanyId(company.id, updatedCompany);
@@ -67,29 +103,23 @@ const ProjectsSettings = () => {
     scrollToBottom();
   };
 
-  const scrollToBottom = () => {
-    scrollDiv.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  };
-
   const deleteField = async (uuid: string) => {
     const updatedCompany = {
       ...company,
-      project_attributes: (company.project_attributes ?? []).filter(
-        (attr: any) => attr.uuid !== uuid,
+      project_attributes: (company?.project_attributes ?? []).filter(
+        (attr: any) => attr.uuid !== uuid
       ),
     };
 
     await updateCompanyByCompanyId(company.id, updatedCompany);
     await refreshCompany();
   };
+
   const updateField = async (uuid: string, patch: any) => {
     const updatedCompany = {
       ...company,
-      project_attributes: (company.project_attributes ?? []).map((attr: any) =>
-        attr.uuid === uuid ? { ...attr, ...patch } : attr,
+      project_attributes: (company?.project_attributes ?? []).map((attr: any) =>
+        attr.uuid === uuid ? { ...attr, ...patch } : attr
       ),
     };
 
@@ -98,7 +128,7 @@ const ProjectsSettings = () => {
   };
 
   const duplicateField = async (uuid: string) => {
-    const attrs = company.project_attributes ?? [];
+    const attrs = company?.project_attributes ?? [];
     const index = attrs.findIndex((a: any) => a.uuid === uuid);
     if (index === -1) return;
 
@@ -121,12 +151,13 @@ const ProjectsSettings = () => {
     await updateCompanyByCompanyId(company.id, updatedCompany);
     await refreshCompany();
   };
+
   const gridConfig =
     fieldsCount <= 7
       ? { cols: 1, rows: fieldsCount }
       : fieldsCount <= 10
-        ? { cols: 2, rows: 5 }
-        : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
+      ? { cols: 2, rows: 5 }
+      : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
 
   const isWide = fieldsCount > 7;
 
@@ -142,7 +173,6 @@ const ProjectsSettings = () => {
           },
         }}
       >
-        {/* LEFT */}
         <div className="w-5/12 flex flex-col gap-8">
           <div className="flex justify-between items-end">
             <div className="flex flex-col gap-1">
@@ -169,6 +199,7 @@ const ProjectsSettings = () => {
               </div>
             </Tooltip>
           </div>
+
           <div className="overflow-auto max-h-[65vh] scrollbar-hidden">
             <div className="flex flex-col gap-6">
               {company?.project_attributes?.map((field: any, index: number) => (
@@ -184,13 +215,13 @@ const ProjectsSettings = () => {
                 />
               ))}
             </div>
+
             <div ref={scrollDiv} />
           </div>
         </div>
 
         <Divider type="vertical" className="h-auto" />
 
-        {/* RIGHT */}
         <div className="w-7/12">
           <div className="flex flex-col gap-1">
             <p className="text-grey-dark text-base">Preview</p>
@@ -200,9 +231,9 @@ const ProjectsSettings = () => {
           </div>
 
           <div
-            className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all
-      ${isWide ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"}
-    `}
+            className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all ${
+              isWide ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"
+            }`}
           >
             <div className="flex gap-4 items-center pb-6">
               <p className="text-forumBlue-normal">Create New Project</p>
@@ -213,7 +244,6 @@ const ProjectsSettings = () => {
                 gridConfig.cols === 1 ? "space-y-4" : "columns-2 gap-4"
               }
             >
-              {/* Fixed field */}
               <div className="w-full break-inside-avoid mb-4">
                 <ShortText
                   name="Project Name"
@@ -222,27 +252,30 @@ const ProjectsSettings = () => {
                 />
               </div>
 
-              {/* Dynamic fields */}
               {company?.project_attributes?.map((field: any, index: number) => {
                 const RenderComponent = FIELD_COMPONENTS_BY_NUMBER[field.type];
                 if (!RenderComponent) return null;
 
-                const needsOptions =
+                const usesSerializedOptions =
                   field.type === 3 || field.type === 4 || field.type === 5;
+
+                const options = usesSerializedOptions
+                  ? parseOptionsFromMetadata(field.metadata)
+                  : undefined;
 
                 const isRangedDate =
                   field.type === 7 && (field.metadata ?? []).includes("ranged");
+
+                const isMultiple =
+                  (field.type === 3 || field.type === 4) &&
+                  hasMultipleFlag(field.metadata);
 
                 const props = {
                   name: field.label,
                   required: field.required,
                   hint_text: field.has_hint_text ? field.hint : undefined,
-                  options: needsOptions
-                    ? (field.metadata ?? []).map((opt: string) => ({
-                        label: opt,
-                        value: opt,
-                      }))
-                    : undefined,
+                  options,
+                  isMultiple,
                   is_ranged_date: isRangedDate,
                   height: "small",
                   style: { maxWidth: "320px" },
