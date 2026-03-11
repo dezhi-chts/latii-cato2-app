@@ -116,7 +116,7 @@ const Header = ({
                   <IconComponent number={index + 1} />
                 </div>
                 <div>
-                  <p className={`${fileNameColor} text-xs`}>{uploadFile.name}</p>
+                  <p className={`${fileNameColor} text-xs break-all`}>{uploadFile.name}</p>
                   <p>
                     {
                       uploadFile.operation_type === FileOperationType.ArchitectureDrawing && uploadFile.status === FileStatus.Processing && <span className="text-xs text-grey-light-strong">Step A and B</span>
@@ -126,7 +126,7 @@ const Header = ({
                     }
                   </p>
                 </div>
-                {index < filesData.length - 1 && <div className="mx-6 w-[97px] h-[1px] bg-grey-light-strong"></div>}
+                {index < filesData.length - 1 && <div className="mx-3 w-[87px] h-[1px] bg-grey-light-strong"></div>}
               </div>;
             })}
             {/* Multi File Merger 步骤 */}
