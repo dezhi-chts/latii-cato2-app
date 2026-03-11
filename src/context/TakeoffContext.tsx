@@ -37,6 +37,7 @@ interface TakeoffContextType {
 
   isPageRefresh: () => boolean;
   loadFromStorage: () => any;
+  clearStorage: () => void;
 }
 
 // 创建 Context
@@ -51,7 +52,7 @@ interface TakeoffProviderProps {
 
 // 创建 Provider 组件
 export const TakeoffProvider: React.FC<TakeoffProviderProps> = ({ children, projectId, takeoffId }) => {
-  // 生成 localStorage key
+  // 生成 sessionStorage key
   const storageKey = projectId && takeoffId ? `takeoff_${projectId}_${takeoffId}` : 'takeoff_default';
 
   // 判断是否是页面刷新
@@ -61,15 +62,25 @@ export const TakeoffProvider: React.FC<TakeoffProviderProps> = ({ children, proj
     return fileList.length === 0;
   };
 
-  // 从 localStorage 加载初始状态
+  // 从 sessionStorage 加载初始状态
   const loadFromStorage = (): any => {
     try {
       if (typeof window === 'undefined') return null;
-      const stored = localStorage.getItem(storageKey);
+      const stored = sessionStorage.getItem(storageKey);
       return stored ? JSON.parse(stored) : null;
     } catch (error) {
-      console.error('Error loading from localStorage:', error);
+      console.error('Error loading from sessionStorage:', error);
       return null;
+    }
+  };
+
+  // 清空 sessionStorage
+  const clearStorage = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      sessionStorage.removeItem(storageKey);
+    } catch (error) {
+      console.error('Error clearing sessionStorage:', error);
     }
   };
 
@@ -80,8 +91,8 @@ export const TakeoffProvider: React.FC<TakeoffProviderProps> = ({ children, proj
   const [fileViewStep, setFileViewStep] = useState<FileViewStep | ''>('');
   const [indexBoxCount, setIndexBoxCount] = useState<number>(0);
 
-  // 保存状态到 localStorage
-  const saveToStorage = () => {
+  // 保存状态到 sessionStorage
+  const saveToSessionStorage = () => {
     try {
       if (typeof window === 'undefined') return;
       const data = {
@@ -90,15 +101,16 @@ export const TakeoffProvider: React.FC<TakeoffProviderProps> = ({ children, proj
           status: file.status
         }))
       };
-      localStorage.setItem(storageKey, JSON.stringify(data));
+      sessionStorage.setItem(storageKey, JSON.stringify(data));
     } catch (error) {
-      console.error('Error saving to localStorage:', error);
+      console.error('Error saving to sessionStorage:', error);
     }
   };
 
-  // 当状态变化时保存到 localStorage
+  // 当状态变化时保存到 sessionStorage
   useEffect(() => {
-    // saveToStorage();
+    if (fileList.length === 0) return;
+    saveToSessionStorage();
   }, [fileList, storageKey]);
 
   // 合并文件状态（从 API 获取文件数据后调用）
@@ -141,6 +153,7 @@ export const TakeoffProvider: React.FC<TakeoffProviderProps> = ({ children, proj
     mergeFileStatus,
     isPageRefresh,
     loadFromStorage,
+    clearStorage,
     indexBoxCount,
     setIndexBoxCount
   };
