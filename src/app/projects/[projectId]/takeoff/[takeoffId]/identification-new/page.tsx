@@ -278,8 +278,47 @@ const PageLabelingContent = () => {
     }
   }
 
+  const fileOperationType = useMemo(() => {
+    if (!fileList.length) return "";
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    return file?.operation_type || "";
+  }, [fileList, selectedFileId]);
+
   // 处理返回按钮的点击事件
   const handleBack = useCallback(() => {
+    // 处理返回上一个文件的逻辑
+    const handleBackToPreviousFile = () => {
+      console.log("fileList", fileList);
+      let findIndex = fileList.findIndex((file: any) => file.id === selectedFileId);
+      console.log("findIndex", findIndex);
+      if (findIndex > 0) {
+        let prevFile = fileList[findIndex - 1];
+        if (prevFile.status === FileStatus.Completed) {
+          setSelectedFileId(prevFile.id);
+          setFileViewStep(FileViewStep.Second);
+        } else if (prevFile.operation_type === FileOperationType.ArchitectureDrawing) {
+          setSelectedFileId(prevFile.id);
+          setFileViewStep(FileViewStep.IndexSummary);
+        }
+        // 更新文件状态为processing
+        setFileList((prev: any[]) => {
+          return prev.map((file: any) => {
+            if (file.id === prevFile.id) {
+              // 下一个文件状态更改为操作中
+              return { ...file, status: FileStatus.Processing };
+            } else if (file.id === selectedFileId) {
+              // 上一个文件状态更改为未完成
+              return { ...file, status: FileStatus.Uploaded };
+            }
+            return file;
+          });
+        });
+      } else {
+        // 如果前面没有文件可以返回了，则直接执行goBack
+        router.back();
+      }
+    };
+
     if (fileViewStep === FileViewStep.IndexDrawing) {
       // 如果是index视图，则返回到summary视图
       setFileViewStep(FileViewStep.IndexSummary);
@@ -288,36 +327,10 @@ const PageLabelingContent = () => {
         // 如果是label视图，则返回到summary视图
         setFileViewStep(FileViewStep.IndexSummary);
       } else {
-        // 判断当前文件的前面是否存在其他文件，如果存在其他文件，则切换到其他文件
-        // 如果文件是已完成状态，则切换到label视图，如果是Arch Drawing文件，且未完成状态，则切换到summary视图
-        let findIndex = fileList.findIndex((file: any) => file.id === selectedFileId);
-        if (findIndex > 0) {
-          let prevFile = fileList[findIndex - 1];
-          if (prevFile.status === FileStatus.Completed) {
-            setSelectedFileId(prevFile.id);
-            setFileViewStep(FileViewStep.Second);
-          } else if (prevFile.operation_type === FileOperationType.ArchitectureDrawing) {
-            setSelectedFileId(prevFile.id);
-            setFileViewStep(FileViewStep.IndexSummary);
-          }
-          // 更新文件状态为processing
-          setFileList((prev: any[]) => {
-            return prev.map((file: any) => {
-              if (file.id === prevFile.id) {
-                // 下一个文件状态更改为操作中
-                return { ...file, status: FileStatus.Processing };
-              } else if (file.id === selectedFileId) {
-                // 上一个文件状态更改为未完成
-                return { ...file, status: FileStatus.Uploaded };
-              }
-              return file;
-            });
-          });
-        } else {
-          // 如果前面没有文件可以返回了，则直接执行goBack
-          router.back();
-        }
+        handleBackToPreviousFile();
       }
+    } else if (fileViewStep === FileViewStep.IndexSummary) {
+      handleBackToPreviousFile();
     } else if (fileViewStep === FileViewStep.FileMerge) {
       // 如果是合并视图，返回的时候，返回最后一个文件
       let lastFile = fileList[fileList.length - 1];
@@ -336,7 +349,7 @@ const PageLabelingContent = () => {
       // 其他情况执行 goBack
       router.back();
     }
-  }, [fileViewStep, selectedFileId]);
+  }, [fileViewStep, selectedFileId, fileList, fileOperationType, router]);
 
 
   // 右上角按钮的相关信息
@@ -400,12 +413,6 @@ const PageLabelingContent = () => {
     return { text: ButtonText.NextStep, disabled: false };
   }, [fileList, selectedFileId, fileViewStep, indexBoxCount]);
 
-
-  const fileOperationType = useMemo(() => {
-    if (!fileList.length) return "";
-    let file = fileList.find((file: any) => file.id === selectedFileId);
-    return file?.operation_type || "";
-  }, [fileList, selectedFileId]);
 
   return (
     <div
