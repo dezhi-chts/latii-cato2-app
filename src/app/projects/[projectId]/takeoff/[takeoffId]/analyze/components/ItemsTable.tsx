@@ -368,7 +368,7 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
   }, [dynamicFields, defaultColumns, renderField, editingCell]); // 依赖动态字段、默认列、编辑逻辑、编辑状态
 
   return (
-    <div className="flex flex-col gap-4 w-full pt-8">
+    <div className="flex flex-col gap-4 w-full pt-8 ">
       <div className="flex justify-between w-full">
         <div className="flex gap-3 items-center">
           <Input
@@ -452,23 +452,27 @@ const ItemsTable = ({ takeOff, selectedFileId, onRefreshItems }: any) => {
                     </Button> */}
         </div>
       </div>
-      <div className="overflow-hidden border border-gray-200 rounded-lg">
-        <Table
-          rowKey={(record: any) => record.id}
-          columns={newColumns}
-          dataSource={tableData}
-          pagination={false}
-          size="small"
-          rowSelection={rowSelection as any}
-          className="border-l-forum-blue"
-          scroll={{
-            x: "max-content",
-            y: "calc(100vh - 300px)", // 保留垂直滚动功能
-          }}
-          loading={tableLoading}
-          //className="min-w-full max-h-full"
-        />
+      <div className="flex">
+        <div className="border-2 rounded-l-lg  border-forumBlue-normal "></div>
+        <div className="overflow-hidden border border-gray-200 rounded-l-lg">
+          <Table
+            rowKey={(record: any) => record.id}
+            columns={newColumns}
+            dataSource={tableData}
+            pagination={false}
+            size="small"
+            rowSelection={rowSelection as any}
+            className=""
+            scroll={{
+              x: "max-content",
+              y: "calc(100vh - 300px)", // 保留垂直滚动功能
+            }}
+            loading={tableLoading}
+            //className="min-w-full max-h-full"
+          />
+        </div>
       </div>
+
       {showEvideceModal && (
         <EvidenceModal
           showEvideceModal={showEvideceModal}
