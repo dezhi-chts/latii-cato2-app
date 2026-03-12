@@ -9,7 +9,7 @@ export const Table = ({ labels }: any) => {
     "border-r border-grey-light-hover h-full flex items-center justify-center";
 
   return (
-    <div className="w-full mt-6 overflow-x-auto">
+    <div className="w-full mt-6 overflow-auto max-h-[50vh]">
       <div className="flex rounded-t-lg text-grey-normal bg-grey-light py-3 text-center min-w-max">
         <div className="w-8 flex-shrink-0 sticky left-0 z-10 bg-grey-light px-2" />
         <div style={{ width: FIXED_WIDTH }}>Label</div>
