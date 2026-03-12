@@ -133,17 +133,22 @@ const mockLabels: Label[] = [
 
 const Body = () => {
   return (
-    <div className="w-full flex p-20 justify-evenly">
-      <div className="max-w-1/2 flex flex-col gap-4">
+    <div className="w-full flex p-20 pt-0 gap-8 overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col gap-4 pt-20">
         <Select options={mockOptions} className="w-80" defaultValue="1" />
-        <div className="w-fit">
+        <div className="w-full min-w-0">
           <Table labels={mockLabels} />
         </div>
       </div>
-      <Divider type="vertical" className="bg-grey-light-hover h-auto" />
-      <div className="max-w-1/2 flex flex-col gap-4">
+
+      <Divider
+        type="vertical"
+        className="bg-grey-light-hover h-auto shrink-0"
+      />
+
+      <div className="min-w-0 flex-1 flex flex-col gap-4 pt-20">
         <Select options={mockOptions} className="w-80" defaultValue="2" />
-        <div className="w-fit">
+        <div className="w-full min-w-0">
           <Table labels={mockLabels} />
         </div>
       </div>

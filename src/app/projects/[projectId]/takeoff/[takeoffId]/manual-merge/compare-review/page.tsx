@@ -12,7 +12,7 @@ export type HeaderFile = {
 
 const ItemReview = () => {
   return (
-    <div>
+    <div className="w-full">
       <Header />
       <Body />
     </div>
