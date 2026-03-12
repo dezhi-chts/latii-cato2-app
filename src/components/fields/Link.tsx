@@ -1,6 +1,9 @@
+"use client";
+
 import { Button, Input, Space } from "antd";
 import RequiredHint from "./RequiredHint";
 import Image from "next/image";
+import { useMemo, useState } from "react";
 
 type LinkProps = {
   name: string;
@@ -8,6 +11,7 @@ type LinkProps = {
   hint_text?: string;
   value?: string;
   onBlur?: () => void;
+  onChange?: (e: any) => void;
 };
 
 const Weblink = ({
@@ -16,15 +20,48 @@ const Weblink = ({
   hint_text = "",
   value,
   onBlur,
+  onChange,
 }: LinkProps) => {
+  const [internalValue, setInternalValue] = useState("");
+
+  const currentValue = useMemo(() => {
+    if (value !== undefined) return value;
+    return internalValue;
+  }, [value, internalValue]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange?.(e);
+
+    if (!onChange && !onBlur && value === undefined) {
+      setInternalValue(e.target.value);
+    }
+  };
+
+  const handleOpenLink = () => {
+    if (!currentValue) return;
+
+    const url = currentValue.startsWith("http")
+      ? currentValue
+      : `https://${currentValue}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm">
         {name} {RequiredHint(required)}
       </p>
+
       <Space.Compact style={{ width: "100%" }} className="max-w-80">
-        <Input defaultValue={value} placeholder={hint_text} onBlur={onBlur} />
-        <Button onClick={() => window.open(value, "_blank")} className="px-1">
+        <Input
+          value={currentValue}
+          placeholder={hint_text}
+          onBlur={onBlur}
+          onChange={handleChange}
+        />
+
+        <Button onClick={handleOpenLink} className="px-1">
           <Image
             src="/assets/icons/fields/link_light.svg"
             alt="Link"
