@@ -107,7 +107,7 @@ const ProjectsSettings = () => {
     const updatedCompany = {
       ...company,
       project_attributes: (company?.project_attributes ?? []).filter(
-        (attr: any) => attr.uuid !== uuid
+        (attr: any) => attr.uuid !== uuid,
       ),
     };
 
@@ -118,8 +118,8 @@ const ProjectsSettings = () => {
   const updateField = async (uuid: string, patch: any) => {
     const updatedCompany = {
       ...company,
-      project_attributes: (company?.project_attributes ?? []).map((attr: any) =>
-        attr.uuid === uuid ? { ...attr, ...patch } : attr
+      project_attributes: (company?.project_attributes ?? []).map(
+        (attr: any) => (attr.uuid === uuid ? { ...attr, ...patch } : attr),
       ),
     };
 
@@ -153,11 +153,11 @@ const ProjectsSettings = () => {
   };
 
   const gridConfig =
-    fieldsCount <= 7
+    fieldsCount < 7
       ? { cols: 1, rows: fieldsCount }
       : fieldsCount <= 10
-      ? { cols: 2, rows: 5 }
-      : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
+        ? { cols: 2, rows: 5 }
+        : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
 
   const isWide = fieldsCount > 7;
 
@@ -231,9 +231,7 @@ const ProjectsSettings = () => {
           </div>
 
           <div
-            className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all ${
-              isWide ? "w-5/6 max-w-4xl" : "w-4/6 max-w-2xl"
-            }`}
+            className={`mt-6 border-primaryN30 border rounded-lg p-6 transition-all w-fit`}
           >
             <div className="flex gap-4 items-center pb-6">
               <p className="text-forumBlue-normal">Create New Project</p>
@@ -278,13 +276,12 @@ const ProjectsSettings = () => {
                   isMultiple,
                   is_ranged_date: isRangedDate,
                   height: "small",
-                  style: { maxWidth: "320px" },
                 };
 
                 return (
                   <div
                     key={field.uuid ?? `${field.type}-${field.label}-${index}`}
-                    className="w-full break-inside-avoid mb-4"
+                    className="w-[320px] break-inside-avoid mb-4"
                   >
                     {RenderComponent(props)}
                   </div>
