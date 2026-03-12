@@ -1,50 +1,151 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { ConfigProvider, notification, Tabs } from "antd";
 import Header from "./components/Header";
-import { ConfigProvider, Tabs } from "antd";
-import type { TabsProps } from "antd";
-import YourTemplatesTab from "./components/YourTemplatesTab";
-import PromptLibraryTab from "./components/PromptLibraryTab";
+import { TemplateViewer } from "./components/TemplateViewer";
+import { PromptEditor } from "./components/PromptEditor";
+import {
+  getTemplates,
+  getTemplateById,
+} from "@/services/templateService";
+import LoadingScreen from "@/components/loading-screen";
+
+// 主 Tab 类型
+export enum MainTab {
+  YourTemplates = "your-templates",
+  PromptLibrary = "prompt-library",
+}
+
 const Page = () => {
-  const onChange = (key: string) => {
-    console.log(key);
+  const [activeMainTab, setActiveMainTab] = useState<MainTab>(
+    MainTab.YourTemplates
+  );
+
+  // 模版列表
+  const [templateList, setTemplateList] = useState<any[]>([]);
+  // 当前选中模版ID
+  const [templateId, setTemplateId] = useState<number | null>(null);
+  // 当前选中模版的内容
+  const [templateContent, setTemplateContent] = useState<any>(null);
+  // 当前选中FieldID
+  const subFieldId = useRef<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // 公司ID - 可以从用户信息或其他地方获取，这里暂时硬编码为1
+  const companyId = 1;
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  useEffect(() => {
+    if (templateId) {
+      // 获取模版内容
+      fetchTemplateContent(templateId);
+    }
+  }, [templateId]);
+
+
+  // 获取模版列表
+  const fetchTemplates = async () => {
+    const response = await getTemplates();
+    if (response.status === "success") {
+      let list = response.data?.items || [];
+      let fixed = { id: 1, name: "Standard Prompt" };
+      list.unshift(fixed);
+      setTemplateId(fixed.id);
+      setTemplateList(list);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to fetch templates",
+      });
+    }
   };
 
-  const items: TabsProps["items"] = [
-    {
-      key: "1",
-      label: "Your Templates",
-      children: <YourTemplatesTab />,
-    },
-    {
-      key: "2",
-      label: "Prompt Library",
-      children: <PromptLibraryTab />,
-    },
-  ];
+  // 获取模版内容
+  const fetchTemplateContent = async (id: number) => {
+    const response = await getTemplateById(id);
+    if (response.status === "success") {
+      setTemplateId(id);
+      setTemplateContent(response.data);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to fetch template content",
+      });
+    }
+  };
+
+  // 模版创建成功后,刷新模版列表
+  const handleTemplateCreated = () => {
+    fetchTemplates();
+  };
+
   return (
-    <div className="pt-12 flex flex-col gap-4">
-      <div className="flex items-center pl-12 pb-1">
+    <div className="flex flex-col h-screen bg-white">
+      {/* Header */}
+      <div className="px-14 h-[80px] flex items-center ">
         <Header />
       </div>
-      <ConfigProvider
-        theme={{
-          components: {
-            Tabs: {
-              inkBarColor: "#555555",
-              itemSelectedColor: "#555555",
-              itemColor: "#A3A3A3",
-              itemHoverColor: "#555555",
+
+      <div className="px-14 w-full flex flex-col border-b border-primaryN30">
+        {/* Main Tab Switcher */}
+        <ConfigProvider
+          theme={{
+            components: {
+              Tabs: {
+                inkBarColor: "#555555",
+                itemSelectedColor: "#555555",
+                itemColor: "#A3A3A3",
+                itemHoverColor: "#555555",
+              },
             },
-          },
-        }}
-      >
-        <Tabs
-          className="[&_.ant-tabs-tab]:w-36 [&_.ant-tabs-tab]:justify-center [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-primaryN30 [&_.ant-tabs-nav::before]:!opacity-100 [&_.ant-tabs-nav-wrap]:pl-12"
-          defaultActiveKey="1"
-          items={items}
-        />
-      </ConfigProvider>
+          }}
+        >
+          <Tabs
+            activeKey={activeMainTab}
+            onChange={(key) => setActiveMainTab(key as MainTab)}
+            items={[
+              {
+                key: MainTab.YourTemplates,
+                label: "Your Templates",
+              },
+              {
+                key: MainTab.PromptLibrary,
+                label: "Prompt Library",
+                disabled: true,
+              },
+            ]}
+            className="[&_.ant-tabs-tab]:text-xs [&_.ant-tabs-nav]:mb-0 [&_.ant-tabs-nav::before]:border-b-0 [&_.ant-tabs-tab]:px-2"
+          />
+        </ConfigProvider>
+      </div>
+
+      <div className="px-14 py-10 flex-1 overflow-hidden">
+        {/* Tab 内容切换 */}
+        {activeMainTab === MainTab.YourTemplates ? (
+          <TemplateViewer
+            templateList={templateList}
+            templateId={templateId}
+            setTemplateId={setTemplateId}
+            templateContent={templateContent}
+            onChangeSubTab={(id) => subFieldId.current = id}
+            onChangeMainTab={setActiveMainTab}
+            onTemplateCreated={handleTemplateCreated}
+          />
+        ) : (
+          <PromptEditor
+            templateId={templateId}
+            setTemplateId={setTemplateId}
+            templateContent={templateContent}
+            subFieldName={subFieldId.current}
+            setLoading={setLoading}
+          />
+        )}
+      </div>
+      {loading && <LoadingScreen isLoading={loading} />}
     </div>
   );
 };
