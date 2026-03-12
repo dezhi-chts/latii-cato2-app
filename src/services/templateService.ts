@@ -30,7 +30,7 @@ export const createTemplate = async (settings: any) => {
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error creating template:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -63,14 +63,14 @@ export const createField = async (templateId: string, field: Field) => {
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error creating field:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
 export const updateField = async (
   templateId: string,
   fieldId: string,
-  field: Field
+  field: Field,
 ) => {
   try {
     const url = `/prompt-template/${templateId}/field/${fieldId}`;
@@ -78,7 +78,7 @@ export const updateField = async (
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error creating field:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
