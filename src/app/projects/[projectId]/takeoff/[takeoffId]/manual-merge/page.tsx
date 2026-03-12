@@ -65,7 +65,7 @@ const ManualMerge = () => {
 
   return (
     <div className="w-full">
-      {/* <Header /> */}
+      <Header />
       <div className="flex justify-between px-20 pt-8">
         <div className="flex flex-col gap-1">
           <p className="text-forumBlue-normal">Multi File Merger</p>
@@ -74,9 +74,13 @@ const ManualMerge = () => {
           </p>
         </div>
         <div className="flex gap-3 text-xs">
-          <Button backgroundColor="primaryN20" className="!rounded-md">
-            <p className="text-grey-normal">Item Compare</p>
-          </Button>
+          <Link
+            href={`/projects/${projectId}/takeoff/${takeoffId}/manual-merge/compare-review`}
+          >
+            <Button backgroundColor="primaryN20" className="!rounded-md">
+              <p className="text-grey-normal">Item Compare</p>
+            </Button>
+          </Link>
           <Link
             href={`/projects/${projectId}/takeoff/${takeoffId}/manual-merge/item-review`}
           >

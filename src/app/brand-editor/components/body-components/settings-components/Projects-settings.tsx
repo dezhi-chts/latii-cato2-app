@@ -159,8 +159,6 @@ const ProjectsSettings = () => {
         ? { cols: 2, rows: 5 }
         : { cols: 2, rows: Math.ceil(fieldsCount / 2) };
 
-  const isWide = fieldsCount > 7;
-
   return (
     <div className="flex gap-20 mb-10 mt-[-20px] zoomed-container">
       <ConfigProvider
