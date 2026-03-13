@@ -108,6 +108,25 @@ Our Buttons already have premade styles and the chance to add custom tailwind cl
   border-color: #427cce !important;
 }
 
+/* 自定义 checkbox 样式 - 用于 NewTemplateModal */
+/* 使用更高的选择器优先级覆盖全局样式 */
+.custom-checkbox.ant-checkbox-wrapper
+  .ant-checkbox-checked
+  .ant-checkbox-inner {
+  background-color: #e3ebf8 !important;
+  border-color: transparent !important;
+}
+
+.custom-checkbox.ant-checkbox-wrapper
+  .ant-checkbox-checked
+  .ant-checkbox-inner::after {
+  border-color: #325d9b !important;
+}
+
+.custom-checkbox.ant-checkbox-wrapper .ant-checkbox-inner {
+  border-radius: 4px !important;
+}
+
 .custom-select-page .ant-select-selector {
   color: #717171 !important;
   font-size: 10px !important;
