@@ -132,9 +132,9 @@ export const PromptEditor = ({
       {/* Right Content - Field Display */}
       <div className="flex-1 overflow-y-auto">
         <FieldEditor
-          templateId={templateId?.toString() || ""}
+          templateId={templateId as number}
           field={editingField as any}
-          onChange={() => { }} />
+        />
       </div>
 
       {/* Field Editor Modal */}
@@ -142,7 +142,7 @@ export const PromptEditor = ({
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         field={editingField}
-        templateId={templateId?.toString() || ""}
+        templateId={templateId as number}
       />
     </div>
   );

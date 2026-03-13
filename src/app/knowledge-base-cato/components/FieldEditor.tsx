@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, message, Tag } from "antd";
-import { AvailableValues } from "./AvailableValues";
 
 import { updateField, createField } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
+import { PlusOutlined } from "@ant-design/icons";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 
-interface ValueItem {
-  id: string;
-  value: string;
-  isDefault?: boolean;
-}
+// 动态引入ReactQuill防止SSR错误
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+import 'react-quill/dist/quill.snow.css';
+import { FieldEvent } from "../page";
 
 interface FieldData {
   id: string;
@@ -19,15 +20,17 @@ interface FieldData {
   notes: string;
   field_type: string;
   config_json: {
+    available_values: string[];
     extraction_rules: string[];
   };
 }
 
 interface FieldEditorProps {
-  templateId: string;
+  templateId: number;
   field: FieldData;
   mode?: "create" | "edit"; // 创建模式 或 编辑模式
   onClose?: () => void;
+  onUpdateField?: (eventName: FieldEvent, data: any) => void;
 }
 
 const typeOptions = [
@@ -41,7 +44,8 @@ export const FieldEditor = ({
   templateId,
   field,
   mode = "edit",
-  onClose
+  onClose,
+  onUpdateField
 }: FieldEditorProps) => {
   const [formData, setFormData] = useState<FieldData>({
     id: "",
@@ -49,6 +53,7 @@ export const FieldEditor = ({
     notes: "",
     field_type: "",
     config_json: {
+      available_values: [],
       extraction_rules: [],
     },
   });
@@ -59,12 +64,10 @@ export const FieldEditor = ({
   }, [field]);
 
   const handleFieldChange = (key: keyof FieldData, value: any) => {
-    console.log('######### handleFieldChange', key, value);
     setFormData({ ...formData, [key]: value });
   };
 
   const handleSubmit = useCallback(() => {
-    console.log('######### handleSubmit', formData);
     // 判断必填项是否填写
     if (!formData?.name) {
       message.error("Please fill in the required field: Label");
@@ -105,10 +108,22 @@ export const FieldEditor = ({
     );
     if (res.status === "success") {
       message.success("Field created successfully");
+      onUpdateField?.(FieldEvent.Create, { templateId });
     } else {
       message.error(res?.data?.detail || "Failed to create field");
     }
     setLoading(false);
+  };
+
+  const handleAddValue = () => {
+    const newValues = [...values, "Please input value"];
+    setFormData({
+      ...formData,
+      config_json: {
+        ...formData.config_json,
+        available_values: newValues,
+      },
+    });
   };
 
   const rulesString = useMemo(() => {
@@ -116,109 +131,170 @@ export const FieldEditor = ({
     return formData?.config_json?.extraction_rules?.join(", ") || "";
   }, [formData]);
 
+  const values = useMemo(() => {
+    return formData?.config_json?.available_values || [];
+  }, [formData]);
+
+  const disabelEdit = templateId === 1;
+
   return (
-    <div className="w-[960px] h-full flex flex-col gap-6 border border-primaryN30 rounded-xl">
-      {/* Title with Tags */}
-      {mode === "edit" ? <div className="px-10 h-[70px] flex items-center gap-3 border-b border-primaryN30">
-        <h2 className="text-2xl font-bold text-grey-normal">{field?.name || ""}</h2>
-      </div> : <div className="h-[20px]"></div>}
-
-      {/* Form Fields */}
-      <div className="flex-1 px-10 flex flex-col gap-5">
-        {/* Label */}
-        <div className="flex items-start gap-8">
-          <label className={`${labelWidth} text-xs font-bold`}>
-            Label <span className="text-red-500">*</span>
-          </label>
-          <div className="flex-1">
-            <Input
-              value={formData?.name || ""}
-              onChange={(e) => handleFieldChange("name", e.target.value)}
-              className="border-primaryN30 rounded-md text-xs"
-              placeholder="Enter field name"
-            />
+    <div className="w-full h-full flex flex-col gap-6 border border-primaryN30 rounded-xl overflow-hidden">
+      <div className="flex-1 flex flex-row overflow-y-auto">
+        {/* Form Fields */}
+        <div className={`${mode === 'create' ? 'w-[40%]' : 'w-[500px]'} px-10 py-5 flex flex-col gap-10`}>
+          {/* Label */}
+          <div className="flex flex-col gap-2">
+            <label className={`text-sm`}>Label</label>
+            <p className="text-xs text-grey-normal">This will be the name of your columns in your takeoff list.</p>
+            <div className="w-full mt-2">
+              <Input
+                value={formData?.name || ""}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
+                className="w-full h-[28px] border-primaryN30 rounded-md text-xs"
+                placeholder="Enter field name"
+                disabled={disabelEdit}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Notes */}
-        <div className="flex items-start gap-8">
-          <label className={`${labelWidth} text-xs font-bold`}>
-            Notes
-          </label>
-          <div className="flex-1">
-            <Input.TextArea
-              size="small"
-              value={formData?.notes || ""}
-              onChange={(e) => handleFieldChange("notes", e.target.value)}
-              className="border-primaryN30 rounded-md text-xs"
-              placeholder="For Example: All Our Glass is Tempered."
-              rows={4}
-            />
-            <div className="mt-1 text-xxs text-grey-normal">
-              This will show on your budgetary File, as a always present note.
+          {/* Type */}
+          {
+            formData?.name !== 'Generations' &&
+            <div className="flex flex-col gap-2">
+              <label className={`text-sm`}>Type of Prompt</label>
+              <div className="flex-1 flex gap-2">
+                {typeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    className={`w-[100px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors ${formData?.field_type === option.value
+                      ? "bg-forumBlue-light-hover text-forumBlue-dark-active"
+                      : "bg-grey-light text-grey-light-strong"
+                      }`}
+                    onClick={() => handleFieldChange("field_type", option.value)}
+                    disabled={disabelEdit}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          }
+
+          {/* Available Values */}
+          {formData?.field_type === 'string' && <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <div>
+                <label className={`text-sm`}>Values Options</label>
+                <p className="mt-1 text-xs text-grey-normal">Create value options to improve recognition.</p>
+              </div>
+              <div>
+                <button
+                  className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+                  onClick={() => handleAddValue()}
+                  disabled={disabelEdit}
+                >
+                  <PlusOutlined className="text-xs" />
+                  <span className="ml-1">Value</span>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 mt-2">
+              <div className={`flex flex-col gap-2 rounded-lg ${values.length > 0 ? "border border-primaryN30 " : ""}`}>
+                {values.map(((item, index) => (
+                  <div
+                    key={index}
+                    className="h-[44px] px-4 flex items-center justify-between border-b border-primaryN30"
+                  >
+                    <button className="text-grey-normal hover:text-red-500"
+                      disabled={disabelEdit}
+                    >
+                      <Image src="/assets/icons/delete.svg" alt="plus icon" width={15} height={15} />
+                    </button>
+                    <input
+                      className="ml-4 mr-1 flex-1 text-sm"
+                      value={item}
+                      onChange={(e) => {
+                        const newValues = [...values];
+                        newValues[index] = e.target.value;
+                        setFormData({
+                          ...formData,
+                          config_json: {
+                            ...formData.config_json,
+                            available_values: newValues,
+                          },
+                        });
+                      }}
+                      disabled={disabelEdit}
+                    />
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-[10px] px-3 py-0.5 rounded-lg cursor-pointer ${item.isDefault ? "text-[#5856D7] bg-[#5856D733]" : "bg-grey-light-hover text-grey-light-strong"
+                          }`}
+                      >
+                        Default
+                      </span>
+                    </div>
+                  </div>
+                )))}
+              </div>
+            </div>
+          </div>}
+
+          {/* Notes */}
+          <div className="flex flex-col items-start gap-2">
+            <label className={`text-sm`}>Notes</label>
+            <p className="text-xs text-grey-normal">Add notes if needed for your team to visualize.</p>
+            <div className="w-full mt-2">
+              <Input.TextArea
+                size="small"
+                value={formData?.notes || ""}
+                onChange={(e) => handleFieldChange("notes", e.target.value)}
+                className="w-full border-primaryN30 rounded-md text-xs"
+                placeholder="For Example: All Our Glass is Tempered."
+                rows={4}
+                disabled={disabelEdit}
+              />
             </div>
           </div>
         </div>
-
-        {/* Type */}
-        <div className="flex items-start gap-8">
-          <label className={`${labelWidth} text-xs font-bold`}>
-            Type <span className="text-red-500">*</span>
-          </label>
-          <div className="flex-1 flex gap-2">
-            {typeOptions.map((option) => (
-              <button
-                key={option.value}
-                className={`px-4 py-0.5 rounded-lg text-xxs transition-colors ${formData?.field_type === option.value
-                  ? "bg-grey-light-active text-grey-dark"
-                  : "bg-grey-light text-grey-light-strong hover:bg-grey-light-active"
-                  }`}
-                onClick={() => handleFieldChange("field_type", option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Available Values */}
-        <div className="flex items-start gap-8">
-          <label className={`${labelWidth} text-xs font-bold`}>
-            Available Values
-          </label>
-          <div className="flex-1">
-            <AvailableValues
-              values={[]}
-              onChange={(values) => { }
-              }
-            />
-          </div>
-        </div>
-
-        {/* Rules */}
-        <div className="flex items-start gap-8">
-          <label className={`${labelWidth} text-xs font-bold`}>
-            Rules
-          </label>
-          <div className="flex-1">
-            <div className="flex flex-col gap-3">
-              <textarea
+        <div className="flex-1 flex px-10 py-5">
+          {/* Rules */}
+          <div className="mb-2 flex-1 flex flex-col gap-2">
+            <label className={`text-sm`}>Rules</label>
+            <div className="flex-1 flex flex-col gap-3">
+              <ReactQuill
+                theme="snow"
                 value={rulesString}
-                onChange={(e) => handleFieldChange("config_json", { ...formData?.config_json, extraction_rules: e.target.value.split("\n") })}
-                placeholder="Type the prompt rules you want Cato to use to populate the field and add into the table fields. For example:&#10;1. Perform an exact match with Field Prompt Label name on the drawing.&#10;2. Support fuzzy matching (e.g., 'galv' matches 'Galvanized Steel')"
-                className="w-full h-[200px] p-4 border border-primaryN30 rounded-md text-xs resize-none focus:outline-none focus:border-forumBlue-normal"
-              />
+                onChange={(value) => {
+                  if (value?.trim().length > 0) {
+                    setFormData({
+                      ...formData,
+                      config_json: {
+                        ...formData.config_json,
+                        extraction_rules: [value],
+                      },
+                    });
+                  }
+                }}
+                className="h-[calc(100%-50px)]"
+                readOnly={disabelEdit}
+              >
+              </ReactQuill>
             </div>
           </div>
         </div>
       </div>
       <div className="mb-2 mr-10 flex justify-end">
-        <Button
-          className="custom-primary-btn"
-          onClick={handleSubmit}
-        >
-          Save
-        </Button>
+        {
+          !disabelEdit && (
+            <Button
+              className="custom-primary-btn"
+              onClick={handleSubmit}
+            >
+              Save
+            </Button>
+          )
+        }
       </div>
       {loading && <LoadingScreen isLoading={loading} />}
     </div>

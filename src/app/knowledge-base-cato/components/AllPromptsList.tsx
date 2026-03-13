@@ -22,16 +22,17 @@ export const AllPromptsList = ({
   onCreatePrompt,
 }: AllPromptsListProps) => {
   return (
-    <div className="w-[300px] flex flex-col">
+    <div className="w-[350px] flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-base text-grey-normal">All Prompts</span>
-        <div className="w-[96px] h-[24px] rounded-md flex justify-center items-center gap-2 bg-primaryN10">
-          <span className="text-xxs text-grey-normal">Review</span>
-          <span className="w-4 h-4 rounded-full bg-dragonOrange text-white text-[10px] flex items-center justify-center">
-            3
-          </span>
-        </div>
+        <button
+          className={`w-[80px] h-[26px] flex items-center text-xs justify-center rounded-lg transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+          onClick={onCreatePrompt}
+        >
+          <PlusOutlined className="text-xs" />
+          <span className="ml-1">Prompt</span>
+        </button>
       </div>
 
       {/* Field List */}
@@ -56,15 +57,6 @@ export const AllPromptsList = ({
           ))}
         </div>
       </div>
-
-      {/* Create Button */}
-      <button
-        className="mt-4 w-full py-2 bg-forumBlue-light rounded-md text-xs text-forumBlue-dark-active hover:border-forumBlue-normal hover:text-forumBlue-normal flex items-center justify-center gap-1"
-        onClick={onCreatePrompt}
-      >
-        <PlusOutlined className="text-xs" />
-        <span>Create Prompt</span>
-      </button>
     </div>
   );
 };
