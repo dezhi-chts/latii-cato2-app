@@ -4,7 +4,6 @@ import { ConfigProvider, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { PAGE_SIZE } from "./Home-Projects-Table";
 import dayjs from "dayjs";
 
 const TextCell = ({ value }: { value: unknown }) => {
@@ -165,7 +164,7 @@ const HomeTakeoffsTable = ({
         loading={tableLoading}
         pagination={{
           current: currentPage,
-          pageSize: PAGE_SIZE,
+          pageSize: 10,
           showSizeChanger: false,
           showQuickJumper: false,
           itemRender: () => null,
