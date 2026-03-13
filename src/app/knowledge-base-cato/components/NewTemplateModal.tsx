@@ -5,6 +5,7 @@ import { Modal, Button, Input, Checkbox, message } from "antd";
 import { createTemplate, getTemplateById } from "@/services/templateService";
 import { useUser } from "@/context/UserContext";
 import LoadingScreen from "@/components/loading-screen";
+import { PlusOutlined } from "@ant-design/icons";
 
 
 interface StandardField {
@@ -17,7 +18,7 @@ interface StandardField {
 interface NewTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (template: any) => void;
 }
 
 export const NewTemplateModal = ({
@@ -115,7 +116,7 @@ export const NewTemplateModal = ({
       const res = await createTemplate(payload);
       if (res.status === "success") {
         message.success("Template created successfully");
-        onSuccess();
+        onSuccess(res.data);
         onClose();
       } else {
         message.error(res?.data?.detail || "Failed to create template");
@@ -128,13 +129,6 @@ export const NewTemplateModal = ({
     }
   };
 
-  const allSelected =
-    standardFields.length > 0 &&
-    selectedFieldIds.length === standardFields.length;
-  const someSelected =
-    selectedFieldIds.length > 0 &&
-    selectedFieldIds.length < standardFields.length;
-
   return (
     <Modal
       open={isOpen}
@@ -144,22 +138,25 @@ export const NewTemplateModal = ({
       footer={null}
       onCancel={onClose}
     >
-      <div className="h-[700px] flex flex-col gap-5 py-4 font-nunito">
-        <div className="py-2 text-forumBlue-normal text-lg">New Template</div>
+      <div className="px-4 h-[700px] flex flex-col gap-6 py-4 font-nunito">
+        <div>
+          <div className="pt-2 pb-1 text-forumBlue-normal text-base">New Template</div>
+          <div className="text-grey-normal text-xs">Create a new template for CATO to create your takeoff lists.</div>
+        </div>
         {/* Template Name */}
-        <div className="flex items-center gap-4">
-          <label className="w-[60px] text-xs text-grey-normal">Name</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">Template Name <span className="text-red-500">*</span></label>
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            className="border-primaryN30 rounded-md text-xs"
+            className="h-[28px] border-primaryN30 rounded-md text-xs"
             placeholder="Template Name"
           />
         </div>
 
         {/* Standard Fields Section */}
-        <div className="flex-1 flex flex-col">
-          <div className="mb-2 flex items-center justify-between">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          {/* <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-bold text-grey-normal">
               Include this Standard Prompt Fields:
             </span>
@@ -171,35 +168,46 @@ export const NewTemplateModal = ({
             >
               Select All
             </Checkbox>
-          </div>
+          </div> */}
 
           {/* Fields Grid - Two Columns */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3 overflow-y-auto py-2">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-6 overflow-y-auto py-2">
             {standardFields.map((field) => (
               <Checkbox
                 key={field.id}
                 checked={selectedFieldIds.includes(field.id)}
                 onChange={(e) => handleFieldToggle(field.id, e.target.checked)}
-                className="text-xs text-grey-normal"
+                className="custom-checkbox text-xs text-grey-normal"
+                disabled={field.name === 'Label' || field.name === 'Sub Label'}
               >
-                {field.name}
+                <span className="text-sm">{field.name}</span>
               </Checkbox>
             ))}
           </div>
         </div>
 
         {/* Footer Buttons */}
-        <div className="flex justify-end gap-3 pt-2 border-t border-primaryN30">
-          <Button className="custom-default-btn" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            className="custom-primary-btn"
-            onClick={handleCreate}
-            disabled={!templateName.trim() || selectedFieldIds.length === 0}
-          >
-            Create
-          </Button>
+        <div className="flex justify-between gap-3 pt-2 border-t border-primaryN30">
+          <div>
+            <button
+              className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+            >
+              <PlusOutlined className="text-xs" />
+              <span>Prompt</span>
+            </button>
+          </div>
+          <div>
+            <Button className="custom-default-btn" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              className="ml-2 custom-primary-btn !w-[60px]"
+              onClick={handleCreate}
+              disabled={!templateName.trim() || selectedFieldIds.length === 0}
+            >
+              Add
+            </Button>
+          </div>
         </div>
       </div>
       {loading && <LoadingScreen isLoading={loading} />}

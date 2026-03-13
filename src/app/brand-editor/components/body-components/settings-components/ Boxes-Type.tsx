@@ -83,6 +83,8 @@ const BoxesType = () => {
   const handleAddModalCancel = () => setIsAddModalOpen(false);
   const handleOpenAddModal = () => setIsAddModalOpen(true);
 
+  const { TextArea } = Input;
+
   const handleOkAddModal = async (data: {
     name: string;
     description: string;
@@ -436,8 +438,8 @@ const BoxesType = () => {
 
                 <div className="w-4/12 px-2 flex items-center">
                   {isEditing ? (
-                    <Input
-                      size="small"
+                    <TextArea
+                      rows={2}
                       value={draft?.search_prompt ?? ""}
                       onKeyDown={(e) => handleKeyDownEdit(e, box.id)}
                       onChange={(e) =>
@@ -455,8 +457,8 @@ const BoxesType = () => {
                 <div className="w-5/12 px-2 flex justify-between items-center relative">
                   <div className="w-11/12">
                     {isEditing ? (
-                      <Input
-                        size="small"
+                      <TextArea
+                        rows={2}
                         value={draft?.analysis_prompt ?? ""}
                         onKeyDown={(e) => handleKeyDownEdit(e, box.id)}
                         onChange={(e) =>

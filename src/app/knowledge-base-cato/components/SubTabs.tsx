@@ -19,7 +19,7 @@ interface SubTab {
 }
 
 interface SubTabsProps {
-  templateId: string;
+  templateId: number;
   tabs: SubTab[];
   activeTab: string;
   onTabChange: (key: string) => void;
@@ -52,7 +52,6 @@ export const SubTabs = ({
     const scrollElement = scrollRef.current;
     if (scrollElement) {
       scrollElement.addEventListener("scroll", checkScrollPosition);
-      checkScrollPosition();
     }
     return () => {
       if (scrollElement) {
@@ -90,82 +89,84 @@ export const SubTabs = ({
   // 可滚动的其他Tab
   const scrollableTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
 
+  const disabelEdit = templateId === 1;
+
   return (
-    <div className="h-[40px] flex items-center bg-grey-light px-4 rounded-tl-xl rounded-tr-xl">
-      {/* 左箭头 - 根据滚动位置禁用/启用 */}
-      <button
-        className={`p-2 ${showLeftArrow
-          ? "text-grey-normal hover:text-forumBlue-normal cursor-pointer"
-          : "text-grey-light-active cursor-not-allowed"
-          }`}
-        onClick={() => showLeftArrow && handleScroll("left")}
-        disabled={!showLeftArrow}
-      >
-        <LeftOutlined className="text-xs" />
-      </button>
-
-      {/* Fixed Tabs - 前3个Tab固定 */}
-      <div className="flex shrink-0">
-        {fixedTabs.map((tab) => (
-          <button
-            key={tab.name}
-            className={`px-6 py-0.5 rounded-md text-xs whitespace-nowrap ${activeTab === tab.name
-              ? "text-white bg-forumBlue-normal"
-              : "text-grey-normal"
-              }`}
-            onClick={() => {
-              console.log('######## tab.name', tab.name)
-              onTabChange(tab.name)
-            }}
-          >
-            {tab.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Scrollable Tabs - 其他Tab可滚动 */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-x-auto scrollbar-hide"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        <div className="flex">
-          {scrollableTabs.map((tab) => (
+    <div className="h-[40px] flex flex-row justify-between items-center gap-3">
+      <div className="h-full py-1.5 flex-1 flex flex-row items-center bg-grey-light px-4 rounded-tl-xl rounded-tr-xl overflow-hidden">
+        {/* Fixed Tabs - 前3个Tab固定 */}
+        <div className="h-full flex">
+          {fixedTabs.map((tab) => (
             <button
               key={tab.name}
-              className={`px-6 py-0.5 rounded-md text-xs whitespace-nowrap ${activeTab === tab.name
-                ? "text-white bg-forumBlue-normal"
+              className={`px-6 rounded-md text-xs font-bold whitespace-nowrap ${activeTab === tab.name
+                ? "text-forumBlue-dark-hover bg-forumBlue-light-hover"
                 : "text-grey-normal"
                 }`}
-              onClick={() => onTabChange(tab.name)}
+              onClick={() => {
+                onTabChange(tab.name)
+              }}
             >
               {tab.name}
             </button>
           ))}
         </div>
+        {/* 左箭头 - 根据滚动位置禁用/启用 */}
+        <button
+          className={`p-2 ${showLeftArrow
+            ? "text-grey-normal hover:text-forumBlue-normal cursor-pointer"
+            : "text-grey-light-active cursor-not-allowed"
+            }`}
+          onClick={() => showLeftArrow && handleScroll("left")}
+          disabled={!showLeftArrow}
+        >
+          <LeftOutlined className="text-xs" />
+        </button>
+
+        {/* Scrollable Tabs - 其他Tab可滚动 */}
+        <div
+          ref={scrollRef}
+          className="h-full flex-1 overflow-x-auto scrollbar-hide"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <div className="h-full flex">
+            {scrollableTabs.map((tab) => (
+              <button
+                key={tab.name}
+                className={`px-6 h-full rounded-md text-xs font-bold whitespace-nowrap ${activeTab === tab.name
+                  ? "text-forumBlue-dark-hover bg-forumBlue-light-hover"
+                  : "text-grey-normal"
+                  }`}
+                onClick={() => onTabChange(tab.name)}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 右箭头 - 根据滚动位置禁用/启用 */}
+        <button
+          className={`p-2 ${showRightArrow
+            ? "text-grey-normal hover:text-forumBlue-normal cursor-pointer"
+            : "text-grey-light-active cursor-not-allowed"
+            }`}
+          onClick={() => showRightArrow && handleScroll("right")}
+          disabled={!showRightArrow}
+        >
+          <RightOutlined className="text-xs" />
+        </button>
       </div>
 
-      {/* 右箭头 - 根据滚动位置禁用/启用 */}
-      <button
-        className={`p-2 ${showRightArrow
-          ? "text-grey-normal hover:text-forumBlue-normal cursor-pointer"
-          : "text-grey-light-active cursor-not-allowed"
-          }`}
-        onClick={() => showRightArrow && handleScroll("right")}
-        disabled={!showRightArrow}
-      >
-        <RightOutlined className="text-xs" />
-      </button>
-
       {/* 添加按钮 - 固定在最右边 */}
-      <div
-        className="ml-2 w-[24px] h-[24px] rounded-full text-xs text-white bg-forumBlue-light-active flex items-center justify-center cursor-pointer"
+      {!disabelEdit ? <div
+        className="w-[24px] h-[24px] rounded-full text-xs text-white bg-forumBlue-light-active flex shrink-0 items-center justify-center cursor-pointer"
         onClick={() => {
           setIsModalOpen(true);
         }}
       >
         <span className="text-base text-forumBlue-normal">+</span>
-      </div>
+      </div> : <div className="w-[24px] h-[24px]"></div>}
 
       <FieldEditorModal
         isOpen={isModalOpen}

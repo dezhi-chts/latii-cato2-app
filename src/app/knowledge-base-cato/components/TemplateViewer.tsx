@@ -6,7 +6,8 @@ import { SubTabs } from "./SubTabs";
 import ReactMarkdown from "react-markdown";
 import { EditOutlined } from "@ant-design/icons";
 
-import { MainTab } from "@/app/knowledge-base-cato/page";
+import { MainTab, TemplateEvent } from "@/app/knowledge-base-cato/page";
+import { FieldEditor } from "./FieldEditor";
 
 const GENERATIONS = 'Generations';
 
@@ -17,7 +18,7 @@ interface TemplateViewerProps {
   templateContent: any;
   onChangeMainTab: (tab: MainTab) => void;
   onChangeSubTab: (name: string) => void;
-  onTemplateCreated: () => void;
+  onUpdateTemplate: (eventName: TemplateEvent, data: any) => void;
 }
 export const TemplateViewer = ({
   templateList,
@@ -26,10 +27,15 @@ export const TemplateViewer = ({
   templateContent,
   onChangeMainTab,
   onChangeSubTab,
-  onTemplateCreated,
+  onUpdateTemplate,
 }: TemplateViewerProps) => {
   const [activeSubTab, setActiveSubTab] = useState<string>(GENERATIONS);
   const [activeFieldContent, setActiveFieldContent] = useState<any>({});
+
+  useEffect(() => {
+    // 模版切换的时候，重新设置子标签
+    setActiveSubTab(GENERATIONS);
+  }, [templateId]);
 
   const subTabs = useMemo(() => {
     return templateContent?.fields || [];
@@ -39,6 +45,10 @@ export const TemplateViewer = ({
     if (activeSubTab === GENERATIONS) {
       setActiveFieldContent({
         name: GENERATIONS,
+        config_json: {
+          available_values: [],
+          extraction_rules: [templateContent?.analysis_ai_prompt || ""],
+        },
       });
     }
     let field = subTabs.find((item: any) => item.name === activeSubTab);
@@ -48,10 +58,6 @@ export const TemplateViewer = ({
     // 触发子字段ID变化
     onChangeSubTab(activeSubTab);
   }, [activeSubTab, subTabs, onChangeSubTab]);
-
-  const rules = useMemo(() => {
-    return activeFieldContent?.config_json?.extraction_rules || [];
-  }, [activeFieldContent]);
 
   const handleFieldEdit = useCallback(() => {
     onChangeMainTab(MainTab.PromptLibrary);
@@ -64,14 +70,14 @@ export const TemplateViewer = ({
         templates={templateList}
         selectedTemplateId={templateId}
         onSelectTemplate={setTemplateId}
-        onTemplateCreated={onTemplateCreated}
+        onUpdateTemplate={onUpdateTemplate}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Sub Tabs */}
         <SubTabs
-          templateId={templateId?.toString() || ""}
+          templateId={templateId as number}
           tabs={subTabs}
           activeTab={activeSubTab}
           onTabChange={setActiveSubTab}
@@ -79,40 +85,9 @@ export const TemplateViewer = ({
         />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 relative">
-          {/* Title Section */}
-          {
-            activeFieldContent?.name === GENERATIONS ? (
-              <div className="mb-6">
-                <ReactMarkdown>
-                  {templateContent?.analysis_ai_prompt &&
-                    templateContent.analysis_ai_prompt.replace(/\n/g, "  \n")}
-                </ReactMarkdown>
-              </div>
-            ) : (
-              <div className="mb-6 flex flex-col gap-5">
-                <div>
-                  <p className="text-base">Prompt Label</p>
-                  <p className="text-sm text-grey-normal">{activeFieldContent?.name}</p>
-                </div>
-                <div>
-                  <p className="text-base">Type</p>
-                  <p className="text-sm text-grey-normal">{activeFieldContent?.field_type}</p>
-                </div>
-                <div>
-                  <p className="text-base">Extraction Rules</p>
-                  <p className="text-sm text-grey-normal">
-                    {
-                      rules.map((rule: any, index: number) => (
-                        <p key={index}>{index + 1}. {rule}</p>
-                      ))
-                    }</p>
-                </div>
-              </div>
-            )
-          }
+        <div className="flex-1 overflow-y-auto py-8 relative">
           {/** 编辑按钮 */}
-          {activeSubTab !== GENERATIONS && (
+          {/* {activeSubTab !== GENERATIONS && (
             <div className="absolute top-10 right-4">
               <button
                 className="rounded-md border border-primaryN30 px-2"
@@ -122,7 +97,11 @@ export const TemplateViewer = ({
                 <span className="ml-2 text-xs text-grey-normal">Edit</span>
               </button>
             </div>
-          )}
+          )} */}
+          <FieldEditor
+            templateId={templateId as number}
+            field={activeFieldContent}
+          />
         </div>
       </div>
     </div>
