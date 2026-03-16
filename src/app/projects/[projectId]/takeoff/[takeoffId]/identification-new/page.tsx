@@ -17,21 +17,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getTakeOffById } from "@/services/takeOffService";
 import { useUser } from "@/context/UserContext";
 
-import {
-  FileOperationType,
-  FileStatus,
-} from "../types/evidence";
+import { FileOperationType, FileStatus } from "../types/evidence";
 
 import LoadingScreen from "@/components/loading-screen";
 import Header from "./components/Header";
-import BuildingBackground, { BuildLoadingStep } from "./components/BuildingBackground";
+import BuildingBackground, {
+  BuildLoadingStep,
+} from "./components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
 import IdentIndex from "../identification-index/page";
 import IdentSummary from "../identification-summary/page";
 import IdentLabel from "../identification-label/page";
 import ManualMerge from "../manual-merge/page";
-import { useTakeoff, TakeoffProvider, FileViewStep } from "@/context/TakeoffContext";
-
+import {
+  useTakeoff,
+  TakeoffProvider,
+  FileViewStep,
+} from "@/context/TakeoffContext";
+import { analyzeItemByGeminiSdk } from "@/services/DrawingAiService";
 
 const { confirm } = Modal;
 
@@ -71,13 +74,13 @@ const PageLabelingContent = () => {
     indexBoxCount,
     loadFromStorage,
     clearStorage,
-    mergeFileStatus
+    mergeFileStatus,
   } = useTakeoff();
 
   const drawingIndexRef = useRef<any>(null);
   const drawingSummaryRef = useRef<any>(null);
   const drawingLabelRef = useRef<any>(null);
-  const buildingStep = useRef('');
+  const buildingStep = useRef("");
 
   useEffect(() => {
     if (takeOffId && company_id) {
@@ -92,19 +95,19 @@ const PageLabelingContent = () => {
     // 步骤1：监听页面卸载前的事件（刷新/关闭标签页都会触发）
     const handleBeforeUnload = () => {
       // 存入sessionStorage，标记"页面即将刷新"
-      sessionStorage.setItem('isRefreshing', 'true');
+      sessionStorage.setItem("isRefreshing", "true");
       // 注：sessionStorage 仅在当前标签页有效，关闭标签页后会清空，适合区分刷新
     };
 
     // 步骤2：页面加载时校验标记
     const checkRefresh = () => {
-      const isRefreshing = sessionStorage.getItem('isRefreshing');
-      console.log('isRefreshing', isRefreshing);
-      if (isRefreshing === 'true') {
+      const isRefreshing = sessionStorage.getItem("isRefreshing");
+      console.log("isRefreshing", isRefreshing);
+      if (isRefreshing === "true") {
         // 说明是刷新行为
         setIsPageRefresh(true);
         // 清空标记，避免下次加载误判
-        sessionStorage.removeItem('isRefreshing');
+        sessionStorage.removeItem("isRefreshing");
       } else {
         // 首次加载/路由跳转
         setIsPageRefresh(false);
@@ -112,20 +115,19 @@ const PageLabelingContent = () => {
     };
 
     // 绑定事件
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
     // 页面加载完成后校验
     checkRefresh();
 
     // 组件卸载时解绑事件（避免内存泄漏）
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (isClearStorage) {
         // 组件卸载时清除sessionStorage标记
         clearStorage();
       }
     };
   }, []);
-
 
   const getTakeOffDetails = async () => {
     setFullLoading(true);
@@ -141,33 +143,52 @@ const PageLabelingContent = () => {
           setFileList(list);
 
           // 检查是否所有文件都已完成
-          const allCompleted = list.every((file: any) => file.status === FileStatus.Completed);
+          const allCompleted = list.every(
+            (file: any) => file.status === FileStatus.Completed
+          );
           if (allCompleted) {
             // 如果所有文件都已完成，不设置选中文件id，设置为合并页面
             setSelectedFileId(-1);
             setFileViewStep(FileViewStep.FileMerge);
           } else {
             // 检查是否只有一个文件为处理中
-            const processFiles = list.filter((file: any) => file.status === FileStatus.Processing);
+            const processFiles = list.filter(
+              (file: any) => file.status === FileStatus.Processing
+            );
             if (processFiles.length === 1) {
               // 如果只有一个处理中的文件，设置为选中文件
               const processFile = processFiles[0];
               setSelectedFileId(processFile.id);
-              setFileViewStep(processFile.operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
+              setFileViewStep(
+                processFile.operation_type ===
+                  FileOperationType.ArchitectureDrawing
+                  ? FileViewStep.IndexSummary
+                  : FileViewStep.Second
+              );
             } else {
               // 其他情况默认设置第一个文件为当前操作文件
               setSelectedFileId(project_files[0].id);
-              setFileViewStep(project_files[0].operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
+              setFileViewStep(
+                project_files[0].operation_type ===
+                  FileOperationType.ArchitectureDrawing
+                  ? FileViewStep.IndexSummary
+                  : FileViewStep.Second
+              );
             }
           }
         } else {
           // 如果loadedFiles?.fileList为空，取第一个文件的设置逻辑
           const updatedFiles = project_files.map((file: any, index: number) =>
-            index === 0 ? { ...file, status: FileStatus.Processing } : file,
+            index === 0 ? { ...file, status: FileStatus.Processing } : file
           );
           setFileList(updatedFiles);
           setSelectedFileId(project_files[0].id);
-          setFileViewStep(project_files[0].operation_type === FileOperationType.ArchitectureDrawing ? FileViewStep.IndexSummary : FileViewStep.Second);
+          setFileViewStep(
+            project_files[0].operation_type ===
+              FileOperationType.ArchitectureDrawing
+              ? FileViewStep.IndexSummary
+              : FileViewStep.Second
+          );
         }
       } else {
         notification.error({
@@ -195,17 +216,28 @@ const PageLabelingContent = () => {
         handleFileStatus(selectedFileId, fileId);
       }
     }
-  }
+  };
+
+  const handleAnaylize = async () => {
+    const response = await analyzeItemByGeminiSdk(takeOffId as string, 1);
+    console.log(response);
+  };
 
   const handleFileStatus = (oldFileId: number, newFileId: number) => {
     setSelectedFileId(newFileId);
-    setFileList(prev => {
+    setFileList((prev) => {
       return prev.map((file: any) => {
         if (file.id === oldFileId) {
-          if (file.operation_type === FileOperationType.ArchitectureDrawing && fileViewStep === FileViewStep.Second) {
-            return { ...file, status: FileStatus.Completed }
-          } else if (file.operation_type === FileOperationType.Quote && fileViewStep === FileViewStep.Second) {
-            return { ...file, status: FileStatus.Completed }
+          if (
+            file.operation_type === FileOperationType.ArchitectureDrawing &&
+            fileViewStep === FileViewStep.Second
+          ) {
+            return { ...file, status: FileStatus.Completed };
+          } else if (
+            file.operation_type === FileOperationType.Quote &&
+            fileViewStep === FileViewStep.Second
+          ) {
+            return { ...file, status: FileStatus.Completed };
           }
           return { ...file, status: FileStatus.Uploaded };
         } else if (file.id === newFileId) {
@@ -217,19 +249,23 @@ const PageLabelingContent = () => {
 
     let fileInfo = fileList.find((file: any) => file.id === newFileId);
     if (fileInfo?.operation_type === FileOperationType.ArchitectureDrawing) {
-      setFileViewStep(fileInfo.status === FileStatus.Completed ? FileViewStep.Second : FileViewStep.IndexSummary);
+      setFileViewStep(
+        fileInfo.status === FileStatus.Completed
+          ? FileViewStep.Second
+          : FileViewStep.IndexSummary
+      );
     } else if (fileInfo?.operation_type === FileOperationType.Quote) {
       setFileViewStep(FileViewStep.Second);
     }
-  }
+  };
 
   const handleNext = async (buttonInfo: { text: string }) => {
     if (buttonInfo.text === ButtonText.NextFile) {
       let filterFiles = fileList.filter(
-        (file: any) => file.id !== selectedFileId,
+        (file: any) => file.id !== selectedFileId
       );
       let nextFile = filterFiles.find(
-        (file: any) => file.status !== FileStatus.Completed,
+        (file: any) => file.status !== FileStatus.Completed
       );
       if (nextFile) {
         // 切换下一个文件时，先判断是否有未保存的crop
@@ -270,13 +306,14 @@ const PageLabelingContent = () => {
         }, 5000);
       }
     } else if (buttonInfo.text === ButtonText.CreateTakeoff) {
+      handleAnaylize(); //added new functionality
       buildingStep.current = BuildLoadingStep.PageTakeOff;
       setBuildLoading(true);
       setTimeout(() => {
         setBuildLoading(false);
       }, 5000);
     }
-  }
+  };
 
   const fileOperationType = useMemo(() => {
     if (!fileList.length) return "";
@@ -289,14 +326,18 @@ const PageLabelingContent = () => {
     // 处理返回上一个文件的逻辑
     const handleBackToPreviousFile = () => {
       console.log("fileList", fileList);
-      let findIndex = fileList.findIndex((file: any) => file.id === selectedFileId);
+      let findIndex = fileList.findIndex(
+        (file: any) => file.id === selectedFileId
+      );
       console.log("findIndex", findIndex);
       if (findIndex > 0) {
         let prevFile = fileList[findIndex - 1];
         if (prevFile.status === FileStatus.Completed) {
           setSelectedFileId(prevFile.id);
           setFileViewStep(FileViewStep.Second);
-        } else if (prevFile.operation_type === FileOperationType.ArchitectureDrawing) {
+        } else if (
+          prevFile.operation_type === FileOperationType.ArchitectureDrawing
+        ) {
           setSelectedFileId(prevFile.id);
           setFileViewStep(FileViewStep.IndexSummary);
         }
@@ -335,7 +376,11 @@ const PageLabelingContent = () => {
       // 如果是合并视图，返回的时候，返回最后一个文件
       let lastFile = fileList[fileList.length - 1];
       setSelectedFileId(lastFile.id);
-      setFileViewStep(lastFile.status === FileStatus.Completed ? FileViewStep.Second : FileViewStep.IndexSummary);
+      setFileViewStep(
+        lastFile.status === FileStatus.Completed
+          ? FileViewStep.Second
+          : FileViewStep.IndexSummary
+      );
       // 更新文件状态为processing
       setFileList((prev: any[]) => {
         return prev.map((file: any) => {
@@ -351,11 +396,12 @@ const PageLabelingContent = () => {
     }
   }, [fileViewStep, selectedFileId, fileList, fileOperationType, router]);
 
-
   // 右上角按钮的相关信息
   const nextButtonInfo = useMemo(() => {
     const hasMultipleFiles = fileList.length > 1;
-    const allFilesCompleted = fileList.every((file: any) => file.status === FileStatus.Completed);
+    const allFilesCompleted = fileList.every(
+      (file: any) => file.status === FileStatus.Completed
+    );
     const otherFilesComplete = fileList
       .filter((file: any) => file.id !== selectedFileId)
       .every((file: any) => file.status === FileStatus.Completed);
@@ -413,11 +459,8 @@ const PageLabelingContent = () => {
     return { text: ButtonText.NextStep, disabled: false };
   }, [fileList, selectedFileId, fileViewStep, indexBoxCount]);
 
-
   return (
-    <div
-      className={`w-full flex flex-col relative h-[100vh]`}
-    >
+    <div className={`w-full flex flex-col relative h-[100vh]`}>
       <Header
         fileList={fileList}
         selectedFileId={selectedFileId}
@@ -429,31 +472,19 @@ const PageLabelingContent = () => {
         fileViewStep={fileViewStep}
       />
       <div className="flex-1 flex overflow-hidden">
-        {
-          fileViewStep === FileViewStep.IndexDrawing &&
-          <IdentIndex
-            ref={drawingIndexRef}
-          />
-        }
-        {
-          fileViewStep === FileViewStep.IndexSummary &&
-          <IdentSummary
-            ref={drawingSummaryRef}
-          />
-        }
-        {fileViewStep === FileViewStep.Second &&
-          <IdentLabel
-            ref={drawingLabelRef}
-          />
-        }
-        {fileViewStep === FileViewStep.FileMerge &&
-          <ManualMerge></ManualMerge>
-        }
+        {fileViewStep === FileViewStep.IndexDrawing && (
+          <IdentIndex ref={drawingIndexRef} />
+        )}
+        {fileViewStep === FileViewStep.IndexSummary && (
+          <IdentSummary ref={drawingSummaryRef} />
+        )}
+        {fileViewStep === FileViewStep.Second && (
+          <IdentLabel ref={drawingLabelRef} />
+        )}
+        {fileViewStep === FileViewStep.FileMerge && <ManualMerge></ManualMerge>}
       </div>
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
-      {buildLoading && (
-        <BuildingBackground step={buildingStep.current} />
-      )}
+      {buildLoading && <BuildingBackground step={buildingStep.current} />}
       {showAnalysisModal && (
         <PreAnalysisMdal
           isOpen={showAnalysisModal}

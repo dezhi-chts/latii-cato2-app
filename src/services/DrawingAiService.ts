@@ -20,9 +20,9 @@ export const reconcileItems = async (take_off_id: number) => {
     console.error("Error fetching candidates:", error);
     return { data: null, status: "error" };
   }
-}
+};
 
-export const reconcileDefault = async (body: object) =>{
+export const reconcileDefault = async (body: object) => {
   try {
     const url = `/drawing-ai/reconcile_items_default`;
     const response = await http.post(url, body);
@@ -31,9 +31,9 @@ export const reconcileDefault = async (body: object) =>{
     console.error("Error defaulting item:", error);
     return { data: null, status: "error" };
   }
-}
+};
 
-export const reconcilePreview = async (body: object) =>{
+export const reconcilePreview = async (body: object) => {
   try {
     const url = `/drawing-ai/reconcile_items_preview`;
     const response = await http.post(url, body);
@@ -42,9 +42,9 @@ export const reconcilePreview = async (body: object) =>{
     console.error("Error previewing item:", error);
     return { data: null, status: "error" };
   }
-}
+};
 
-export const reconcliePreviewKeepAll = async (body: object) =>{
+export const reconcliePreviewKeepAll = async (body: object) => {
   try {
     const url = `/drawing-ai/keepall_items_preview`;
     const response = await http.post(url, body);
@@ -53,9 +53,9 @@ export const reconcliePreviewKeepAll = async (body: object) =>{
     console.error("Error previewing item:", error);
     return { data: null, status: "error" };
   }
-}
+};
 
-export const reconcileConfirm = async (body: object) =>{
+export const reconcileConfirm = async (body: object) => {
   try {
     const url = `/drawing-ai/reconcile_items_confirm`;
     const response = await http.post(url, body);
@@ -64,9 +64,9 @@ export const reconcileConfirm = async (body: object) =>{
     console.error("Error completing item:", error);
     return { data: null, status: "error" };
   }
-}
+};
 
-export const reconcileKeepAllConfirm = async (body: object) =>{
+export const reconcileKeepAllConfirm = async (body: object) => {
   try {
     const url = `/drawing-ai/keepall_items_confirm`;
     const response = await http.post(url, body);
@@ -75,4 +75,18 @@ export const reconcileKeepAllConfirm = async (body: object) =>{
     console.error("Error completing item:", error);
     return { data: null, status: "error" };
   }
-}
+};
+
+export const analyzeItemByGeminiSdk = async (
+  take_off_id: string,
+  template_id: number
+) => {
+  try {
+    const url = `/drawing-ai/analyze_item_by_gemini_sdk?take_off_id=${take_off_id}&template_id=${template_id}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error analyzing item:", error);
+    return { data: null, status: "error" };
+  }
+};
