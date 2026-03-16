@@ -24,7 +24,29 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
     setSettings(project);
   }, [project]);
 
+  useEffect(() => {
+    const validAttributesIds = attributes.map((attr) => attr.uuid);
+    const validSettingsAttributes = Object.fromEntries(
+      Object.entries(settings.attributes ?? {}).filter(([key]) =>
+        validAttributesIds.includes(key),
+      ),
+    );
+
+    setSettings((prev: any) => ({
+      ...prev,
+      attributes: validSettingsAttributes,
+    }));
+  }, [attributes]);
+
   const handleInputChange = (field: string, value: string) => {
+    if (field === "project_name") {
+      setSettings((prev: any) => ({
+        ...prev,
+        project_name: value,
+      }));
+      return;
+    }
+
     const fieldId = attributes.find((attr) => attr.label === field)?.uuid;
 
     setSettings((prev: any) => ({
@@ -106,8 +128,6 @@ const ProjectSettings = ({ project, handleUpdate }: ProjectSettingsProps) => {
           const hasOptions = metadata.length > 0;
 
           const options = hasOptions ? JSON.parse(metadata[0]) : [];
-
-          console.log(options);
 
           const isMultiple = metadata.length > 1 && metadata[1] === "multiple";
 

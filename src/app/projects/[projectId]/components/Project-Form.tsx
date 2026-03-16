@@ -2,6 +2,7 @@
 
 import Checkbox from "@/components/fields/Check";
 import DateInput from "@/components/fields/DateInput";
+import GoogleLocation from "@/components/fields/GoogleLocation";
 import Weblink from "@/components/fields/Link";
 import LongText from "@/components/fields/LongText";
 import Numbers from "@/components/fields/Numbers";
@@ -25,6 +26,7 @@ export const FIELD_COMPONENTS_BY_NUMBER: Record<
   6: (props) => <Switch {...props} />,
   7: (props) => <DateInput {...props} />,
   8: (props) => <Weblink {...props} />,
+  9: (props) => <GoogleLocation {...props} />,
 };
 
 export const COMMIT_ON_BLUR = new Set([0, 1, 2, 8]);
@@ -47,10 +49,6 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
       [getFieldKey(label)]: value,
     }));
   };
-
-  useEffect(() => {
-    console.log(form);
-  }, [form]);
 
   function formatOptions(options: string[]) {
     if (!Array.isArray(options) || !options?.length) return [];
@@ -124,11 +122,16 @@ const ProjectForm = ({ form, setForm }: ProjectFormProps) => {
                   onBlur: (e: any) =>
                     commit(attr.label)(e?.target?.value ?? ""),
                 }
-              : {
-                  value: form[getFieldKey(attr.label)],
-                  onChange: (v: any) =>
-                    commit(attr.label)(isRadio ? v.target.value : v),
-                })}
+              : attr.type === 9 // GoogleLocation
+                ? {
+                    value: form[getFieldKey(attr.label)] ?? "",
+                    onChange: (address: string) => commit(attr.label)(address),
+                  }
+                : {
+                    value: form[getFieldKey(attr.label)],
+                    onChange: (v: any) =>
+                      commit(attr.label)(isRadio ? v.target.value : v),
+                  })}
           />
         );
       })}

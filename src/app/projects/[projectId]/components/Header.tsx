@@ -172,6 +172,15 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
     return attribute.label;
   };
 
+  const curateAttributes = (attributes: any) => {
+    const validAttributesIds =
+      company?.project_attributes.map((attr) => attr.uuid) ?? [];
+
+    return Object.entries(attributes ?? {})
+      .filter(([key]) => validAttributesIds.includes(key))
+      .slice(0, 4);
+  };
+
   return (
     <div
       className="pl-36 left-0 pt-6 pb-2 flex flex-col gap-2 pr-20 bg-white min-h-[10vh] absolute top-0 w-full z-40 border-b border-primaryN30 shadow-sm"
@@ -235,33 +244,31 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
         className={`${status.is_displayed ? "max-h-0 opacity-0" : "max-h-6 opacity-100"} transition-all duration-500 ease-in-out overflow-hidden flex gap-20 pt-1`}
       >
         {project?.attributes &&
-          Object.entries(project.attributes)
-            .slice(0, 4)
-            .map(([key, value]) => {
-              const title = getTitleByAttribueId(key);
+          curateAttributes(project.attributes).map(([key, value]) => {
+            const title = getTitleByAttribueId(key);
 
-              let displayValue = value;
+            let displayValue = value;
 
-              if (Array.isArray(value)) {
-                displayValue = value.join(", ");
-              } else if (typeof value === "string" && value.startsWith("[")) {
-                try {
-                  const parsed = JSON.parse(value);
-                  if (Array.isArray(parsed)) {
-                    displayValue = parsed.join(", ");
-                  }
-                } catch {}
-              }
+            if (Array.isArray(value)) {
+              displayValue = value.join(", ");
+            } else if (typeof value === "string" && value.startsWith("[")) {
+              try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                  displayValue = parsed.join(", ");
+                }
+              } catch {}
+            }
 
-              return (
-                <div key={key} className="flex gap-2 text-sm text-grey-normal">
-                  <span className="font-bold ">{title}</span>
-                  <span className="max-w-32 truncate">
-                    {String(displayValue)}
-                  </span>
-                </div>
-              );
-            })}
+            return (
+              <div key={key} className="flex gap-2 text-sm text-grey-normal">
+                <span className="font-bold ">{title}</span>
+                <span className="max-w-32 truncate">
+                  {String(displayValue)}
+                </span>
+              </div>
+            );
+          })}
       </div>
       <div
         className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${

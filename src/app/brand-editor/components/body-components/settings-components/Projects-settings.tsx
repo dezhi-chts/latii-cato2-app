@@ -16,6 +16,7 @@ import DateInput from "@/components/fields/DateInput";
 import Weblink from "@/components/fields/Link";
 import Check from "@/components/fields/Check";
 import Location from "@/components/fields/Location";
+import GoogleLocation from "@/components/fields/GoogleLocation";
 
 type FieldOption = {
   label: string;
@@ -36,7 +37,8 @@ const ProjectsSettings = () => {
     6: (props) => <Switch {...props} />,
     7: (props) => <DateInput {...props} />,
     8: (props) => <Weblink {...props} />,
-    9: (props) => <Location {...props} />,
+    // 9: (props) => <Location {...props} />,
+    9: (props) => <GoogleLocation {...props} />,
   };
 
   const { company, refreshCompany } = useCompany();

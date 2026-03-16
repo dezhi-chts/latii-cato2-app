@@ -16,6 +16,7 @@ import Radio from "@/components/fields/Radio";
 import Location from "@/components/fields/Location";
 import UploadFiles from "@/components/fields/UploadFiles";
 import { FieldBox } from "./Field-Box";
+import GoogleLocation from "@/components/fields/GoogleLocation";
 
 type MockField = {
   id: number;
@@ -140,7 +141,8 @@ const ProjectsSettings = () => {
     link: (props) => <Weblink {...props} />,
     checks: (props) => <Checkbox {...props} />,
     radios: (props) => <Radio {...props} />,
-    location: (props) => <Location {...props} />,
+    // location: (props) => <Location {...props} />,
+    location: (props) => <GoogleLocation {...props} />,
     upload_files: (props) => <UploadFiles {...props} />,
   };
 
