@@ -144,7 +144,7 @@ const PageLabelingContent = () => {
 
           // 检查是否所有文件都已完成
           const allCompleted = list.every(
-            (file: any) => file.status === FileStatus.Completed
+            (file: any) => file.status === FileStatus.Completed,
           );
           if (allCompleted) {
             // 如果所有文件都已完成，不设置选中文件id，设置为合并页面
@@ -153,7 +153,7 @@ const PageLabelingContent = () => {
           } else {
             // 检查是否只有一个文件为处理中
             const processFiles = list.filter(
-              (file: any) => file.status === FileStatus.Processing
+              (file: any) => file.status === FileStatus.Processing,
             );
             if (processFiles.length === 1) {
               // 如果只有一个处理中的文件，设置为选中文件
@@ -163,7 +163,7 @@ const PageLabelingContent = () => {
                 processFile.operation_type ===
                   FileOperationType.ArchitectureDrawing
                   ? FileViewStep.IndexSummary
-                  : FileViewStep.Second
+                  : FileViewStep.Second,
               );
             } else {
               // 其他情况默认设置第一个文件为当前操作文件
@@ -172,14 +172,14 @@ const PageLabelingContent = () => {
                 project_files[0].operation_type ===
                   FileOperationType.ArchitectureDrawing
                   ? FileViewStep.IndexSummary
-                  : FileViewStep.Second
+                  : FileViewStep.Second,
               );
             }
           }
         } else {
           // 如果loadedFiles?.fileList为空，取第一个文件的设置逻辑
           const updatedFiles = project_files.map((file: any, index: number) =>
-            index === 0 ? { ...file, status: FileStatus.Processing } : file
+            index === 0 ? { ...file, status: FileStatus.Processing } : file,
           );
           setFileList(updatedFiles);
           setSelectedFileId(project_files[0].id);
@@ -187,7 +187,7 @@ const PageLabelingContent = () => {
             project_files[0].operation_type ===
               FileOperationType.ArchitectureDrawing
               ? FileViewStep.IndexSummary
-              : FileViewStep.Second
+              : FileViewStep.Second,
           );
         }
       } else {
@@ -252,7 +252,7 @@ const PageLabelingContent = () => {
       setFileViewStep(
         fileInfo.status === FileStatus.Completed
           ? FileViewStep.Second
-          : FileViewStep.IndexSummary
+          : FileViewStep.IndexSummary,
       );
     } else if (fileInfo?.operation_type === FileOperationType.Quote) {
       setFileViewStep(FileViewStep.Second);
@@ -262,10 +262,10 @@ const PageLabelingContent = () => {
   const handleNext = async (buttonInfo: { text: string }) => {
     if (buttonInfo.text === ButtonText.NextFile) {
       let filterFiles = fileList.filter(
-        (file: any) => file.id !== selectedFileId
+        (file: any) => file.id !== selectedFileId,
       );
       let nextFile = filterFiles.find(
-        (file: any) => file.status !== FileStatus.Completed
+        (file: any) => file.status !== FileStatus.Completed,
       );
       if (nextFile) {
         // 切换下一个文件时，先判断是否有未保存的crop
@@ -306,12 +306,10 @@ const PageLabelingContent = () => {
         }, 5000);
       }
     } else if (buttonInfo.text === ButtonText.CreateTakeoff) {
-      handleAnaylize(); //added new functionality
       buildingStep.current = BuildLoadingStep.PageTakeOff;
       setBuildLoading(true);
-      setTimeout(() => {
-        setBuildLoading(false);
-      }, 5000);
+      await handleAnaylize();
+      setBuildLoading(false);
     }
   };
 
@@ -327,7 +325,7 @@ const PageLabelingContent = () => {
     const handleBackToPreviousFile = () => {
       console.log("fileList", fileList);
       let findIndex = fileList.findIndex(
-        (file: any) => file.id === selectedFileId
+        (file: any) => file.id === selectedFileId,
       );
       console.log("findIndex", findIndex);
       if (findIndex > 0) {
@@ -379,7 +377,7 @@ const PageLabelingContent = () => {
       setFileViewStep(
         lastFile.status === FileStatus.Completed
           ? FileViewStep.Second
-          : FileViewStep.IndexSummary
+          : FileViewStep.IndexSummary,
       );
       // 更新文件状态为processing
       setFileList((prev: any[]) => {
@@ -400,7 +398,7 @@ const PageLabelingContent = () => {
   const nextButtonInfo = useMemo(() => {
     const hasMultipleFiles = fileList.length > 1;
     const allFilesCompleted = fileList.every(
-      (file: any) => file.status === FileStatus.Completed
+      (file: any) => file.status === FileStatus.Completed,
     );
     const otherFilesComplete = fileList
       .filter((file: any) => file.id !== selectedFileId)
