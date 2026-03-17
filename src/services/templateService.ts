@@ -56,7 +56,7 @@ export const updateTemplate = async (templateId: string, settings: any) => {
   }
 };
 
-export const createField = async (templateId: string, field: Field) => {
+export const createField = async (templateId: number, field: Field) => {
   try {
     const url = `/prompt-template/${templateId}/field`;
     const response = await http.post(url, field);
@@ -68,7 +68,7 @@ export const createField = async (templateId: string, field: Field) => {
 };
 
 export const updateField = async (
-  templateId: string,
+  templateId: number,
   fieldId: string,
   field: Field,
 ) => {
@@ -100,6 +100,35 @@ export const getFieldsByTemplateId = async (templateId: string) => {
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error getting fields:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const setTemplateDefault = async (
+  templateId: number,
+  company_id: number,
+) => {
+  try {
+    const url = `/prompt-template/${templateId}/set-default?company_id=${company_id}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error updating template default:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const copyTemplate = async (
+  templateId: number,
+  company_id: number,
+  name: string,
+) => {
+  try {
+    const url = `/prompt-template/${templateId}/copy`;
+    const response = await http.post(url, { company_id, name });
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error copying template:", error);
     return { data: null, status: "error" };
   }
 };

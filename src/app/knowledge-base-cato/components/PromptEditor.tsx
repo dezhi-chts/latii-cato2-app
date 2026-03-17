@@ -130,7 +130,7 @@ export const PromptEditor = ({
       />
 
       {/* Right Content - Field Display */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto border border-primaryN30 rounded-xl px-10 py-5">
         <FieldEditor
           templateId={templateId as number}
           field={editingField as any}

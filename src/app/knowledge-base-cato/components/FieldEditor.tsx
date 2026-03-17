@@ -22,6 +22,7 @@ interface FieldData {
   config_json: {
     available_values: string[];
     extraction_rules: string[];
+    default_value: string;
   };
 }
 
@@ -38,8 +39,6 @@ const typeOptions = [
   { value: "number", label: "Numeric Value" },
 ];
 
-const labelWidth = "w-[120px]";
-
 export const FieldEditor = ({
   templateId,
   field,
@@ -55,16 +54,20 @@ export const FieldEditor = ({
     config_json: {
       available_values: [],
       extraction_rules: [],
+      default_value: '',
     },
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log('############### FieldEditor', field);
     if (field) setFormData(field);
   }, [field]);
 
   const handleFieldChange = (key: keyof FieldData, value: any) => {
     setFormData({ ...formData, [key]: value });
+    // 同步调用更新操作
+    onUpdateField?.(FieldEvent.Update, { template_id: templateId, field_id: field?.id || "", fieldData: formData });
   };
 
   const handleSubmit = useCallback(() => {
@@ -78,7 +81,7 @@ export const FieldEditor = ({
       return;
     }
     if (mode === "create") {
-      handleCreate();
+      onUpdateField?.(FieldEvent.Create, { template_id: templateId, fieldData: formData });
     } else {
       handleUpdate();
       onClose?.();
@@ -88,7 +91,7 @@ export const FieldEditor = ({
   const handleUpdate = async () => {
     setLoading(true);
     const res = await updateField(
-      templateId || "",
+      templateId,
       field?.id || "",
       formData as any,
     );
@@ -100,31 +103,31 @@ export const FieldEditor = ({
     setLoading(false);
   };
 
-  const handleCreate = async () => {
-    setLoading(true);
-    const res = await createField(
-      templateId || "",
-      formData as any,
-    );
-    if (res.status === "success") {
-      message.success("Field created successfully");
-      onUpdateField?.(FieldEvent.Create, { templateId });
-    } else {
-      message.error(res?.data?.detail || "Failed to create field");
-    }
-    setLoading(false);
-  };
-
   const handleAddValue = () => {
     const newValues = [...values, "Please input value"];
-    setFormData({
-      ...formData,
-      config_json: {
-        ...formData.config_json,
-        available_values: newValues,
-      },
-    });
+    let configJSON = {
+      ...formData?.config_json,
+      available_values: newValues,
+    };
+    handleFieldChange("config_json", configJSON);
   };
+
+  const handleValuesChange = (index: number, value: string) => {
+    let configJSON = {
+      ...formData?.config_json,
+      available_values: [...values],
+    };
+    configJSON.available_values[index] = value;
+    handleFieldChange("config_json", configJSON);
+  }
+
+  const handleValuesDefault = (defaultValue: string) => {
+    let configJSON = {
+      ...formData?.config_json,
+      default_value: defaultValue,
+    };
+    handleFieldChange("config_json", configJSON);
+  }
 
   const rulesString = useMemo(() => {
     if (!formData?.config_json?.extraction_rules) return "";
@@ -135,21 +138,25 @@ export const FieldEditor = ({
     return formData?.config_json?.available_values || [];
   }, [formData]);
 
-  const disabelEdit = templateId === 1;
+  const disabelEdit = mode !== "create";
 
   return (
-    <div className="w-full h-full flex flex-col gap-6 border border-primaryN30 rounded-xl overflow-hidden">
+    <div className="w-full h-full flex flex-col gap-6 overflow-hidden">
       <div className="flex-1 flex flex-row overflow-y-auto">
         {/* Form Fields */}
-        <div className={`${mode === 'create' ? 'w-[40%]' : 'w-[500px]'} px-10 py-5 flex flex-col gap-10`}>
+        <div className={`${mode === 'create' ? 'w-[40%]' : 'w-[500px]'} flex flex-col gap-10`}>
           {/* Label */}
           <div className="flex flex-col gap-2">
             <label className={`text-sm`}>Label</label>
             <p className="text-xs text-grey-normal">This will be the name of your columns in your takeoff list.</p>
             <div className="w-full mt-2">
               <Input
-                value={formData?.name || ""}
-                onChange={(e) => handleFieldChange("name", e.target.value)}
+                defaultValue={formData?.name || ""}
+                onChange={(e) => {
+                  if (e.target.value.trim().length > 0 && e.target.value !== formData?.name) {
+                    handleFieldChange("name", e.target.value)
+                  }
+                }}
                 className="w-full h-[28px] border-primaryN30 rounded-md text-xs"
                 placeholder="Enter field name"
                 disabled={disabelEdit}
@@ -170,7 +177,11 @@ export const FieldEditor = ({
                       ? "bg-forumBlue-light-hover text-forumBlue-dark-active"
                       : "bg-grey-light text-grey-light-strong"
                       }`}
-                    onClick={() => handleFieldChange("field_type", option.value)}
+                    onClick={() => {
+                      if (formData?.field_type === option.value) return;
+                      handleFieldChange("field_type", option.value)
+                    }
+                    }
                     disabled={disabelEdit}
                   >
                     {option.label}
@@ -212,24 +223,21 @@ export const FieldEditor = ({
                     </button>
                     <input
                       className="ml-4 mr-1 flex-1 text-sm"
-                      value={item}
+                      defaultValue={item}
                       onChange={(e) => {
-                        const newValues = [...values];
-                        newValues[index] = e.target.value;
-                        setFormData({
-                          ...formData,
-                          config_json: {
-                            ...formData.config_json,
-                            available_values: newValues,
-                          },
-                        });
+                        if (e.target.value.trim().length === 0) return;
+                        if (e.target.value === item) return;
+                        handleValuesChange(index, e.target.value)
                       }}
                       disabled={disabelEdit}
                     />
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-[10px] px-3 py-0.5 rounded-lg cursor-pointer ${item.isDefault ? "text-[#5856D7] bg-[#5856D733]" : "bg-grey-light-hover text-grey-light-strong"
+                        className={`text-[10px] px-3 py-0.5 rounded-lg cursor-pointer ${formData?.config_json?.default_value === item ? "text-[#5856D7] bg-[#5856D733]" : "bg-grey-light-hover text-grey-light-strong"
                           }`}
+                        onClick={(e) => {
+                          handleValuesDefault(item);
+                        }}
                       >
                         Default
                       </span>
@@ -242,15 +250,15 @@ export const FieldEditor = ({
 
           {/* Notes */}
           <div className="flex flex-col items-start gap-2">
-            <label className={`text-sm`}>Notes</label>
-            <p className="text-xs text-grey-normal">Add notes if needed for your team to visualize.</p>
+            <label className={`text-sm`}>Internal Notes</label>
+            <p className="text-xs text-grey-normal">Add specific context or reminders for your team to visualize.</p>
             <div className="w-full mt-2">
               <Input.TextArea
                 size="small"
                 value={formData?.notes || ""}
                 onChange={(e) => handleFieldChange("notes", e.target.value)}
                 className="w-full border-primaryN30 rounded-md text-xs"
-                placeholder="For Example: All Our Glass is Tempered."
+                placeholder="Add team notes here..."
                 rows={4}
                 disabled={disabelEdit}
               />
@@ -264,16 +272,17 @@ export const FieldEditor = ({
             <div className="flex-1 flex flex-col gap-3">
               <ReactQuill
                 theme="snow"
-                value={rulesString}
+                defaultValue={rulesString}
                 onChange={(value) => {
                   if (value?.trim().length > 0) {
-                    setFormData({
-                      ...formData,
-                      config_json: {
-                        ...formData.config_json,
-                        extraction_rules: [value],
-                      },
-                    });
+                    console.log('######## rules onchange ', value)
+                    // setFormData({
+                    //   ...formData,
+                    //   config_json: {
+                    //     ...formData.config_json,
+                    //     extraction_rules: [value],
+                    //   },
+                    // });
                   }
                 }}
                 className="h-[calc(100%-50px)]"
@@ -284,18 +293,27 @@ export const FieldEditor = ({
           </div>
         </div>
       </div>
-      <div className="mb-2 mr-10 flex justify-end">
-        {
-          !disabelEdit && (
+      {
+        !disabelEdit && (
+          <div className="mb-2 mr-10 flex justify-end gap-2">
             <Button
-              className="custom-primary-btn"
+              className="custom-default-btn"
+              onClick={() => {
+                onClose?.();
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              className="custom-primary-btn !w-[86px]"
               onClick={handleSubmit}
             >
-              Save
+              Add
             </Button>
-          )
-        }
-      </div>
+          </div>
+        )
+      }
+
       {loading && <LoadingScreen isLoading={loading} />}
     </div>
   );

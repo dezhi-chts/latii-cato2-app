@@ -19,12 +19,14 @@ interface NewTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (template: any) => void;
+  onAddPrompt: () => void;
 }
 
 export const NewTemplateModal = ({
   isOpen,
   onClose,
   onSuccess,
+  onAddPrompt,
 }: NewTemplateModalProps) => {
   const [templateName, setTemplateName] = useState("");
   const [standardTemplateInfo, setStandardTemplateInfo] = useState<any>(null);
@@ -189,12 +191,13 @@ export const NewTemplateModal = ({
         {/* Footer Buttons */}
         <div className="flex justify-between gap-3 pt-2 border-t border-primaryN30">
           <div>
-            <button
+            {/* <button
               className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+              onClick={() => onAddPrompt()}
             >
               <PlusOutlined className="text-xs" />
               <span>Prompt</span>
-            </button>
+            </button> */}
           </div>
           <div>
             <Button className="custom-default-btn" onClick={onClose}>
