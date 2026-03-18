@@ -79,10 +79,10 @@ export const reconcileKeepAllConfirm = async (body: object) => {
 
 export const analyzeItemByGeminiSdk = async (
   take_off_id: string,
-  template_id: number
+  template_id: number,
 ) => {
   try {
-    const url = `/drawing-ai/analyze_item_by_gemini_sdk?take_off_id=${take_off_id}&template_id=${template_id}`;
+    const url = `/drawing-ai/analyze_item?take_off_id=${take_off_id}&template_id=${template_id}`;
     const response = await http.post(url);
     return { data: response as any, status: "success" };
   } catch (error) {
