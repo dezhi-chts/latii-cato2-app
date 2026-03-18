@@ -190,26 +190,32 @@ export const TemplateList = ({
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* 复制和删除按钮 - hover 或选中时显示 */}
               {/* Default 标签 - 只显示当前设置的 default */}
-              {(template.id !== 1 && (template.is_default || selectedTemplateId === template.id)) && (
-                <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
-                  ? "bg-white text-forumBlue-normal"
-                  : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
+              <div
+                className={`flex items-center gap-1 transition-opacity ${selectedTemplateId === template.id || template.is_default
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
                   }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTemplateDefault(template.id)
-                  }}
-                >
-                  Default
-                </span>
-              )}
-
+              >
+                {template.id !== 1 && (
+                  <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
+                    ? "bg-white text-forumBlue-normal"
+                    : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTemplateDefault(template.id)
+                    }}
+                  >
+                    Default
+                  </span>
+                )}
+              </div>
+              {/* 复制和删除按钮 - hover 或选中时显示 */}
               <div
                 className={`flex items-center gap-1 transition-opacity ${selectedTemplateId === template.id
                   ? "opacity-100"
-                  : "opacity-0"
+                  : "opacity-0 group-hover:opacity-100"
                   }`}
               >
                 <button
