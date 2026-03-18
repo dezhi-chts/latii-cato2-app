@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ConfigProvider, notification, Modal } from "antd";
+import { ConfigProvider, notification, Modal, message } from "antd";
 import Header from "./components/Header";
 import { TemplateViewer } from "./components/TemplateViewer";
 import { PromptEditor } from "./components/PromptEditor";
@@ -206,29 +206,12 @@ const Page = () => {
     }
   }
 
-  const handleFieldCreate = async (templateId: number, formData: any) => {
-    setLoading(true);
-    const res = await createField(
-      templateId,
-      formData as any,
-    );
-    if (res.status === "success") {
-      fetchTemplateContent(templateId);
-    } else {
-      notification.error({
-        message: "Error",
-        description: res?.data?.detail || "Failed to create field",
-      });
-    }
-  };
-
   // 更新field信息
   const sendUpdateField = async (templateId: number, fieldId: string, fieldData: any) => {
     // 同步当前默认状态到服务端
     console.log('########## sendUpdateField', templateId, fieldId, fieldData);
     const response = await updateField(templateId, fieldId, fieldData);
     if (response.status === "success") {
-      fetchTemplateContent(templateId);
     } else {
       notification.error({
         message: "Error",
@@ -254,8 +237,17 @@ const Page = () => {
 
   const handleUpdateField = (eventName: FieldEvent, data: any) => {
     if (eventName === FieldEvent.Create) {
-      handleFieldCreate(data.template_id, data.field);
+      fetchTemplateContent(data.template_id);
     } else if (eventName === FieldEvent.Update) {
+      setTemplateContent((prev: any) => ({
+        ...prev,
+        fields: prev.fields.map((field: any) => {
+          return field.id === data.field_id ? {
+            ...field,
+            ...data.fieldData,
+          } : field;
+        }),
+      }));
       sendUpdateField(data.template_id, data.field_id, data.fieldData);
     }
   };
@@ -274,6 +266,7 @@ const Page = () => {
             onClick={() => {
               if (templateId === 1 && tab === MainTab.PromptLibrary) {
                 // 默认模版禁止切换到 PromptLibrary，因为 PromptLibrary 是用户自定义的模版
+                message.error('Standard template is not allowed to switch to PromptLibrary');
                 return;
               }
               setActiveMainTab(tab)
@@ -305,6 +298,7 @@ const Page = () => {
             subFieldName={subFieldId.current}
             setLoading={setLoading}
             onUpdateField={handleUpdateField}
+            onRefreshTemplate={() => templateId && fetchTemplateContent(templateId)}
           />
         )}
       </div>

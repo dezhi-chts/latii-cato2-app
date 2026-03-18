@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Input, message, Tag } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Input, message, Tag, Modal, notification } from "antd";
 
 import { updateField, createField } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
@@ -13,6 +13,8 @@ import dynamic from "next/dynamic";
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 import 'react-quill/dist/quill.snow.css';
 import { FieldEvent } from "../page";
+
+const { confirm } = Modal;
 
 interface FieldData {
   id: string;
@@ -58,16 +60,25 @@ export const FieldEditor = ({
     },
   });
   const [loading, setLoading] = useState(false);
+  // 用于区分 ReactQuill 的初始化触发和用户输入
+  const isQuillInitializedRef = useRef(false);
 
   useEffect(() => {
-    console.log('############### FieldEditor', field);
-    if (field) setFormData(field);
+    if (field) {
+      setFormData(field);
+      // 重置 ReactQuill 初始化标志
+      isQuillInitializedRef.current = false;
+    }
   }, [field]);
 
   const handleFieldChange = (key: keyof FieldData, value: any) => {
-    setFormData({ ...formData, [key]: value });
+    let newFormData = { ...formData, [key]: value };
+    setFormData(() => newFormData);
+
+    // 如果是创建新的prompt，则不能输入完成后，在onBlur事件中直接更新数据
+    if (mode === "create") return;
     // 同步调用更新操作
-    onUpdateField?.(FieldEvent.Update, { template_id: templateId, field_id: field?.id || "", fieldData: formData });
+    onUpdateField?.(FieldEvent.Update, { template_id: templateId, field_id: field?.id || "", fieldData: newFormData });
   };
 
   const handleSubmit = useCallback(() => {
@@ -80,28 +91,31 @@ export const FieldEditor = ({
       message.error("Please fill in the required field: Type");
       return;
     }
-    if (mode === "create") {
-      onUpdateField?.(FieldEvent.Create, { template_id: templateId, fieldData: formData });
-    } else {
-      handleUpdate();
-      onClose?.();
-    }
+    handleCreateField();
   }, [formData]);
 
-  const handleUpdate = async () => {
+  const handleCreateField = async () => {
     setLoading(true);
-    const res = await updateField(
+    const res = await createField(
       templateId,
-      field?.id || "",
       formData as any,
     );
     if (res.status === "success") {
-      message.success("Field updated successfully");
+      setLoading(false);
+      notification.success({
+        message: "Success",
+        description: res?.data?.detail || "Field created successfully",
+      });
+      onClose?.();
+      onUpdateField?.(FieldEvent.Create, { template_id: templateId, fieldData: formData });
     } else {
-      message.error(res?.data?.detail || "Failed to update field");
+      setLoading(false);
+      notification.error({
+        message: "Error",
+        description: res?.data?.detail || "Failed to create field",
+      });
     }
-    setLoading(false);
-  };
+  }
 
   const handleAddValue = () => {
     const newValues = [...values, "Please input value"];
@@ -129,6 +143,24 @@ export const FieldEditor = ({
     handleFieldChange("config_json", configJSON);
   }
 
+  const handleRemoveValue = (index: number) => {
+    confirm({
+      title: "Are you sure you want to delete this value?",
+      okText: "Yes",
+      okType: "danger",
+      onOk: () => {
+        let configJSON = {
+          ...formData?.config_json,
+          available_values: [...values],
+        };
+        configJSON.available_values.splice(index, 1);
+        handleFieldChange("config_json", configJSON);
+      },
+    })
+  }
+
+
+
   const rulesString = useMemo(() => {
     if (!formData?.config_json?.extraction_rules) return "";
     return formData?.config_json?.extraction_rules?.join(", ") || "";
@@ -138,7 +170,7 @@ export const FieldEditor = ({
     return formData?.config_json?.available_values || [];
   }, [formData]);
 
-  const disabelEdit = mode !== "create";
+  const disabelEdit = templateId === 1 || field?.name === 'Generations';
 
   return (
     <div className="w-full h-full flex flex-col gap-6 overflow-hidden">
@@ -151,9 +183,16 @@ export const FieldEditor = ({
             <p className="text-xs text-grey-normal">This will be the name of your columns in your takeoff list.</p>
             <div className="w-full mt-2">
               <Input
-                defaultValue={formData?.name || ""}
+                value={formData?.name}
                 onChange={(e) => {
-                  if (e.target.value.trim().length > 0 && e.target.value !== formData?.name) {
+                  setFormData({
+                    ...formData,
+                    name: e.target.value,
+                  })
+                }}
+                onBlur={(e) => {
+                  console.log('########## name change', e.target.value)
+                  if (e.target.value.trim().length > 0 && e.target.value !== field?.name) {
                     handleFieldChange("name", e.target.value)
                   }
                 }}
@@ -218,15 +257,26 @@ export const FieldEditor = ({
                   >
                     <button className="text-grey-normal hover:text-red-500"
                       disabled={disabelEdit}
+                      onClick={() => handleRemoveValue(index)}
                     >
                       <Image src="/assets/icons/delete.svg" alt="plus icon" width={15} height={15} />
                     </button>
                     <input
                       className="ml-4 mr-1 flex-1 text-sm"
-                      defaultValue={item}
+                      value={item}
                       onChange={(e) => {
+                        setFormData({
+                          ...formData,
+                          config_json: {
+                            ...formData?.config_json,
+                            available_values: values.map((v, i) => i === index ? e.target.value : v),
+                          },
+                        })
+                      }}
+                      onBlur={(e) => {
+                        console.log('########## value change', e.target.value)
                         if (e.target.value.trim().length === 0) return;
-                        if (e.target.value === item) return;
+                        if (e.target.value !== formData?.config_json?.available_values[index]) return;
                         handleValuesChange(index, e.target.value)
                       }}
                       disabled={disabelEdit}
@@ -256,7 +306,18 @@ export const FieldEditor = ({
               <Input.TextArea
                 size="small"
                 value={formData?.notes || ""}
-                onChange={(e) => handleFieldChange("notes", e.target.value)}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    notes: e.target.value,
+                  })
+                }}
+                onBlur={(e) => {
+                  console.log('########## notes change', e.target.value)
+                  if (e.target.value.trim().length === 0) return;
+                  if (e.target.value === formData?.notes) return;
+                  handleFieldChange("notes", e.target.value)
+                }}
                 className="w-full border-primaryN30 rounded-md text-xs"
                 placeholder="Add team notes here..."
                 rows={4}
@@ -265,37 +326,79 @@ export const FieldEditor = ({
             </div>
           </div>
         </div>
-        <div className="flex-1 flex px-10 py-5">
+        <div className="flex-1 flex px-10">
           {/* Rules */}
           <div className="mb-2 flex-1 flex flex-col gap-2">
             <label className={`text-sm`}>Rules</label>
-            <div className="flex-1 flex flex-col gap-3">
-              <ReactQuill
+            <p className="text-xs text-grey-normal">Define what CATO should look for and the logic it should use to analyze your files.</p>
+            <div className="mt-2 flex-1 flex flex-col gap-3">
+              {/* <ReactQuill
+                key={formData?.id}
                 theme="snow"
                 defaultValue={rulesString}
                 onChange={(value) => {
-                  if (value?.trim().length > 0) {
-                    console.log('######## rules onchange ', value)
-                    // setFormData({
-                    //   ...formData,
-                    //   config_json: {
-                    //     ...formData.config_json,
-                    //     extraction_rules: [value],
-                    //   },
-                    // });
+                  // 第一次 onChange 是初始化触发，忽略
+                  if (!isQuillInitializedRef.current) {
+                    isQuillInitializedRef.current = true;
+                    return;
+                  }
+                  // 只有用户输入时才处理
+                  if (value?.trim().length > 0 && value !== rulesString) {
+                    console.log('######## rules user input ', value)
+                    setFormData({
+                      ...formData,
+                      config_json: {
+                        ...formData.config_json,
+                        extraction_rules: [value],
+                      },
+                    });
+                  }
+                }}
+                onBlur={(e) => {
+                  if (formData?.config_json?.extraction_rules?.[0] !== field?.config_json?.extraction_rules?.[0]) {
+                    handleFieldChange("config_json", {
+                      ...formData.config_json,
+                      extraction_rules: [formData?.config_json?.extraction_rules?.[0]],
+                    });
                   }
                 }}
                 className="h-[calc(100%-50px)]"
                 readOnly={disabelEdit}
               >
-              </ReactQuill>
+              </ReactQuill> */}
+              <Input.TextArea
+                size="small"
+                value={rulesString}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    config_json: {
+                      ...formData.config_json,
+                      extraction_rules: [e.target.value],
+                    },
+                  });
+                }}
+                onBlur={(e) => {
+                  console.log('########## rules change', e.target.value)
+                  if (formData?.config_json?.extraction_rules?.[0] !== field?.config_json?.extraction_rules?.[0]) {
+                    handleFieldChange("config_json", {
+                      ...formData.config_json,
+                      extraction_rules: [formData?.config_json?.extraction_rules?.[0]],
+                    });
+                  }
+                }}
+                className="w-full border-primaryN30 rounded-md text-xs"
+                style={{ height: 'calc(100%)', }}
+                placeholder="Add team notes here..."
+                disabled={disabelEdit}
+              />
             </div>
           </div>
         </div>
       </div>
       {
-        !disabelEdit && (
-          <div className="mb-2 mr-10 flex justify-end gap-2">
+        mode === 'create' && (
+          <div className="mb-2 mr-10 flex justify-end gap-3">
             <Button
               className="custom-default-btn"
               onClick={() => {
@@ -305,7 +408,7 @@ export const FieldEditor = ({
               Back
             </Button>
             <Button
-              className="custom-primary-btn !w-[86px]"
+              className="custom-primary-btn !w-[96px]"
               onClick={handleSubmit}
             >
               Add

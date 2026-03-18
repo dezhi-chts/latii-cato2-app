@@ -54,7 +54,6 @@ export const TemplateViewer = ({
       });
     }
     let field = subTabs.find((item: any) => item.name === activeSubTab);
-    console.log('########### field', field)
     if (field) {
       setActiveFieldContent(field);
     }
@@ -62,9 +61,10 @@ export const TemplateViewer = ({
     onChangeSubTab(activeSubTab);
   }, [activeSubTab, subTabs, onChangeSubTab]);
 
-  const handleFieldEdit = useCallback(() => {
-    onChangeMainTab(MainTab.PromptLibrary);
-  }, [activeSubTab]);
+  const handleFieldUpdate = useCallback((eventName: FieldEvent, data: any) => {
+    // 直接通知父组件更新，由父组件更新 templateContent 后 subTabs 会自动刷新
+    onUpdateField(eventName, data);
+  }, [onUpdateField]);
 
   return (
     <div className="flex flex-row gap-20 h-full">
@@ -104,7 +104,7 @@ export const TemplateViewer = ({
           <FieldEditor
             templateId={templateId as number}
             field={activeFieldContent}
-            onUpdateField={onUpdateField}
+            onUpdateField={handleFieldUpdate}
           />
         </div>
       </div>

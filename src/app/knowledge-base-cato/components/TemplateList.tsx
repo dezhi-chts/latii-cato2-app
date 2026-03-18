@@ -139,7 +139,7 @@ export const TemplateList = ({
         {templates.map((template, index) => (
           <div
             key={template.id}
-            className={`px-3 h-[36px] rounded-md cursor-pointer flex justify-between items-center ${selectedTemplateId === template.id
+            className={`group px-3 h-[36px] rounded-md cursor-pointer flex justify-between items-center ${selectedTemplateId === template.id
               ? "bg-forumBlue-light-active"
               : "bg-white border-transparent hover:bg-grey-light"
               }`}
@@ -190,32 +190,51 @@ export const TemplateList = ({
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {template.id !== 1 && <span className={`text-xxs px-2 rounded-lg border border- bg-grey-light-hover 
-                ${template.is_default ? template.id === selectedTemplateId ? "text-forumBlue-normal bg-white" : "text-forumBlue-normal" : "text-grey-light-strong"}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (template.is_default) return;
-                  handleTemplateDefault(template.id)
-                }}
+              {/* 复制和删除按钮 - hover 或选中时显示 */}
+              {/* Default 标签 - 只显示当前设置的 default */}
+              {(template.id !== 1 && (template.is_default || selectedTemplateId === template.id)) && (
+                <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
+                  ? "bg-white text-forumBlue-normal"
+                  : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTemplateDefault(template.id)
+                  }}
+                >
+                  Default
+                </span>
+              )}
+
+              <div
+                className={`flex items-center gap-1 transition-opacity ${selectedTemplateId === template.id
+                  ? "opacity-100"
+                  : "opacity-0"
+                  }`}
               >
-                Default
-              </span>}
-              {selectedTemplateId === template.id && (
-                <>
-                  <button className="text-grey-normal hover:text-forumBlue-normal" onClick={(e) => {
+                <button
+                  className="p-1 rounded hover:bg-white/50 transition-colors"
+                  onClick={(e) => {
                     e.stopPropagation();
                     handleCopyTemplate(template.id, template.name + ' copy')
-                  }}>
-                    <Image src="/assets/icons/copy.svg" alt="Copy" width={14} height={14}></Image>
+                  }}
+                  title="Copy"
+                >
+                  <Image src="/assets/icons/copy.svg" alt="Copy" width={14} height={14} />
+                </button>
+                {template.id !== 1 && (
+                  <button
+                    className="p-1 rounded hover:bg-white/50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTemplate(template.id)
+                    }}
+                    title="Delete"
+                  >
+                    <Image src="/assets/icons/delete-forum-blue.svg" alt="Delete" width={14} height={14} />
                   </button>
-                  {template.id !== 1 && <button className="text-grey-normal hover:text-red-500" onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTemplate(template.id)
-                  }}>
-                    <Image src="/assets/icons/delete-forum-blue.svg" alt="Delete" width={14} height={14} color="#427CCE"></Image>
-                  </button>}
-                </>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ))}

@@ -1,7 +1,7 @@
 import { http } from "@/lib/http";
 import { Field } from "@/types/templates";
 
-export const getTemplates = async (page: number = 1, perPage: number = 30) => {
+export const getTemplates = async (page: number = 1, perPage: number = 100) => {
   try {
     const url = `/prompt-template/list?page=${page}&per_page=${perPage}`;
     const response = await http.get(url);
@@ -129,6 +129,17 @@ export const copyTemplate = async (
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error copying template:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const copyField = async (templateId: number, fieldId: string) => {
+  try {
+    const url = `/prompt-template/${templateId}/field/${fieldId}/copy`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error copying field:", error);
     return { data: null, status: "error" };
   }
 };

@@ -37,6 +37,7 @@ export const FieldEditorModal = ({
             field={field}
             mode={'create'}
             onClose={onClose}
+            onUpdateField={onUpdateField}
           />
         </div>
       </div>
