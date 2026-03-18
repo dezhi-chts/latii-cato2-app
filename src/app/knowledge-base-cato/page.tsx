@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ConfigProvider, notification, Modal } from "antd";
+import { ConfigProvider, notification, Modal, message } from "antd";
 import Header from "./components/Header";
 import { TemplateViewer } from "./components/TemplateViewer";
 import { PromptEditor } from "./components/PromptEditor";
@@ -10,6 +10,10 @@ import {
   getTemplateById,
   updateTemplate,
   deleteTemplate,
+  setTemplateDefault,
+  copyTemplate,
+  updateField,
+  createField,
 } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
 
@@ -32,6 +36,7 @@ export enum TemplateEvent {
   UpdateValueDefault = "updateValueDefault",
   Create = "create",
   Delete = "delete",
+  Copy = "copy",
 }
 
 export enum FieldEvent {
@@ -73,6 +78,7 @@ const Page = () => {
 
   // 获取模版列表
   const fetchTemplates = async () => {
+    setLoading(true);
     const response = await getTemplates();
     if (response.status === "success") {
       let list = response.data?.items || [];
@@ -86,10 +92,14 @@ const Page = () => {
         description: "Failed to fetch templates",
       });
     }
+    setLoading(false);
   };
 
   // 获取模版内容
   const fetchTemplateContent = async (id: number) => {
+    // 将模版内容设置为空，避免在获取内容时显示旧内容
+    setTemplateContent(null);
+    setLoading(true);
     const response = await getTemplateById(id);
     if (response.status === "success") {
       setTemplateContent(response.data);
@@ -99,12 +109,11 @@ const Page = () => {
         description: "Failed to fetch template content",
       });
     }
+    setLoading(false);
   };
 
   // 设置默认模版
   const handleTemplateDefault = async (templateId: number) => {
-    let defaultTemplate = templateList.find((template) => template.id === templateId);
-    defaultTemplate.is_default = true;
     setTemplateList((prev) => {
       let list = prev.map((template) => {
         return {
@@ -114,7 +123,7 @@ const Page = () => {
       });
       return list;
     });
-    sendUpdateTemplate(templateId, defaultTemplate);
+    handleSetDefaultTemplate(templateId);
   };
 
   // 更新模版名称
@@ -155,6 +164,21 @@ const Page = () => {
     }
   }
 
+  const handleCopyTemplate = async (templateId: number, name: string) => {
+    setLoading(true);
+    // 发送请求
+    const response = await copyTemplate(templateId, companyId, name);
+    if (response.status === "success") {
+      fetchTemplates();
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to copy template",
+      });
+    }
+    setLoading(false);
+  }
+
   // 发送删除模版请求
   const sendDeleteTemplate = async (templateId: number) => {
     // 同步当前默认状态到服务端
@@ -169,6 +193,33 @@ const Page = () => {
     }
   }
 
+  // 设置默认模版
+  const handleSetDefaultTemplate = async (templateId: number) => {
+    // 同步当前默认状态到服务端
+    const response = await setTemplateDefault(templateId, companyId);
+    if (response.status === "success") {
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to set default template",
+      });
+    }
+  }
+
+  // 更新field信息
+  const sendUpdateField = async (templateId: number, fieldId: string, fieldData: any) => {
+    // 同步当前默认状态到服务端
+    console.log('########## sendUpdateField', templateId, fieldId, fieldData);
+    const response = await updateField(templateId, fieldId, fieldData);
+    if (response.status === "success") {
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to update field",
+      });
+    }
+  }
+
   // 模版更新事件处理
   const handleUpdateTemplate = (eventName: TemplateEvent, data: any) => {
     if (eventName === TemplateEvent.Create) {
@@ -179,12 +230,25 @@ const Page = () => {
       handleUpdateTemplateName(data.template_id, data.name);
     } else if (eventName === TemplateEvent.Delete) {
       handleDeleteTemplate(data.template_id);
+    } else if (eventName === TemplateEvent.Copy) {
+      handleCopyTemplate(data.template_id, data.name);
     }
   };
 
   const handleUpdateField = (eventName: FieldEvent, data: any) => {
     if (eventName === FieldEvent.Create) {
       fetchTemplateContent(data.template_id);
+    } else if (eventName === FieldEvent.Update) {
+      setTemplateContent((prev: any) => ({
+        ...prev,
+        fields: prev.fields.map((field: any) => {
+          return field.id === data.field_id ? {
+            ...field,
+            ...data.fieldData,
+          } : field;
+        }),
+      }));
+      sendUpdateField(data.template_id, data.field_id, data.fieldData);
     }
   };
 
@@ -199,7 +263,14 @@ const Page = () => {
         {/* Main Tab Switcher */}
         {mainTabList.map((tab: MainTab) => (
           <div key={tab} className={`w-[140px] h-[30px] flex items-center justify-center text-xs rounded-md cursor-pointer ${tab === activeMainTab ? 'font-bold text-grey-dark bg-forumBlue-light' : 'text-grey-light-strong'}`}
-            onClick={() => setActiveMainTab(tab)}
+            onClick={() => {
+              if (templateId === 1 && tab === MainTab.PromptLibrary) {
+                // 默认模版禁止切换到 PromptLibrary，因为 PromptLibrary 是用户自定义的模版
+                message.error('Standard template is not allowed to switch to PromptLibrary');
+                return;
+              }
+              setActiveMainTab(tab)
+            }}
           >
             {tab}
           </div>
@@ -217,6 +288,7 @@ const Page = () => {
             onChangeSubTab={(id) => subFieldId.current = id}
             onChangeMainTab={setActiveMainTab}
             onUpdateTemplate={handleUpdateTemplate}
+            onUpdateField={handleUpdateField}
           />
         ) : (
           <PromptEditor
@@ -226,6 +298,7 @@ const Page = () => {
             subFieldName={subFieldId.current}
             setLoading={setLoading}
             onUpdateField={handleUpdateField}
+            onRefreshTemplate={() => templateId && fetchTemplateContent(templateId)}
           />
         )}
       </div>

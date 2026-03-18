@@ -5,6 +5,8 @@ import { Button, Popover, Input } from "antd";
 import { FormOutlined, DeleteOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { NewTemplateModal } from "./NewTemplateModal";
+import { NewTemplateTipModal } from "./NewTemplateTipModal";
+
 import { TemplateEvent } from "../page";
 
 interface Template {
@@ -27,6 +29,7 @@ export const TemplateList = ({
   onUpdateTemplate
 }: TemplateListProps) => {
   const [isNewTemplateModalOpen, setIsNewTemplateModalOpen] = useState(false);
+  const [isNewFieldModalOpen, setIsNewFieldModalOpen] = useState(false);
   // 当前正在编辑的 template id
   const [editingTemplateId, setEditingTemplateId] = useState<number | null>(null);
   // 编辑时的临时值 - 使用 ref 避免重新渲染
@@ -43,7 +46,7 @@ export const TemplateList = ({
   };
 
   const handleTemplateDefault = (templateId: number) => {
-    onUpdateTemplate?.(TemplateEvent.UpdateValueDefault, { template_id: templateId });
+    onUpdateTemplate?.(TemplateEvent.UpdateValueDefault, { template_id: templateId, });
   };
 
   // 处理删除事件 - ID 为 1 的标准模版不允许删除
@@ -78,6 +81,10 @@ export const TemplateList = ({
     onUpdateTemplate?.(TemplateEvent.Create, templateInfo);
   };
 
+  const handleCopyTemplate = (templateId: number, name: string) => {
+    onUpdateTemplate?.(TemplateEvent.Copy, { template_id: templateId, name: name.trim() });
+  };
+
   // 处理取消
   const handleCancel = () => {
     setEditingTemplateId(null);
@@ -102,10 +109,10 @@ export const TemplateList = ({
             placement="rightBottom"
             title={null}
             content={
-              <div className="py-2 w-[280px] flex flex-col gap-2">
-                <div className="text-sm font-medium text-grey-normal">Templates</div>
+              <div className="py-2 w-[280px] flex flex-col gap-1">
+                <div className="text-sm font-medium">Templates</div>
                 <div className="text-xs text-grey-normal leading-relaxed">
-                  Customize the fields Cato uses to read your PDF. Create specialized templates to accurately capture data for different takeoff types (e.g., steel vs. aluminum).
+                  Contains the default fields Cato always looks for. This template is fixed, create on top new prompt fields in other templates.
                 </div>
               </div>
             }
@@ -132,7 +139,7 @@ export const TemplateList = ({
         {templates.map((template, index) => (
           <div
             key={template.id}
-            className={`px-3 h-[36px] rounded-md cursor-pointer flex justify-between items-center ${selectedTemplateId === template.id
+            className={`group px-3 h-[36px] rounded-md cursor-pointer flex justify-between items-center ${selectedTemplateId === template.id
               ? "bg-forumBlue-light-active"
               : "bg-white border-transparent hover:bg-grey-light"
               }`}
@@ -183,27 +190,51 @@ export const TemplateList = ({
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className={`text-xxs px-2 rounded-lg border border- bg-grey-light-hover ${template.is_default ? "text-forumBlue-normal" : "text-grey-light-strong"}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleTemplateDefault(template.id)
-                }}
-              >
-                Default
-              </span>
-              {selectedTemplateId === template.id && template.id !== 1 ? (
-                <>
-                  {/* <button className="text-grey-normal hover:text-forumBlue-normal">
-                    <FormOutlined className="text-xs text-forumBlue-normal" />
-                  </button> */}
-                  <button className="text-grey-normal hover:text-red-500" onClick={(e) => {
+              {/* 复制和删除按钮 - hover 或选中时显示 */}
+              {/* Default 标签 - 只显示当前设置的 default */}
+              {(template.id !== 1 && (template.is_default || selectedTemplateId === template.id)) && (
+                <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
+                  ? "bg-white text-forumBlue-normal"
+                  : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
+                  }`}
+                  onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteTemplate(template.id)
-                  }}>
-                    <DeleteOutlined className="text-xs text-forumBlue-normal" />
+                    handleTemplateDefault(template.id)
+                  }}
+                >
+                  Default
+                </span>
+              )}
+
+              <div
+                className={`flex items-center gap-1 transition-opacity ${selectedTemplateId === template.id
+                  ? "opacity-100"
+                  : "opacity-0"
+                  }`}
+              >
+                <button
+                  className="p-1 rounded hover:bg-white/50 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyTemplate(template.id, template.name + ' copy')
+                  }}
+                  title="Copy"
+                >
+                  <Image src="/assets/icons/copy.svg" alt="Copy" width={14} height={14} />
+                </button>
+                {template.id !== 1 && (
+                  <button
+                    className="p-1 rounded hover:bg-white/50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTemplate(template.id)
+                    }}
+                    title="Delete"
+                  >
+                    <Image src="/assets/icons/delete-forum-blue.svg" alt="Delete" width={14} height={14} />
                   </button>
-                </>
-              ) : null}
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -214,6 +245,16 @@ export const TemplateList = ({
         isOpen={isNewTemplateModalOpen}
         onClose={handleCloseNewTemplateModal}
         onSuccess={handleCreate}
+        onAddPrompt={() => {
+          setIsNewFieldModalOpen(true);
+        }}
+      />
+
+      <NewTemplateTipModal
+        isOpen={isNewFieldModalOpen}
+        onClose={() => {
+          setIsNewFieldModalOpen(false);
+        }}
       />
     </div>
   );

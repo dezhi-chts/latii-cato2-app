@@ -6,7 +6,7 @@ import { SubTabs } from "./SubTabs";
 import ReactMarkdown from "react-markdown";
 import { EditOutlined } from "@ant-design/icons";
 
-import { MainTab, TemplateEvent } from "@/app/knowledge-base-cato/page";
+import { FieldEvent, MainTab, TemplateEvent } from "@/app/knowledge-base-cato/page";
 import { FieldEditor } from "./FieldEditor";
 
 const GENERATIONS = 'Generations';
@@ -19,6 +19,7 @@ interface TemplateViewerProps {
   onChangeMainTab: (tab: MainTab) => void;
   onChangeSubTab: (name: string) => void;
   onUpdateTemplate: (eventName: TemplateEvent, data: any) => void;
+  onUpdateField: (eventName: FieldEvent, data: any) => void;
 }
 export const TemplateViewer = ({
   templateList,
@@ -28,6 +29,7 @@ export const TemplateViewer = ({
   onChangeMainTab,
   onChangeSubTab,
   onUpdateTemplate,
+  onUpdateField,
 }: TemplateViewerProps) => {
   const [activeSubTab, setActiveSubTab] = useState<string>(GENERATIONS);
   const [activeFieldContent, setActiveFieldContent] = useState<any>({});
@@ -59,9 +61,10 @@ export const TemplateViewer = ({
     onChangeSubTab(activeSubTab);
   }, [activeSubTab, subTabs, onChangeSubTab]);
 
-  const handleFieldEdit = useCallback(() => {
-    onChangeMainTab(MainTab.PromptLibrary);
-  }, [activeSubTab]);
+  const handleFieldUpdate = useCallback((eventName: FieldEvent, data: any) => {
+    // 直接通知父组件更新，由父组件更新 templateContent 后 subTabs 会自动刷新
+    onUpdateField(eventName, data);
+  }, [onUpdateField]);
 
   return (
     <div className="flex flex-row gap-20 h-full">
@@ -85,7 +88,7 @@ export const TemplateViewer = ({
         />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto py-8 relative">
+        <div className="flex-1 overflow-y-auto my-8 px-10 py-5 relative rounded-xl border border-primaryN30">
           {/** 编辑按钮 */}
           {/* {activeSubTab !== GENERATIONS && (
             <div className="absolute top-10 right-4">
@@ -101,6 +104,7 @@ export const TemplateViewer = ({
           <FieldEditor
             templateId={templateId as number}
             field={activeFieldContent}
+            onUpdateField={handleFieldUpdate}
           />
         </div>
       </div>

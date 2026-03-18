@@ -28,18 +28,18 @@ export const FieldEditorModal = ({
       width={'auto'}
       onCancel={onClose}
     >
-      <div className="w-[1200px] h-[60%] font-nunito">
-        <div className="py-2 text-lg text-forumBlue-normal">Create New Prompt</div>
-        <FieldEditor
-          templateId={templateId}
-          field={field}
-          mode={'create'}
-          onClose={onClose}
-          onUpdateField={(eventName: FieldEvent, data: any) => {
-            onClose();
-            onUpdateField?.(eventName, data);
-          }}
-        />
+      <div className="px-6 w-[1200px] h-[800px] font-nunito flex flex-col">
+        <div className="pt-2 text-base text-forumBlue-normal">Create Prompt</div>
+        <div className="text-grey-normal text-xs">Select a prompt or create a new one.</div>
+        <div className="flex-1 pt-10">
+          <FieldEditor
+            templateId={templateId}
+            field={field}
+            mode={'create'}
+            onClose={onClose}
+            onUpdateField={onUpdateField}
+          />
+        </div>
       </div>
     </Modal>
   );

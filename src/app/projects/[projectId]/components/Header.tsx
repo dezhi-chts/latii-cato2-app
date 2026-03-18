@@ -257,7 +257,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
                 if (Array.isArray(parsed)) {
                   displayValue = parsed.join(", ");
                 }
-              } catch {}
+              } catch { }
             }
 
             return (
@@ -271,9 +271,8 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
           })}
       </div>
       <div
-        className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${
-          status.should_hide_overflow ? "overflow-hidden" : ""
-        } transition-all duration-500 ease-in-out `}
+        className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${status.should_hide_overflow ? "overflow-hidden" : ""
+          } transition-all duration-500 ease-in-out `}
       >
         <ProjectSettings project={project} handleUpdate={handleUpdate} />
       </div>
