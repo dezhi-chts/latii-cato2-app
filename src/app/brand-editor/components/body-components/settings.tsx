@@ -3,6 +3,8 @@
 import { useState } from "react";
 import ProjectsSettings from "./settings-components/Projects-settings";
 import BoxesType from "./settings-components/ Boxes-Type";
+import Libraries from "@/app/brand-editor/components/body-components/libraries";
+import ProductEditor from "@/app/brand-editor/components/body-components/product-editor";
 
 const Settings = () => {
   const tabs = [
@@ -13,6 +15,14 @@ const Settings = () => {
     {
       id: 2,
       text: "Boxes Type",
+    },
+    {
+      id: 3,
+      text: "Libraries",
+    },
+    {
+      id: 4,
+      text: "Product Editor",
     },
   ];
 
@@ -46,6 +56,8 @@ const Settings = () => {
       <div className="pl-6 pt-10">
         {selectedTab.id === 1 && <ProjectsSettings />}
         {selectedTab.id === 2 && <BoxesType />}
+        {selectedTab.id === 3 && <Libraries />}
+        {selectedTab.id === 4 && <ProductEditor />}
       </div>
     </div>
   );

@@ -42,11 +42,12 @@ const Parameter = () => {
 			type: "unit",
 			title: "Unit Attribute",
 			name: "UNIT Attribute Tree"
-		}, {
-			type: "default_template",
-			title: "Default Template",
-			name: "Default Template"
-		},
+		}
+		// , {
+		// 	type: "default_template",
+		// 	title: "Default Template",
+		// 	name: "Default Template"
+		// },
 	]);
 	const [editParameterMsg, setEditParameterMsg] = useState<ParameterItem>({})
 
