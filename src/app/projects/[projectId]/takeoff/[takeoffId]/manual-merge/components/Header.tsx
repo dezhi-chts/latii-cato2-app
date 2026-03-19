@@ -13,7 +13,7 @@ const Header = () => {
     <div className="px-14 w-full h-[110px] border-b border-primaryN30 flex items-center">
       <Link
         className="cursor-pointer"
-        href={`/projects/${projectId}/takeoff/${takeoffId}`}
+        href={`/projects/${projectId}/takeoff/${takeoffId}/identification/page-label`}
       >
         <Image
           src="/assets/icons/arrow-back.svg"

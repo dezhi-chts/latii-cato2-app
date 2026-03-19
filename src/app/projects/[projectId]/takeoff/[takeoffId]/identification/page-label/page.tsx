@@ -35,8 +35,9 @@ import {
   AddRectBoxControls,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
-import BuildingBackground, { BuildLoadingStep } from "../identification-new/components/BuildingBackground";
+import BuildingBackground, { BuildLoadingStep } from "../components/BuildingBackground";
 import NewLogicBoxModal from "./components/NewLogicBoxModal";
+import Header from "../components/Header";
 
 import {
   EvidenceType,
@@ -54,6 +55,8 @@ import {
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { useUser } from "@/context/UserContext";
 import { useTakeoff } from "@/context/TakeoffContext";
+import { ButtonText } from "../page";
+import { analyzeItemByGeminiSdk } from "@/services/DrawingAiService";
 
 
 const { confirm } = Modal;
@@ -67,10 +70,6 @@ const validPageType = [
   PageType.Mix,
 ];
 
-export enum ButtonText {
-  NextFile = "Next File",
-  Complete = "Complete",
-}
 
 export interface IdentLabelRef {
   pdfRef: React.RefObject<PdfWrapperRefMethods | null>;
@@ -78,6 +77,7 @@ export interface IdentLabelRef {
 
 const IdentLabel = forwardRef<IdentLabelRef, {
 }>((any, ref) => {
+  const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
@@ -113,7 +113,13 @@ const IdentLabel = forwardRef<IdentLabelRef, {
   const unSavedCropsCount = useRef<number>(0);
   const { company_id } = useUser();
   const [boxTypeList, setBoxTypeList] = useState<any>([]);
-  const { fileList, setFileList, selectedFileId, setSelectedFileId } = useTakeoff();
+  const {
+    fileList,
+    setFileList,
+    selectedFileId,
+    setSelectedFileId,
+    clearStorage
+  } = useTakeoff();
 
   useEffect(() => {
     getBoxTypeList();
@@ -540,12 +546,189 @@ const IdentLabel = forwardRef<IdentLabelRef, {
     handleAddRectBox(type);
   }
 
+  const handleAnaylize = async () => {
+    setBuildLoading(true);
+    const response = await analyzeItemByGeminiSdk(takeOffId as string, 1);
+    if (response.status === "success") {
+      setBuildLoading(false);
+      // 跳转到merge页面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/manual-merge`);
+    } else {
+      setBuildLoading(false);
+      notification.error({
+        message: "Error",
+        description: "Failed to analyze the file",
+      });
+    }
+  };
+
+  const handleChangeFile = async (fileId: number) => {
+    if (selectedFileId === fileId) return;
+    // 切换文件, 判断当前是否有未保存的crop，如果有则显示提示框并且保存
+    const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+    if (!pdfRef.current || unsaved) {
+      // 判断fileId的文件是否是已完成状态，已完成的文件才可以点击，未完成的文件不允许点击
+      const file = fileList.find((file: any) => file.id === fileId);
+      if (file?.status === FileStatus.Completed) {
+        handleFileStatus(selectedFileId, fileId);
+      }
+    }
+  };
+
+
+  const handleFileStatus = (oldFileId: number, newFileId: number) => {
+    setSelectedFileId(newFileId);
+    setFileList((prev) => {
+      return prev.map((file: any) => {
+        if (file.id === oldFileId) {
+          // 切换文件时，在label页面的时候，将旧文件的状态设置为已完成
+          return { ...file, status: FileStatus.Completed };
+        } else if (file.id === newFileId) {
+          return { ...file, status: FileStatus.Processing };
+        }
+        return file;
+      });
+    });
+
+    let fileInfo = fileList.find((file: any) => file.id === newFileId);
+    if (fileInfo?.operation_type === FileOperationType.ArchitectureDrawing) {
+      // 如果新文件是Arch Drawing文件，则跳转到summary页面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+    } else if (fileInfo?.operation_type === FileOperationType.Quote) {
+      // 如果新文件是Quote文件，则跳转到label页面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+    }
+  };
+
+  const handleNext = async (buttonInfo: { text: string }) => {
+    if (buttonInfo.text === ButtonText.NextFile) {
+      let filterFiles = fileList.filter(
+        (file: any) => file.id !== selectedFileId,
+      );
+      let nextFile = filterFiles.find(
+        (file: any) => file.status !== FileStatus.Completed,
+      );
+      if (nextFile) {
+        // 切换下一个文件时，先判断是否有未保存的crop
+        const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+        if (!pdfRef.current || unsaved) {
+          // 没有未保存的crop，切换文件
+          handleFileStatus(selectedFileId, nextFile.id);
+        }
+      }
+    } else if (buttonInfo.text === ButtonText.FileMerge) {
+      // 切换到合并页面的时候，判断是否有未保存的crop
+      const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+      if (!pdfRef.current || unsaved) {
+        // 先将当前文件状态标记为 Completed
+        // setFileList((prev: any[]) => {
+        //   return prev.map((file: any) => {
+        //     if (file.id === selectedFileId) {
+        //       return { ...file, status: FileStatus.Completed };
+        //     }
+        //     return file;
+        //   });
+        // });
+        await handleAnaylize();
+      }
+    }
+  };
 
   const fileOperationType = useMemo(() => {
     if (!fileList.length) return "";
     let file = fileList.find((file: any) => file.id === selectedFileId);
     return file?.operation_type || "";
   }, [fileList, selectedFileId]);
+
+  // 处理返回按钮的点击事件
+  const handleBack = useCallback(() => {
+    const handleBackToPreviousFile = () => {
+      console.log("fileList", fileList);
+      let findIndex = fileList.findIndex(
+        (file: any) => file.id === selectedFileId,
+      );
+      console.log("findIndex", findIndex);
+      if (findIndex > 0) {
+        let prevFile = fileList[findIndex - 1];
+
+        // 更新文件状态为processing
+        setFileList((prev: any[]) => {
+          return prev.map((file: any) => {
+            if (file.id === prevFile.id) {
+              // 下一个文件状态更改为操作中
+              return { ...file, status: FileStatus.Processing };
+            } else if (file.id === selectedFileId) {
+              // 上一个文件状态更改为未完成
+              return { ...file, status: FileStatus.Uploaded };
+            }
+            return file;
+          });
+        });
+
+        if (prevFile.status === FileStatus.Completed) {
+          setSelectedFileId(prevFile.id);
+          // 跳转到label页面
+          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+        } else if (
+          prevFile.operation_type === FileOperationType.ArchitectureDrawing
+        ) {
+          setSelectedFileId(prevFile.id);
+          // 跳转到summary页面
+          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+        }
+      } else {
+        // 如果前面没有文件可以返回了，则直接返回home
+        // 清除sessionStorage
+        clearStorage();
+        router.replace('/home');
+      }
+    };
+
+    if
+      (fileOperationType === FileOperationType.ArchitectureDrawing) {
+      // 如果当前文件是Arch Drawing文件，则跳转到summary页面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+    } else if (fileOperationType === FileOperationType.Quote) {
+      // 如果当前文件是Quote文件
+      handleBackToPreviousFile();
+    }
+
+  }, [selectedFileId, fileList, fileOperationType, router]);
+
+  // 右上角按钮的相关信息
+  const nextButtonInfo = useMemo(() => {
+    const hasMultipleFiles = fileList.length > 1;
+    const allFilesCompleted = fileList.every(
+      (file: any) => file.status === FileStatus.Completed,
+    );
+    const otherFilesComplete = fileList
+      .filter((file: any) => file.id !== selectedFileId)
+      .every((file: any) => file.status === FileStatus.Completed);
+
+    // Second 步骤：根据文件数量区分逻辑
+    if (hasMultipleFiles) {
+      // 关键逻辑：如果其他文件都已完成（无论当前文件状态如何），则进入合并步骤
+      if (otherFilesComplete) {
+        return {
+          text: ButtonText.FileMerge, // 进入 File Merge
+          disabled: false,
+        };
+      } else {
+        // 还有其他未完成的文件
+        return {
+          text: ButtonText.NextFile,
+          disabled: false,
+        };
+      }
+    } else {
+      // 单个文件完成
+      return {
+        text: ButtonText.CreateTakeoff,
+        disabled: false,
+      };
+    }
+  }, [fileList, selectedFileId]);
+
 
   const thumbnailBoxTypeList = useMemo(() => {
     if (fileOperationType === FileOperationType.ArchitectureDrawing) {
@@ -567,8 +750,16 @@ const IdentLabel = forwardRef<IdentLabelRef, {
   }, [fileOperationType, boxTypeList]);
 
   return (
-    <div className={`w-full h-full flex flex-col relative`}>
-      <div className={`pr-14 flex-1 flex flex-row overflow-hidden`}>
+    <div className={`w-full h-[100vh] flex flex-col relative overflow-hidden`}>
+      <div className="h-[110px]">
+        <Header
+          onChangeFile={(fileId: number) => handleChangeFile(fileId)}
+          nextButtonInfo={nextButtonInfo}
+          handleNext={handleNext}
+          onHandleBack={handleBack}
+        ></Header>
+      </div>
+      <div className={`flex-1 pr-14 flex flex-row overflow-hidden`}>
         <div className="pl-4 mb-2 flex flex-col">
           <div className="mt-4 mb-4 pl-10 flex flex-row gap-4">
             <div className="mt-1 w-[18px] h-[18px] rounded-full bg-[#C4D6F0] text-xs text-forumBlue-normal-active flex items-center justify-center">{fileOperationType === FileOperationType.ArchitectureDrawing ? "B" : "A"}</div>
@@ -698,9 +889,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {
         </div>
       </div>
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
-      {buildLoading && (
-        <BuildingBackground step={BuildLoadingStep.PageAnalysis} />
-      )}
+      {buildLoading && <BuildingBackground step={'page-merge'} />}
       <NewLogicBoxModal
         isOpen={showNewLogicBoxModal}
         onClose={handleCloseModal}

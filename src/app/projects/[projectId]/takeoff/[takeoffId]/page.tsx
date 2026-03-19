@@ -2,13 +2,13 @@
 
 import { JSX, useEffect, useMemo, useState } from "react";
 import Header from "./components/Header";
-import IdentificationIndex from "./identification-index/page";
-import { ButtonText } from "./identification-new/page";
+import IdentificationIndex from "./identification/drawing-index/page";
+import { ButtonText } from "./identification/page";
 import { FileOperationType, FileStatus } from "./types/evidence";
 import { notification } from "antd";
 import { getTakeOffById } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
-import PageLabeling from "./identification-label/page";
+import PageLabeling from "./identification/page-label/page";
 
 export type StepName =
   | "identification-index"

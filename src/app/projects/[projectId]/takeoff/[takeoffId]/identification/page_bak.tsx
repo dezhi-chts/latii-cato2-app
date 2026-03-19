@@ -25,9 +25,9 @@ import BuildingBackground, {
   BuildLoadingStep,
 } from "./components/BuildingBackground";
 import PreAnalysisMdal from "./components/PreAnalysisMdal";
-import IdentIndex from "../identification-index/page";
-import IdentSummary from "../identification-summary/page";
-import IdentLabel from "../identification-label/page";
+import IdentIndex from "./drawing-index/page";
+import IdentSummary from "./index-summary/page";
+import IdentLabel from "./page-label/page";
 import ManualMerge from "../manual-merge/page";
 import {
   useTakeoff,
@@ -92,6 +92,26 @@ const PageLabelingContent = () => {
   const [isClearStorage, setIsClearStorage] = useState(true);
 
   useEffect(() => {
+    const navigationEntries = performance.getEntriesByType('navigation');
+    console.log('navigationEntries', navigationEntries);
+    if (navigationEntries.length > 0) {
+      const navEntry = navigationEntries[0] as PerformanceNavigationTiming;
+
+      console.log('导航类型:', navEntry.type);
+      // 可能的值: "navigate" | "reload" | "back_forward" | "prerender"
+
+      if (navEntry.type === 'reload') {
+        return 'refresh'; // 页面刷新 (F5 / Ctrl+R)
+      }
+
+      if (navEntry.type === 'back_forward') {
+        return 'back_forward'; // 前进/后退按钮
+      }
+
+      if (navEntry.type === 'navigate') {
+        return 'navigate'; // 正常导航（点击链接、地址栏输入等）
+      }
+    }
     // 步骤1：监听页面卸载前的事件（刷新/关闭标签页都会触发）
     const handleBeforeUnload = () => {
       // 存入sessionStorage，标记"页面即将刷新"
