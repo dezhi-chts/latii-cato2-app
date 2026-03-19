@@ -353,12 +353,14 @@ const PdfWrapper = forwardRef(
           loadingTaskRef.current = null;
         })
         .catch((error) => {
-          console.error("Failed to load PDF:", error);
+          console.error("Failed to load PDF:", error.message);
           setPdfLoading(false);
-          notification.error({
-            message: "Error",
-            description: error.message,
-          });
+          if (error.message !== "Worker was destroyed") {
+            notification.error({
+              message: "Error",
+              description: error.message,
+            });
+          }
 
           // 加载失败后取消任务并清空引用
           if (loadingTaskRef.current) {
