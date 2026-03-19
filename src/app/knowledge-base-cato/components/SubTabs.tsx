@@ -199,6 +199,49 @@ export const SubTabs = ({
     }
   };
 
+  // 滚动指定 Tab 到可视区域
+  const scrollTabIntoView = (tabName: string) => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+
+    // 找到对应的 Tab 按钮
+    const tabButtons = scrollElement.querySelectorAll('button');
+    let targetButton: Element | null = null;
+
+    tabButtons.forEach((btn) => {
+      if (btn.textContent?.trim() === tabName) {
+        targetButton = btn;
+      }
+    });
+
+    if (!targetButton) return;
+
+    const containerRect = scrollElement.getBoundingClientRect();
+    const buttonRect = (targetButton as HTMLElement).getBoundingClientRect();
+
+    // 计算 Tab 相对于容器的偏移
+    const buttonLeft = buttonRect.left - containerRect.left + scrollElement.scrollLeft;
+    const buttonRight = buttonLeft + buttonRect.width;
+
+    const containerScrollLeft = scrollElement.scrollLeft;
+    const containerVisibleRight = containerScrollLeft + containerRect.width;
+
+    // 如果 Tab 在左侧被遮挡
+    if (buttonLeft < containerScrollLeft) {
+      scrollElement.scrollTo({
+        left: buttonLeft - 8, // 留一点边距
+        behavior: "smooth",
+      });
+    }
+    // 如果 Tab 在右侧被遮挡
+    else if (buttonRight > containerVisibleRight) {
+      scrollElement.scrollTo({
+        left: buttonRight - containerRect.width + 8, // 留一点边距
+        behavior: "smooth",
+      });
+    }
+  };
+
   // 固定显示的前3个Tab
   const fixedTabs = [
     {
@@ -215,7 +258,11 @@ export const SubTabs = ({
     }
   ];
   // 可滚动的其他Tab
-  const scrollableTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
+  //const scrollableTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
+  const scrollableTabs = [{
+    name: "Generations",
+    field_type: "string",
+  }, ...tabs];
 
   const disabelEdit = templateId === 1;
 
@@ -240,7 +287,7 @@ export const SubTabs = ({
 
         <div className="h-[40px] py-1.5 flex flex-row items-center bg-grey-light px-4 rounded-tl-xl rounded-tr-xl overflow-hidden">
           {/* Fixed Tabs - 前3个Tab固定 */}
-          <div className="h-full flex">
+          {/* <div className="h-full flex">
             {fixedTabs.map((tab) => (
               <button
                 key={tab.name}
@@ -255,7 +302,7 @@ export const SubTabs = ({
                 {tab.name}
               </button>
             ))}
-          </div>
+          </div> */}
           {/* 左箭头 - 根据滚动位置禁用/启用 */}
           {/* <button
           className={`p-2 ${showLeftArrow
@@ -281,7 +328,10 @@ export const SubTabs = ({
                     ? "text-forumBlue-dark-hover bg-forumBlue-light-hover"
                     : "text-grey-normal"
                     }`}
-                  onClick={() => onTabChange(tab.name)}
+                  onClick={() => {
+                    onTabChange(tab.name);
+                    scrollTabIntoView(tab.name);
+                  }}
                 >
                   {tab.name}
                 </button>
