@@ -191,7 +191,7 @@ const Project = () => {
                 return (
                   <Link
                     key={index}
-                    href={`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification-new`}
+                    href={`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification`}
                   >
                     <div className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30 cursor-pointer hover:bg-primaryN10 transition-all duration-150">
                       <div>
@@ -279,9 +279,9 @@ const Project = () => {
           data={projectInfo.current}
           handleNext={(type: "takeoffModal" | "pageIndex") => {
             // 跳转到Page-Index页面
-            //router.push(`/projects/38/takeoff/15/identification-new`);
+            //router.push(`/projects/38/takeoff/15/identification`);
             router.push(
-              `/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification-new`,
+              `/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification`,
             );
           }}
           handleCancel={() => {

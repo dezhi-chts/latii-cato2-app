@@ -14,6 +14,9 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { Button } from "antd";
 
 import { FileOperationType, FileStatus } from "../../types/evidence";
+import { useTakeoff } from "@/context/TakeoffContext";
+import LoadingScreen from "@/components/loading-screen";
+import { getTakeOffById } from "@/services/takeOffService";
 const ActiveCircle = ({ number }: any) => {
   return (
     <div className="w-[18px] h-[18px] rounded-full  bg-forumBlue-normal text-white text-xs flex justify-center items-center">
@@ -57,8 +60,6 @@ const fileStatusMap: any = {
 }
 
 const Header = ({
-  fileList,
-  selectedFileId,
   onChangeFile,
   nextButtonInfo,
   handleNext,
@@ -68,6 +69,67 @@ const Header = ({
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
+  const [fullLoading, setFullLoading] = useState<boolean>(false);
+
+  const {
+    takeOff,
+    setTakeOff,
+    fileList,
+    setFileList,
+    selectedFileId,
+    setSelectedFileId,
+    setFileViewStep,
+    loadFromStorage,
+    mergeFileStatus
+  } = useTakeoff();
+
+  useEffect(() => {
+    const navigationEntries = performance.getEntriesByType('navigation');
+    if (navigationEntries.length > 0) {
+      const navEntry: any = navigationEntries[0] as PerformanceNavigationTiming;
+
+      console.log('导航类型:', navEntry.type);
+      // 可能的值: "navigate" | "reload" | "back_forward" | "prerender"
+
+      if (navEntry.type === 'reload') {
+        // 页面刷新的话，takeoffContext中的数据会被重置，此时需要重新获取数据
+        getTakeOffDetails();
+      }
+    }
+  }, []);
+
+  const getTakeOffDetails = async () => {
+    setFullLoading(true);
+    let res: any = await getTakeOffById(takeOffId as any);
+    if (res.status === "success") {
+      let project_files = res?.data?.project_files ?? [];
+      setTakeOff(res?.data ?? {});
+      // 同步sessionStorage中的数据
+      let localData = loadFromStorage();
+      if (localData?.fileList?.length > 0) {
+        // 同步sessionStorage中的文件状态
+        let list = mergeFileStatus(res?.data?.project_files);
+        let findProcess = list.find((file: any) => file.status === FileStatus.Processing);
+        if (findProcess) {
+          setSelectedFileId(findProcess.id);
+        }
+      } else {
+        // 如果本地数据中没有存储，则取第一个文件
+        // 判断第一个文件的类型，如果文件时Arch Drawing，则跳转到IndexSummary页面
+        const updatedFiles = project_files.map((file: any, index: number) =>
+          index === 0 ? { ...file, status: FileStatus.Processing } : file,
+        );
+        setFileList(updatedFiles);
+        setSelectedFileId(project_files[0].id);
+      }
+    } else {
+      notification.error({
+        message: "Error",
+        description: "No files found in this take off",
+      });
+    }
+    setFullLoading(false);
+  }
 
   const filesData = useMemo(() => {
     if (!fileList) return [];
@@ -81,7 +143,7 @@ const Header = ({
   const isFileMergeStep = fileViewStep === 'FileMerge';
 
   // 判断所有文件是否都已完成（在 FileMerge 步骤时，也认为所有文件已完成）
-  const allFilesCompleted = filesData.every((file: any) => file.status === FileStatus.Completed) || isFileMergeStep;
+  const allFilesCompleted = false; // filesData.every((file: any) => file.status === FileStatus.Completed) || isFileMergeStep;
 
   const handleClickFile = async (file: any) => {
     if (selectedFileId === file.id) return;
@@ -161,6 +223,7 @@ const Header = ({
           {nextButtonInfo?.text}
         </Button>
       </div>
+      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
     </div>
   );
 };

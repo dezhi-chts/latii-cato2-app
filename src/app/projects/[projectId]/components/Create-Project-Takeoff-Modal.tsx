@@ -249,7 +249,7 @@ const CreateProjectTakeoffModal = ({
       });
       // 跳转到下一页
       router.push(
-        `/projects/${projectId}/takeoff/${takeOffId}/identification-new`,
+        `/projects/${projectId}/takeoff/${takeOffId}/identification`,
       );
     } else {
       notification.error({

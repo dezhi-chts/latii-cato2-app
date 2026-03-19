@@ -33,21 +33,23 @@ import {
   FileStatus,
   GroupType,
   PdfWrapperRefMethods,
-} from "../types/evidence";
+} from "../../types/evidence";
 
 import LoadingScreen from "@/components/loading-screen";
-import PdfWrapper from "../components/pdf/PdfWrapper";
-import Thumbnail from "../components/pdf/Thumbnail";
+import PdfWrapper from "../../components/pdf/PdfWrapper";
+import Thumbnail from "../../components/pdf/Thumbnail";
 import {
   ZoomControls,
   SelectPagesControls,
   ThumbnailControls,
-} from "../components/pdf/Pdf-Controls";
-import BuildingBackground, { BuildLoadingStep } from "../identification/components/BuildingBackground";
+} from "../../components/pdf/Pdf-Controls";
+import BuildingBackground, { BuildLoadingStep } from "../components/BuildingBackground";
 import IndexRectView from "./components/IndexRectView";
 import SkipTipModal from "./components/SkipTipModal";
+import Header from "../components/Header";
 
 import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
+import { ButtonText } from "../page";
 
 const confirm = Modal.confirm;
 
@@ -193,8 +195,8 @@ const IdentIndex = forwardRef<IdentIndexRef, {
         message: "Success",
         description: "Drawing index recognized successfully",
       });
-      // 更改文件view step 为 summary
-      setFileViewStep(FileViewStep.IndexSummary);
+      // 识别成功后跳转到summary页面
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
     } else {
       notification.error({
         message: "Error",
@@ -313,11 +315,76 @@ const IdentIndex = forwardRef<IdentIndexRef, {
     setCropsCount(count);
   };
 
+  const handleChangeFile = async (fileId: number) => {
+    if (selectedFileId === fileId) return;
+    // 切换文件, 判断当前是否有未保存的crop，如果有则显示提示框并且保存
+    const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
+    if (!pdfRef.current || unsaved) {
+      // 判断fileId的文件是否是已完成状态，已完成的文件才可以点击，未完成的文件不允许点击
+      const file = fileList.find((file: any) => file.id === fileId);
+      if (file?.status === FileStatus.Completed) {
+        handleFileStatus(selectedFileId, fileId);
+      }
+    }
+  };
+
+  const handleFileStatus = (oldFileId: number, newFileId: number) => {
+    setSelectedFileId(newFileId);
+    setFileList((prev) => {
+      return prev.map((file: any) => {
+        if (file.id === oldFileId) {
+          // 在summary页面的时候，切换新文件，则旧文件更新为未完成状态，新文件设置为处理状态中
+          return { ...file, status: FileStatus.Uploaded };
+        } else if (file.id === newFileId) {
+          return { ...file, status: FileStatus.Processing };
+        }
+        return file;
+      });
+    });
+  }
+  const handleNext = async (buttonInfo: { text: string }) => {
+    if (buttonInfo.text === ButtonText.Analysis) {
+      // 调用手动分析接口
+      recognizeDrawingIndexData();
+    }
+  };
+
+  const fileOperationType = useMemo(() => {
+    if (!fileList.length) return "";
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    return file?.operation_type || "";
+  }, [fileList, selectedFileId]);
+
+  // 处理返回按钮的点击事件
+  const handleBack = useCallback(() => {
+    // 返回summary页面
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+  }, [router]);
+
+  // 右上角按钮的相关信息
+  const nextButtonInfo = useMemo(() => {
+    const hasUnsavedCrops = indexBoxList.length === 0 && labelList.length === 0;
+    return {
+      text: ButtonText.Analysis,
+      disabled: hasUnsavedCrops,
+    };
+
+  }, [fileList, selectedFileId, indexBoxList, labelList]);
+
   return (
     <div
-      className={`w-full h-full flex flex-col relative`}
+      className={`w-full h-[100vh] flex flex-col relative overflow-hidden`}
     >
-      <div className={`pr-14 flex-1 h-full flex flex-row overflow-hidden relative`}>
+      <div className="h-[110px]">
+        <Header
+          onChangeFile={(fileId: number) => handleChangeFile(fileId)}
+          nextButtonInfo={nextButtonInfo}
+          handleNext={handleNext}
+          onHandleBack={handleBack}
+        >
+        </Header>
+      </div>
+      <div className={`flex-1 pr-14 h-full flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
           style={{ width: "340px" }}

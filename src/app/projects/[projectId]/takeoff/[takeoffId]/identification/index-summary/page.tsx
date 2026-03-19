@@ -14,7 +14,7 @@ import {
   Modal,
 } from "antd";
 
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import debounce from "lodash/debounce";
 
@@ -40,6 +40,7 @@ import {
   ThumbnailControls,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ContentView from "./components/ContentView";
+import Header from "../components/Header";
 
 import {
   EvidenceResult,
@@ -50,17 +51,13 @@ import {
   PdfWrapperRefMethods, ArchDrawingSummaryPageTypes
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 
-import BuildingBackground, { BuildLoadingStep } from "../identification-new/components/BuildingBackground";
-import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
+import BuildingBackground, { BuildLoadingStep } from "../components/BuildingBackground";
+import { useTakeoff } from "@/context/TakeoffContext";
+import { ButtonText } from "../page";
 
 const confirm = Modal.confirm;
 
-export interface IdentificationSummaryRef {
-}
-
-const IdentSummary = forwardRef<IdentificationSummaryRef, {
-}>(({
-}, ref) => {
+const IdentSummary = () => {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
@@ -95,7 +92,7 @@ const IdentSummary = forwardRef<IdentificationSummaryRef, {
     setFileList,
     selectedFileId,
     setSelectedFileId,
-    setFileViewStep
+    clearStorage
   } = useTakeoff();
 
   useEffect(() => {
@@ -110,9 +107,6 @@ const IdentSummary = forwardRef<IdentificationSummaryRef, {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  useImperativeHandle(ref, () => ({
-  }));
 
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
@@ -254,11 +248,111 @@ const IdentSummary = forwardRef<IdentificationSummaryRef, {
   };
 
   const handleRestartIndex = () => {
-    setFileViewStep(FileViewStep.IndexDrawing);
+    // 跳转到index drawing页面，重新绘制index drawing
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/drawing-index`);
   };
 
+  const handleFileStatus = (oldFileId: number, newFileId: number) => {
+    setSelectedFileId(newFileId);
+    setFileList((prev) => {
+      return prev.map((file: any) => {
+        if (file.id === oldFileId) {
+          // 在summary页面的时候，切换新文件，则旧文件更新为未完成状态，新文件设置为处理状态中
+          return { ...file, status: FileStatus.Uploaded };
+        } else if (file.id === newFileId) {
+          return { ...file, status: FileStatus.Processing };
+        }
+        return file;
+      });
+    });
+  }
+
+  const handleChangeFile = async (fileId: number) => {
+    if (selectedFileId === fileId) return;
+    // 判断fileId的文件是否是已完成状态，已完成的文件才可以点击，未完成的文件不允许点击
+    const file = fileList.find((file: any) => file.id === fileId);
+    if (file?.status === FileStatus.Completed) {
+      handleFileStatus(selectedFileId, fileId);
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+    }
+  };
+
+  const handleNext = async (buttonInfo: { text: string }) => {
+    // 在summary页面的时候，点击Next Step跳转到label页面
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+  };
+
+  const fileOperationType = useMemo(() => {
+    if (!fileList.length) return "";
+    let file = fileList.find((file: any) => file.id === selectedFileId);
+    return file?.operation_type || "";
+  }, [fileList, selectedFileId]);
+
+  // 处理返回按钮的点击事件
+  const handleBack = useCallback(() => {
+    // 处理返回上一个文件的逻辑
+    const handleBackToPreviousFile = () => {
+      console.log("fileList", fileList);
+      let findIndex = fileList.findIndex(
+        (file: any) => file.id === selectedFileId,
+      );
+      console.log("findIndex", findIndex);
+      if (findIndex > 0) {
+        let prevFile = fileList[findIndex - 1];
+
+        // 更新文件状态为processing
+        setFileList((prev: any[]) => {
+          return prev.map((file: any) => {
+            if (file.id === prevFile.id) {
+              // 下一个文件状态更改为操作中
+              return { ...file, status: FileStatus.Processing };
+            } else if (file.id === selectedFileId) {
+              // 上一个文件状态更改为未完成
+              return { ...file, status: FileStatus.Uploaded };
+            }
+            return file;
+          });
+        });
+
+        if (prevFile.status === FileStatus.Completed) {
+          setSelectedFileId(prevFile.id);
+          // 跳转到label页面
+          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+        } else if (
+          prevFile.operation_type === FileOperationType.ArchitectureDrawing
+        ) {
+          setSelectedFileId(prevFile.id);
+          // 跳转到summary页面
+          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+        }
+      } else {
+        // 如果前面没有文件可以返回了，则直接返回home
+        // 清除sessionStorage中的数据
+        clearStorage();
+        router.replace('/home');
+      }
+    };
+
+    handleBackToPreviousFile();
+  }, [selectedFileId, fileList, fileOperationType, router]);
+
+  // 右上角按钮的相关信息
+  const nextButtonInfo = useMemo(() => {
+    return {
+      text: ButtonText.NextStep,
+      disabled: false,
+    };
+  }, [fileList, selectedFileId,]);
+
   return (
-    <div className={`w-full h-full flex flex-col relative`}>
+    <div className={`w-full h-[100vh] flex flex-col relative overflow-hidden`}>
+      <Header
+        onChangeFile={(fileId: number) => handleChangeFile(fileId)}
+        nextButtonInfo={nextButtonInfo}
+        handleNext={handleNext}
+        onHandleBack={handleBack}
+      >
+      </Header>
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
@@ -337,9 +431,6 @@ const IdentSummary = forwardRef<IdentificationSummaryRef, {
       {buildLoading && <BuildingBackground step={'page-label'} />}
     </div>
   );
-});
-
-IdentSummary.displayName = "IdentSummary";
-
+};
 
 export default IdentSummary;
