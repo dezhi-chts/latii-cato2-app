@@ -258,11 +258,11 @@ export const SubTabs = ({
     }
   ];
   // 可滚动的其他Tab
-  //const scrollableTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
-  const scrollableTabs = [{
-    name: "Generations",
-    field_type: "string",
-  }, ...tabs];
+  const otherTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
+  const scrollableTabs = [
+    ...fixedTabs,
+    ...otherTabs
+  ];
 
   const disabelEdit = templateId === 1;
 
