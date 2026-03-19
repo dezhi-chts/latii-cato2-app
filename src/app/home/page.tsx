@@ -78,7 +78,8 @@ const Home = () => {
   const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([]);
   const [currentProjectsPage, setCurrentProjectsPage] = useState(1);
 
-  const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
+  //const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
+  const [takeoffsCache, setTakeoffsCache] = useState<any>([]);
   const [currentTakeoffsPage, setCurrentTakeoffsPage] = useState(1);
   const [totalTakeoffsPages, setTotalTakeoffsPages] = useState(1);
 
@@ -119,9 +120,9 @@ const Home = () => {
   };
 
   const getTakeoffs = async (page: number) => {
-    if (takeoffsCache[page]) {
-      return;
-    }
+    // if (takeoffsCache[page]) {
+    //   return;
+    // }
     const params = {
       per_page: 10,
       page: currentTakeoffsPage,
@@ -133,11 +134,19 @@ const Home = () => {
     setTotalTakeoffsPages(res?.data?.total_pages ?? 1);
     setTakeOffLoading(false);
     if (res?.status === "success") {
-      setTakeoffsCache((prev) => ({ ...prev, [page]: takeoffs }));
+      //setTakeoffsCache((prev) => ({ ...prev, [page]: takeoffs }));
+      setTakeoffsCache((prev) => takeoffs);
     } else {
-      setTakeoffsCache((prev) => ({ ...prev, [page]: [] }));
+      //setTakeoffsCache((prev) => ({ ...prev, [page]: [] }));
+      setTakeoffsCache((prev) => []);
     }
   };
+
+  useEffect(() => {
+    if (currentTakeoffsPage > 0) {
+      getTakeoffs(currentTakeoffsPage);
+    }
+  }, [currentTakeoffsPage]);
 
   const handleRemoveProject = async (record: ProjectRow) => {
     confirm({
@@ -262,7 +271,8 @@ const Home = () => {
           ) : (
             <HomeTakeoffsTable
               tableLoading={takeOffLoading}
-              takeoffs={takeoffsCache[currentTakeoffsPage]}
+              //takeoffs={takeoffsCache[currentTakeoffsPage]}
+              takeoffs={takeoffsCache}
               selectedColumns={[]}
               handleRemoveTakeoff={handleRemoveTakeoff}
               currentPage={currentTakeoffsPage}
