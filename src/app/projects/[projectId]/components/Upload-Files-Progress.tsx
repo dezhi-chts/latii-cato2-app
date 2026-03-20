@@ -121,7 +121,7 @@ const UploadFilesProgress = ({
         setStatus("error");
         notification.error({
           message: "Error",
-          description: "Upload Failed，Please try again.",
+          description: res?.data?.detail || "Upload Failed，Please try again.",
         });
         // 上传失败，关闭模态框
         closeModal();

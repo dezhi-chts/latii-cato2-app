@@ -52,7 +52,7 @@ export const uploadFiles = async (
     return { data: response, status: "success" };
   } catch (error) {
     console.error("Error uploading files:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -89,6 +89,6 @@ export const uploadFilesNoProjectId = async (
     return { data: response, status: "success" };
   } catch (error) {
     console.error("Error uploading files:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };

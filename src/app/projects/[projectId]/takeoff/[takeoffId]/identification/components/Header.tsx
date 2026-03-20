@@ -91,9 +91,11 @@ const Header = ({
       console.log('导航类型:', navEntry.type);
       // 可能的值: "navigate" | "reload" | "back_forward" | "prerender"
 
-      if (navEntry.type === 'reload' || navEntry.type === 'back_forward') {
-        // 页面刷新的话，takeoffContext中的数据会被重置，此时需要重新获取数据
-        getTakeOffDetails();
+      if (navEntry.type === 'reload' || navEntry.type === 'back_forward' || navEntry.type === 'navigate') {
+        if (fileList?.length === 0) {
+          // 页面刷新的话，takeoffContext中的数据会被重置，此时需要重新获取数据
+          getTakeOffDetails();
+        }
       }
     }
   }, []);
