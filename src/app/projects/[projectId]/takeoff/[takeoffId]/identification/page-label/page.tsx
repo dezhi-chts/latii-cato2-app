@@ -4,7 +4,6 @@ import {
   Button,
   ConfigProvider,
   Divider,
-  message,
   Modal,
   notification,
   Popover,
@@ -155,11 +154,17 @@ const IdentLabel = forwardRef<IdentLabelRef, {
     const result = await deleteBoxType(item.company_id.toString(), item.id);
 
     if (result.status === "success") {
-      message.success("Logic Box deleted successfully");
+      notification.success({
+        message: "Success",
+        description: "Logic Box deleted successfully",
+      });
       getBoxTypeList();
     } else {
       const errorMsg = result?.data?.detail || "Failed to delete Logic Box";
-      message.error(errorMsg);
+      notification.error({
+        message: "Error",
+        description: errorMsg,
+      });
     }
   };
 
