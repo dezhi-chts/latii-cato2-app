@@ -148,7 +148,7 @@ const ContentView = ({
       ) : (
         <div className="mt-8 text-xs">
           Sorry, we were unable to categorize the pages automatically, please
-          click “Restart Index” button to manually label the content for AI to
+          click “Reset to Manual Selection” button to manually label the content for AI to
           analyze
         </div>
       )}
