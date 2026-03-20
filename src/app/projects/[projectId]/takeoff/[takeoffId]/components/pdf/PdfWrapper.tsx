@@ -209,6 +209,8 @@ const PdfWrapper = forwardRef(
 
     const [loadingProgress, setLoadingProgress] = useState(0);
 
+    const [isRendering, setIsRendering] = useState(false);
+
     const [rotate, setRotate] = useState<number>(-1);
 
     const isAdjustRotateRef = useRef<boolean>(false);
@@ -665,6 +667,7 @@ const PdfWrapper = forwardRef(
       )
         return;
       (async () => {
+        setIsRendering(true);
         const page = await pdfDoc.current.getPage(pageNum);
         const pageOriginalRotation = page.rotate;
         let viewPointsOptions = {
@@ -749,6 +752,8 @@ const PdfWrapper = forwardRef(
           }
         } catch (e: any) {
           if (e?.name !== "RenderingCancelledException") console.error(e);
+        } finally {
+          setIsRendering(false);
         }
       })();
       return () => {
@@ -2275,6 +2280,11 @@ const PdfWrapper = forwardRef(
                   height: (stageHeight + 2) + "px",
                 }}
               >
+                {isRendering && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+                    <Spin tip="Loading page..." />
+                  </div>
+                )}
                 <canvas ref={pdfCanvas} />
 
                 {/** Stage层处理图形绘制方面 */}
