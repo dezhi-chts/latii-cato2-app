@@ -559,7 +559,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {
       setBuildLoading(false);
       notification.error({
         message: "Error",
-        description: "Failed to analyze the file",
+        description: response?.data?.detail || "Failed to analyze the file",
       });
     }
   };

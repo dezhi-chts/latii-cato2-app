@@ -85,8 +85,8 @@ export const analyzeItemByGeminiSdk = async (
     const url = `/drawing-ai/analyze_item?take_off_id=${take_off_id}&template_id=${template_id}`;
     const response = await http.post(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing item:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
