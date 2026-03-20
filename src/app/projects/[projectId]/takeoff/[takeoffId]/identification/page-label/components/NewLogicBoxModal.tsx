@@ -156,9 +156,7 @@ export default function NewLogicBoxModal({
       onClose();
       onSuccess?.();
     } else {
-      const errorMsg = typeof result?.data === 'string'
-        ? result?.data
-        : result?.data?.detail || result?.data?.message || "Failed to update Logic Box";
+      const errorMsg = result?.data?.detail || "Failed to update Logic Box";
       message.error(errorMsg);
     }
   };
@@ -184,7 +182,6 @@ export default function NewLogicBoxModal({
       width={560}
       footer={null}
       onCancel={handleCancel}
-      destroyOnClose={true}
     >
       <div className="p-6 font-nunito">
         <h2 className="text-lg text-forumBlue-normal mb-2">

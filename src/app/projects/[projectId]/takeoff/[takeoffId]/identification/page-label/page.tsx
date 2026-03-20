@@ -4,7 +4,6 @@ import {
   Button,
   ConfigProvider,
   Divider,
-  message,
   Modal,
   notification,
   Popover,
@@ -155,13 +154,17 @@ const IdentLabel = forwardRef<IdentLabelRef, {
     const result = await deleteBoxType(item.company_id.toString(), item.id);
 
     if (result.status === "success") {
-      message.success("Logic Box deleted successfully");
+      notification.success({
+        message: "Success",
+        description: "Logic Box deleted successfully",
+      });
       getBoxTypeList();
     } else {
-      const errorMsg = typeof result?.data === 'string'
-        ? result?.data
-        : result?.data?.detail || result?.data?.message || "Failed to delete Logic Box";
-      message.error(errorMsg);
+      const errorMsg = result?.data?.detail || "Failed to delete Logic Box";
+      notification.error({
+        message: "Error",
+        description: errorMsg,
+      });
     }
   };
 
@@ -537,7 +540,6 @@ const IdentLabel = forwardRef<IdentLabelRef, {
   };
 
   const handleChangeBoxType = (type: string) => {
-    console.log("type", type);
     if (type === "customize") {
       setShowNewLogicBoxModal(true);
       return;
@@ -557,7 +559,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {
       setBuildLoading(false);
       notification.error({
         message: "Error",
-        description: "Failed to analyze the file",
+        description: response?.data?.detail || "Failed to analyze the file",
       });
     }
   };
@@ -643,11 +645,9 @@ const IdentLabel = forwardRef<IdentLabelRef, {
   // 处理返回按钮的点击事件
   const handleBack = useCallback(() => {
     const handleBackToPreviousFile = () => {
-      console.log("fileList", fileList);
       let findIndex = fileList.findIndex(
         (file: any) => file.id === selectedFileId,
       );
-      console.log("findIndex", findIndex);
       if (findIndex > 0) {
         let prevFile = fileList[findIndex - 1];
 

@@ -141,9 +141,9 @@ export const createBoxType = async (
     const url = `/box_types/create/${company_id}`;
     const response = await http.post(url, data);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating box type:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 

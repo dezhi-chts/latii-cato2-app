@@ -24,7 +24,8 @@ const UploadFilesProgress = ({
       quoteFiles = [],
       quoteHingeMode = "1",
     } = uploadFilesData;
-    if (archFiles.length > 0) {
+    // 只要有archFiles或quoteFiles，就上传文件
+    if (archFiles.length > 0 || quoteFiles.length > 0) {
       handleUploadFiles();
     }
   }, [uploadFilesData]);
@@ -66,6 +67,7 @@ const UploadFilesProgress = ({
       quoteFiles = [],
       quoteHingeMode = "1",
     } = uploadFilesData;
+
     // 目前只处理archFiles文件
     const archFilesInfo: any = archFiles.map((file: any) => ({
       file_name: file.name,
@@ -102,7 +104,7 @@ const UploadFilesProgress = ({
             filesInfo,
             files,
             projectId: projectIdParam,
-            hinge_status: arcHingeMode,
+            hinge_status: archFiles.length === 0 ? quoteHingeMode : arcHingeMode,
           },
           (progressEvent: any) => {
             handleProgress(progressEvent);
@@ -121,7 +123,7 @@ const UploadFilesProgress = ({
         setStatus("error");
         notification.error({
           message: "Error",
-          description: "Upload Failed，Please try again.",
+          description: res?.data?.detail || "Upload Failed，Please try again.",
         });
         // 上传失败，关闭模态框
         closeModal();
