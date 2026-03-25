@@ -19,6 +19,7 @@ import { fetchProject } from "@/services/projectService";
 import Header from "./components/Header";
 import ItemsTable from "./components/ItemsTable";
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
+import { getTakeOffResult } from "@/services/DrawingAiService";
 
 export type PageData = {
   current: number;
@@ -2124,7 +2125,7 @@ const Analyze = () => {
   };
 
   const getProjectInfo = async () => {
-    let res = await fetchProject(projectId);
+    let res = await getTakeOffResult(takeOffId as string);
     if (res.status === "success") {
       setProject(res);
     } else {
@@ -2171,7 +2172,7 @@ const Analyze = () => {
 
     //设置新的url
     let file = takeOff?.project_files.find(
-      (file: any) => file.id === selectedFileId
+      (file: any) => file.id === selectedFileId,
     );
     if (file) {
       let newPdfUrl = file?.parse_detail?.uploaded_file_url;

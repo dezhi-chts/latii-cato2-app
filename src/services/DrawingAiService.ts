@@ -90,3 +90,14 @@ export const analyzeItemByGeminiSdk = async (
     return { data: error?.response?.data || null, status: "error" };
   }
 };
+
+export const getTakeOffResult = async (take_off_id: string) => {
+  try {
+    const url = `/drawing-ai/take_off_result?take_off_id=${take_off_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error fetching take off:", error);
+    return { data: null, status: "error" };
+  }
+};
