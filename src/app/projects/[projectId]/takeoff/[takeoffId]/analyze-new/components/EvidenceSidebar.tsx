@@ -33,6 +33,7 @@ interface PageThumbnailEntry {
 	pageNumber: number;
 	imageUrl: string;
 	pageEvidences: EvidenceRecord[];
+	aspectRatio: number;
 }
 
 interface PageThumbnailCardProps {
@@ -41,8 +42,10 @@ interface PageThumbnailCardProps {
 	isTargetPage: boolean;
 	isSelectedFile: boolean;
 	showEvidenceBoxes: boolean;
+	forceLoad: boolean;
 	onClick: () => void;
 	onRegisterRef: (key: string, element: HTMLDivElement | null) => void;
+	onImageReady: (key: string) => void;
 }
 
 function PageThumbnailCard({
@@ -51,10 +54,13 @@ function PageThumbnailCard({
 	isTargetPage,
 	isSelectedFile,
 	showEvidenceBoxes,
+	forceLoad,
 	onClick,
 	onRegisterRef,
+	onImageReady,
 }: PageThumbnailCardProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	const imageRef = useRef<HTMLImageElement | null>(null);
 	const [isVisible, setIsVisible] = useState(false);
 
 	useEffect(() => {
@@ -84,6 +90,12 @@ function PageThumbnailCard({
 		};
 	}, []);
 
+	useEffect(() => {
+		if (forceLoad) {
+			setIsVisible(true);
+		}
+	}, [forceLoad]);
+
 	const sortedEvidences = useMemo(() => {
 		return [...entry.pageEvidences].sort((firstEvidence, secondEvidence) => {
 			const firstHighlighted = highlightedEvidenceIds.includes(
@@ -100,6 +112,16 @@ function PageThumbnailCard({
 			return firstHighlighted ? 1 : -1;
 		});
 	}, [entry.pageEvidences, highlightedEvidenceIds]);
+
+	const shouldRenderImage = isVisible || forceLoad;
+
+	useEffect(() => {
+		if (!shouldRenderImage || !entry.imageUrl || !imageRef.current?.complete) {
+			return;
+		}
+
+		onImageReady(entry.key);
+	}, [entry.imageUrl, entry.key, onImageReady, shouldRenderImage]);
 
 	return (
 		<div
@@ -123,22 +145,27 @@ function PageThumbnailCard({
 				</span>
 			</div>
 
-			<div className="relative overflow-hidden rounded-lg bg-white">
+			<div
+				className="relative overflow-hidden rounded-lg bg-white"
+				style={{ aspectRatio: `${entry.aspectRatio}` }}
+			>
 				{entry.imageUrl ? (
 					<>
-						{isVisible ? (
+						{shouldRenderImage ? (
 							<img
+								ref={imageRef}
 								src={entry.imageUrl}
 								alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
-								className="block h-auto w-full"
+								className="absolute inset-0 h-full w-full object-contain"
 								loading="lazy"
+								onLoad={() => onImageReady(entry.key)}
 							/>
 						) : (
-							<div className="h-[280px] w-full animate-pulse bg-primaryN30" />
+							<div className="absolute inset-0 animate-pulse bg-primaryN30" />
 						)}
-						{isVisible &&
+						{shouldRenderImage &&
 							showEvidenceBoxes &&
-							sortedEvidences.map((evidence, evidenceIndex) => {
+							sortedEvidences.map((evidence) => {
 								const bounds = getEvidenceBounds(evidence);
 								if (!bounds) {
 									return null;
@@ -171,7 +198,7 @@ function PageThumbnailCard({
 							})}
 					</>
 				) : (
-					<div className="flex h-[280px] items-center justify-center bg-white">
+					<div className="absolute inset-0 flex items-center justify-center bg-white">
 						<Empty
 							image={Empty.PRESENTED_IMAGE_SIMPLE}
 							description={
@@ -204,13 +231,16 @@ export default function EvidenceSidebar({
 	const lastScrolledItemIdRef = useRef<number | null>(null);
 	const lastAutoSyncedItemIdRef = useRef<number | null>(null);
 	const [activePageKey, setActivePageKey] = useState<string | null>(null);
+	const [targetImageReadyKey, setTargetImageReadyKey] = useState<string | null>(
+		null,
+	);
 
 	useEffect(() => {
-		console.log("selectedItem", selectedItem);
 		if (!selectedItem?.id) {
 			lastAutoSyncedItemIdRef.current = null;
 			lastScrolledItemIdRef.current = null;
 			setActivePageKey(null);
+			setTargetImageReadyKey(null);
 			return;
 		}
 
@@ -238,12 +268,30 @@ export default function EvidenceSidebar({
 		return visibleFiles.flatMap((file) => {
 			const imagePages = file?.parse_detail?.image_page_infos || [];
 			const fileEvidences = evidencesByFile?.[file?.id] || [];
+			const fallbackEvidence =
+				fileEvidences.find((evidence) => {
+					return (
+						Number(evidence?.page_width_pdf || 0) > 0 &&
+						Number(evidence?.page_height_pdf || 0) > 0
+					);
+				}) || null;
 
 			return imagePages.map((pageInfo, pageIndex) => {
 				const pageNumber = pageIndex + 1;
 				const pageEvidences = fileEvidences.filter((evidence) => {
 					return (evidence?.project_file_page_number || 1) === pageNumber;
 				});
+				const ratioEvidence =
+					pageEvidences.find((evidence) => {
+						return (
+							Number(evidence?.page_width_pdf || 0) > 0 &&
+							Number(evidence?.page_height_pdf || 0) > 0
+						);
+					}) || fallbackEvidence;
+				const pageWidth = Number(ratioEvidence?.page_width_pdf || 0);
+				const pageHeight = Number(ratioEvidence?.page_height_pdf || 0);
+				const aspectRatio =
+					pageWidth > 0 && pageHeight > 0 ? pageWidth / pageHeight : 0.75;
 
 				return {
 					key: `${file?.id}-${pageNumber}`,
@@ -251,6 +299,7 @@ export default function EvidenceSidebar({
 					pageNumber,
 					imageUrl: pageInfo?.s3_url || "",
 					pageEvidences,
+					aspectRatio,
 				};
 			});
 		});
@@ -275,6 +324,25 @@ export default function EvidenceSidebar({
 	}, [evidencesByFile, selectedEvidenceIds, selectedItem]);
 
 	useEffect(() => {
+		setTargetImageReadyKey(null);
+	}, [targetPageKey]);
+
+	const scrollToPageKey = (
+		pageKey: string,
+		behavior: ScrollBehavior = "smooth",
+	) => {
+		const targetElement = pageRefs.current[pageKey];
+		if (!targetElement) {
+			return;
+		}
+
+		targetElement.scrollIntoView({
+			behavior,
+			block: "center",
+		});
+	};
+
+	useEffect(() => {
 		if (!selectedItem?.id || !targetPageKey) {
 			return;
 		}
@@ -287,17 +355,8 @@ export default function EvidenceSidebar({
 		}
 
 		const scrollToTarget = () => {
-			const targetElement = pageRefs.current[targetPageKey];
-			if (!targetElement) {
-				return;
-			}
-
-			targetElement.scrollIntoView({
-				behavior: "smooth",
-				block: "center",
-			});
+			scrollToPageKey(targetPageKey);
 			setActivePageKey(targetPageKey);
-			lastScrolledItemIdRef.current = selectedItem.id;
 		};
 
 		const timer = window.setTimeout(scrollToTarget, 50);
@@ -306,6 +365,26 @@ export default function EvidenceSidebar({
 			window.clearTimeout(timer);
 		};
 	}, [activePageKey, selectedItem, targetPageKey]);
+
+	useEffect(() => {
+		if (
+			!selectedItem?.id ||
+			!targetPageKey ||
+			targetImageReadyKey !== targetPageKey
+		) {
+			return;
+		}
+
+		const timer = window.setTimeout(() => {
+			scrollToPageKey(targetPageKey);
+			setActivePageKey(targetPageKey);
+			lastScrolledItemIdRef.current = selectedItem.id;
+		}, 80);
+
+		return () => {
+			window.clearTimeout(timer);
+		};
+	}, [selectedItem, targetImageReadyKey, targetPageKey]);
 
 	return (
 		<div className="flex h-full w-[470px] flex-col border-l border-primaryN30 pl-5">
@@ -348,7 +427,7 @@ export default function EvidenceSidebar({
 					</Tooltip> */}
 					<Tooltip title="Add box">
 						<div
-							className="w-[30px] !h-[24px] text-xxs text-forumBlue-dark-active bg-forumBlue-light-active rounded-md flex flex-row justify-center items-center gap-1"
+							className="w-[30px] !h-[24px] text-xxs text-forumBlue-dark-active bg-forumBlue-light-active rounded-md flex flex-row justify-center items-center gap-1 cursor-pointer"
 							onClick={onOpenAddBoxModal}
 						>
 							<Image
@@ -373,12 +452,18 @@ export default function EvidenceSidebar({
 								isTargetPage={entry.key === activePageKey}
 								isSelectedFile={entry.file?.id === selectedFileId}
 								showEvidenceBoxes={showEvidenceBoxes}
+								forceLoad={entry.key === targetPageKey}
 								onClick={() => {
 									onSelectFile(entry.file?.id);
 									setActivePageKey(entry.key);
 								}}
 								onRegisterRef={(key, element) => {
 									pageRefs.current[key] = element;
+								}}
+								onImageReady={(key) => {
+									if (key === targetPageKey) {
+										setTargetImageReadyKey(key);
+									}
 								}}
 							/>
 						);

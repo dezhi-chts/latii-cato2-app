@@ -457,7 +457,7 @@ export default function TakeoffItemsTable({
 			</div>
 
 			<div className="flex min-h-0 flex-1">
-				<div className="rounded-l-lg h-[calc(100vh-320px)] border-[3px] border-forumBlue-normal" />
+				<div className="rounded-l-lg h-[calc(100vh-315px)] border-[3px] border-forumBlue-normal" />
 				<div className="min-h-0 flex-1 overflow-hidden">
 					<Table<TakeoffItemRecord>
 						rowKey={(record) => record?.id}
