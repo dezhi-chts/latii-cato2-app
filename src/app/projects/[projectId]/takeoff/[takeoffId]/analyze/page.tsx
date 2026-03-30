@@ -20,6 +20,7 @@ import Header from "./components/Header";
 import ItemsTable from "./components/ItemsTable";
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import { getTakeOffResult } from "@/services/DrawingAiService";
+import NewItemsTable from "./components/NewItemsTable";
 
 export type PageData = {
   current: number;
@@ -38,7 +39,7 @@ const Analyze = () => {
     rotatePDF: () => void;
   }>(null);
 
-  const [selectedFileId, setSelectedFileId] = useState<number>(-1);
+  const [selectedFileId, setSelectedFileId] = useState<number>(0);
   const [takeOff, setTakeOff] = useState<any>({
     take_off_result: {
       id: 129,
@@ -2237,11 +2238,18 @@ const Analyze = () => {
             isTableExpanded ? "w-4/5" : "w-3/5"
           } pl-10 flex gap-2 transition-all duration-300 ease-in-out`}
         >
-          <ItemsTable
+          <NewItemsTable
+            items={
+              takeOff?.project_files?.find(
+                (file: any) => file.id === selectedFileId,
+              )?.item_result ?? []
+            }
+          />
+          {/* <ItemsTable
             takeOff={takeOff}
             selectedFileId={selectedFileId}
             onRefreshItems={getTakeOff}
-          />
+          /> */}
         </div>
         <div className="flex items-center relative mx-5">
           <Divider type="vertical" className="h-full bg-primaryN30" />
