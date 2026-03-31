@@ -96,6 +96,30 @@ const HomeTakeoffsTable = ({
       {
         title: (
           <span className="text-xs font-semibold text-grey-normal">
+            Status
+          </span>
+        ),
+        dataIndex: "status",
+        key: "status",
+        align: "center",
+        render: (value) => <TextCell value={value === 2 ? "Analyzed" : "Uploaded"} />,
+      },
+      {
+        title: (
+          <span className="text-xs font-semibold text-grey-normal">
+            Last Edit
+          </span>
+        ),
+        dataIndex: "update_time",
+        key: "update_time",
+        align: "center",
+        render: (value) => (
+          <TextCell value={value && dayjs(value).format("MMMM D, YYYY")} />
+        ),
+      },
+      {
+        title: (
+          <span className="text-xs font-semibold text-grey-normal">
             Operation
           </span>
         ),
@@ -137,10 +161,17 @@ const HomeTakeoffsTable = ({
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
-      onClick: () =>
-        router.push(
-          `/projects/${record.project_id}/takeoff/${record.id}/identification`,
-        ),
+      onClick: () => {
+        if (record.status === 2) {
+          router.push(
+            `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
+          );
+        } else {
+          router.push(
+            `/projects/${record.project_id}/takeoff/${record.id}/identification`,
+          );
+        }
+      },
       className: "cursor-pointer hover:bg-gray-50",
     }),
     [router],
