@@ -188,10 +188,16 @@ const Project = () => {
                 console.log(takeOff);
                 if (!name.toLowerCase().includes(filter.toLowerCase()))
                   return null;
+
+                let status = takeOff?.take_off_result?.status || "";
+                let locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification`;
+                if (status === 2) {
+                  locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/manual-merge-new`;
+                }
                 return (
                   <Link
                     key={index}
-                    href={`/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification`}
+                    href={locationUrl}
                   >
                     <div className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30 cursor-pointer hover:bg-primaryN10 transition-all duration-150">
                       <div>
@@ -207,7 +213,7 @@ const Project = () => {
                           {takeOff?.take_off_result?.name || ""}
                         </div>
                         <div className="w-[100px] h-[26px] bg-[#008ECE4C] rounded-xl text-center font-light text-sm flex items-center justify-center">
-                          Takeoff
+                          {takeOff?.take_off_result?.status === 2 ? "Analyzed" : "Uploaded"}
                         </div>
 
                         <div className="text-xs text-grey-normal">

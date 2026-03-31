@@ -43,6 +43,7 @@ export default function ItemReferenceModal({
 	const [expandedEvidenceId, setExpandedEvidenceId] = useState<number | null>(
 		null,
 	);
+	const [zoomPercent, setZoomPercent] = useState(100);
 	const result = parseItemResult(item?.result || {});
 	const labelValue = formatCellValue(result?.Label);
 	const orderedFieldNames = [
@@ -111,6 +112,7 @@ export default function ItemReferenceModal({
 	useEffect(() => {
 		if (!open) {
 			setExpandedEvidenceId(null);
+			setZoomPercent(100);
 			return;
 		}
 
@@ -121,6 +123,14 @@ export default function ItemReferenceModal({
 			setExpandedEvidenceId(null);
 		}
 	}, [expandedEvidenceId, open, referenceCards]);
+
+	useEffect(() => {
+		setZoomPercent(100);
+	}, [expandedEvidenceId]);
+
+	const handleZoomChange = (nextZoomPercent: number) => {
+		setZoomPercent(Math.max(100, Math.min(300, nextZoomPercent)));
+	};
 
 	return (
 		<Modal
@@ -180,6 +190,36 @@ export default function ItemReferenceModal({
 					>
 						{expandedCard ? (
 							<div className="relative min-h-0 flex-1 bg-[#FBFBFC]">
+								<div className="absolute right-16 top-4 h-8 z-10 flex items-center gap-1 rounded-md border border-primaryN30 bg-white px-1 py-1 shadow-sm">
+									<button
+										type="button"
+										className={`flex h-8 w-[30px] items-center justify-center rounded text-sm ${
+											zoomPercent <= 100
+												? "cursor-not-allowed text-grey-light"
+												: "text-grey-dark hover:text-forumBlue-normal"
+										}`}
+										disabled={zoomPercent <= 100}
+										onClick={() => handleZoomChange(zoomPercent - 25)}
+									>
+										-
+									</button>
+									<span className="w-[40px] text-center text-xs text-grey-dark">
+										{zoomPercent}%
+									</span>
+									<button
+										type="button"
+										className={`flex h-8 w-[30px] items-center justify-center rounded text-sm ${
+											zoomPercent >= 300
+												? "cursor-not-allowed text-grey-light"
+												: "text-grey-dark hover:text-forumBlue-normal"
+										}`}
+										disabled={zoomPercent >= 300}
+										onClick={() => handleZoomChange(zoomPercent + 25)}
+									>
+										+
+									</button>
+								</div>
+
 								<button
 									type="button"
 									className="absolute right-4 top-4 z-10 flex h-8 items-center gap-2 rounded-md border border-primaryN30 bg-white px-3 text-xs text-grey-dark shadow-sm transition-colors hover:border-forumBlue-normal hover:text-forumBlue-normal"
@@ -188,15 +228,28 @@ export default function ItemReferenceModal({
 									<FullscreenExitOutlined />
 								</button>
 
-								<div className="flex h-full w-full items-center justify-center overflow-auto">
+								<div className="h-full w-full overflow-auto p-6">
 									{expandedCard.imageUrl ? (
-										<img
-											src={expandedCard.imageUrl}
-											alt={`${expandedCard.file?.file_name || "Evidence"} page ${
-												expandedCard.evidence?.project_file_page_number || 1
-											}`}
-											className="max-h-full w-full rounded-xl border border-primaryN30 bg-white object-contain"
-										/>
+										<div
+											className="flex min-h-full min-w-full items-start justify-center"
+											style={{
+												width: `${zoomPercent}%`,
+											}}
+										>
+											<img
+												src={expandedCard.imageUrl}
+												alt={`${expandedCard.file?.file_name || "Evidence"} page ${
+													expandedCard.evidence?.project_file_page_number || 1
+												}`}
+												className="rounded-xl border border-primaryN30 bg-white"
+												style={{
+													width: "100%",
+													maxWidth: "none",
+													height: "auto",
+													display: "block",
+												}}
+											/>
+										</div>
 									) : (
 										<Empty
 											image={Empty.PRESENTED_IMAGE_SIMPLE}
