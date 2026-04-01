@@ -524,7 +524,7 @@ export const getAllGroupedByTakeOff = async (take_off_id: number) => {
 		const url = `/drawing-ai/drawing_ai/get_all_grouped_by_take_off?take_off_id=${take_off_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {

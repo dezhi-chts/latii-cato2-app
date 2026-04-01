@@ -19,6 +19,7 @@ import { getTemplateById } from "@/services/templateService";
 import {
 	manualMergeByFileSource,
 	manualMergeByFile,
+	manualMergeByTakeOff,
 } from "@/services/mergeService";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -92,17 +93,20 @@ const formatCellValue = (value: unknown): string => {
 };
 
 /**
- * Collect merge IDs from items for file-level merge API
- * Extracts take_off_result_item_ids and file_source_merge_result_ids from items
+ * Collect merge IDs from items for different merge levels
+ * - For file-level merge: extracts take_off_result_item_ids and file_source_merge_result_ids
+ * - For takeoff-level merge: extracts single_file_merge_result_ids, take_off_result_item_ids, and file_source_merge_result_ids
  */
 const collectMergeIdsFromItems = (
 	items: any[],
 ): {
 	takeOffResultItemIds: number[];
 	fileSourceMergeResultIds: number[];
+	singleFileMergeResultIds: number[];
 } => {
 	const takeOffResultItemIds: number[] = [];
 	const fileSourceMergeResultIds: number[] = [];
+	const singleFileMergeResultIds: number[] = [];
 
 	items.forEach((item) => {
 		// Collect take_off_result_item_ids from take_off_result_item_id_list
@@ -110,25 +114,30 @@ const collectMergeIdsFromItems = (
 			takeOffResultItemIds.push(...item.take_off_result_item_id_list);
 		}
 
-		// Collect file_source_merge_result_ids from multiple possible sources:
-		// 1. item.id - the item's own ID which is the file_source_merge_result_id
+		// Collect single_file_merge_result_ids (item's own id for takeoff-level merge)
 		if (item.id) {
-			fileSourceMergeResultIds.push(item.id);
+			singleFileMergeResultIds.push(item.id);
 		}
-		// 2. item.file_source_merge_result_id - explicit field
-		if (
-			item.file_source_merge_result_id &&
-			item.file_source_merge_result_id !== item.id
-		) {
+
+		// Collect file_source_merge_result_ids from file_source_merge_result_id_list
+		if (Array.isArray(item.file_source_merge_result_id_list)) {
+			fileSourceMergeResultIds.push(...item.file_source_merge_result_id_list);
+		}
+		// Also check for single file_source_merge_result_id field
+		if (item.file_source_merge_result_id) {
 			fileSourceMergeResultIds.push(item.file_source_merge_result_id);
 		}
-		// 3. item.file_source_merge_result_ids - array of IDs
+		// Also check for file_source_merge_result_ids array
 		if (Array.isArray(item.file_source_merge_result_ids)) {
 			fileSourceMergeResultIds.push(...item.file_source_merge_result_ids);
 		}
 	});
 
-	return { takeOffResultItemIds, fileSourceMergeResultIds };
+	return {
+		takeOffResultItemIds,
+		fileSourceMergeResultIds,
+		singleFileMergeResultIds,
+	};
 };
 
 const buildConflictGroups = (pendingRows: any[]): ConflictGroup[] => {
@@ -554,10 +563,11 @@ export default function ManualMergeModal({
 
 	// Handle Keep All submit
 	const handleKeepAllSubmit = useCallback(async () => {
-		if (!fileId || keepAllItems.length === 0) {
+		// fileId can be 0 for takeoff-level merge, so check for undefined/null specifically
+		if (fileId === undefined || fileId === null || keepAllItems.length === 0) {
 			notification.error({
 				message: "Error",
-				description: "Missing required parameters (fileId)",
+				description: "Missing required parameters",
 			});
 			return;
 		}
@@ -579,16 +589,34 @@ export default function ManualMergeModal({
 					sourceType!,
 					merge_list,
 				);
-			} else {
-				// File-level merge: use manualMergeByFile
+			} else if (fileId === 0) {
+				// Takeoff-level merge (multiple files): use manualMergeByTakeOff
 				const merge_list = keepAllItems.map((item) => {
-					const { takeOffResultItemIds, fileSourceMergeResultIds } =
+					const {
+						takeOffResultItemIds,
+						fileSourceMergeResultIds,
+						singleFileMergeResultIds,
+					} = collectMergeIdsFromItems([item]);
+
+					return {
+						result: item.result,
+						single_file_merge_result_ids: singleFileMergeResultIds,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: fileSourceMergeResultIds,
+					};
+				});
+
+				res = await manualMergeByTakeOff(takeOffId, merge_list);
+			} else {
+				// File-level merge (single file internal): use manualMergeByFile
+				const merge_list = keepAllItems.map((item) => {
+					const { takeOffResultItemIds, singleFileMergeResultIds } =
 						collectMergeIdsFromItems([item]);
 
 					return {
 						result: item.result,
 						take_off_result_item_ids: takeOffResultItemIds,
-						file_source_merge_result_ids: fileSourceMergeResultIds,
+						file_source_merge_result_ids: singleFileMergeResultIds,
 					};
 				});
 
@@ -659,7 +687,13 @@ export default function ManualMergeModal({
 
 	// Handle Customize submit
 	const handleCustomizeSubmit = useCallback(async () => {
-		if (!fileId || !activeGroup || !computedMergedResult) {
+		// fileId can be 0 for takeoff-level merge, so check for undefined/null specifically
+		if (
+			fileId === undefined ||
+			fileId === null ||
+			!activeGroup ||
+			!computedMergedResult
+		) {
 			notification.error({
 				message: "Error",
 				description: "Missing required parameters",
@@ -687,16 +721,34 @@ export default function ManualMergeModal({
 					sourceType!,
 					merge_list,
 				);
+			} else if (fileId === 0) {
+				// Takeoff-level merge (multiple files): use manualMergeByTakeOff
+				const {
+					takeOffResultItemIds,
+					fileSourceMergeResultIds,
+					singleFileMergeResultIds,
+				} = collectMergeIdsFromItems(tableData);
+
+				const merge_list = [
+					{
+						result: computedMergedResult,
+						single_file_merge_result_ids: singleFileMergeResultIds,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: fileSourceMergeResultIds,
+					},
+				];
+
+				res = await manualMergeByTakeOff(takeOffId, merge_list);
 			} else {
-				// File-level merge: use manualMergeByFile
-				const { takeOffResultItemIds, fileSourceMergeResultIds } =
+				// File-level merge (single file internal): use manualMergeByFile
+				const { takeOffResultItemIds, singleFileMergeResultIds } =
 					collectMergeIdsFromItems(tableData);
 
 				const merge_list = [
 					{
 						result: computedMergedResult,
 						take_off_result_item_ids: takeOffResultItemIds,
-						file_source_merge_result_ids: fileSourceMergeResultIds,
+						file_source_merge_result_ids: singleFileMergeResultIds,
 					},
 				];
 
