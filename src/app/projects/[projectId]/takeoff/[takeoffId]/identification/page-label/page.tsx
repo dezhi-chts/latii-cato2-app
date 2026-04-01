@@ -55,7 +55,7 @@ import {
 import { useUser } from "@/context/UserContext";
 import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
-import { analyzeItemByGeminiSdk } from "@/services/DrawingAiService";
+import { AnalyzeItemBySourceType } from "@/services/DrawingAiService";
 
 
 const { confirm } = Modal;
@@ -550,7 +550,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {
 
   const handleAnaylize = async () => {
     setBuildLoading(true);
-    const response = await analyzeItemByGeminiSdk(takeOffId as string, 1);
+    const response = await AnalyzeItemBySourceType(takeOffId as string, 1);
     if (response.status === "success") {
       setBuildLoading(false);
       // 跳转到merge页面

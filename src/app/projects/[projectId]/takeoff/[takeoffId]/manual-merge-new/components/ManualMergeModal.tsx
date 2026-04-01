@@ -18,6 +18,8 @@ import {
 	reconcileConfirm,
 	reconcileKeepAllConfirm,
 } from "@/services/DrawingAiService";
+import { getEvidenceByFileId } from "@/services/evidenceService";
+import { getTemplateById } from "@/services/templateService";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -32,8 +34,17 @@ interface ConflictGroup {
 interface ManualMergeModalProps {
 	open: boolean;
 	pendingRows: any[];
+	fileIds?: number[];
 	onConfirm: (mergedResults: any[]) => void;
 	onCancel: () => void;
+}
+
+interface EvidenceData {
+	id: number;
+	s3_url?: string;
+	type?: string;
+	project_file_page_number?: number;
+	project_file_id?: number;
 }
 
 const MOCK_CONFLICT_DATA: Record<string, any[]> = {
@@ -189,16 +200,23 @@ const MOCK_CONFLICT_DATA: Record<string, any[]> = {
 	// ],
 };
 
-const safeParseResult = (result: unknown): Record<string, unknown> => {
-	if (!result) return {};
-	if (typeof result === "string") {
+const safeParseResult = (
+	result: unknown,
+	originalResult?: unknown,
+): Record<string, unknown> => {
+	// Prefer originalResult if available (contains the raw API data)
+	const dataToUse = originalResult ?? result;
+
+	if (!dataToUse) return {};
+	if (typeof dataToUse === "string") {
 		try {
-			return JSON.parse(result);
+			return JSON.parse(dataToUse);
 		} catch {
 			return {};
 		}
 	}
-	if (typeof result === "object") return result as Record<string, unknown>;
+	if (typeof dataToUse === "object")
+		return dataToUse as Record<string, unknown>;
 	return {};
 };
 
@@ -212,30 +230,46 @@ const buildConflictGroups = (pendingRows: any[]): ConflictGroup[] => {
 	const mockKeys = Object.keys(MOCK_CONFLICT_DATA);
 
 	if (pendingRows.length > 0) {
+		// Check if pendingRows are already grouped (from API with groupLabel/groupSubLabel)
+		// Group by groupLabel + groupSubLabel if available
 		const grouped: Record<string, any[]> = {};
+
 		pendingRows.forEach((row) => {
-			const result = safeParseResult(row.result);
-			const label = String(result.Label || "");
-			const subLabel = String(result["Sub Label"] || "");
+			// Use groupLabel/groupSubLabel if available (from API response)
+			// Otherwise fall back to result.Label/Sub Label
+			const result = safeParseResult(row.result, row.originalResult);
+			const label = row.groupLabel ?? String(result.Label || "");
+			const subLabel = row.groupSubLabel ?? String(result["Sub Label"] || "");
 			const key = `${label}_____${subLabel}`;
 			if (!grouped[key]) grouped[key] = [];
 			grouped[key].push(row);
 		});
 
 		const groups = Object.entries(grouped).map(([key, items]) => {
-			const firstResult = safeParseResult(items[0]?.result);
+			// Get label from first item
+			const firstItem = items[0];
+			const firstResult = safeParseResult(
+				firstItem?.result,
+				firstItem?.originalResult,
+			);
+			const label = firstItem?.groupLabel ?? String(firstResult.Label || "");
+			const subLabel =
+				firstItem?.groupSubLabel ?? String(firstResult["Sub Label"] || "");
+
 			return {
 				groupKey: key,
-				label: String(firstResult.Label || ""),
-				subLabel: String(firstResult["Sub Label"] || ""),
+				label,
+				subLabel,
 				items,
 				item_ids: items.map((i) => i.id),
 			};
 		});
 
-		if (groups.some((g) => g.items.length > 1)) return groups;
+		// Return groups that have conflicts (more than 1 item) or all groups if any exist
+		if (groups.length > 0) return groups;
 	}
 
+	// Fallback to mock data
 	return mockKeys.map((key) => {
 		const items = MOCK_CONFLICT_DATA[key];
 		const firstResult = safeParseResult(items[0]?.result);
@@ -252,7 +286,7 @@ const buildConflictGroups = (pendingRows: any[]): ConflictGroup[] => {
 const getFieldsFromItems = (items: any[]): string[] => {
 	const fieldSet = new Set<string>();
 	items.forEach((item) => {
-		const result = safeParseResult(item.result);
+		const result = safeParseResult(item.result, item.originalResult);
 		Object.keys(result).forEach((k) => fieldSet.add(k));
 	});
 
@@ -286,10 +320,13 @@ type MergeMode = "customize" | "keepAll";
 interface TableItem {
 	id: number;
 	result: string;
+	originalResult?: string;
 	selectFields: string[];
 	evidence_selected: boolean;
 	evidence_id_list?: number[];
 	evidence_msg?: any;
+	groupLabel?: string;
+	groupSubLabel?: string;
 	[key: string]: any;
 }
 
@@ -305,10 +342,13 @@ interface EvidenceItem {
 export default function ManualMergeModal({
 	open,
 	pendingRows,
+	fileIds,
 	onConfirm,
 	onCancel,
 }: ManualMergeModalProps) {
-	const takeOffId = Number(useParams().takeoffId);
+	const params = useParams();
+	const takeOffId = Number(params.takeoffId);
+	const projectId = String(params.projectId);
 
 	const [conflictGroups, setConflictGroups] = useState<ConflictGroup[]>([]);
 	const [activeGroupIndex, setActiveGroupIndex] = useState(0);
@@ -316,8 +356,92 @@ export default function ManualMergeModal({
 
 	const [tableData, setTableData] = useState<TableItem[]>([]);
 	const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
+	const [allEvidences, setAllEvidences] = useState<EvidenceData[]>([]);
+	const [loadingEvidences, setLoadingEvidences] = useState(false);
+	const [templateFields, setTemplateFields] = useState<string[]>([]);
 
 	const [confirming, setConfirming] = useState(false);
+
+	// Fetch template fields when modal opens
+	useEffect(() => {
+		const fetchTemplateFields = async () => {
+			if (!open) return;
+
+			try {
+				const result = await getTemplateById(1);
+				if (result.status === "success" && result.data) {
+					const template = result.data;
+					const fields = template.fields || [];
+					const fieldNames = fields
+						.map((field: any) => field.name || field.field_name)
+						.filter(Boolean);
+
+					if (fieldNames.length > 0) {
+						setTemplateFields(fieldNames);
+					}
+				}
+			} catch (error) {
+				console.error("[ManualMergeModal] Error fetching template:", error);
+			}
+		};
+
+		fetchTemplateFields();
+	}, [open]);
+
+	// Fetch all evidences for all files when modal opens
+	useEffect(() => {
+		const fetchEvidences = async () => {
+			if (!open || !projectId) return;
+
+			// Collect all unique file IDs from both fileIds prop and pendingRows
+			const allFileIds = new Set<number>();
+
+			// Add fileIds from props
+			if (fileIds && fileIds.length > 0) {
+				fileIds.forEach((fId) => allFileIds.add(fId));
+			}
+
+			// Extract project_file_id from pendingRows items
+			pendingRows.forEach((row) => {
+				if (row.project_file_id) {
+					allFileIds.add(row.project_file_id);
+				}
+			});
+
+			if (allFileIds.size === 0) return;
+
+			setLoadingEvidences(true);
+			try {
+				// Fetch evidences for all files concurrently
+				const fileIdArray = Array.from(allFileIds);
+				console.log(
+					"[ManualMergeModal] Fetching evidences for file IDs:",
+					fileIdArray,
+				);
+
+				const evidencePromises = fileIdArray.map((fId) =>
+					getEvidenceByFileId(projectId, fId),
+				);
+				const results = await Promise.all(evidencePromises);
+
+				// Merge all evidences into one array
+				const mergedEvidences: EvidenceData[] = [];
+				results.forEach((res) => {
+					if (res.status === "success" && Array.isArray(res.data)) {
+						mergedEvidences.push(...res.data);
+					}
+				});
+
+				setAllEvidences(mergedEvidences);
+			} catch (error) {
+				console.error("[ManualMergeModal] Error fetching evidences:", error);
+			} finally {
+				setLoadingEvidences(false);
+			}
+		};
+
+		fetchEvidences();
+	}, [open, fileIds, projectId, pendingRows]);
 
 	useEffect(() => {
 		if (open) {
@@ -330,23 +454,106 @@ export default function ManualMergeModal({
 
 	const activeGroup = conflictGroups[activeGroupIndex] || null;
 
+	// Use template fields if available, otherwise fallback to getFieldsFromItems
 	const fields = useMemo(() => {
+		if (templateFields.length > 0) {
+			return templateFields;
+		}
 		if (!activeGroup) return [];
 		return getFieldsFromItems(activeGroup.items);
-	}, [activeGroup]);
+	}, [activeGroup, templateFields]);
+
+	const generateTableData = useCallback((items: any[]) => {
+		const data: TableItem[] = items.map((item: any, index: number) => {
+			const result = safeParseResult(item.result, item.originalResult);
+			return {
+				...item,
+				selectFields: index === 0 ? Object.keys(result) : ["Label"],
+				evidence_selected: true,
+			};
+		});
+		setTableData(data);
+	}, []);
+
+	const generateEvidenceList = useCallback(
+		(items: any[]) => {
+			const evidences: EvidenceItem[] = [];
+			items.forEach((item: any, index: number) => {
+				// First try to get from evidence_msg (if available)
+				const msg = item.evidence_msg;
+				if (msg) {
+					const url =
+						typeof msg === "object" && !Array.isArray(msg)
+							? msg.s3_url || ""
+							: Array.isArray(msg)
+								? msg[0]?.s3_url || ""
+								: "";
+					if (url) {
+						evidences.push({
+							id: msg.id || item.evidence_id || 0,
+							index,
+							item_id: item.id,
+							evidence_selected: true,
+							s3_url: url,
+							type: msg.type || "",
+						});
+						return;
+					}
+				}
+
+				// Try to find evidence from allEvidences using evidence_id or evidence_id_list
+				const evidenceIds: number[] = [];
+				if (item.evidence_id) {
+					evidenceIds.push(item.evidence_id);
+				}
+				if (Array.isArray(item.evidence_id_list)) {
+					evidenceIds.push(...item.evidence_id_list);
+				}
+				if (Array.isArray(item.evidence_ids)) {
+					evidenceIds.push(...item.evidence_ids);
+				}
+
+				// Find matching evidence from allEvidences
+				for (const evidenceId of evidenceIds) {
+					const matchedEvidence = allEvidences.find((e) => e.id === evidenceId);
+					if (matchedEvidence) {
+						if (matchedEvidence.s3_url) {
+							evidences.push({
+								id: matchedEvidence.id,
+								index,
+								item_id: item.id,
+								evidence_selected: true,
+								s3_url: matchedEvidence.s3_url,
+								type: matchedEvidence.type || "",
+							});
+							break;
+						}
+					}
+				}
+			});
+			setEvidenceList(evidences);
+		},
+		[allEvidences],
+	);
 
 	useEffect(() => {
 		if (!activeGroup) return;
 		generateTableData(activeGroup.items);
 		generateEvidenceList(activeGroup.items);
-	}, [activeGroup]);
+	}, [activeGroup, generateTableData, generateEvidenceList]);
+
+	// Re-generate evidence list when allEvidences is loaded
+	useEffect(() => {
+		if (!activeGroup || allEvidences.length === 0) return;
+		generateEvidenceList(activeGroup.items);
+	}, [allEvidences, activeGroup, generateEvidenceList]);
 
 	useEffect(() => {
 		if (!activeGroup) return;
 		if (mergeMode === "customize") {
 			setTableData((prev) =>
 				prev.map((item, idx) => {
-					const result = safeParseResult(item.result);
+					const result = safeParseResult(item.result, item.originalResult);
 					return {
 						...item,
 						selectFields: idx === 0 ? Object.keys(result) : ["Label"],
@@ -365,42 +572,6 @@ export default function ManualMergeModal({
 			);
 		}
 	}, [mergeMode]);
-
-	const generateTableData = (items: any[]) => {
-		const data: TableItem[] = items.map((item: any, index: number) => {
-			const result = safeParseResult(item.result);
-			return {
-				...item,
-				selectFields: index === 0 ? Object.keys(result) : ["Label"],
-				evidence_selected: true,
-			};
-		});
-		setTableData(data);
-	};
-
-	const generateEvidenceList = (items: any[]) => {
-		const evidences: EvidenceItem[] = [];
-		items.forEach((item: any, index: number) => {
-			const msg = item.evidence_msg;
-			if (msg) {
-				const url =
-					typeof msg === "object" && !Array.isArray(msg)
-						? msg.s3_url || ""
-						: Array.isArray(msg)
-							? msg[0]?.s3_url || ""
-							: "";
-				evidences.push({
-					id: msg.id || item.evidence_id || 0,
-					index,
-					item_id: item.id,
-					evidence_selected: true,
-					s3_url: url,
-					type: msg.type || "",
-				});
-			}
-		});
-		setEvidenceList(evidences);
-	};
 
 	const handleToggleField = useCallback(
 		(itemId: number, field: string) => {
@@ -446,13 +617,17 @@ export default function ManualMergeModal({
 		fields.forEach((field) => {
 			for (const item of tableData) {
 				if (item.selectFields.includes(field)) {
-					const result = safeParseResult(item.result);
+					const result = safeParseResult(item.result, item.originalResult);
 					merged[field] = formatCellValue(result[field]);
 					break;
 				}
 			}
 			if (!merged[field]) {
-				const result = safeParseResult(tableData[0]?.result);
+				const firstItem = tableData[0];
+				const result = safeParseResult(
+					firstItem?.result,
+					firstItem?.originalResult,
+				);
 				merged[field] = formatCellValue(result[field]);
 			}
 		});
@@ -587,7 +762,7 @@ export default function ManualMergeModal({
 			width: field.length > 15 ? 150 : 100,
 			align: "center" as const,
 			render: (_: unknown, record: any) => {
-				const result = safeParseResult(record.result);
+				const result = safeParseResult(record.result, record.originalResult);
 				const value = formatCellValue(result[field]);
 				const isSelected =
 					mergeMode === "customize" &&
@@ -697,12 +872,12 @@ export default function ManualMergeModal({
 								{totalCount}
 							</span>
 						</div>
-						<Button
+						{/* <Button
 							className="custom-default-btn !h-8 !w-[90px]"
 							onClick={onCancel}
 						>
 							Cancel
-						</Button>
+						</Button> */}
 					</div>
 				</div>
 
@@ -742,7 +917,7 @@ export default function ManualMergeModal({
 										>
 											<div className="h-[6px] w-[6px] rounded-full bg-white" />
 										</div>
-										<div className="min-w-0 flex-1">
+										<div className="min-w-0 flex-1 overflow-hidden">
 											<div
 												className={`truncate text-xs font-medium ${
 													isActive ? "text-forumBlue-normal" : "text-grey-dark"
@@ -750,7 +925,10 @@ export default function ManualMergeModal({
 											>
 												{group.label || "Unknown"}
 											</div>
-											<div className="mt-0.5 text-[10px] text-grey-normal">
+											<div
+												className="mt-0.5 truncate text-[10px] text-grey-normal"
+												title={`Items ${group.item_ids.join(", ")}`}
+											>
 												Items {group.item_ids.join(", ")}
 											</div>
 										</div>
@@ -793,10 +971,10 @@ export default function ManualMergeModal({
 								</div>
 
 								{/* Content area */}
-								<div className="flex-1 overflow-y-auto px-5 py-4">
-									{/* Source items table */}
-									<div className="mb-4">
-										<div className="overflow-hidden rounded-[12px] border border-primaryN30">
+								<div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
+									{/* Source items table - 50% height */}
+									<div className="mb-4 max-h-[50%] shrink-0">
+										<div className="h-full overflow-hidden rounded-[12px] border border-primaryN30">
 											<Table
 												rowKey={(record) => record.id || Math.random()}
 												columns={customizeColumns}
@@ -804,92 +982,95 @@ export default function ManualMergeModal({
 												pagination={false}
 												scroll={{
 													x: "max-content",
+													y: "calc(100% - 100px)",
 												}}
 												size="small"
-												className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+												className="h-full small-font-table [&_.ant-table]:!h-full [&_.ant-table]:!text-xs [&_.ant-table-body]:!overflow-y-auto [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-container]:!h-full [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
 											/>
 										</div>
 									</div>
 
-									{/* Evidence images */}
-									{evidenceList.length > 0 && (
-										<div className="mb-4 flex flex-row flex-wrap gap-4">
-											{evidenceList.map((item, index) => (
-												<div
-													key={item.id}
-													className="relative min-w-[30%] max-w-[32%] flex-1 overflow-hidden rounded-lg border border-primaryN30"
-												>
-													<div className="flex flex-row gap-3 p-3">
-														<div className="shrink-0">
-															<span className="inline-block rounded bg-primaryN30 px-1.5 py-0.5 text-xs text-grey-normal">
-																{item.index + 1}
-															</span>
-														</div>
-														<div className="flex-1 overflow-hidden">
-															{item.s3_url ? (
-																<Image
-																	src={item.s3_url}
-																	alt=""
-																	width="100%"
-																	height="auto"
-																	className="max-h-[250px] object-contain"
-																	preview={false}
-																/>
-															) : (
-																<div className="flex h-[200px] items-center justify-center text-xs text-grey-normal">
-																	No evidence image
-																</div>
-															)}
-														</div>
-														<div className="shrink-0">
-															<div
-																className={`flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border transition-colors ${
-																	item.evidence_selected
-																		? "border-forumBlue-normal bg-forumBlue-normal/10"
-																		: "border-transparent"
-																}`}
-																onClick={() => handleEvidenceChecked(index)}
-															>
-																<svg
-																	width="18"
-																	height="18"
-																	viewBox="0 0 24 24"
-																	fill="none"
+									{/* Evidence images - fill remaining height (between top table and bottom Final Item) */}
+									<div className="mb-4 min-h-0 flex-1 overflow-y-auto">
+										{evidenceList.length > 0 ? (
+											<div className="flex flex-row flex-wrap gap-4">
+												{evidenceList.map((item, index) => (
+													<div
+														key={item.id}
+														className="relative min-w-[30%] max-w-[32%] flex-1 overflow-hidden rounded-lg border border-primaryN30"
+													>
+														<div className="flex flex-row gap-3 p-3">
+															<div className="shrink-0">
+																<span className="inline-block rounded bg-primaryN30 px-1.5 py-0.5 text-xs text-grey-normal">
+																	{item.index + 1}
+																</span>
+															</div>
+															<div className="flex-1 overflow-hidden">
+																{item.s3_url ? (
+																	<Image
+																		src={item.s3_url}
+																		alt=""
+																		width="100%"
+																		height="auto"
+																		className="max-h-[180px] object-contain"
+																		preview={false}
+																	/>
+																) : (
+																	<div className="flex h-[150px] items-center justify-center text-xs text-grey-normal">
+																		No evidence image
+																	</div>
+																)}
+															</div>
+															<div className="shrink-0">
+																<div
+																	className={`flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border transition-colors ${
+																		item.evidence_selected
+																			? "border-forumBlue-normal bg-forumBlue-normal/10"
+																			: "border-transparent"
+																	}`}
+																	onClick={() => handleEvidenceChecked(index)}
 																>
-																	<path
-																		d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"
-																		stroke={
-																			item.evidence_selected
-																				? "#427CCE"
-																				: "#999"
-																		}
-																		strokeWidth="1.5"
-																		strokeLinecap="round"
-																		strokeLinejoin="round"
-																	/>
-																	<path
-																		d="M14 2V8H20"
-																		stroke={
-																			item.evidence_selected
-																				? "#427CCE"
-																				: "#999"
-																		}
-																		strokeWidth="1.5"
-																		strokeLinecap="round"
-																		strokeLinejoin="round"
-																	/>
-																</svg>
+																	<svg
+																		width="18"
+																		height="18"
+																		viewBox="0 0 24 24"
+																		fill="none"
+																	>
+																		<path
+																			d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"
+																			stroke={
+																				item.evidence_selected
+																					? "#427CCE"
+																					: "#999"
+																			}
+																			strokeWidth="1.5"
+																			strokeLinecap="round"
+																			strokeLinejoin="round"
+																		/>
+																		<path
+																			d="M14 2V8H20"
+																			stroke={
+																				item.evidence_selected
+																					? "#427CCE"
+																					: "#999"
+																			}
+																			strokeWidth="1.5"
+																			strokeLinecap="round"
+																			strokeLinejoin="round"
+																		/>
+																	</svg>
+																</div>
 															</div>
 														</div>
 													</div>
-												</div>
-											))}
-										</div>
-									)}
+												))}
+											</div>
+										) : null}
+									</div>
 
-									{/* Final Item / Merged Result */}
-									<div className="rounded-[12px] bg-[#EEF5FF]/40 px-5 py-4">
-										<div className="mb-3 flex items-center justify-between">
+									{/* Final Item / Merged Result - fixed 100px height */}
+									<div className="h-[130px] shrink-0 overflow-hidden rounded-[12px] bg-[#EEF5FF]/40 px-5 py-2">
+										<div className="mb-2 flex shrink-0 items-center justify-between">
 											<span className="text-sm font-medium text-forumBlue-normal">
 												Final Item
 											</span>
@@ -903,7 +1084,7 @@ export default function ManualMergeModal({
 										</div>
 
 										{mergeMode === "customize" && computedMergedResult ? (
-											<div className="overflow-hidden rounded-[8px] border border-primaryN30 bg-white">
+											<div className="h-[calc(100%-36px)] overflow-auto rounded-[8px] border border-primaryN30 bg-white">
 												<Table
 													rowKey={() => "live-preview"}
 													columns={mergedColumns}
@@ -917,12 +1098,15 @@ export default function ManualMergeModal({
 												/>
 											</div>
 										) : mergeMode === "keepAll" && tableData.length > 0 ? (
-											<div className="overflow-hidden rounded-[8px] border border-primaryN30 bg-white">
+											<div className="h-[calc(100%-36px)] overflow-auto rounded-[8px] border border-primaryN30 bg-white">
 												<Table
 													rowKey={(record: any) => record?.id || Math.random()}
 													columns={mergedColumns}
 													dataSource={tableData.map((item) => ({
-														...safeParseResult(item.result),
+														...safeParseResult(
+															item.result,
+															item.originalResult,
+														),
 														original_item_id: item.id,
 													}))}
 													pagination={false}

@@ -35,7 +35,11 @@ const formatTakeOffResultByFileData = (rawData: any) => {
 					? (sourceValue as any).label_sublabel_group_data
 					: sourceValue;
 
-			if (!groupedData || typeof groupedData !== "object" || Array.isArray(groupedData)) {
+			if (
+				!groupedData ||
+				typeof groupedData !== "object" ||
+				Array.isArray(groupedData)
+			) {
 				acc[sourceKey] = [];
 				return acc;
 			}
@@ -44,9 +48,9 @@ const formatTakeOffResultByFileData = (rawData: any) => {
 				([labelSubLabel, listLabel]) => {
 					const { label, subLabel } = splitLabelAndSubLabel(labelSubLabel);
 					return {
-						"Label": label,
+						Label: label,
 						"Sub Label": subLabel,
-						"List": Array.isArray(listLabel) ? listLabel : [],
+						List: Array.isArray(listLabel) ? listLabel : [],
 					};
 				},
 			);
@@ -62,7 +66,7 @@ const formatTakeOffResultByFileData = (rawData: any) => {
  * 获取解析出来的原始数据列表，按文件获取，上送take_off_id和file_id
  * /drawing-ai/drawing_ai/take_off_result_by_file
  * 返回格式:
- * { 
+ * {
  *      data: {
  *          "Schedule":{
  *              "Label":"",
@@ -84,7 +88,7 @@ const formatTakeOffResultByFileData = (rawData: any) => {
  *              "Sub Label":"",
  *              "List":[]
  *          }
- *      }, 
+ *      },
  *      status: "error" | "success"
  * }
  */
@@ -95,7 +99,7 @@ export const getTakeOffResultByFile = async (
 	try {
 		const url = `/drawing-ai/drawing_ai/take_off_result_by_file?take_off_id=${take_off_id}&file_id=${file_id}`;
 		const response = await http.get(url);
-        console.log("response:", response);
+		console.log("response:", response);
 		const formattedData = formatTakeOffResultByFileData(response);
 		return {
 			data: formattedData,
@@ -105,7 +109,7 @@ export const getTakeOffResultByFile = async (
 		console.error("Error getting take off result by file:", error);
 		return {
 			data: error?.response?.data?.data || {},
-			status: "error"
+			status: "error",
 		};
 	}
 };
@@ -206,10 +210,15 @@ export const getMergeResultByFileSourceList = async (
 		});
 		const results = await Promise.all(tasks);
 		const allSuccess = results.every((item) => item.status === "success");
-		const dataBySourceType = results.reduce<Record<string, any>>((acc, item) => {
-			acc[item.source_type] = item.data;
-			return acc;
-		}, {});
+		const dataBySourceType = results.reduce<Record<string, any>>(
+			(acc, item) => {
+				acc[item.source_type] = item.data;
+				return acc;
+			},
+			{},
+		);
+
+		console.log("dataBySourceType", dataBySourceType);
 
 		return {
 			data: dataBySourceType,
@@ -323,14 +332,16 @@ export const getFileSourceMergeResultDetailById = async (result_id: number) => {
 			status: "success",
 		};
 	} catch (error: any) {
-		console.error("Error getting file source merge result detail by id:", error);
+		console.error(
+			"Error getting file source merge result detail by id:",
+			error,
+		);
 		return {
 			data: error?.response?.data?.data || {},
 			status: "error",
 		};
 	}
 };
-
 
 // ========================单文件源之间合并===================================
 
@@ -462,7 +473,10 @@ export const getSingleFileMergeResultDetailById = async (result_id: number) => {
 			status: "success",
 		};
 	} catch (error: any) {
-		console.error("Error getting single file merge result detail by id:", error);
+		console.error(
+			"Error getting single file merge result detail by id:",
+			error,
+		);
 		return {
 			data: error?.response?.data?.data || {},
 			status: "error",
@@ -595,7 +609,10 @@ export const getMultipleFilesMergeResultDetailById = async (
 			status: "success",
 		};
 	} catch (error: any) {
-		console.error("Error getting multiple files merge result detail by id:", error);
+		console.error(
+			"Error getting multiple files merge result detail by id:",
+			error,
+		);
 		return {
 			data: error?.response?.data?.data || {},
 			status: "error",
@@ -713,4 +730,3 @@ export const deleteMultipleFilesMergeResultById = async (result_id: number) => {
 		};
 	}
 };
-
