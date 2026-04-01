@@ -163,9 +163,16 @@ const HomeTakeoffsTable = ({
     (record: ProjectRow) => ({
       onClick: () => {
         if (record.status === 2) {
-          router.push(
-            `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
-          );
+          if (typeof record.project_file_ids === 'string' && record.project_file_ids.split(',').length > 1) {
+            // 如果有多个文件，且状态为已分析，跳转到手动合并页
+            router.push(
+              `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
+            );
+          } else {
+            router.push(
+              `/projects/${record.project_id}/takeoff/${record.id}/identification`,
+            );
+          }
         } else {
           router.push(
             `/projects/${record.project_id}/takeoff/${record.id}/identification`,
