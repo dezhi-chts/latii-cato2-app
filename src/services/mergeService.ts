@@ -293,7 +293,7 @@ export const manualMergeByFileSource = async (
 		}));
 		const response = await http.post(url, body);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -319,7 +319,7 @@ export const getFileSourceMergeResultDetailById = async (result_id: number) => {
 		const url = `/drawing-ai/drawing_ai/get_file_source_merge_result_detail_by_id?result_id=${result_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -352,7 +352,7 @@ export const autoMergeAllSourceTypesByFile = async (
 		const url = `/drawing-ai/drawing_ai/auto_merge_all_source_types_by_file?take_off_id=${take_off_id}&file_id=${file_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -382,7 +382,7 @@ export const getAllGroupedByFile = async (
 		const url = `/drawing-ai/drawing_ai/get_all_grouped_by_file?take_off_id=${take_off_id}&file_id=${file_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -432,7 +432,7 @@ export const manualMergeByFile = async (
 		}));
 		const response = await http.post(url, body);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -458,7 +458,7 @@ export const getSingleFileMergeResultDetailById = async (result_id: number) => {
 		const url = `/drawing-ai/drawing_ai/get_single_file_merge_result_detail_by_id?result_id=${result_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -484,7 +484,7 @@ export const autoMergeAllFilesByTakeOff = async (take_off_id: number) => {
 		const url = `/drawing-ai/drawing_ai/auto_merge_all_files_by_take_off/${take_off_id}`;
 		const response = await http.post(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -510,7 +510,7 @@ export const getAllGroupedByTakeOff = async (take_off_id: number) => {
 		const url = `/drawing-ai/drawing_ai/get_all_grouped_by_take_off?take_off_id=${take_off_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -563,7 +563,7 @@ export const manualMergeByTakeOff = async (
 		}));
 		const response = await http.post(url, body);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -591,7 +591,7 @@ export const getMultipleFilesMergeResultDetailById = async (
 		const url = `/drawing-ai/drawing_ai/get_multiple_files_merge_result_detail_by_id?result_id=${result_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -642,7 +642,7 @@ export const createMultipleFilesMergeResult = async (
 		};
 		const response = await http.post(url, body);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -674,7 +674,7 @@ export const updateMultipleFilesMergeResultById = async (
 		const url = `/drawing-ai/drawing_ai/update_multiple_files_merge_result_by_id/${result_id}`;
 		const response = await http.post(url, result);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -702,7 +702,7 @@ export const deleteMultipleFilesMergeResultById = async (result_id: number) => {
 		const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id?result_id=${result_id}`;
 		const response = await http.delete(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
