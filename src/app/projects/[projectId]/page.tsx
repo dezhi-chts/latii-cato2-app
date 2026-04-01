@@ -192,7 +192,9 @@ const Project = () => {
                 let status = takeOff?.take_off_result?.status || "";
                 let locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification`;
                 if (status === 2) {
-                  locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/manual-merge-new`;
+                  if (takeOff?.project_files?.length > 1) {
+                    locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/manual-merge-new`;
+                  }
                 }
                 return (
                   <Link
