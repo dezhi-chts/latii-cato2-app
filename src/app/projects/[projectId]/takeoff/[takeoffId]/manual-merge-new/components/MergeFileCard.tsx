@@ -176,20 +176,13 @@ export default function MergeFileCard({
 			fixed: "right",
 			align: "center",
 			render: (_: unknown, record: MergeFileRow) => {
-				const evidenceCount =
-					record?.evidence_id_list?.length ||
-					(record?.evidence_msg?.s3_url ? 1 : 0);
-
 				return (
 					<button
 						type="button"
-						disabled={!evidenceCount}
-						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors hover:opacity-70"
 						onClick={(event) => {
 							event.stopPropagation();
-							if (evidenceCount) {
-								onOpenReferenceModal(record as unknown as TakeoffItemRecord);
-							}
+							onOpenReferenceModal(record as unknown as TakeoffItemRecord);
 						}}
 					>
 						<Image

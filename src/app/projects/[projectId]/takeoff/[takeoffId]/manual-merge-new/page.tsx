@@ -18,9 +18,13 @@ import { FileViewStep, useTakeoff } from "@/context/TakeoffContext";
 import ManualMergeModal from "./components/ManualMergeModal";
 import OriginalItemReferenceModal from "./components/OriginalItemReferenceModal";
 import MergedItemReferenceModal from "./components/MergedItemReferenceModal";
+import ItemTraceabilityModal from "./components/ItemTraceabilityModal";
 import { ProjectFileRecord, TakeoffItemRecord } from "../analyze-new/types";
 import { FileOperationType, FileStatus, PageType } from "../types/evidence";
-import { getTakeOffById } from "@/services/takeOffService";
+import {
+	getMergeStatusByTakeOffId,
+	getTakeOffById,
+} from "@/services/takeOffService";
 import {
 	getTakeOffResultByFile,
 	autoMergeByFileSource,
@@ -34,6 +38,7 @@ import {
 	autoMergeAllFilesByTakeOff,
 	getAllGroupedByTakeOff,
 	manualMergeByTakeOff,
+	rollbackMergeResultsByFile,
 } from "@/services/mergeService";
 import { getTemplateById } from "@/services/templateService";
 import testData from "./test.json";
@@ -115,6 +120,9 @@ interface MergeWorkflowFile {
 	readyManualMergeCompleted: boolean;
 	// Flag to indicate if file has no data (empty result from API)
 	hasNoData?: boolean;
+	// API-synced status flags (from getMergeStatusByTakeOffId)
+	withinSourceCompleted?: boolean; // within_source_completed - merged stage completed
+	betweenSourcesCompleted?: boolean; // between_sources_completed - ready stage completed
 }
 
 const ARCHITECTURE_SECTION_ORDER = [
@@ -308,15 +316,22 @@ function MergeRowsTable({
 	emptyText,
 	onOpenReferenceModal,
 	scrollY,
+	stage,
+	isMergeAllMode,
 }: {
 	title?: string;
 	description?: string;
 	rows: MergeWorkflowRow[];
 	columns: string[];
 	emptyText: string;
-	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
+	onOpenReferenceModal: (
+		row: MergeWorkflowRow,
+		context?: { stage?: string; isMergeAllMode?: boolean },
+	) => void;
 	hideHeader?: boolean;
 	scrollY?: string;
+	stage?: string;
+	isMergeAllMode?: boolean;
 }) {
 	const tableColumns = useMemo<ColumnsType<MergeWorkflowRow>>(() => {
 		const getColumnWidth = (fieldName: string) => {
@@ -374,23 +389,13 @@ function MergeRowsTable({
 			fixed: "right",
 			align: "center",
 			render: (_: unknown, record: MergeWorkflowRow) => {
-				const evidenceCount =
-					record?.evidence_id_list?.length ||
-					(Array.isArray(record?.evidence_msg)
-						? record.evidence_msg.length
-						: 0) ||
-					(record?.evidence_msg?.s3_url ? 1 : 0);
-
 				return (
 					<button
 						type="button"
-						disabled={!evidenceCount}
-						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors hover:opacity-70"
 						onClick={(event) => {
 							event.stopPropagation();
-							if (evidenceCount) {
-								onOpenReferenceModal(record);
-							}
+							onOpenReferenceModal(record, { stage, isMergeAllMode });
 						}}
 					>
 						<Image
@@ -399,16 +404,13 @@ function MergeRowsTable({
 							width={14}
 							height={14}
 						/>
-						{/* <span className="rounded-md bg-loadingGray px-[6px] text-[8px] leading-4 text-grey-dark">
-							{evidenceCount}
-						</span> */}
 					</button>
 				);
 			},
 		};
 
 		return [...dataColumns, referenceColumn];
-	}, [columns, onOpenReferenceModal]);
+	}, [columns, onOpenReferenceModal, stage, isMergeAllMode]);
 
 	return (
 		<div className="overflow-hidden rounded-[24px] border border-primaryN30 bg-white">
@@ -1060,6 +1062,32 @@ const getFileStageState = (
 	// If file has no data, all stages are considered completed
 	if (file.hasNoData) {
 		return "completed";
+	}
+
+	// Use API-synced status if available (takes priority)
+	// within_source_completed = source-type internal merge completed (unmerged stage done)
+	// between_sources_completed = cross-source merge completed (merged stage done, ready stage done)
+	if (file.withinSourceCompleted !== undefined || file.betweenSourcesCompleted !== undefined) {
+		if (stage === "unmerged") {
+			// Unmerged is completed if within_source_completed is true
+			return file.withinSourceCompleted ? "completed" : "active";
+		}
+
+		if (stage === "merged") {
+			if (!file.withinSourceCompleted) {
+				return "pending";
+			}
+			// Merged is active if within_source completed but between_sources not completed
+			// Merged is completed if between_sources_completed is true
+			return file.betweenSourcesCompleted ? "completed" : "active";
+		}
+
+		// Ready stage
+		if (!file.betweenSourcesCompleted) {
+			return "pending";
+		}
+		// Ready is completed if between_sources_completed is true and no pending rows
+		return file.readyPendingRows.length === 0 ? "completed" : "active";
 	}
 
 	if (file.operationType === FileOperationType.ArchitectureDrawing) {
@@ -2072,6 +2100,12 @@ export default function ManualMergeNewPage() {
 	const [mergedRefItem, setMergedRefItem] = useState<MergeWorkflowRow | null>(
 		null,
 	);
+	const [showTraceabilityModal, setShowTraceabilityModal] = useState(false);
+	const [traceabilityItem, setTraceabilityItem] =
+		useState<MergeWorkflowRow | null>(null);
+	const [traceabilityLevel, setTraceabilityLevel] = useState<
+		"multiple_files" | "single_file" | "file_source" | "original"
+	>("original");
 	const [loadingActionKey, setLoadingActionKey] = useState<string | null>(null);
 	const [showItemsMergeModal, setShowItemsMergeModal] = useState(false);
 	const [itemsMergePendingRows, setItemsMergePendingRows] = useState<any[]>([]);
@@ -2086,6 +2120,7 @@ export default function ManualMergeNewPage() {
 		null,
 	);
 	const [mergeAllLoading, setMergeAllLoading] = useState(false);
+	const [takeOffCompleted, setTakeOffCompleted] = useState(false);
 
 	const { setTakeOff, setFileList, setSelectedFileId, setFileViewStep } =
 		useTakeoff();
@@ -2329,6 +2364,89 @@ export default function ManualMergeNewPage() {
 		[buildSectionsFromData, createInitialMergeStatus],
 	);
 
+	// Store merge status from API for use during initialization and updates
+	const mergeStatusRef = useRef<{
+		files: Record<string, { within_source_completed: boolean; between_sources_completed: boolean }>;
+		take_off_completed: boolean;
+	} | null>(null);
+
+	// Apply merge status to workflow files
+	const applyMergeStatusToFiles = useCallback((
+		files: MergeWorkflowFile[],
+		statusData: typeof mergeStatusRef.current
+	): MergeWorkflowFile[] => {
+		if (!statusData?.files) return files;
+		
+		return files.map(file => {
+			const fileStatus = statusData.files[String(file.id)];
+			if (fileStatus) {
+				return {
+					...file,
+					withinSourceCompleted: fileStatus.within_source_completed,
+					betweenSourcesCompleted: fileStatus.between_sources_completed,
+					// Also sync sourceMergeStarted for compatibility
+					sourceMergeStarted: fileStatus.between_sources_completed || file.sourceMergeStarted,
+				};
+			}
+			return file;
+		});
+	}, []);
+
+	// Determine which file and stage to start from based on API status
+	const determineInitialFileAndStage = useCallback((
+		files: MergeWorkflowFile[],
+		statusData: typeof mergeStatusRef.current
+	): { targetFileId: number; targetStage: WorkflowStage | null } => {
+		// Default: start from first file
+		const firstFile = files[0];
+		if (!firstFile) {
+			return { targetFileId: 0, targetStage: null };
+		}
+
+		// If no status data, use default flow (first file, first stage)
+		if (!statusData?.files) {
+			return { targetFileId: firstFile.id, targetStage: "unmerged" };
+		}
+
+		// Find the first incomplete file
+		for (const file of files) {
+			const fileStatus = statusData.files[String(file.id)];
+			
+			// If no status for this file, it's incomplete - start here
+			if (!fileStatus) {
+				return { targetFileId: file.id, targetStage: "unmerged" };
+			}
+
+			// Check completion status
+			const { within_source_completed, between_sources_completed } = fileStatus;
+
+			// If within_source not completed, start at unmerged stage
+			// (need to do source-type merge first)
+			if (!within_source_completed) {
+				return { targetFileId: file.id, targetStage: "unmerged" };
+			}
+
+			// If within_source completed but between_sources not completed, start at merged stage
+			// (show source-type merge results, user can then do file-level merge)
+			if (!between_sources_completed) {
+				return { targetFileId: file.id, targetStage: "merged" };
+			}
+
+			// If both completed, this file is complete, continue to next file
+		}
+
+		// All files are complete - check if takeoff merge is done
+		if (statusData.take_off_completed) {
+			// Everything is done, show the last file in ready stage or merge-all mode
+			const lastFile = files[files.length - 1];
+			return { targetFileId: lastFile.id, targetStage: "ready" };
+		}
+
+		// All files complete but takeoff not merged - show first file ready stage
+		// User should click "Merge All File Labels"
+		return { targetFileId: firstFile.id, targetStage: "ready" };
+	}, []);
+
 	const fetchTakeoffDetails = useCallback(async () => {
 		setLoading(true);
 		try {
@@ -2362,32 +2480,51 @@ export default function ManualMergeNewPage() {
 			// Step 2: Fetch template column names once (will be cached for subsequent use)
 			const preferredFields = await resolveColumnNames(1);
 
-			// Step 3: Only fetch data for the FIRST file, other files will be loaded on demand
-			const firstFile = projectFiles[0];
+			// Step 3: Determine which file to load based on API status
+			// First, build a temporary list to determine the target file
+			const tempFilesForStatusCheck = projectFiles.map((file) => ({
+				id: file.id,
+				withinSourceCompleted: mergeStatusRef.current?.files?.[String(file.id)]?.within_source_completed,
+				betweenSourcesCompleted: mergeStatusRef.current?.files?.[String(file.id)]?.between_sources_completed,
+			}));
+			
+			// Find the target file to load based on status
+			let targetFileToLoad = projectFiles[0];
+			if (mergeStatusRef.current?.files) {
+				for (const file of projectFiles) {
+					const fileStatus = mergeStatusRef.current.files[String(file.id)];
+					if (!fileStatus || !fileStatus.within_source_completed || !fileStatus.between_sources_completed) {
+						targetFileToLoad = file;
+						break;
+					}
+				}
+			}
+
 			const fileResultsByFileId: Record<number, NormalizedFileSection[]> = {};
 
+			// Load data for the target file
 			const resultResponse = await getTakeOffResultByFile(
 				Number(takeoffId),
-				firstFile.id,
+				targetFileToLoad.id,
 			);
-			console.log("resultResponse for first file", resultResponse);
+			console.log("resultResponse for target file", targetFileToLoad.id, resultResponse);
 
 			if (resultResponse.status === "success" && resultResponse.data) {
-				fileResultsByFileId[firstFile.id] = normalizeFileSections(
-					firstFile.operation_type || "",
+				fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
+					targetFileToLoad.operation_type || "",
 					resultResponse.data,
 				);
 			} else {
-				fileResultsByFileId[firstFile.id] = normalizeFileSections(
-					firstFile.operation_type || "",
+				fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
+					targetFileToLoad.operation_type || "",
 					null,
 				);
 			}
 
-			// Build workflow files - only first file has data loaded
+			// Build workflow files - only target file has data loaded
 			const nextWorkflowFiles = projectFiles.map((file) => {
-				const isFirstFile = file.id === firstFile.id;
-				const unmergedSections = isFirstFile
+				const isTargetFile = file.id === targetFileToLoad.id;
+				const unmergedSections = isTargetFile
 					? buildSectionsFromData(
 							file.id,
 							file.operation_type || "",
@@ -2396,13 +2533,13 @@ export default function ManualMergeNewPage() {
 						)
 					: [];
 
-				// Check if first file has no data (all sections have 0 rows)
+				// Check if target file has no data (all sections have 0 rows)
 				const hasNoData =
-					isFirstFile &&
+					isTargetFile &&
 					unmergedSections.every((section) => section.rows.length === 0);
 
 				const mergeStatus = createInitialMergeStatus(file.operation_type || "");
-				mergeStatus.unmergedDataLoaded = isFirstFile;
+				mergeStatus.unmergedDataLoaded = isTargetFile;
 
 				return {
 					id: file.id,
@@ -2438,11 +2575,26 @@ export default function ManualMergeNewPage() {
 				},
 			});
 			setFileList(projectFiles);
-			setSelectedFileId(firstFile.id);
 			setFileViewStep(FileViewStep.FileMerge);
-			initialWorkflowFilesRef.current = cloneWorkflowFiles(nextWorkflowFiles);
-			setWorkflowFiles(nextWorkflowFiles);
-			setSelectedFileIdLocal(firstFile.id);
+			
+			// Apply merge status from API to workflow files
+			const filesWithStatus = applyMergeStatusToFiles(nextWorkflowFiles, mergeStatusRef.current);
+			
+			initialWorkflowFilesRef.current = cloneWorkflowFiles(filesWithStatus);
+			setWorkflowFiles(filesWithStatus);
+			
+			// Determine which file and stage to start from based on API status
+			const { targetFileId, targetStage } = determineInitialFileAndStage(
+				filesWithStatus,
+				mergeStatusRef.current,
+			);
+			
+			setSelectedFileId(targetFileId);
+			setSelectedFileIdLocal(targetFileId);
+			if (targetStage) {
+				setSelectedStage(targetStage);
+				lastStageSyncedFileIdRef.current = targetFileId;
+			}
 		} catch (error) {
 			console.error("Error fetching takeoff details:", error);
 			notification.error({
@@ -2453,8 +2605,10 @@ export default function ManualMergeNewPage() {
 			setLoading(false);
 		}
 	}, [
+		applyMergeStatusToFiles,
 		buildSectionsFromData,
 		createInitialMergeStatus,
+		determineInitialFileAndStage,
 		resolveColumnNames,
 		setFileList,
 		setFileViewStep,
@@ -2503,6 +2657,9 @@ export default function ManualMergeNewPage() {
 						(section) => section.rows.length === 0,
 					);
 
+					// Get merge status for this file from ref
+					const fileStatus = mergeStatusRef.current?.files?.[String(fileId)];
+					
 					setWorkflowFiles((current) =>
 						current.map((file) => {
 							if (file.id !== fileId) return file;
@@ -2519,11 +2676,17 @@ export default function ManualMergeNewPage() {
 									unmergedDataLoaded: true,
 								},
 								hasNoData,
+								// Preserve or apply API status
+								withinSourceCompleted: file.withinSourceCompleted ?? fileStatus?.within_source_completed,
+								betweenSourcesCompleted: file.betweenSourcesCompleted ?? fileStatus?.between_sources_completed,
+								sourceMergeStarted: file.sourceMergeStarted || (fileStatus?.between_sources_completed ?? false),
 							};
 						}),
 					);
 				} else {
 					// API returned no data or failed
+					const fileStatus = mergeStatusRef.current?.files?.[String(fileId)];
+					
 					setWorkflowFiles((current) =>
 						current.map((file) => {
 							if (file.id !== fileId) return file;
@@ -2537,6 +2700,10 @@ export default function ManualMergeNewPage() {
 									unmergedDataLoaded: true,
 								},
 								hasNoData: true,
+								// Preserve or apply API status
+								withinSourceCompleted: file.withinSourceCompleted ?? fileStatus?.within_source_completed,
+								betweenSourcesCompleted: file.betweenSourcesCompleted ?? fileStatus?.between_sources_completed,
+								sourceMergeStarted: file.sourceMergeStarted || (fileStatus?.between_sources_completed ?? false),
 							};
 						}),
 					);
@@ -2554,14 +2721,168 @@ export default function ManualMergeNewPage() {
 		[workflowFiles, takeoffId, columnNames, buildSectionsFromData],
 	);
 
+	const fetchMergeStatus = useCallback(async () => {
+		const result = await getMergeStatusByTakeOffId(Number(takeoffId));
+		if (result.status === "success" && result.data) {
+			const statusData = result.data as {
+				files: Record<string, { within_source_completed: boolean; between_sources_completed: boolean }>;
+				take_off_completed: boolean;
+			};
+			mergeStatusRef.current = statusData;
+			setTakeOffCompleted(statusData.take_off_completed);
+			return statusData;
+		}
+		return null;
+	}, [takeoffId]);
+
+
+	// Track if initial merged data has been loaded
+	const initialMergedDataLoadedRef = useRef(false);
+
 	useEffect(() => {
 		// Skip if already initialized (prevents re-fetch on hot reload)
 		if (hasInitializedRef.current) {
 			return;
 		}
 		hasInitializedRef.current = true;
-		fetchTakeoffDetails();
-	}, [fetchTakeoffDetails]);
+		
+		// Fetch merge status first, then fetch takeoff details
+		const initializeData = async () => {
+			await fetchMergeStatus();
+			fetchTakeoffDetails();
+		};
+		initializeData();
+	}, [fetchTakeoffDetails, fetchMergeStatus]);
+
+	// Load merged/ready data if starting from merged or ready stage
+	useEffect(() => {
+		if (initialMergedDataLoadedRef.current) {
+			return;
+		}
+		if (!selectedFile || loading) {
+			return;
+		}
+		
+		// Check if this file needs merged data loaded based on API status
+		const fileStatus = mergeStatusRef.current?.files?.[String(selectedFile.id)];
+		if (!fileStatus?.within_source_completed) {
+			// File is at unmerged stage, no need to load merged data
+			initialMergedDataLoadedRef.current = true;
+			return;
+		}
+
+		initialMergedDataLoadedRef.current = true;
+		
+		// Get source types for this file
+		const sourceTypes = selectedFile.operationType === FileOperationType.ArchitectureDrawing
+			? [PageType.FloorPlan, PageType.Elevation, PageType.Schedule]
+			: ["window_door_unit_list"];
+		
+		// Load merged data and optionally ready data
+		const loadInitialStageData = async () => {
+			setLoading(true);
+			try {
+				const preferredFields = await resolveColumnNames(1);
+				
+				// Load merged data
+				if (selectedFile.mergedSections.length === 0) {
+					const result = await getMergeResultByFileSourceList(
+						Number(takeoffId),
+						selectedFile.id,
+						sourceTypes,
+					);
+
+					if (result.status === "success" && result.data) {
+						// Build merged sections from API response
+						const mergedSections: MergeWorkflowSection[] = [];
+						for (const sourceType of sourceTypes) {
+							const sourceData = result.data[sourceType];
+							if (!sourceData) continue;
+
+							const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+								sourceData,
+								{
+									fileId: selectedFile.id,
+									sourceType,
+									preferredFields,
+								},
+							);
+
+							mergedSections.push({
+								key: sourceType,
+								title: sourceType,
+								rows: [],
+								autoMergeStarted: true,
+								autoMergedRows,
+								pendingRows,
+								groupedRows: {},
+								manualMergeCompleted: false,
+							});
+						}
+
+						setWorkflowFiles((current) =>
+							current.map((file) => {
+								if (file.id !== selectedFile.id) return file;
+								return {
+									...file,
+									mergedSections,
+									sections: mergedSections,
+									mergeStatus: {
+										...file.mergeStatus,
+										mergedDataLoaded: true,
+									},
+								};
+							}),
+						);
+					}
+				}
+
+				// If between_sources is completed, also load ready stage data
+				if (fileStatus.between_sources_completed && 
+					selectedFile.readyAutoMergedRows.length === 0 && 
+					selectedFile.readyPendingRows.length === 0) {
+					
+					const groupedResult = await getAllGroupedByFile(
+						Number(takeoffId),
+						selectedFile.id,
+					);
+
+					if (groupedResult.status === "success" && groupedResult.data) {
+						const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+							groupedResult.data,
+							{
+								fileId: selectedFile.id,
+								sourceType: "single_file",
+								preferredFields,
+							},
+						);
+
+						setWorkflowFiles((current) =>
+							current.map((file) => {
+								if (file.id !== selectedFile.id) return file;
+								return {
+									...file,
+									readyAutoMergedRows: autoMergedRows,
+									readyPendingRows: pendingRows,
+									sourceMergeStarted: true,
+									mergeStatus: {
+										...file.mergeStatus,
+										readyDataLoaded: true,
+									},
+								};
+							}),
+						);
+					}
+				}
+			} catch (error) {
+				console.error("Error loading initial stage data:", error);
+			} finally {
+				setLoading(false);
+			}
+		};
+		
+		loadInitialStageData();
+	}, [selectedFile, loading, takeoffId, resolveColumnNames]);
 
 	useEffect(() => {
 		if (!selectedFile) {
@@ -2816,6 +3137,8 @@ export default function ManualMergeNewPage() {
 					updateWorkflowFile(fileId, (f) => ({
 						...f,
 						mergedSections,
+						// Update withinSourceCompleted to true after source-type merge is done
+						withinSourceCompleted: true,
 						// Note: sourceMergeStarted should remain false here
 						// It should only be true when Ready stage merge is started
 						mergeStatus: {
@@ -2837,6 +3160,18 @@ export default function ManualMergeNewPage() {
 							),
 						},
 					}));
+					
+					// Also update the merge status ref
+					if (mergeStatusRef.current?.files) {
+						const currentStatus = mergeStatusRef.current.files[String(fileId)] || {
+							within_source_completed: false,
+							between_sources_completed: false,
+						};
+						mergeStatusRef.current.files[String(fileId)] = {
+							...currentStatus,
+							within_source_completed: true,
+						};
+					}
 
 					// Auto switch to Merged stage after successful merge
 					console.log("Setting selectedStage to 'merged'");
@@ -2941,15 +3276,53 @@ export default function ManualMergeNewPage() {
 		}, 2000);
 	};
 
-	const handleOpenReferenceModal = useCallback((row: MergeWorkflowRow) => {
-		if (row.isMerged) {
-			setMergedRefItem(row);
-			setShowMergedRefModal(true);
-		} else {
-			setOriginalRefItem(row);
-			setShowOriginalRefModal(true);
-		}
-	}, []);
+	const handleOpenReferenceModal = useCallback(
+		(
+			row: MergeWorkflowRow,
+			context?: { stage?: string; isMergeAllMode?: boolean },
+		) => {
+			// Determine the traceability level based on context and row data
+			let level: "multiple_files" | "single_file" | "file_source" | "original" =
+				"original";
+
+			// Check stage first to determine the appropriate level
+			// merge-all stage: items are from multiple files merge
+			if (context?.isMergeAllMode || context?.stage === "merge-all") {
+				level = row.isMerged ? "multiple_files" : "single_file";
+			}
+			// ready stage: items are from single file merge (file internal merge)
+			else if (context?.stage === "ready") {
+				level = row.isMerged ? "single_file" : "file_source";
+			}
+			// merged stage: items are from file source merge (source type merge)
+			else if (context?.stage === "merged") {
+				level = row.isMerged ? "file_source" : "original";
+			}
+			// unmerged stage: items are original items
+			else if (context?.stage === "unmerged") {
+				level = "original";
+			}
+			// Fallback: check row data for level hints
+			else if (row.singleFileMergeResultId) {
+				level = "single_file";
+			} else if (row.fileSourceMergeResultId) {
+				level = "file_source";
+			}
+
+			setTraceabilityItem(row);
+			setTraceabilityLevel(level);
+			setShowTraceabilityModal(true);
+		},
+		[],
+	);
+
+	// Wrapper function for components that don't pass context
+	const handleOpenReferenceModalWithStage = useCallback(
+		(row: MergeWorkflowRow) => {
+			handleOpenReferenceModal(row, { stage: selectedStage, isMergeAllMode });
+		},
+		[handleOpenReferenceModal, selectedStage, isMergeAllMode],
+	);
 
 	const handleOpenManualMergeModal = useCallback(
 		(context: ManualMergeContext) => {
@@ -3177,11 +3550,25 @@ export default function ManualMergeNewPage() {
 						readyAutoMergedRows: autoMergedRows,
 						readyPendingRows: pendingRows,
 						readyManualMergeCompleted: pendingRows.length === 0,
+						// Update betweenSourcesCompleted to true after file-level merge is done
+						betweenSourcesCompleted: true,
 						mergeStatus: {
 							...file.mergeStatus,
 							readyDataLoaded: true,
 						},
 					}));
+					
+					// Also update the merge status ref
+					if (mergeStatusRef.current?.files) {
+						const currentStatus = mergeStatusRef.current.files[String(fileId)] || {
+							within_source_completed: true,
+							between_sources_completed: false,
+						};
+						mergeStatusRef.current.files[String(fileId)] = {
+							...currentStatus,
+							between_sources_completed: true,
+						};
+					}
 
 					setSelectedStage("ready");
 					notification.success({
@@ -3314,31 +3701,81 @@ export default function ManualMergeNewPage() {
 		}, 500);
 	};
 
-	const handleResetCurrentFile = async (fileId: number) => {
-		const actionKey = `reset-file-${fileId}`;
-		setLoadingActionKey(actionKey);
-		await mockRequestDelay();
-
-		const initialFile = initialWorkflowFilesRef.current.find(
-			(file) => file.id === fileId,
-		);
-		if (!initialFile) {
-			setLoadingActionKey(null);
+	const handleResetCurrentFile = (fileId: number) => {
+		const targetFile = workflowFiles.find((file) => file.id === fileId);
+		if (!targetFile) {
 			return;
 		}
 
-		setWorkflowFiles((current) =>
-			current.map((file) =>
-				file.id === fileId ? cloneWorkflowFiles([initialFile])[0] : file,
-			),
-		);
-		setSelectedStage("unmerged");
-		lastStageSyncedFileIdRef.current = fileId;
-		setLoadingActionKey(null);
-		notification.success({
-			message: "Mock reset complete",
-			description:
-				"The current file has been reset to the initial unmerged state.",
+		Modal.confirm({
+			title: "Reset Merge",
+			content: `Are you sure you want to reset the merge for "${targetFile.fileName}"? This will clear all merge progress and return to the unmerged state.`,
+			okText: "Confirm",
+			cancelText: "Cancel",
+			onOk: async () => {
+				const actionKey = `reset-file-${fileId}`;
+				setLoadingActionKey(actionKey);
+
+				try {
+					const response = await rollbackMergeResultsByFile(
+						Number(takeoffId),
+						fileId,
+					);
+
+					if (response.status === "error") {
+						notification.error({
+							message: "Reset Failed",
+							description: "Failed to reset merge. Please try again.",
+						});
+						return;
+					}
+
+					// Reload the file data from API
+					const initialFile = initialWorkflowFilesRef.current.find(
+						(file) => file.id === fileId,
+					);
+					if (initialFile) {
+						setWorkflowFiles((current) =>
+							current.map((file) =>
+								file.id === fileId
+									? {
+											...cloneWorkflowFiles([initialFile])[0],
+											sourceMergeStarted: false,
+											// Clear API-synced status flags
+											withinSourceCompleted: false,
+											betweenSourcesCompleted: false,
+										}
+									: file,
+							),
+						);
+					}
+					
+					// Also update the merge status ref
+					if (mergeStatusRef.current?.files?.[String(fileId)]) {
+						mergeStatusRef.current.files[String(fileId)] = {
+							within_source_completed: false,
+							between_sources_completed: false,
+						};
+					}
+
+					setSelectedStage("unmerged");
+					lastStageSyncedFileIdRef.current = fileId;
+
+					notification.success({
+						message: "Reset Complete",
+						description:
+							"The file has been reset to the initial unmerged state.",
+					});
+				} catch (error) {
+					console.error("Error resetting merge:", error);
+					notification.error({
+						message: "Reset Failed",
+						description: "An error occurred while resetting. Please try again.",
+					});
+				} finally {
+					setLoadingActionKey(null);
+				}
+			},
 		});
 	};
 
@@ -3603,8 +4040,10 @@ export default function ManualMergeNewPage() {
 
 	const fullscreenLoadingText = useMemo(() => {
 		if (createTakeoffLoading) return "Creating takeoff...";
+		if (loadingActionKey?.startsWith("reset-file-"))
+			return "Resetting merge...";
 		return "Auto merging...";
-	}, [createTakeoffLoading]);
+	}, [createTakeoffLoading, loadingActionKey]);
 
 	if (loading) {
 		return (
@@ -3629,6 +4068,18 @@ export default function ManualMergeNewPage() {
 	);
 	const shouldShowNextFile = isSelectedFileCompleted && hasOtherUnfinishedFiles;
 
+	// Check if source type conflicts are not fully resolved
+	const hasUnresolvedSourceConflicts = (() => {
+		if (!selectedFile) return true;
+		const sectionsToCheck =
+			selectedFile.mergedSections.length > 0
+				? selectedFile.mergedSections
+				: selectedFile.sections;
+		return sectionsToCheck.some(
+			(section) => !section.autoMergeStarted || section.pendingRows.length > 0,
+		);
+	})();
+
 	return (
 		<div className="min-h-screen flex flex-col">
 			{isFullscreenAutoMergeLoading ? (
@@ -3649,8 +4100,7 @@ export default function ManualMergeNewPage() {
 							{workflowFiles.map((file, index) => {
 								const isSelected =
 									file.id === selectedFileId && !isMergeAllMode;
-								const canSelectFile =
-									isSelected || isFileCompleted(file);
+								const canSelectFile = isSelected || isFileCompleted(file);
 								const fileListStatusMeta = getFileListStatusMeta(
 									file,
 									selectedFileId,
@@ -3847,6 +4297,8 @@ export default function ManualMergeNewPage() {
 											? "calc((100vh - 520px) / 2)"
 											: "calc(100vh - 350px)"
 									}
+									stage="merge-all"
+									isMergeAllMode={true}
 								/>
 							</div>
 
@@ -3903,6 +4355,8 @@ export default function ManualMergeNewPage() {
 										emptyText="No unmerged labels."
 										onOpenReferenceModal={handleOpenReferenceModal}
 										scrollY="calc((100vh - 520px) / 2)"
+										stage="merge-all"
+										isMergeAllMode={true}
 									/>
 								) : (
 									<div className="rounded-[16px] border border-[#D4EDDA] bg-[#F4FBF6] p-6 text-center">
@@ -4143,7 +4597,8 @@ export default function ManualMergeNewPage() {
 																}
 																disabled={
 																	Boolean(loadingActionKey) ||
-																	isSelectedFileCompleted
+																	isSelectedFileCompleted ||
+																	hasUnresolvedSourceConflicts
 																}
 																onClick={() =>
 																	handleRequestSourceMerge(selectedFile.id)
@@ -4191,7 +4646,7 @@ export default function ManualMergeNewPage() {
 																		rows={section.rows}
 																		columns={columnNames}
 																		onOpenReferenceModal={
-																			handleOpenReferenceModal
+																			handleOpenReferenceModalWithStage
 																		}
 																	/>
 																) : (
@@ -4202,7 +4657,7 @@ export default function ManualMergeNewPage() {
 																			handleOpenManualMergeModal
 																		}
 																		onOpenReferenceModal={
-																			handleOpenReferenceModal
+																			handleOpenReferenceModalWithStage
 																		}
 																		fileId={selectedFile.id}
 																		isFileCompleted={isSelectedFileCompleted}
@@ -4226,7 +4681,9 @@ export default function ManualMergeNewPage() {
 														columnNames={columnNames}
 														loadingActionKey={loadingActionKey}
 														onAutoMergeSection={handleAutoMergeSection}
-														onOpenReferenceModal={handleOpenReferenceModal}
+														onOpenReferenceModal={
+															handleOpenReferenceModalWithStage
+														}
 														isFileCompleted={isSelectedFileCompleted}
 													/>
 												) : null}
@@ -4238,7 +4695,9 @@ export default function ManualMergeNewPage() {
 														columnNames={columnNames}
 														loadingActionKey={loadingActionKey}
 														onOpenManualMergeModal={handleOpenManualMergeModal}
-														onOpenReferenceModal={handleOpenReferenceModal}
+														onOpenReferenceModal={
+															handleOpenReferenceModalWithStage
+														}
 														isFileCompleted={isSelectedFileCompleted}
 													/>
 												) : null}
@@ -4249,7 +4708,9 @@ export default function ManualMergeNewPage() {
 														columnNames={columnNames}
 														loadingActionKey={loadingActionKey}
 														onOpenManualMergeModal={handleOpenManualMergeModal}
-														onOpenReferenceModal={handleOpenReferenceModal}
+														onOpenReferenceModal={
+															handleOpenReferenceModalWithStage
+														}
 														isFileCompleted={isSelectedFileCompleted}
 													/>
 												) : null}
@@ -4309,6 +4770,19 @@ export default function ManualMergeNewPage() {
 					sourceType={manualMergeContext?.sourceType}
 					onConfirm={handleItemsMergeConfirm}
 					onCancel={handleItemsMergeCancel}
+				/>
+			)}
+
+			{showTraceabilityModal && traceabilityItem && (
+				<ItemTraceabilityModal
+					open={showTraceabilityModal}
+					item={traceabilityItem}
+					level={traceabilityLevel}
+					columnNames={columnNames}
+					onClose={() => {
+						setShowTraceabilityModal(false);
+						setTraceabilityItem(null);
+					}}
 				/>
 			)}
 		</div>

@@ -730,3 +730,23 @@ export const deleteMultipleFilesMergeResultById = async (result_id: number) => {
 		};
 	}
 };
+
+export const rollbackMergeResultsByFile = async (
+	take_off_id: number,
+	file_id: number,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/rollback_merge_results_by_take_off_and_file?take_off_id=${take_off_id}&file_id=${file_id}`;
+		const response = await http.get(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error resetting merge by take off:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
