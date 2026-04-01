@@ -95,7 +95,8 @@ export const getTakeOffResultByFile = async (
 	try {
 		const url = `/drawing-ai/drawing_ai/take_off_result_by_file?take_off_id=${take_off_id}&file_id=${file_id}`;
 		const response = await http.get(url);
-		const formattedData = formatTakeOffResultByFileData(response?.data);
+        console.log("response:", response);
+		const formattedData = formatTakeOffResultByFileData(response);
 		return {
 			data: formattedData,
 			status: "success",
@@ -131,7 +132,7 @@ export const autoMergeByFileSource = async (
 		const url = `/drawing-ai/drawing_ai/auto_merge_by_file_suorce?take_off_id=${take_off_id}&file_id=${file_id}&source_type=${source_type}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -163,7 +164,7 @@ export const getMergeResultByFileSource = async (
 		const url = `/drawing-ai/drawing_ai/get_merge_result_by_file_suorce?take_off_id=${take_off_id}&file_id=${file_id}&source_type=${source_type}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
@@ -436,6 +437,276 @@ export const manualMergeByFile = async (
 		};
 	} catch (error: any) {
 		console.error("Error manual merging by file:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 根据 result_id 获取单文件合并结果明细
+ * /drawing-ai/drawing_ai/get_single_file_merge_result_detail_by_id
+ * 参数:
+ * - result_id: 合并结果ID
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const getSingleFileMergeResultDetailById = async (result_id: number) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_single_file_merge_result_detail_by_id?result_id=${result_id}`;
+		const response = await http.get(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error getting single file merge result detail by id:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 根据 take_off_id 自动合并该算量下全部文件
+ * /drawing-ai/drawing_ai/auto_merge_all_files_by_take_off/{take_off_id}
+ * 参数:
+ * - take_off_id: 算量任务ID
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const autoMergeAllFilesByTakeOff = async (take_off_id: number) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/auto_merge_all_files_by_take_off/${take_off_id}`;
+		const response = await http.post(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error auto merging all files by take off:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 按 take_off 获取全部分组结果
+ * /drawing-ai/drawing_ai/get_all_grouped_by_take_off
+ * 参数:
+ * - take_off_id: 算量任务ID
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const getAllGroupedByTakeOff = async (take_off_id: number) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_all_grouped_by_take_off?take_off_id=${take_off_id}`;
+		const response = await http.get(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error getting all grouped by take off:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 按 take_off 进行手动合并
+ * /drawing-ai/drawing_ai/manual_merge_by_take_off/{take_off_id}
+ * 请求方式:
+ * - POST
+ * 参数:
+ * - take_off_id: 算量任务ID
+ * - merge_list: 手动合并数组对象，元素字段包含
+ *   - result
+ *   - single_file_merge_result_ids
+ *   - take_off_result_item_ids
+ *   - file_source_merge_result_ids
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const manualMergeByTakeOff = async (
+	take_off_id: number,
+	merge_list: Array<{
+		result: any;
+		single_file_merge_result_ids: number[];
+		take_off_result_item_ids: number[];
+		file_source_merge_result_ids: number[];
+	}>,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/manual_merge_by_take_off/${take_off_id}`;
+		const body = merge_list.map((item) => ({
+			...item,
+			single_file_merge_result_ids: item.single_file_merge_result_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+			take_off_result_item_ids: item.take_off_result_item_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+			file_source_merge_result_ids: item.file_source_merge_result_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+		}));
+		const response = await http.post(url, body);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error manual merging by take off:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 根据 result_id 获取多文件合并结果明细
+ * /drawing-ai/drawing_ai/get_multiple_files_merge_result_detail_by_id
+ * 参数:
+ * - result_id: 合并结果ID
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const getMultipleFilesMergeResultDetailById = async (
+	result_id: number,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_multiple_files_merge_result_detail_by_id?result_id=${result_id}`;
+		const response = await http.get(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error getting multiple files merge result detail by id:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 创建多文件合并结果
+ * /drawing-ai/drawing_ai/create_multiple_files_merge_result
+ * 请求方式:
+ * - POST
+ * 参数:
+ * - take_off_id: 算量任务ID
+ * - single_file_merge_result_ids: 单文件合并结果ID数组
+ * - take_off_result_item_ids: 原始结果项ID数组
+ * - file_source_merge_result_ids: 文件来源合并结果ID数组
+ * - result: 合并结果
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const createMultipleFilesMergeResult = async (
+	take_off_id: number,
+	single_file_merge_result_ids: number[],
+	take_off_result_item_ids: number[],
+	file_source_merge_result_ids: number[],
+	result: string,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/create_multiple_files_merge_result`;
+		const body = {
+			take_off_id,
+			single_file_merge_result_ids: single_file_merge_result_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+			take_off_result_item_ids: take_off_result_item_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+			file_source_merge_result_ids: file_source_merge_result_ids
+				.map((id) => `[${id}]`)
+				.join(","),
+			result,
+		};
+		const response = await http.post(url, body);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error creating multiple files merge result:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 根据 result_id 更新多文件合并结果
+ * /drawing-ai/drawing_ai/update_multiple_files_merge_result_by_id/{result_id}
+ * 请求方式:
+ * - POST
+ * 参数:
+ * - result_id: 合并结果ID
+ * - result: 更新后的结果对象
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const updateMultipleFilesMergeResultById = async (
+	result_id: number,
+	result: Record<string, any>,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/update_multiple_files_merge_result_by_id/${result_id}`;
+		const response = await http.post(url, result);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error updating multiple files merge result by id:", error);
+		return {
+			data: error?.response?.data?.data || {},
+			status: "error",
+		};
+	}
+};
+
+/**
+ * 根据 result_id 删除多文件合并结果
+ * /drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id
+ * 请求方式:
+ * - DELETE
+ * 参数:
+ * - result_id: 合并结果ID
+ * 返回:
+ * - data: 接口返回数据
+ * - status: "error" | "success"
+ */
+export const deleteMultipleFilesMergeResultById = async (result_id: number) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id?result_id=${result_id}`;
+		const response = await http.delete(url);
+		return {
+			data: response?.data || {},
+			status: "success",
+		};
+	} catch (error: any) {
+		console.error("Error deleting multiple files merge result by id:", error);
 		return {
 			data: error?.response?.data?.data || {},
 			status: "error",
