@@ -45,6 +45,7 @@ interface ManualMergeContext {
 	fileId: number;
 	mode: "section" | "ready";
 	sectionKey?: string;
+	sourceType?: string;
 }
 
 interface NormalizedFileSection {
@@ -691,6 +692,112 @@ const normalizeFileSections = (
 	];
 };
 
+/**
+ * Parse merge result data into MergeWorkflowRows
+ * Supports both source-level and file-level merge results:
+ * - Source level: in_file_source_merge_result / not_in_file_source_merge_result
+ * - File level: in_single_file_merge_result / not_in_single_file_merge_result
+ */
+interface ParseMergeResultOptions {
+	fileId: number;
+	sourceType: string;
+	preferredFields: string[];
+}
+
+interface ParsedMergeResult {
+	autoMergedRows: MergeWorkflowRow[];
+	pendingRows: MergeWorkflowRow[];
+}
+
+const parseFileSourceMergeResult = (
+	sourceData: any,
+	options: ParseMergeResultOptions,
+): ParsedMergeResult => {
+	const { fileId, sourceType, preferredFields } = options;
+
+	// Support both source-level and file-level merge result keys
+	const inMergeResult =
+		sourceData?.in_file_source_merge_result ||
+		sourceData?.in_single_file_merge_result ||
+		[];
+	const notInMergeResult =
+		sourceData?.not_in_file_source_merge_result ||
+		sourceData?.not_in_single_file_merge_result ||
+		[];
+
+	// Process in_file_source_merge_result as autoMergedRows
+	const autoMergedRows: MergeWorkflowRow[] = [];
+	inMergeResult.forEach((group: any, groupIndex: number) => {
+		const groupLabel = group?.Label || "";
+		const groupSubLabel = group?.["Sub Label"] || "";
+		// Support both "list" (lowercase) and "List" (uppercase)
+		const listItems = Array.isArray(group?.list)
+			? group.list
+			: Array.isArray(group?.List)
+				? group.List
+				: [];
+
+		listItems.forEach((item: any, itemIndex: number) => {
+			const result = parseItemResult(item?.result);
+			const displayResult = preferredFields.reduce(
+				(acc: Record<string, string>, fieldName: string) => {
+					acc[fieldName] = getDisplayValueByField(result, fieldName);
+					return acc;
+				},
+				{},
+			);
+			autoMergedRows.push({
+				...item,
+				id: item?.id || `${groupIndex}-${itemIndex}`,
+				key: `${fileId}-${sourceType}-merged-${item?.id || `${groupIndex}-${itemIndex}`}`,
+				result: displayResult,
+				sourceType,
+				isMerged: true,
+				fileSourceMergeResultId: group?.id,
+				groupLabel,
+				groupSubLabel,
+			});
+		});
+	});
+
+	// Process not_in_file_source_merge_result as pendingRows
+	const pendingRows: MergeWorkflowRow[] = [];
+	notInMergeResult.forEach((group: any, groupIndex: number) => {
+		const groupLabel = group?.Label || "";
+		const groupSubLabel = group?.["Sub Label"] || "";
+		// Support both "list" (lowercase) and "List" (uppercase)
+		const listItems = Array.isArray(group?.list)
+			? group.list
+			: Array.isArray(group?.List)
+				? group.List
+				: [];
+
+		listItems.forEach((item: any, itemIndex: number) => {
+			const parsedResult = parseItemResult(item?.result);
+			const displayResult = preferredFields.reduce(
+				(acc: Record<string, string>, fieldName: string) => {
+					acc[fieldName] = getDisplayValueByField(parsedResult, fieldName);
+					return acc;
+				},
+				{},
+			);
+			pendingRows.push({
+				...item,
+				id: item?.id || `${groupIndex}-${itemIndex}`,
+				key: `${fileId}-${sourceType}-pending-${item?.id || `${groupIndex}-${itemIndex}`}`,
+				result: displayResult,
+				originalResult: item?.result,
+				sourceType,
+				isMerged: false,
+				groupLabel,
+				groupSubLabel,
+			});
+		});
+	});
+
+	return { autoMergedRows, pendingRows };
+};
+
 const getArchitectureAutoMerged = (file: MergeWorkflowFile) => {
 	return file.sections.every(
 		(section) => section.autoMergeStarted || section.rows.length === 0,
@@ -857,12 +964,25 @@ const getQuoteSection = (file: MergeWorkflowFile) => {
 };
 
 const hasArchitectureMergeStarted = (file: MergeWorkflowFile) => {
-	// Check if mergedSections has data (new API flow)
+	// Check if mergedSections has actual merged data (new API flow)
+	// Only consider merge started if mergedSections has sections with data
 	if (file.mergedSections && file.mergedSections.length > 0) {
-		return true;
+		const hasMergedData = file.mergedSections.some(
+			(section) =>
+				section.autoMergeStarted &&
+				(section.autoMergedRows.length > 0 || section.pendingRows.length > 0),
+		);
+		if (hasMergedData) {
+			return true;
+		}
 	}
-	// Fallback to old logic for compatibility
-	return file.sections.some((section) => section.autoMergeStarted);
+	// Fallback to old logic: check if any section in sections array has autoMergeStarted
+	// AND has actual merged data (autoMergedRows or pendingRows)
+	return file.sections.some(
+		(section) =>
+			section.autoMergeStarted &&
+			(section.autoMergedRows.length > 0 || section.pendingRows.length > 0),
+	);
 };
 
 const getFileRowsForReadyMerge = (file: MergeWorkflowFile) => {
@@ -903,19 +1023,25 @@ const getFileStageState = (
 
 	const quoteSection = getQuoteSection(file);
 
+	// Check if quote section has actual merged data
+	const hasQuoteMergeStarted =
+		quoteSection?.autoMergeStarted &&
+		(quoteSection.autoMergedRows.length > 0 ||
+			quoteSection.pendingRows.length > 0);
+
 	if (stage === "unmerged") {
-		return quoteSection?.autoMergeStarted ? "completed" : "active";
+		return hasQuoteMergeStarted ? "completed" : "active";
 	}
 
 	if (stage === "merged") {
-		if (!quoteSection?.autoMergeStarted) {
+		if (!hasQuoteMergeStarted) {
 			return "pending";
 		}
 
 		return quoteSection.pendingRows.length === 0 ? "completed" : "active";
 	}
 
-	if (!quoteSection?.autoMergeStarted || quoteSection.pendingRows.length > 0) {
+	if (!hasQuoteMergeStarted || quoteSection.pendingRows.length > 0) {
 		return "pending";
 	}
 
@@ -936,7 +1062,11 @@ const getRecommendedStage = (file: MergeWorkflowFile): WorkflowStage => {
 	}
 
 	const quoteSection = getQuoteSection(file);
-	if (!quoteSection?.autoMergeStarted) {
+	const hasQuoteMergeStarted =
+		quoteSection?.autoMergeStarted &&
+		(quoteSection.autoMergedRows.length > 0 ||
+			quoteSection.pendingRows.length > 0);
+	if (!hasQuoteMergeStarted) {
 		return "unmerged";
 	}
 
@@ -1301,6 +1431,7 @@ function SectionMergedContent({
 									fileId,
 									mode: "section",
 									sectionKey: section.key,
+									sourceType: section.key,
 								})
 							}
 						>
@@ -1472,6 +1603,7 @@ function MergedStageCard({
 											fileId: selectedFile.id,
 											mode: "section",
 											sectionKey: activeSection.key,
+											sourceType: activeSection.key,
 										})
 									}
 								/>
@@ -1543,6 +1675,7 @@ function MergedStageCard({
 											fileId: selectedFile.id,
 											mode: "section",
 											sectionKey: quoteSection?.key || "all-labels",
+											sourceType: quoteSection?.key || "all-labels",
 										})
 									}
 								/>
@@ -1722,6 +1855,7 @@ function ReadyStageCard({
 											onOpenManualMergeModal({
 												fileId: selectedFile.id,
 												mode: "ready",
+												sourceType: "all-labels",
 											})
 										}
 									>
@@ -1873,6 +2007,7 @@ export default function ManualMergeNewPage() {
 		useState<ManualMergeContext | null>(null);
 	const lastStageSyncedFileIdRef = useRef<number | null>(null);
 	const initialWorkflowFilesRef = useRef<MergeWorkflowFile[]>([]);
+	const hasInitializedRef = useRef(false);
 	const [isMergeAllMode, setIsMergeAllMode] = useState(false);
 	const [mergeAllResult, setMergeAllResult] = useState<MergeAllResult | null>(
 		null,
@@ -2194,6 +2329,11 @@ export default function ManualMergeNewPage() {
 	]);
 
 	useEffect(() => {
+		// Skip if already initialized (prevents re-fetch on hot reload)
+		if (hasInitializedRef.current) {
+			return;
+		}
+		hasInitializedRef.current = true;
 		fetchTakeoffDetails();
 	}, [fetchTakeoffDetails]);
 
@@ -2313,58 +2453,16 @@ export default function ManualMergeNewPage() {
 				const file = workflowFiles.find((f) => f.id === fileId);
 				if (!file) return;
 
-				const groupedData = result.data;
-				const autoMergedRows: MergeWorkflowRow[] = [];
-				const pendingRows: MergeWorkflowRow[] = [];
+				const preferredFields = await resolveColumnNames(1);
 
-				// Process grouped data into rows
-				if (groupedData.merged_list && Array.isArray(groupedData.merged_list)) {
-					const preferredFields = await resolveColumnNames(1);
-					groupedData.merged_list.forEach((item: any, index: number) => {
-						const result = parseItemResult(item?.result);
-						const displayResult = preferredFields.reduce(
-							(acc: Record<string, string>, fieldName: string) => {
-								acc[fieldName] = getDisplayValueByField(result, fieldName);
-								return acc;
-							},
-							{},
-						);
-						autoMergedRows.push({
-							...item,
-							id: item?.id || index,
-							key: `${fileId}-ready-merged-${item?.id || index}`,
-							result: displayResult,
-							sourceType: "Ready",
-							isMerged: true,
-							singleFileMergeResultId: item?.id,
-						});
-					});
-				}
-
-				if (
-					groupedData.unmerged_list &&
-					Array.isArray(groupedData.unmerged_list)
-				) {
-					const preferredFields = await resolveColumnNames(1);
-					groupedData.unmerged_list.forEach((item: any, index: number) => {
-						const result = parseItemResult(item?.result);
-						const displayResult = preferredFields.reduce(
-							(acc: Record<string, string>, fieldName: string) => {
-								acc[fieldName] = getDisplayValueByField(result, fieldName);
-								return acc;
-							},
-							{},
-						);
-						pendingRows.push({
-							...item,
-							id: item?.id || index,
-							key: `${fileId}-ready-pending-${item?.id || index}`,
-							result: displayResult,
-							sourceType: "Ready",
-							isMerged: false,
-						});
-					});
-				}
+				const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+					result.data,
+					{
+						fileId,
+						sourceType: "Ready",
+						preferredFields,
+					},
+				);
 
 				updateWorkflowFile(fileId, (f) => ({
 					...f,
@@ -2455,88 +2553,19 @@ export default function ManualMergeNewPage() {
 						const sourceData = resultsData.data[sourceType];
 						if (!sourceData) return;
 
-						const inMergeResult = sourceData.in_file_source_merge_result || [];
-						const notInMergeResult =
-							sourceData.not_in_file_source_merge_result || [];
+						const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+							sourceData,
+							{
+								fileId,
+								sourceType,
+								preferredFields,
+							},
+						);
 
 						// Skip if both lists are empty
-						if (inMergeResult.length === 0 && notInMergeResult.length === 0) {
+						if (autoMergedRows.length === 0 && pendingRows.length === 0) {
 							return;
 						}
-
-						// Convert in_file_source_merge_result to autoMergedRows
-						// Each group has { Label, "Sub Label", list/List: [...] }
-						const autoMergedRows: MergeWorkflowRow[] = [];
-						inMergeResult.forEach((group: any, groupIndex: number) => {
-							const groupLabel = group?.Label || "";
-							const groupSubLabel = group?.["Sub Label"] || "";
-							// Support both "list" (lowercase) and "List" (uppercase)
-							const listItems = Array.isArray(group?.list)
-								? group.list
-								: Array.isArray(group?.List)
-									? group.List
-									: [];
-
-							listItems.forEach((item: any, itemIndex: number) => {
-								const result = parseItemResult(item?.result);
-								const displayResult = preferredFields.reduce(
-									(acc: Record<string, string>, fieldName: string) => {
-										acc[fieldName] = getDisplayValueByField(result, fieldName);
-										return acc;
-									},
-									{},
-								);
-								autoMergedRows.push({
-									...item,
-									id: item?.id || `${groupIndex}-${itemIndex}`,
-									key: `${fileId}-${sourceType}-merged-${item?.id || `${groupIndex}-${itemIndex}`}`,
-									result: displayResult,
-									sourceType,
-									isMerged: true,
-									fileSourceMergeResultId: group?.id,
-									groupLabel,
-									groupSubLabel,
-								});
-							});
-						});
-
-						// Convert not_in_file_source_merge_result to pendingRows
-						const pendingRows: MergeWorkflowRow[] = [];
-						notInMergeResult.forEach((group: any, groupIndex: number) => {
-							const groupLabel = group?.Label || "";
-							const groupSubLabel = group?.["Sub Label"] || "";
-							// Support both "list" (lowercase) and "List" (uppercase)
-							const listItems = Array.isArray(group?.list)
-								? group.list
-								: Array.isArray(group?.List)
-									? group.List
-									: [];
-
-							listItems.forEach((item: any, itemIndex: number) => {
-								const parsedResult = parseItemResult(item?.result);
-								const displayResult = preferredFields.reduce(
-									(acc: Record<string, string>, fieldName: string) => {
-										acc[fieldName] = getDisplayValueByField(
-											parsedResult,
-											fieldName,
-										);
-										return acc;
-									},
-									{},
-								);
-								pendingRows.push({
-									...item,
-									id: item?.id || `${groupIndex}-${itemIndex}`,
-									key: `${fileId}-${sourceType}-pending-${item?.id || `${groupIndex}-${itemIndex}`}`,
-									result: displayResult,
-									originalResult: item?.result,
-									sourceType,
-									isMerged: false,
-									groupLabel,
-									groupSubLabel,
-								});
-							});
-						});
 
 						mergedSections.push({
 							key: sourceType,
@@ -2567,9 +2596,10 @@ export default function ManualMergeNewPage() {
 							...f.mergeStatus,
 							sourceMergeStatus: sourceTypes.reduce(
 								(acc, sourceType) => {
-									const sourceData = resultsData.data[sourceType];
-									const hasPending =
-										sourceData?.not_in_file_source_merge_result?.length > 0;
+									const section = mergedSections.find(
+										(s) => s.key === sourceType,
+									);
+									const hasPending = (section?.pendingRows?.length || 0) > 0;
 									acc[sourceType] = {
 										autoMerged: true,
 										manualMergeCompleted: !hasPending,
@@ -2872,32 +2902,80 @@ export default function ManualMergeNewPage() {
 		setLoadingActionKey(null);
 	};
 
-	const handleAutoMergeSources = async (fileId: number) => {
-		const actionKey = `auto-sources-${fileId}`;
-		setLoadingActionKey(actionKey);
-		await mockRequestDelay();
+	const handleAutoMergeSources = useCallback(
+		async (fileId: number) => {
+			const actionKey = `auto-sources-${fileId}`;
+			setLoadingActionKey(actionKey);
 
-		updateWorkflowFile(fileId, (file) => {
-			const allRows = getFileRowsForReadyMerge(file);
-			const { autoMergedRows, pendingRows } =
-				splitFileRowsForReadyMerge(allRows);
+			try {
+				// Call autoMergeAllSourceTypesByFile API
+				const mergeResult = await autoMergeAllSourceTypesByFile(
+					Number(takeoffId),
+					fileId,
+				);
 
-			return {
-				...file,
-				sourceMergeStarted: true,
-				readyAutoMergedRows: autoMergedRows,
-				readyPendingRows: pendingRows,
-				readyManualMergeCompleted: pendingRows.length === 0,
-			};
-		});
+				if (mergeResult.status !== "success") {
+					notification.error({
+						message: "Auto Merge Failed",
+						description: "Failed to auto merge sources. Please try again.",
+					});
+					setLoadingActionKey(null);
+					return;
+				}
 
-		setSelectedStage("ready");
-		notification.success({
-			message: "Mock source merge complete",
-			description: "Ready board data has been generated for this file.",
-		});
-		setLoadingActionKey(null);
-	};
+				// Get the merged result using getAllGroupedByFile
+				const groupedResult = await getAllGroupedByFile(
+					Number(takeoffId),
+					fileId,
+				);
+
+				if (groupedResult.status === "success" && groupedResult.data) {
+					const preferredFields = await resolveColumnNames(1);
+
+					const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+						groupedResult.data,
+						{
+							fileId,
+							sourceType: "Ready",
+							preferredFields,
+						},
+					);
+
+					updateWorkflowFile(fileId, (file) => ({
+						...file,
+						sourceMergeStarted: true,
+						readyAutoMergedRows: autoMergedRows,
+						readyPendingRows: pendingRows,
+						readyManualMergeCompleted: pendingRows.length === 0,
+						mergeStatus: {
+							...file.mergeStatus,
+							readyDataLoaded: true,
+						},
+					}));
+
+					setSelectedStage("ready");
+					notification.success({
+						message: "Auto Merge Sources Complete",
+						description: `Successfully merged sources. ${autoMergedRows.length} merged, ${pendingRows.length} pending.`,
+					});
+				} else {
+					notification.error({
+						message: "Failed to Load Results",
+						description: "Auto merge completed but failed to load results.",
+					});
+				}
+			} catch (error) {
+				console.error("Error in auto merge sources:", error);
+				notification.error({
+					message: "Error",
+					description: "An error occurred during auto merge sources.",
+				});
+			} finally {
+				setLoadingActionKey(null);
+			}
+		},
+		[takeoffId, resolveColumnNames, updateWorkflowFile],
+	);
 
 	const handleAutoMergeReady = async (fileId: number) => {
 		const actionKey = `auto-ready-${fileId}`;
@@ -2987,7 +3065,11 @@ export default function ManualMergeNewPage() {
 			return;
 		}
 
-		const hasPendingSections = file.sections.some(
+		// Check mergedSections first (new API flow), fallback to sections (old flow)
+		const sectionsToCheck =
+			file.mergedSections.length > 0 ? file.mergedSections : file.sections;
+
+		const hasPendingSections = sectionsToCheck.some(
 			(section) => !section.autoMergeStarted || section.pendingRows.length > 0,
 		);
 
@@ -2995,7 +3077,7 @@ export default function ManualMergeNewPage() {
 			notification.warning({
 				message: "Pending manual merge",
 				description:
-					"At least one tag still has unmerged items. Complete all tag manual merges before source merge.",
+					"At least one source still has unmerged items. Complete all source manual merges before file merge.",
 			});
 			return;
 		}
@@ -3119,193 +3201,114 @@ export default function ManualMergeNewPage() {
 	};
 
 	const handleItemsMergeConfirm = useCallback(
-		async (mergedResults: any[]) => {
-			setShowItemsMergeModal(false);
-			setLoadingActionKey("manual-merge");
+		async (mergeResult: {
+			success: boolean;
+			mergedItemIds: number[];
+			sourceType?: string;
+			fileId?: number;
+		}) => {
+			if (!mergeResult.success) {
+				return;
+			}
+
+			setLoadingActionKey("manual-merge-refresh");
 
 			try {
-				if (isMergeAllMode && mergeAllResult) {
-					// Manual merge at takeoff level (Merge All stage)
-					const mergeList = mergedResults.map((result) => ({
-						result: result.result,
-						single_file_merge_result_ids: result.singleFileMergeResultIds || [],
-						take_off_result_item_ids: result.takeOffResultItemIds || [],
-						file_source_merge_result_ids: result.fileSourceMergeResultIds || [],
-					}));
+				const fileId = mergeResult.fileId || manualMergeContext?.fileId;
+				const sourceType =
+					mergeResult.sourceType || manualMergeContext?.sectionKey;
 
-					const apiResult = await manualMergeByTakeOff(
-						Number(takeoffId),
-						mergeList,
-					);
+				if (!fileId) {
+					console.error("No fileId available for refresh");
+					return;
+				}
 
-					if (apiResult.status === "success") {
-						// Refresh merge all data
-						const groupedResult = await getAllGroupedByTakeOff(
-							Number(takeoffId),
-						);
-						if (groupedResult.status === "success" && groupedResult.data) {
-							// Process and update merge all result
-							const autoMergedRows: MergeWorkflowRow[] = [];
-							const unmergedRows: MergeWorkflowRow[] = [];
-							// TODO: Process groupedResult.data into rows
-							setMergeAllResult({
-								autoMergedRows,
-								unmergedRows,
-							});
-						}
-						notification.success({
-							message: "Manual Merge Complete",
-							description: "All unmerged rows have been merged.",
-						});
-					} else {
-						notification.error({
-							message: "Manual Merge Failed",
-							description: "Failed to merge items. Please try again.",
-						});
-					}
-				} else if (manualMergeContext?.mode === "ready") {
-					// Manual merge at file level (Ready stage)
-					const fileId = manualMergeContext.fileId;
-					const mergeList = mergedResults.map((result) => ({
-						result: result.result,
-						take_off_result_item_ids: result.takeOffResultItemIds || [],
-						file_source_merge_result_ids: result.fileSourceMergeResultIds || [],
-					}));
-
-					const apiResult = await manualMergeByFile(
-						Number(takeoffId),
-						fileId,
-						mergeList,
-					);
-
-					if (apiResult.status === "success") {
-						// Refresh ready data
-						await loadReadyDataForFile(fileId);
-						updateWorkflowFile(fileId, (file) => ({
-							...file,
+				if (manualMergeContext?.mode === "ready") {
+					// Refresh ready data
+					await loadReadyDataForFile(fileId);
+					updateWorkflowFile(fileId, (file) => ({
+						...file,
+						readyManualMergeCompleted: true,
+						mergeStatus: {
+							...file.mergeStatus,
 							readyManualMergeCompleted: true,
-							mergeStatus: {
-								...file.mergeStatus,
-								readyManualMergeCompleted: true,
-							},
-						}));
-						notification.success({
-							message: "Manual Merge Complete",
-							description: "Ready stage items have been merged successfully.",
-						});
-					} else {
-						notification.error({
-							message: "Manual Merge Failed",
-							description: "Failed to merge items. Please try again.",
-						});
-					}
-				} else if (manualMergeContext?.sectionKey) {
-					// Manual merge at source level (Merged stage)
-					const fileId = manualMergeContext.fileId;
-					const sourceType = manualMergeContext.sectionKey;
-					const mergeList = mergedResults.map((result) => ({
-						result: result.result,
-						take_off_result_item_ids: result.takeOffResultItemIds || [],
+						},
 					}));
-
-					const apiResult = await manualMergeByFileSource(
+				} else if (sourceType) {
+					// Refresh merged data for this source
+					const resultData = await getMergeResultByFileSource(
 						Number(takeoffId),
 						fileId,
 						sourceType,
-						mergeList,
 					);
 
-					if (apiResult.status === "success") {
-						// Refresh merged data for this source
-						const resultData = await getMergeResultByFileSource(
-							Number(takeoffId),
-							fileId,
-							sourceType,
-						);
+					if (resultData.status === "success" && resultData.data) {
+						const file = workflowFiles.find((f) => f.id === fileId);
+						if (file) {
+							const preferredFields = await resolveColumnNames(1);
 
-						if (resultData.status === "success" && resultData.data) {
-							const file = workflowFiles.find((f) => f.id === fileId);
-							if (file) {
-								const sourceData = resultData.data;
-								const preferredFields = await resolveColumnNames(1);
-
-								const normalizedSection = normalizeFileSections(
-									file.operationType,
-									{ [sourceType]: sourceData },
-								);
-								const sections = buildSectionsFromData(
+							const { autoMergedRows, pendingRows } =
+								parseFileSourceMergeResult(resultData.data, {
 									fileId,
-									file.operationType,
-									normalizedSection,
+									sourceType,
 									preferredFields,
+								});
+
+							const manualMergeCompleted = pendingRows.length === 0;
+
+							updateWorkflowFile(fileId, (f) => {
+								const existingIndex = f.mergedSections.findIndex(
+									(s) => s.key === sourceType,
 								);
 
-								const mergedSection = sections[0];
-								if (mergedSection) {
-									mergedSection.autoMergeStarted = true;
-									mergedSection.manualMergeCompleted = true;
+								const updatedSection: MergeWorkflowSection = {
+									key: sourceType,
+									title: sourceType,
+									rows: [...autoMergedRows, ...pendingRows],
+									groupedRows: {},
+									autoMergeStarted: true,
+									autoMergedRows,
+									pendingRows,
+									manualMergeCompleted,
+								};
 
-									updateWorkflowFile(fileId, (f) => {
-										const existingIndex = f.mergedSections.findIndex(
-											(s) => s.key === sourceType,
-										);
-										const newMergedSections =
-											existingIndex >= 0
-												? f.mergedSections.map((s, i) =>
-														i === existingIndex ? mergedSection : s,
-													)
-												: [...f.mergedSections, mergedSection];
+								const newMergedSections =
+									existingIndex >= 0
+										? f.mergedSections.map((s, i) =>
+												i === existingIndex ? updatedSection : s,
+											)
+										: [...f.mergedSections, updatedSection];
 
-										return {
-											...f,
-											mergedSections: newMergedSections,
-											mergeStatus: {
-												...f.mergeStatus,
-												sourceMergeStatus: {
-													...f.mergeStatus.sourceMergeStatus,
-													[sourceType]: {
-														...f.mergeStatus.sourceMergeStatus[sourceType],
-														manualMergeCompleted: true,
-													},
-												},
+								return {
+									...f,
+									mergedSections: newMergedSections,
+									mergeStatus: {
+										...f.mergeStatus,
+										sourceMergeStatus: {
+											...f.mergeStatus.sourceMergeStatus,
+											[sourceType]: {
+												...f.mergeStatus.sourceMergeStatus[sourceType],
+												manualMergeCompleted,
 											},
-										};
-									});
-								}
-							}
+										},
+									},
+								};
+							});
 						}
-						notification.success({
-							message: "Manual Merge Complete",
-							description: `${sourceType} items have been merged successfully.`,
-						});
-					} else {
-						notification.error({
-							message: "Manual Merge Failed",
-							description: "Failed to merge items. Please try again.",
-						});
 					}
 				}
 			} catch (error) {
-				console.error("Error in manual merge:", error);
-				notification.error({
-					message: "Error",
-					description: "An error occurred during manual merge.",
-				});
+				console.error("Error refreshing data after manual merge:", error);
 			} finally {
 				setLoadingActionKey(null);
-				setManualMergeContext(null);
-				setItemsMergePendingRows([]);
 			}
 		},
 		[
-			isMergeAllMode,
-			mergeAllResult,
 			manualMergeContext,
 			takeoffId,
 			workflowFiles,
 			loadReadyDataForFile,
 			resolveColumnNames,
-			buildSectionsFromData,
 			updateWorkflowFile,
 		],
 	);
@@ -3923,6 +3926,8 @@ export default function ManualMergeNewPage() {
 							? [manualMergeContext.fileId]
 							: workflowFiles.map((f) => f.id)
 					}
+					fileId={manualMergeContext?.fileId}
+					sourceType={manualMergeContext?.sourceType}
 					onConfirm={handleItemsMergeConfirm}
 					onCancel={handleItemsMergeCancel}
 				/>

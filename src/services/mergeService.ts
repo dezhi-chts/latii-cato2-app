@@ -393,7 +393,7 @@ export const getAllGroupedByFile = async (
 		const url = `/drawing-ai/drawing_ai/get_all_grouped_by_file?take_off_id=${take_off_id}&file_id=${file_id}`;
 		const response = await http.get(url);
 		return {
-			data: response?.data || {},
+			data: response || {},
 			status: "success",
 		};
 	} catch (error: any) {
