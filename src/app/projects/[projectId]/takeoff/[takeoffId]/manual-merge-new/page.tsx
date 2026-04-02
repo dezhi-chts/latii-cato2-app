@@ -464,20 +464,69 @@ const parseItemResult = (result: unknown): Record<string, unknown> => {
 	return {};
 };
 
-const formatValue = (value: unknown) => {
+const formatValue = (value: unknown): string => {
 	if (value === null || value === undefined || value === "") {
 		return "-";
 	}
 
 	if (Array.isArray(value)) {
-		return value.join(", ");
+		// Format array elements, handling nested objects
+		return value
+			.map((item) => {
+				if (typeof item === "object" && item !== null) {
+					return formatNestedObject(item);
+				}
+				return String(item);
+			})
+			.join(" / ");
 	}
 
 	if (typeof value === "object") {
-		return JSON.stringify(value);
+		return formatNestedObject(value as Record<string, unknown>);
 	}
 
 	return String(value);
+};
+
+// Format nested object into readable string
+const formatNestedObject = (obj: Record<string, unknown>): string => {
+	const parts: string[] = [];
+	for (const [key, val] of Object.entries(obj)) {
+		if (val === null || val === undefined || val === "") {
+			continue;
+		}
+		if (typeof val === "object" && val !== null) {
+			// Recursively format nested objects
+			const nestedStr = formatNestedObject(val as Record<string, unknown>);
+			if (nestedStr && nestedStr !== "-") {
+				parts.push(`${key}: ${nestedStr}`);
+			}
+		} else {
+			parts.push(`${key}: ${String(val)}`);
+		}
+	}
+	return parts.length > 0 ? parts.join(", ") : "-";
+};
+
+// Get value from nested object using dot notation path
+const getNestedValue = (
+	obj: Record<string, unknown>,
+	path: string,
+): unknown => {
+	const parts = path.split(".");
+	let current: unknown = obj;
+
+	for (const part of parts) {
+		if (current === null || current === undefined) {
+			return undefined;
+		}
+		if (typeof current !== "object") {
+			return undefined;
+		}
+		current = (current as Record<string, unknown>)[part];
+	}
+
+	return current;
 };
 
 const getFallbackFields = (allItems: any[]) => {
@@ -531,7 +580,7 @@ const normalizeFieldName = (fieldName: string) => {
 const getDisplayValueByField = (
 	result: Record<string, unknown>,
 	fieldName: string,
-) => {
+): string => {
 	if (fieldName === "Sub Label") {
 		return formatValue(
 			result["Sub Label"] ??
@@ -541,7 +590,64 @@ const getDisplayValueByField = (
 		);
 	}
 
-	return formatValue(result[fieldName]);
+	// 1. Direct field access (exact match)
+	if (result[fieldName] !== undefined) {
+		return formatValue(result[fieldName]);
+	}
+
+	// 2. Check if fieldName contains dot notation (nested field path)
+	// e.g., "Glass.Arrangement.Spacer Type" -> result.Glass.Arrangement["Spacer Type"]
+	if (fieldName.includes(".")) {
+		const value = getNestedValue(result, fieldName);
+		if (value !== undefined) {
+			return formatValue(value);
+		}
+	}
+
+	// 3. Try to find the field in nested objects (for fields like "Spacer Type" inside "Arrangement")
+	// This handles cases where the column name doesn't include the parent path
+	for (const [key, val] of Object.entries(result)) {
+		if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+			const nestedResult = val as Record<string, unknown>;
+			// Check if the nested object has this exact field
+			if (nestedResult[fieldName] !== undefined) {
+				return formatValue(nestedResult[fieldName]);
+			}
+			// Recursively search deeper nested objects
+			for (const [nestedKey, nestedVal] of Object.entries(nestedResult)) {
+				if (
+					typeof nestedVal === "object" &&
+					nestedVal !== null &&
+					!Array.isArray(nestedVal)
+				) {
+					const deepNestedResult = nestedVal as Record<string, unknown>;
+					if (deepNestedResult[fieldName] !== undefined) {
+						return formatValue(deepNestedResult[fieldName]);
+					}
+				}
+			}
+		}
+	}
+
+	// 4. Try alternative field name formats
+	// Convert "Glass.Arrangement.Spacer Type" to check "Arrangement" -> "Spacer Type"
+	if (fieldName.includes(".")) {
+		const parts = fieldName.split(".");
+		// Try from the last part backwards
+		for (let i = parts.length - 1; i >= 0; i--) {
+			const partialPath = parts.slice(i).join(".");
+			const value = getNestedValue(result, partialPath);
+			if (value !== undefined) {
+				return formatValue(value);
+			}
+			// Also try just the last part as a direct key
+			if (i === parts.length - 1 && result[parts[i]] !== undefined) {
+				return formatValue(result[parts[i]]);
+			}
+		}
+	}
+
+	return "-";
 };
 
 const getItemsFromSectionValue = (sectionValue: unknown) => {
@@ -1332,10 +1438,29 @@ const getFileListStatusMeta = (
 		};
 	}
 
+	// Check if file has started merge (unmerged stage completed)
+	const unmergedState = getFileStageState(file, "unmerged");
+	const mergedState = getFileStageState(file, "merged");
+
 	if (file.id === selectedFileId) {
 		return {
 			label: "Processing",
 			dotClassName: "bg-green-normal",
+		};
+	}
+
+	// If unmerged stage is completed, show as "Merged" status
+	if (unmergedState === "completed") {
+		// If merged stage is also completed, show as "Ready"
+		if (mergedState === "completed") {
+			return {
+				label: "Ready",
+				dotClassName: "bg-[#52c41a]",
+			};
+		}
+		return {
+			label: "Merged",
+			dotClassName: "bg-[#1890ff]",
 		};
 	}
 
@@ -1661,16 +1786,20 @@ function UnmergedStageCard({
 	columnNames,
 	loadingActionKey,
 	onAutoMergeSection,
+	onAutoMergeAllSources,
 	onOpenReferenceModal,
 	isFileCompleted = false,
+	isUnmergedStageCompleted = false,
 }: {
 	selectedFile: MergeWorkflowFile;
 	activeSection: MergeWorkflowSection | null;
 	columnNames: string[];
 	loadingActionKey: string | null;
 	onAutoMergeSection: (fileId: number, sectionKey: string) => void;
+	onAutoMergeAllSources: (fileId: number) => void;
 	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
 	isFileCompleted?: boolean;
+	isUnmergedStageCompleted?: boolean;
 }) {
 	const currentSectionKey =
 		activeSection?.key || selectedFile.sections[0]?.key || "";
@@ -1694,13 +1823,14 @@ function UnmergedStageCard({
 					<Button
 						className="custom-primary-btn !w-[150px]"
 						loading={
-							loadingActionKey ===
-							`auto-section-${selectedFile.id}-${currentSectionKey}`
+							loadingActionKey === `auto-all-sections-${selectedFile.id}`
 						}
-						disabled={Boolean(loadingActionKey) || isFileCompleted}
-						onClick={() =>
-							onAutoMergeSection(selectedFile.id, currentSectionKey)
+						disabled={
+							Boolean(loadingActionKey) ||
+							isFileCompleted ||
+							isUnmergedStageCompleted
 						}
+						onClick={() => onAutoMergeAllSources(selectedFile.id)}
 					>
 						Auto Merge
 					</Button>
@@ -1932,193 +2062,127 @@ function ReadyStageCard({
 	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
 	isFileCompleted?: boolean;
 }) {
+	// Show empty state if merge hasn't started yet
+	if (!selectedFile.sourceMergeStarted) {
+		const emptyMessage =
+			selectedFile.operationType === FileOperationType.ArchitectureDrawing
+				? "Complete merged board processing and run Auto Merge Sources first."
+				: "Run Auto Merge in the unmerged board first.";
+
+		return (
+			<div className="rounded-[24px] border border-dashed border-primaryN30 bg-[#FCFCFD] px-6 py-12">
+				<Empty
+					description={
+						<span className="text-xs text-grey-normal">{emptyMessage}</span>
+					}
+				/>
+			</div>
+		);
+	}
+
+	// Common Ready stage content for both file types
 	return (
-		<>
-			{selectedFile.operationType === FileOperationType.ArchitectureDrawing &&
-			!selectedFile.sourceMergeStarted ? (
-				<div className="rounded-[24px] border border-dashed border-primaryN30 bg-[#FCFCFD] px-6 py-12">
-					<Empty
-						description={
-							<span className="text-xs text-grey-normal">
-								Complete merged board processing and run Auto Merge Sources
-								first.
-							</span>
-						}
-					/>
-				</div>
-			) : null}
-
-			{selectedFile.operationType === FileOperationType.Quote &&
-			getFileStageState(selectedFile, "ready") !== "completed" ? (
-				<div className="rounded-[24px] border border-dashed border-primaryN30 bg-[#FCFCFD] px-6 py-12">
-					<Empty
-						description={
-							<span className="text-xs text-grey-normal">
-								Finish quote manual merge in the merged board first.
-							</span>
-						}
-					/>
-				</div>
-			) : null}
-
-			{selectedFile.operationType === FileOperationType.ArchitectureDrawing &&
-			selectedFile.sourceMergeStarted ? (
-				<div className="space-y-5">
-					{selectedFile.readyPendingRows.length ? (
-						<>
-							{/* Merged section */}
-							<div>
-								<div className="mb-4 flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EDF7EE]">
-											<svg
-												width="14"
-												height="14"
-												viewBox="0 0 16 16"
-												fill="none"
-											>
-												<path
-													d="M13.3334 4L6.00008 11.3333L2.66675 8"
-													stroke="#3F8C4C"
-													strokeWidth="2"
-													strokeLinecap="round"
-													strokeLinejoin="round"
-												/>
-											</svg>
-										</div>
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="text-sm font-medium text-grey-dark">
-													Merged
-												</span>
-												<span className="rounded-full bg-[#EDF7EE] px-2 py-0.5 text-xs text-[#3F8C4C]">
-													{selectedFile.readyAutoMergedRows.length}
-												</span>
-											</div>
-											<div className="mt-0.5 text-xs text-grey-normal">
-												Labels that have been automatically merged
-											</div>
-										</div>
-									</div>
+		<div className="space-y-5">
+			{selectedFile.readyPendingRows.length ? (
+				<>
+					{/* Merged section */}
+					<div>
+						<div className="mb-4 flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EDF7EE]">
+									<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+										<path
+											d="M13.3334 4L6.00008 11.3333L2.66675 8"
+											stroke="#3F8C4C"
+											strokeWidth="2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+									</svg>
 								</div>
-								<MergeRowsTable
-									title="Auto Merged Sources"
-									description="Mock file-level source merge output."
-									rows={selectedFile.readyAutoMergedRows}
-									columns={columnNames}
-									emptyText="No auto merged source rows."
-									onOpenReferenceModal={onOpenReferenceModal}
-									hideHeader
-									scrollY="calc((100vh - 520px) / 2)"
-								/>
-							</div>
-
-							{/* Unmerged section */}
-							<div>
-								<div className="mb-4 flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF1F0]">
-											<svg
-												width="14"
-												height="14"
-												viewBox="0 0 16 16"
-												fill="none"
-											>
-												<path
-													d="M8 5.33333V8M8 10.6667H8.00667M14.6667 8C14.6667 11.6819 11.6819 14.6667 8 14.6667C4.3181 14.6667 1.33333 11.6819 1.33333 8C1.33333 4.3181 4.3181 1.33333 8 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
-													stroke="#D14343"
-													strokeWidth="1.5"
-													strokeLinecap="round"
-													strokeLinejoin="round"
-												/>
-											</svg>
-										</div>
-										<div>
-											<div className="flex items-center gap-2">
-												<span className="text-sm font-medium text-grey-dark">
-													Unmerged
-												</span>
-												<span className="rounded-full bg-[#FFF1F0] px-2 py-0.5 text-xs text-[#D14343]">
-													{selectedFile.readyPendingRows.length}
-												</span>
-											</div>
-											<div className="mt-0.5 text-xs text-grey-normal">
-												Labels that require manual merge to resolve conflicts
-											</div>
-										</div>
+								<div>
+									<div className="flex items-center gap-2">
+										<span className="text-sm font-medium text-grey-dark">
+											Merged
+										</span>
+										<span className="rounded-full bg-[#EDF7EE] px-2 py-0.5 text-xs text-[#3F8C4C]">
+											{selectedFile.readyAutoMergedRows.length}
+										</span>
 									</div>
-									<Button
-										className="custom-primary-btn !w-[130px]"
-										disabled={Boolean(loadingActionKey) || isFileCompleted}
-										onClick={() =>
-											onOpenManualMergeModal({
-												fileId: selectedFile.id,
-												mode: "ready",
-												sourceType: "all-labels",
-											})
-										}
-									>
-										Manual Merge
-									</Button>
-								</div>
-								<MergeRowsTable
-									title="Unmerged Items"
-									description="Rows still waiting for final ready merge."
-									rows={selectedFile.readyPendingRows}
-									columns={columnNames}
-									emptyText="No pending ready rows."
-									onOpenReferenceModal={onOpenReferenceModal}
-									hideHeader
-									scrollY="calc((100vh - 520px) / 2)"
-								/>
-							</div>
-						</>
-					) : (
-						<div>
-							<div className="mb-4 flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EDF7EE]">
-										<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-											<path
-												d="M13.3334 4L6.00008 11.3333L2.66675 8"
-												stroke="#3F8C4C"
-												strokeWidth="2"
-												strokeLinecap="round"
-												strokeLinejoin="round"
-											/>
-										</svg>
-									</div>
-									<div>
-										<div className="flex items-center gap-2">
-											<span className="text-sm font-medium text-grey-dark">
-												Merged
-											</span>
-											<span className="rounded-full bg-[#EDF7EE] px-2 py-0.5 text-xs text-[#3F8C4C]">
-												{selectedFile.readyAutoMergedRows.length}
-											</span>
-										</div>
-										<div className="mt-0.5 text-xs text-grey-normal">
-											The file is fully merged and ready
-										</div>
+									<div className="mt-0.5 text-xs text-grey-normal">
+										Labels that have been automatically merged
 									</div>
 								</div>
 							</div>
-							<MergeRowsTable
-								title="Ready Items"
-								description="The file is fully merged and ready."
-								rows={selectedFile.readyAutoMergedRows}
-								columns={columnNames}
-								emptyText="No ready rows available."
-								onOpenReferenceModal={onOpenReferenceModal}
-								hideHeader
-							/>
 						</div>
-					)}
-				</div>
-			) : null}
+						<MergeRowsTable
+							title="Auto Merged Labels"
+							description="Labels that have been automatically merged."
+							rows={selectedFile.readyAutoMergedRows}
+							columns={columnNames}
+							emptyText="No auto merged labels."
+							onOpenReferenceModal={onOpenReferenceModal}
+							hideHeader
+							scrollY="calc((100vh - 520px) / 2)"
+						/>
+					</div>
 
-			{selectedFile.operationType === FileOperationType.Quote &&
-			getFileStageState(selectedFile, "ready") === "completed" ? (
+					{/* Unmerged section */}
+					<div>
+						<div className="mb-4 flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FFF1F0]">
+									<svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+										<path
+											d="M8 5.33333V8M8 10.6667H8.00667M14.6667 8C14.6667 11.6819 11.6819 14.6667 8 14.6667C4.3181 14.6667 1.33333 11.6819 1.33333 8C1.33333 4.3181 4.3181 1.33333 8 1.33333C11.6819 1.33333 14.6667 4.3181 14.6667 8Z"
+											stroke="#D14343"
+											strokeWidth="1.5"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+									</svg>
+								</div>
+								<div>
+									<div className="flex items-center gap-2">
+										<span className="text-sm font-medium text-grey-dark">
+											Unmerged
+										</span>
+										<span className="rounded-full bg-[#FFF1F0] px-2 py-0.5 text-xs text-[#D14343]">
+											{selectedFile.readyPendingRows.length}
+										</span>
+									</div>
+									<div className="mt-0.5 text-xs text-grey-normal">
+										Labels that require manual merge to resolve conflicts
+									</div>
+								</div>
+							</div>
+							<Button
+								className="custom-primary-btn !w-[130px]"
+								disabled={Boolean(loadingActionKey) || isFileCompleted}
+								onClick={() =>
+									onOpenManualMergeModal({
+										fileId: selectedFile.id,
+										mode: "ready",
+										sourceType: "all-labels",
+									})
+								}
+							>
+								Manual Merge
+							</Button>
+						</div>
+						<MergeRowsTable
+							title="Unmerged Items"
+							description="Labels that require manual merge."
+							rows={selectedFile.readyPendingRows}
+							columns={columnNames}
+							emptyText="No pending labels."
+							onOpenReferenceModal={onOpenReferenceModal}
+							hideHeader
+							scrollY="calc((100vh - 520px) / 2)"
+						/>
+					</div>
+				</>
+			) : (
 				<div>
 					<div className="mb-4 flex items-center justify-between">
 						<div className="flex items-center gap-3">
@@ -2139,14 +2203,7 @@ function ReadyStageCard({
 										Merged
 									</span>
 									<span className="rounded-full bg-[#EDF7EE] px-2 py-0.5 text-xs text-[#3F8C4C]">
-										{
-											(selectedFile.readyAutoMergedRows.length
-												? selectedFile.readyAutoMergedRows
-												: getQuoteSection(selectedFile)?.autoMergedRows?.length
-													? getQuoteSection(selectedFile)?.autoMergedRows || []
-													: getQuoteSection(selectedFile)?.rows || []
-											).length
-										}
+										{selectedFile.readyAutoMergedRows.length}
 									</span>
 								</div>
 								<div className="mt-0.5 text-xs text-grey-normal">
@@ -2157,21 +2214,16 @@ function ReadyStageCard({
 					</div>
 					<MergeRowsTable
 						title="Ready Items"
-						description="Quote files become ready immediately after merged rows are fully resolved."
-						rows={
-							selectedFile.readyAutoMergedRows.length
-								? selectedFile.readyAutoMergedRows
-								: getQuoteSection(selectedFile)?.autoMergedRows?.length
-									? getQuoteSection(selectedFile)?.autoMergedRows || []
-									: getQuoteSection(selectedFile)?.rows || []
-						}
+						description="The file is fully merged and ready."
+						rows={selectedFile.readyAutoMergedRows}
 						columns={columnNames}
 						emptyText="No ready rows available."
 						onOpenReferenceModal={onOpenReferenceModal}
+						hideHeader
 					/>
 				</div>
-			) : null}
-		</>
+			)}
+		</div>
 	);
 }
 
@@ -2180,7 +2232,8 @@ export default function ManualMergeNewPage() {
 	const router = useRouter();
 	const projectId = String(params?.projectId || "");
 	const takeoffId = String(params?.takeoffId || "");
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(true); // Initial page load only
+	const [contentLoading, setContentLoading] = useState(false); // Content area loading (semi-transparent)
 	const [workflowFiles, setWorkflowFiles] = useState<MergeWorkflowFile[]>([]);
 	const [columnNames, setColumnNames] = useState<string[]>([
 		"Label",
@@ -2569,14 +2622,14 @@ export default function ManualMergeNewPage() {
 
 			// All files are complete - check if takeoff merge is done
 			if (statusData.take_off_completed) {
-				// Everything is done, show the last file in ready stage or merge-all mode
+				// Everything is done, show merge-all stage as completed
 				const lastFile = files[files.length - 1];
-				return { targetFileId: lastFile.id, targetStage: "ready" };
+				return { targetFileId: lastFile.id, targetStage: "merge-all" };
 			}
 
-			// All files complete but takeoff not merged - show first file ready stage
+			// All files complete but takeoff not merged - show merge-all stage
 			// User should click "Merge All File Labels"
-			return { targetFileId: firstFile.id, targetStage: "ready" };
+			return { targetFileId: firstFile.id, targetStage: "merge-all" };
 		},
 		[],
 	);
@@ -2732,6 +2785,25 @@ export default function ManualMergeNewPage() {
 			if (targetStage) {
 				setSelectedStage(targetStage);
 				lastStageSyncedFileIdRef.current = targetFileId;
+
+				// If target stage is merge-all, load merge-all data
+				if (targetStage === "merge-all") {
+					setIsMergeAllMode(true);
+					// Load merge-all results
+					const groupedRes = await getAllGroupedByTakeOff(Number(takeoffId));
+					if (groupedRes.status === "success" && groupedRes.data) {
+						const preferredFields = columnNamesRef.current || [];
+						const parsedResult = parseFileSourceMergeResult(groupedRes.data, {
+							fileId: 0,
+							sourceType: "All Files",
+							preferredFields,
+						});
+						setMergeAllResult({
+							autoMergedRows: parsedResult.autoMergedRows,
+							unmergedRows: parsedResult.pendingRows,
+						});
+					}
+				}
 			}
 		} catch (error) {
 			console.error("Error fetching takeoff details:", error);
@@ -2768,7 +2840,7 @@ export default function ManualMergeNewPage() {
 				return;
 			}
 
-			setLoading(true);
+			setContentLoading(true);
 			try {
 				const resultResponse = await getTakeOffResultByFile(
 					Number(takeoffId),
@@ -2875,7 +2947,7 @@ export default function ManualMergeNewPage() {
 					description: "Failed to load file data.",
 				});
 			} finally {
-				setLoading(false);
+				setContentLoading(false);
 			}
 		},
 		[workflowFiles, takeoffId, columnNames, buildSectionsFromData],
@@ -2945,7 +3017,7 @@ export default function ManualMergeNewPage() {
 
 		// Load merged data and optionally ready data
 		const loadInitialStageData = async () => {
-			setLoading(true);
+			setContentLoading(true);
 			try {
 				const preferredFields = await resolveColumnNames(1);
 
@@ -3044,7 +3116,7 @@ export default function ManualMergeNewPage() {
 			} catch (error) {
 				console.error("Error loading initial stage data:", error);
 			} finally {
-				setLoading(false);
+				setContentLoading(false);
 			}
 		};
 
@@ -3077,6 +3149,18 @@ export default function ManualMergeNewPage() {
 		lastStageSyncedFileIdRef.current = selectedFile.id;
 		setSelectedStage(getRecommendedStage(selectedFile));
 	}, [selectedFile]);
+
+	// Load unmerged data when switching to a file that hasn't loaded it yet
+	useEffect(() => {
+		if (!selectedFile || loading) {
+			return;
+		}
+
+		// If unmerged data is not loaded yet, load it
+		if (!selectedFile.mergeStatus.unmergedDataLoaded) {
+			loadFileData(selectedFile.id);
+		}
+	}, [selectedFile, loading, loadFileData]);
 
 	const updateWorkflowFile = useCallback(
 		(
@@ -3301,42 +3385,86 @@ export default function ManualMergeNewPage() {
 						});
 					});
 
-					updateWorkflowFile(fileId, (f) => ({
-						...f,
-						mergedSections,
-						// Update internal state flags after source-type auto merge is done
-						withinSourceCompleted: true, // Unmerged stage completed
-						betweenSourcesCompleted: false,
-						// Note: sourceMergeStarted should remain false here
-						// It should only be true when Ready stage merge is started
-						mergeStatus: {
-							...f.mergeStatus,
-							sourceMergeStatus: sourceTypes.reduce(
-								(acc, sourceType) => {
-									const section = mergedSections.find(
-										(s) => s.key === sourceType,
-									);
-									const hasPending = (section?.pendingRows?.length || 0) > 0;
-									acc[sourceType] = {
-										autoMerged: true,
-										manualMergeCompleted: !hasPending,
-										dataLoaded: true,
-									};
-									return acc;
-								},
-								{ ...f.mergeStatus.sourceMergeStatus },
-							),
-						},
-					}));
+					// For Quote files, skip Merged stage and go directly to Ready
+					if (file.operationType === FileOperationType.Quote) {
+						updateWorkflowFile(fileId, (f) => ({
+							...f,
+							mergedSections,
+							// Quote files skip Merged stage, go directly to Ready
+							withinSourceCompleted: true,
+							betweenSourcesCompleted: true,
+							sourceMergeStarted: true,
+							mergeStatus: {
+								...f.mergeStatus,
+								sourceMergeStatus: sourceTypes.reduce(
+									(acc, sourceType) => {
+										const section = mergedSections.find(
+											(s) => s.key === sourceType,
+										);
+										const hasPending = (section?.pendingRows?.length || 0) > 0;
+										acc[sourceType] = {
+											autoMerged: true,
+											manualMergeCompleted: !hasPending,
+											dataLoaded: true,
+										};
+										return acc;
+									},
+									{ ...f.mergeStatus.sourceMergeStatus },
+								),
+							},
+						}));
 
-					// Auto switch to Merged stage after successful merge
-					console.log("Setting selectedStage to 'merged'");
-					setSelectedStage("merged");
+						// Load ready data for Quote file (file-level grouped data)
+						await loadReadyDataForFile(fileId);
 
-					notification.success({
-						message: "Auto merge completed",
-						description: "All sources have been auto merged successfully.",
-					});
+						// Switch to Ready stage for Quote files
+						console.log("Quote file: Setting selectedStage to 'ready'");
+						setSelectedStage("ready");
+
+						notification.success({
+							message: "Auto merge completed",
+							description:
+								"Quote file has been auto merged. Ready for final review.",
+						});
+					} else {
+						// For ArchDrawing files, go to Merged stage
+						updateWorkflowFile(fileId, (f) => ({
+							...f,
+							mergedSections,
+							// Update internal state flags after source-type auto merge is done
+							withinSourceCompleted: true, // Unmerged stage completed
+							betweenSourcesCompleted: false,
+							// Note: sourceMergeStarted should remain false here
+							// It should only be true when Ready stage merge is started
+							mergeStatus: {
+								...f.mergeStatus,
+								sourceMergeStatus: sourceTypes.reduce(
+									(acc, sourceType) => {
+										const section = mergedSections.find(
+											(s) => s.key === sourceType,
+										);
+										const hasPending = (section?.pendingRows?.length || 0) > 0;
+										acc[sourceType] = {
+											autoMerged: true,
+											manualMergeCompleted: !hasPending,
+											dataLoaded: true,
+										};
+										return acc;
+									},
+									{ ...f.mergeStatus.sourceMergeStatus },
+								),
+							},
+						}));
+
+						// Auto switch to Merged stage after successful merge
+						console.log("Setting selectedStage to 'merged'");
+						setSelectedStage("merged");
+
+						notification.success({
+							message: "Auto merge completed",
+							description: "All sources have been auto merged successfully.",
+						});
+					}
 				}
 			} catch (error) {
 				console.error("Error in auto merge all sources:", error);
@@ -3354,6 +3482,7 @@ export default function ManualMergeNewPage() {
 			resolveColumnNames,
 			buildSectionsFromData,
 			updateWorkflowFile,
+			loadReadyDataForFile,
 		],
 	);
 
@@ -4333,14 +4462,31 @@ export default function ManualMergeNewPage() {
 									>
 										<div
 											className={`flex h-4 w-4 items-center justify-center rounded-full ${
-												mergeAllResult
-													? isMergeAllMode
-														? "bg-forumBlue-normal"
-														: "bg-green-normal"
-													: "bg-[#DCDCDC]"
+												takeOffCompleted
+													? "bg-green-normal"
+													: mergeAllResult
+														? isMergeAllMode
+															? "bg-forumBlue-normal"
+															: "bg-green-normal"
+														: "bg-[#DCDCDC]"
 											}`}
 										>
-											{mergeAllResult ? (
+											{takeOffCompleted ? (
+												<svg
+													width="8"
+													height="8"
+													viewBox="0 0 16 16"
+													fill="none"
+												>
+													<path
+														d="M13.3334 4L6.00008 11.3333L2.66675 8"
+														stroke="white"
+														strokeWidth="2.5"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+													/>
+												</svg>
+											) : mergeAllResult ? (
 												isMergeAllMode ? (
 													<div className="h-[6px] w-[6px] rounded-full bg-white" />
 												) : (
@@ -4364,23 +4510,27 @@ export default function ManualMergeNewPage() {
 										<div className="min-w-0">
 											<div
 												className={`text-xs ${
-													mergeAllResult
-														? isMergeAllMode
-															? "text-forumBlue-normal"
-															: "text-grey-dark"
-														: "text-grey-light-strong"
+													takeOffCompleted
+														? "text-grey-dark"
+														: mergeAllResult
+															? isMergeAllMode
+																? "text-forumBlue-normal"
+																: "text-grey-dark"
+															: "text-grey-light-strong"
 												}`}
 											>
 												Auto Merge All File Labels
 											</div>
 											<div className="mt-1 text-xxs text-grey-light-strong">
-												{mergeAllResult
-													? isMergeAllMode
-														? "Viewing"
-														: "Completed"
-													: allFilesCompleted
-														? "Ready"
-														: "Not Started"}
+												{takeOffCompleted
+													? "Completed"
+													: mergeAllResult
+														? isMergeAllMode
+															? "Viewing"
+															: "Completed"
+														: allFilesCompleted
+															? "Ready"
+															: "Not Started"}
 											</div>
 										</div>
 									</button>
@@ -4399,7 +4549,15 @@ export default function ManualMergeNewPage() {
 				</Button>
 			</div>
 
-			<div className="flex-1 flex px-14 py-6">
+			<div className="flex-1 flex px-14 py-6 relative">
+				{contentLoading && (
+					<div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 rounded-[24px]">
+						<div className="flex flex-col items-center gap-3 rounded-[20px] bg-white px-8 py-7 shadow-[0_12px_34px_rgba(16,24,40,0.12)]">
+							<Spin size="large" />
+							<div className="text-sm text-grey-dark">Loading...</div>
+						</div>
+					</div>
+				)}
 				{isMergeAllMode && mergeAllResult ? (
 					<div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-[24px] border border-primaryN30 bg-white p-6 shadow-[0_12px_34px_rgba(16,24,40,0.05)]">
 						<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 pb-5 mb-6">
@@ -4861,10 +5019,12 @@ export default function ManualMergeNewPage() {
 														columnNames={columnNames}
 														loadingActionKey={loadingActionKey}
 														onAutoMergeSection={handleAutoMergeSection}
+														onAutoMergeAllSources={handleAutoMergeAllSources}
 														onOpenReferenceModal={
 															handleOpenReferenceModalWithStage
 														}
 														isFileCompleted={isSelectedFileCompleted}
+														isUnmergedStageCompleted={isUnmergedStageCompleted}
 													/>
 												) : null}
 
