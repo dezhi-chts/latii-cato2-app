@@ -96,9 +96,9 @@ export default function TakeoffListHeader({
 				<div className="flex items-center gap-4">
 					<div className="flex items-center gap-1 text-sm text-forumBlue-normal">
 						<span>Summary</span>
-						<Popover title={null} content={summaryTooltip} color="white">
+						{/* <Popover title={null} content={summaryTooltip} color="white">
 							<InfoCircleOutlined />
-						</Popover>
+						</Popover> */}
 					</div>
 					<Divider type="vertical" className="!h-7 !bg-primaryN30" />
 				</div>
@@ -118,9 +118,15 @@ export default function TakeoffListHeader({
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.systems ?? 0}
+							{summaryStats?.window_items ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Systems</span>
+						<span className="text-sm text-grey-normal">Window Items</span>
+					</div>
+					<div className="flex flex-col">
+						<span className="text-lg leading-5">
+							{summaryStats?.door_items ?? 0}
+						</span>
+						<span className="text-sm text-grey-normal">Door Items</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
