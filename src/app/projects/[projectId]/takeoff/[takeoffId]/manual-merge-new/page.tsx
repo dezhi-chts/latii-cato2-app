@@ -4529,8 +4529,15 @@ export default function ManualMergeNewPage() {
 	const hasOtherUnfinishedFiles = workflowFiles.some(
 		(file) => file.id !== selectedFileId && !isFileCompleted(file),
 	);
+	// Reset Merge button logic:
+	// 1. Show only when file is not in "Unmerged" state (i.e., merged or ready stage)
+	// 2. Disable when all files completed AND merge all is in progress or completed
 	const shouldShowResetMerge = Boolean(
 		selectedFile && getFileStatusMeta(selectedFile).label !== "Unmerged",
+	);
+	const isResetMergeDisabled = Boolean(
+		loadingActionKey ||
+			(allFilesCompleted && (mergeAllResult || isMergeAllMode || takeOffCompleted)),
 	);
 	const shouldShowNextFile = isSelectedFileCompleted && hasOtherUnfinishedFiles;
 
@@ -5035,7 +5042,7 @@ export default function ManualMergeNewPage() {
 												{shouldShowResetMerge && (
 													<Button
 														className="custom-default-btn !w-[130px]"
-														disabled={Boolean(loadingActionKey)}
+														disabled={isResetMergeDisabled}
 														onClick={() =>
 															handleResetCurrentFile(selectedFile.id)
 														}
@@ -5057,8 +5064,8 @@ export default function ManualMergeNewPage() {
 														className="custom-primary-btn !w-[180px]"
 														disabled={
 															Boolean(loadingActionKey) ||
-															(isMergeAllMode &&
-																mergeAllResult?.unmergedRows.length === 0)
+															takeOffCompleted ||
+															mergeAllResult !== null
 														}
 														onClick={handleMergeAllFileLabels}
 													>
