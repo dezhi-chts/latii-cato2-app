@@ -12,15 +12,14 @@ import {
 	Table,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 
-import { getEvidenceByFileId } from "@/services/evidenceService";
-import { getTemplateById } from "@/services/templateService";
 import {
 	manualMergeByFileSource,
 	manualMergeByFile,
 	manualMergeByTakeOff,
 } from "@/services/mergeService";
+import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -53,6 +52,7 @@ interface ManualMergeModalProps {
 	fileIds?: number[];
 	fileId?: number;
 	sourceType?: string;
+	templateFields?: string[];
 	onConfirm: (result: MergeResult) => void;
 	onCancel: () => void;
 }
@@ -64,7 +64,11 @@ interface EvidenceData {
 	type?: string;
 	project_file_page_number?: number;
 	project_file_id?: number;
+	file_key?: string;
 }
+
+// Evidence data map keyed by item id
+type EvidenceDataMap = Record<string, EvidenceData>;
 
 const safeParseResult = (
 	result: unknown,
@@ -240,12 +244,12 @@ export default function ManualMergeModal({
 	fileIds,
 	fileId,
 	sourceType,
+	templateFields: propsTemplateFields,
 	onConfirm,
 	onCancel,
 }: ManualMergeModalProps) {
 	const params = useParams();
 	const takeOffId = Number(params.takeoffId);
-	const projectId = String(params.projectId);
 
 	const [conflictGroups, setConflictGroups] = useState<ConflictGroup[]>([]);
 	const [activeGroupIndex, setActiveGroupIndex] = useState(0);
@@ -253,92 +257,31 @@ export default function ManualMergeModal({
 
 	const [tableData, setTableData] = useState<TableItem[]>([]);
 	const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
-	const [allEvidences, setAllEvidences] = useState<EvidenceData[]>([]);
+	const [evidenceMap, setEvidenceMap] = useState<EvidenceDataMap>({});
 	const [loadingEvidences, setLoadingEvidences] = useState(false);
-	const [templateFields, setTemplateFields] = useState<string[]>([]);
 
 	const [confirming, setConfirming] = useState(false);
 	const [showKeepAllModal, setShowKeepAllModal] = useState(false);
 	const [keepAllItems, setKeepAllItems] = useState<any[]>([]);
 	const [keepAllSubmitting, setKeepAllSubmitting] = useState(false);
 
-	// Fetch template fields when modal opens
-	useEffect(() => {
-		const fetchTemplateFields = async () => {
-			if (!open) return;
-
-			try {
-				const result = await getTemplateById(1);
-				if (result.status === "success" && result.data) {
-					const template = result.data;
-					const fields = template.fields || [];
-					const fieldNames = fields
-						.map((field: any) => field.name || field.field_name)
-						.filter(Boolean);
-
-					if (fieldNames.length > 0) {
-						setTemplateFields(fieldNames);
-					}
-				}
-			} catch (error) {
-				console.error("[ManualMergeModal] Error fetching template:", error);
-			}
-		};
-
-		fetchTemplateFields();
-	}, [open]);
-
-	// Fetch all evidences for all files when modal opens
-	useEffect(() => {
-		const fetchEvidences = async () => {
-			if (!open || !projectId) return;
-
-			// Collect all unique file IDs from both fileIds prop and pendingRows
-			const allFileIds = new Set<number>();
-
-			// Add fileIds from props
-			if (fileIds && fileIds.length > 0) {
-				return;
-				// fileIds.forEach((fId) => allFileIds.add(fId));
-			}
-
-			// Extract project_file_id from pendingRows items
-			pendingRows.forEach((row) => {
-				if (row.project_file_id) {
-					allFileIds.add(row.project_file_id);
-				}
-			});
-
-			if (allFileIds.size === 0) return;
-
-			setLoadingEvidences(true);
-			try {
-				// Fetch evidences for all files concurrently
-				const fileIdArray = Array.from(allFileIds);
-
-				const evidencePromises = fileIdArray.map((fId) =>
-					getEvidenceByFileId(projectId, fId),
-				);
-				const results = await Promise.all(evidencePromises);
-
-				// Merge all evidences into one array
-				const mergedEvidences: EvidenceData[] = [];
-				results.forEach((res) => {
-					if (res.status === "success" && Array.isArray(res.data)) {
-						mergedEvidences.push(...res.data);
-					}
-				});
-
-				setAllEvidences(mergedEvidences);
-			} catch (error) {
-				console.error("[ManualMergeModal] Error fetching evidences:", error);
-			} finally {
-				setLoadingEvidences(false);
-			}
-		};
-
-		fetchEvidences();
-	}, [open, fileIds, projectId, pendingRows]);
+	// Use template fields from props, ensure Label and Sub Label are first
+	const templateFields = useMemo(() => {
+		if (!propsTemplateFields || propsTemplateFields.length === 0) {
+			return [];
+		}
+		// Ensure Label and Sub Label are at the beginning
+		const hasLabel = propsTemplateFields.includes("Label");
+		const hasSubLabel = propsTemplateFields.includes("Sub Label");
+		const otherFields = propsTemplateFields.filter(
+			(f) => f !== "Label" && f !== "Sub Label",
+		);
+		const result: string[] = [];
+		if (hasLabel) result.push("Label");
+		if (hasSubLabel) result.push("Sub Label");
+		result.push(...otherFields);
+		return result;
+	}, [propsTemplateFields]);
 
 	useEffect(() => {
 		if (open) {
@@ -350,6 +293,41 @@ export default function ManualMergeModal({
 	}, [open, pendingRows]);
 
 	const activeGroup = conflictGroups[activeGroupIndex] || null;
+
+	// Fetch evidences for current active group when it changes
+	useEffect(() => {
+		const fetchEvidencesForGroup = async () => {
+			if (!open || !activeGroup) return;
+
+			// Collect all item IDs from the active group
+			const itemIds: number[] = [];
+			activeGroup.items.forEach((item) => {
+				if (item.id) {
+					itemIds.push(item.id);
+				}
+			});
+
+			if (itemIds.length === 0) return;
+
+			setLoadingEvidences(true);
+			try {
+				// Join item IDs with comma for the API call
+				const resultItemIds = itemIds.join(",");
+				const result = await getTakeOffEvidenceUrlsByIds(resultItemIds);
+
+				if (result.status === "success" && result.data) {
+					// The API returns a map with item IDs as keys
+					setEvidenceMap(result.data as EvidenceDataMap);
+				}
+			} catch (error) {
+				console.error("[ManualMergeModal] Error fetching evidences:", error);
+			} finally {
+				setLoadingEvidences(false);
+			}
+		};
+
+		fetchEvidencesForGroup();
+	}, [open, activeGroup]);
 
 	// Use template fields if available, otherwise fallback to getFieldsFromItems
 	const fields = useMemo(() => {
@@ -398,42 +376,38 @@ export default function ManualMergeModal({
 					}
 				}
 
-				// Try to find evidence from allEvidences using evidence_id or evidence_id_list
-				const evidenceIds: number[] = [];
-				if (item.evidence_id) {
-					evidenceIds.push(item.evidence_id);
-				}
-				if (Array.isArray(item.evidence_id_list)) {
-					evidenceIds.push(...item.evidence_id_list);
-				}
-				if (Array.isArray(item.evidence_ids)) {
-					evidenceIds.push(...item.evidence_ids);
-				}
-
-				// Find matching evidence from allEvidences
-				for (const evidenceId of evidenceIds) {
-					const matchedEvidence = allEvidences.find((e) => e.id === evidenceId);
-					if (matchedEvidence) {
-						// Support both evidence_url and s3_url
-						const imageUrl =
-							matchedEvidence.evidence_url || matchedEvidence.s3_url;
-						if (imageUrl) {
-							evidences.push({
-								id: matchedEvidence.id,
-								index,
-								item_id: item.id,
-								evidence_selected: true,
-								s3_url: imageUrl,
-								type: matchedEvidence.type || "",
-							});
-							break;
-						}
+				// Try to find evidence from evidenceMap using item.id as key
+				const itemId = String(item.id);
+				const matchedEvidence = evidenceMap[itemId];
+				if (matchedEvidence) {
+					const imageUrl =
+						matchedEvidence.evidence_url || matchedEvidence.s3_url;
+					if (imageUrl) {
+						evidences.push({
+							id: matchedEvidence.id,
+							index,
+							item_id: item.id,
+							evidence_selected: true,
+							s3_url: imageUrl,
+							type: matchedEvidence.type || "",
+						});
+						return;
 					}
 				}
+
+				// Fallback: add item without evidence image
+				evidences.push({
+					id: item.evidence_id || 0,
+					index,
+					item_id: item.id,
+					evidence_selected: true,
+					s3_url: "",
+					type: "",
+				});
 			});
 			setEvidenceList(evidences);
 		},
-		[allEvidences],
+		[evidenceMap],
 	);
 
 	useEffect(() => {
@@ -442,11 +416,11 @@ export default function ManualMergeModal({
 		generateEvidenceList(activeGroup.items);
 	}, [activeGroup, generateTableData, generateEvidenceList]);
 
-	// Re-generate evidence list when allEvidences is loaded
+	// Re-generate evidence list when evidenceMap is loaded
 	useEffect(() => {
-		if (!activeGroup || allEvidences.length === 0) return;
+		if (!activeGroup || Object.keys(evidenceMap).length === 0) return;
 		generateEvidenceList(activeGroup.items);
-	}, [allEvidences, activeGroup, generateEvidenceList]);
+	}, [evidenceMap, activeGroup, generateEvidenceList]);
 
 	useEffect(() => {
 		if (!activeGroup) return;
@@ -1070,8 +1044,8 @@ export default function ManualMergeModal({
 									{/* Content area */}
 									<div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
 										{/* Source items table - 50% height */}
-										<div className="h-[50vh] mb-4 shrink-0">
-											<div className="h-full overflow-hidden">
+										<div className=" mb-4 shrink-0">
+											<div className="overflow-hidden">
 												<Table
 													rowKey={(record) => record.id || Math.random()}
 													columns={customizeColumns}
@@ -1079,10 +1053,10 @@ export default function ManualMergeModal({
 													pagination={false}
 													scroll={{
 														x: "max-content",
-														y: "calc(50vh + 50px)",
+														y: "calc(30vh + 50px)",
 													}}
 													size="small"
-													className="h-[100%] small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+													className="max-h-[calc(30vh + 50px)] small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
 												/>
 											</div>
 										</div>

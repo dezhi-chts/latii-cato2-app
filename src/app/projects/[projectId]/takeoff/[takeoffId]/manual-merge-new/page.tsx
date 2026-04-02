@@ -2183,6 +2183,22 @@ export default function ManualMergeNewPage() {
 	// Track if template has been loaded from API
 	const templateLoadedRef = useRef(false);
 
+	// Ensure Label and Sub Label are always at the beginning and adjacent
+	const ensureLabelFieldsFirst = (fields: string[]): string[] => {
+		const hasLabel = fields.includes("Label");
+		const hasSubLabel = fields.includes("Sub Label");
+		const otherFields = fields.filter(
+			(f) => f !== "Label" && f !== "Sub Label",
+		);
+
+		const result: string[] = [];
+		if (hasLabel) result.push("Label");
+		if (hasSubLabel) result.push("Sub Label");
+		result.push(...otherFields);
+
+		return result;
+	};
+
 	const resolveColumnNames = useCallback(
 		async (templateId: number = 1, forceRefresh: boolean = false) => {
 			// Return cached column names if template has been loaded and not forcing refresh
@@ -2207,10 +2223,12 @@ export default function ManualMergeNewPage() {
 						.map(normalizeFieldName);
 
 					if (fieldNames.length > 0) {
-						columnNamesRef.current = fieldNames;
+						// Ensure Label and Sub Label are first
+						const orderedFields = ensureLabelFieldsFirst(fieldNames);
+						columnNamesRef.current = orderedFields;
 						templateLoadedRef.current = true;
-						setColumnNames(fieldNames);
-						return fieldNames;
+						setColumnNames(orderedFields);
+						return orderedFields;
 					}
 				}
 			} catch (error) {
@@ -4151,6 +4169,10 @@ export default function ManualMergeNewPage() {
 	const isSelectedFileCompleted = Boolean(
 		selectedFile && isFileCompleted(selectedFile),
 	);
+	// Check if unmerged stage is already completed (auto merge has been done)
+	const isUnmergedStageCompleted = Boolean(
+		selectedFile && getFileStageState(selectedFile, "unmerged") === "completed",
+	);
 	const hasOtherUnfinishedFiles = workflowFiles.some(
 		(file) => file.id !== selectedFileId && !isFileCompleted(file),
 	);
@@ -4686,7 +4708,8 @@ export default function ManualMergeNewPage() {
 																}
 																disabled={
 																	Boolean(loadingActionKey) ||
-																	isSelectedFileCompleted
+																	isSelectedFileCompleted ||
+																	isUnmergedStageCompleted
 																}
 																onClick={() =>
 																	handleAutoMergeAllSources(selectedFile.id)
@@ -4876,6 +4899,7 @@ export default function ManualMergeNewPage() {
 					}
 					fileId={manualMergeContext?.fileId}
 					sourceType={manualMergeContext?.sourceType}
+					templateFields={columnNames}
 					onConfirm={handleItemsMergeConfirm}
 					onCancel={handleItemsMergeCancel}
 				/>

@@ -148,3 +148,16 @@ export const getMergeStatusByTakeOffId = async (take_off_id: number) => {
 	}
 };
 
+export const getTakeOffEvidenceUrlsByIds = async (result_item_ids: string) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_evidence_urls_by_take_off_result_item_ids?take_off_result_item_ids=${result_item_ids}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error(
+			"Error rolling back merge results by take off and file:",
+			error,
+		);
+		return { data: null, status: "error" };
+	}
+};
