@@ -20,6 +20,14 @@ import OriginalItemReferenceModal from "./components/OriginalItemReferenceModal"
 import MergedItemReferenceModal from "./components/MergedItemReferenceModal";
 import ItemTraceabilityModal from "./components/ItemTraceabilityModal";
 import { ProjectFileRecord, TakeoffItemRecord } from "../analyze-new/types";
+import {
+	formatDisplayValue,
+	formatNestedObject,
+	getNestedValue,
+	getDisplayValueByField,
+	normalizeFieldName,
+	parseItemResult as parseItemResultUtil,
+} from "../analyze-new/takeoffUtils";
 import { FileOperationType, FileStatus, PageType } from "../types/evidence";
 import {
 	getMergeStatusByTakeOffId,
@@ -168,28 +176,6 @@ interface MergeAllResult {
 	autoMergedRows: MergeWorkflowRow[];
 	unmergedRows: MergeWorkflowRow[];
 }
-
-const createMockTakeoffItem = (
-	id: number,
-	result: Record<string, unknown>,
-	evidenceId: number,
-	sourceType: string,
-	projectFileId = 380,
-	pageNumber = 1,
-) => ({
-	id,
-	evidence_id: evidenceId,
-	evidence_id_list: [evidenceId],
-	result,
-	isMerged: false,
-	evidence_msg: {
-		id: evidenceId,
-		type: sourceType,
-		s3_url: "",
-		project_file_page_number: pageNumber,
-		project_file_id: projectFileId,
-	},
-});
 
 function TruncatedTextCell({ value }: { value: string }) {
 	const divRef = useRef<HTMLDivElement>(null);
@@ -455,212 +441,8 @@ function MergeRowsTable({
 	);
 }
 
-const parseItemResult = (result: unknown): Record<string, unknown> => {
-	if (!result) {
-		return {};
-	}
-
-	if (typeof result === "string") {
-		try {
-			return JSON.parse(result);
-		} catch (error) {
-			console.error("Failed to parse merge item result:", error);
-			return {};
-		}
-	}
-
-	if (typeof result === "object") {
-		return result as Record<string, unknown>;
-	}
-
-	return {};
-};
-
-const formatValue = (value: unknown): string => {
-	if (value === null || value === undefined || value === "") {
-		return "-";
-	}
-
-	if (Array.isArray(value)) {
-		// Format array elements, handling nested objects
-		return value
-			.map((item) => {
-				if (typeof item === "object" && item !== null) {
-					return formatNestedObject(item);
-				}
-				return String(item);
-			})
-			.join(" / ");
-	}
-
-	if (typeof value === "object") {
-		return formatNestedObject(value as Record<string, unknown>);
-	}
-
-	return String(value);
-};
-
-// Format nested object into readable string
-const formatNestedObject = (obj: Record<string, unknown>): string => {
-	const parts: string[] = [];
-	for (const [key, val] of Object.entries(obj)) {
-		if (val === null || val === undefined || val === "") {
-			continue;
-		}
-		if (typeof val === "object" && val !== null) {
-			// Recursively format nested objects
-			const nestedStr = formatNestedObject(val as Record<string, unknown>);
-			if (nestedStr && nestedStr !== "-") {
-				parts.push(`${key}: ${nestedStr}`);
-			}
-		} else {
-			parts.push(`${key}: ${String(val)}`);
-		}
-	}
-	return parts.length > 0 ? parts.join(", ") : "-";
-};
-
-// Get value from nested object using dot notation path
-const getNestedValue = (
-	obj: Record<string, unknown>,
-	path: string,
-): unknown => {
-	const parts = path.split(".");
-	let current: unknown = obj;
-
-	for (const part of parts) {
-		if (current === null || current === undefined) {
-			return undefined;
-		}
-		if (typeof current !== "object") {
-			return undefined;
-		}
-		current = (current as Record<string, unknown>)[part];
-	}
-
-	return current;
-};
-
-const getFallbackFields = (allItems: any[]) => {
-	const additionalFieldCandidates = [
-		"Sub Label",
-		"Category",
-		"Product",
-		"Product Type",
-		"Type",
-		"Operability",
-	];
-
-	const discoveredFields = Array.from(
-		new Set(
-			allItems.flatMap((item) =>
-				Object.keys(parseItemResult(item?.result || {})),
-			),
-		),
-	).filter((field) => field !== "Label");
-
-	const prioritizedFields = additionalFieldCandidates.filter((field) =>
-		discoveredFields.includes(field),
-	);
-
-	const fallbackFields = discoveredFields.filter(
-		(field) => !prioritizedFields.includes(field),
-	);
-
-	return ["Label", ...prioritizedFields, ...fallbackFields];
-};
-
-const normalizeFieldName = (fieldName: string) => {
-	const lowered = fieldName.trim().toLowerCase();
-
-	if (lowered === "label") {
-		return "Label";
-	}
-
-	if (
-		lowered === "sub-label" ||
-		lowered === "sublabel" ||
-		lowered === "sub_label" ||
-		lowered === "sub label"
-	) {
-		return "Sub Label";
-	}
-
-	return fieldName;
-};
-
-const getDisplayValueByField = (
-	result: Record<string, unknown>,
-	fieldName: string,
-): string => {
-	if (fieldName === "Sub Label") {
-		return formatValue(
-			result["Sub Label"] ??
-				result["Sub-Label"] ??
-				result["Sublabel"] ??
-				result["sub_label"],
-		);
-	}
-
-	// 1. Direct field access (exact match)
-	if (result[fieldName] !== undefined) {
-		return formatValue(result[fieldName]);
-	}
-
-	// 2. Check if fieldName contains dot notation (nested field path)
-	// e.g., "Glass.Arrangement.Spacer Type" -> result.Glass.Arrangement["Spacer Type"]
-	if (fieldName.includes(".")) {
-		const value = getNestedValue(result, fieldName);
-		if (value !== undefined) {
-			return formatValue(value);
-		}
-	}
-
-	// 3. Try to find the field in nested objects (for fields like "Spacer Type" inside "Arrangement")
-	// This handles cases where the column name doesn't include the parent path
-	for (const [key, val] of Object.entries(result)) {
-		if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-			const nestedResult = val as Record<string, unknown>;
-			// Check if the nested object has this exact field
-			if (nestedResult[fieldName] !== undefined) {
-				return formatValue(nestedResult[fieldName]);
-			}
-			// Recursively search deeper nested objects
-			for (const [nestedKey, nestedVal] of Object.entries(nestedResult)) {
-				if (
-					typeof nestedVal === "object" &&
-					nestedVal !== null &&
-					!Array.isArray(nestedVal)
-				) {
-					const deepNestedResult = nestedVal as Record<string, unknown>;
-					if (deepNestedResult[fieldName] !== undefined) {
-						return formatValue(deepNestedResult[fieldName]);
-					}
-				}
-			}
-		}
-	}
-
-	// 4. Try alternative field name formats
-	// Convert "Glass.Arrangement.Spacer Type" to check "Arrangement" -> "Spacer Type"
-	if (fieldName.includes(".")) {
-		const parts = fieldName.split(".");
-		// Try from the last part backwards
-		for (let i = parts.length - 1; i >= 0; i--) {
-			const partialPath = parts.slice(i).join(".");
-			const value = getNestedValue(result, partialPath);
-			if (value !== undefined) {
-				return formatValue(value);
-			}
-			// Also try just the last part as a direct key
-			if (i === parts.length - 1 && result[parts[i]] !== undefined) {
-				return formatValue(result[parts[i]]);
-			}
-		}
-	}
-
-	return "-";
-};
+// Use parseItemResult from takeoffUtils, alias for local usage
+const parseItemResult = parseItemResultUtil;
 
 const getItemsFromSectionValue = (sectionValue: unknown) => {
 	// Handle new API format: Array of { Label, "Sub Label", List: item[] }
@@ -2784,6 +2566,7 @@ export default function ManualMergeNewPage() {
 			let targetFileToLoad = projectFiles[0];
 			let targetFileApiStatus: ApiMergeStatus | undefined;
 			if (mergeStatusRef.current?.files) {
+				let foundIncompleteFile = false;
 				for (const file of projectFiles) {
 					const fileStatus = mergeStatusRef.current.files[String(file.id)];
 					// If no status or not fully completed, this is the target file
@@ -2793,8 +2576,15 @@ export default function ManualMergeNewPage() {
 					) {
 						targetFileToLoad = file;
 						targetFileApiStatus = fileStatus?.status;
+						foundIncompleteFile = true;
 						break;
 					}
+				}
+				// If all files are completed, use the first file but with its actual status
+				if (!foundIncompleteFile && projectFiles.length > 0) {
+					const firstFileStatus =
+						mergeStatusRef.current.files[String(projectFiles[0].id)];
+					targetFileApiStatus = firstFileStatus?.status;
 				}
 			}
 
@@ -3663,7 +3453,7 @@ export default function ManualMergeNewPage() {
 		],
 	);
 
-	const handleSelectFile = (fileId: number, allowIncomplete = false) => {
+	const handleSelectFile = async (fileId: number, allowIncomplete = false) => {
 		const targetFile = workflowFiles.find((file) => file.id === fileId);
 		if (!targetFile) {
 			return;
@@ -3688,6 +3478,27 @@ export default function ManualMergeNewPage() {
 		// Exit merge all mode when selecting a file to view its details
 		if (isMergeAllMode) {
 			setIsMergeAllMode(false);
+		}
+
+		// For completed files, load ready data and switch to ready stage
+		if (isFileCompleted(targetFile)) {
+			// Check if ready data needs to be loaded
+			const needsReadyData =
+				targetFile.readyAutoMergedRows.length === 0 &&
+				targetFile.readyPendingRows.length === 0 &&
+				!targetFile.mergeStatus.readyDataLoaded;
+
+			if (needsReadyData) {
+				setContentLoading(true);
+				try {
+					await loadReadyDataForFile(fileId);
+				} finally {
+					setContentLoading(false);
+				}
+			}
+
+			// Switch to ready stage for completed files
+			setSelectedStage("ready");
 		}
 	};
 
@@ -4537,7 +4348,8 @@ export default function ManualMergeNewPage() {
 	);
 	const isResetMergeDisabled = Boolean(
 		loadingActionKey ||
-			(allFilesCompleted && (mergeAllResult || isMergeAllMode || takeOffCompleted)),
+		(allFilesCompleted &&
+			(mergeAllResult || isMergeAllMode || takeOffCompleted)),
 	);
 	const shouldShowNextFile = isSelectedFileCompleted && hasOtherUnfinishedFiles;
 

@@ -11,6 +11,7 @@ import {
 	getMultipleFilesMergeResultDetailById,
 	getTakeOffResultItemWithEvidenceUrlsById,
 } from "@/services/takeOffService";
+import { getDisplayValueByField } from "../../analyze-new/takeoffUtils";
 
 // Traceability level types
 type TraceabilityLevel =
@@ -123,11 +124,7 @@ function TraceabilityTable({
 				align: "center" as const,
 				render: (_: unknown, record: any) => {
 					const result = parseResult(record);
-					const value = result[fieldName];
-					const displayValue =
-						typeof value === "object"
-							? JSON.stringify(value)
-							: String(value || "-");
+					const displayValue = getDisplayValueByField(result, fieldName);
 
 					return (
 						<div className="mx-auto w-full max-w-[180px] overflow-hidden text-xs">
