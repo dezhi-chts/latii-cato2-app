@@ -41,7 +41,6 @@ import {
 	rollbackMergeResultsByFile,
 } from "@/services/mergeService";
 import { getTemplateById } from "@/services/templateService";
-import testData from "./test.json";
 
 type WorkflowStage = "unmerged" | "merged" | "ready" | "merge-all";
 type StepState = "pending" | "active" | "completed";
@@ -318,6 +317,7 @@ function MergeRowsTable({
 	scrollY,
 	stage,
 	isMergeAllMode,
+	pageSize = 20,
 }: {
 	title?: string;
 	description?: string;
@@ -332,7 +332,20 @@ function MergeRowsTable({
 	scrollY?: string;
 	stage?: string;
 	isMergeAllMode?: boolean;
+	pageSize?: number;
 }) {
+	const [currentPage, setCurrentPage] = useState(1);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [rows]);
+
+	const paginatedRows = useMemo(() => {
+		const startIndex = (currentPage - 1) * pageSize;
+		const endIndex = startIndex + pageSize;
+		return rows.slice(startIndex, endIndex);
+	}, [rows, currentPage, pageSize]);
+
 	const tableColumns = useMemo<ColumnsType<MergeWorkflowRow>>(() => {
 		const getColumnWidth = (fieldName: string) => {
 			if (!fieldName) {
@@ -413,20 +426,29 @@ function MergeRowsTable({
 	}, [columns, onOpenReferenceModal, stage, isMergeAllMode]);
 
 	return (
-		<div className="overflow-hidden rounded-[24px] border border-primaryN30 bg-white">
+		<div className="rounded-[24px] border border-primaryN30 bg-white">
 			<div className="p-4">
 				<Table<MergeWorkflowRow>
 					rowKey={(record) => record.key}
 					columns={tableColumns}
-					dataSource={rows}
-					pagination={false}
-					scroll={{ x: "max-content", y: scrollY || "calc(100vh - 470px)" }}
+					dataSource={paginatedRows}
+					pagination={{
+						current: currentPage,
+						pageSize: pageSize,
+						total: rows.length,
+						showSizeChanger: false,
+						showTotal: (total: number) => `Total ${total} items`,
+						onChange: (page: number) => setCurrentPage(page),
+						size: "small" as const,
+						position: ["bottomRight"],
+					}}
+					scroll={{ x: "max-content", y: scrollY || "calc(100vh - 520px)" }}
 					locale={{
 						emptyText: (
 							<div className="py-10 text-xs text-grey-normal">{emptyText}</div>
 						),
 					}}
-					className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+					className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-2 [&_.ant-pagination]:!text-xs"
 				/>
 			</div>
 		</div>
@@ -1468,11 +1490,25 @@ function SectionTable({
 	rows,
 	columns,
 	onOpenReferenceModal,
+	pageSize = 20,
 }: {
 	rows: MergeWorkflowRow[];
 	columns: string[];
 	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
+	pageSize?: number;
 }) {
+	const [currentPage, setCurrentPage] = useState(1);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [rows]);
+
+	const paginatedRows = useMemo(() => {
+		const startIndex = (currentPage - 1) * pageSize;
+		const endIndex = startIndex + pageSize;
+		return rows.slice(startIndex, endIndex);
+	}, [rows, currentPage, pageSize]);
+
 	const tableColumns = useMemo<ColumnsType<MergeWorkflowRow>>(() => {
 		const getColumnWidth = (fieldName: string) => {
 			if (!fieldName) return 80;
@@ -1545,14 +1581,23 @@ function SectionTable({
 	}
 
 	// Calculate table height: viewport height - header(80px) - top area(~200px) - section header(~60px) - padding(~100px)
-	const tableScrollY = "calc(100vh - 440px)";
+	const tableScrollY = "calc(100vh - 500px)";
 
 	return (
 		<Table<MergeWorkflowRow>
 			rowKey={(record) => record.key}
 			columns={tableColumns}
-			dataSource={rows}
-			pagination={false}
+			dataSource={paginatedRows}
+			pagination={{
+				current: currentPage,
+				pageSize: pageSize,
+				total: rows.length,
+				showSizeChanger: false,
+				showTotal: (total: number) => `Total ${total} items`,
+				onChange: (page: number) => setCurrentPage(page),
+				size: "small" as const,
+				position: ["bottomRight"],
+			}}
 			scroll={{ x: "max-content", y: tableScrollY }}
 			size="small"
 			locale={{
@@ -1560,7 +1605,7 @@ function SectionTable({
 					<div className="py-6 text-xs text-grey-normal">No items.</div>
 				),
 			}}
-			className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+			className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-2 [&_.ant-pagination]:!px-2 [&_.ant-pagination]:!text-[10px]"
 		/>
 	);
 }
@@ -1582,6 +1627,25 @@ function SectionMergedContent({
 }) {
 	const autoMergedRows = section.autoMergedRows || [];
 	const pendingRows = section.pendingRows || [];
+	const pageSize = 20;
+
+	const [autoMergedPage, setAutoMergedPage] = useState(1);
+	const [pendingPage, setPendingPage] = useState(1);
+
+	useEffect(() => {
+		setAutoMergedPage(1);
+		setPendingPage(1);
+	}, [section.key]);
+
+	const paginatedAutoMergedRows = useMemo(() => {
+		const startIndex = (autoMergedPage - 1) * pageSize;
+		return autoMergedRows.slice(startIndex, startIndex + pageSize);
+	}, [autoMergedRows, autoMergedPage]);
+
+	const paginatedPendingRows = useMemo(() => {
+		const startIndex = (pendingPage - 1) * pageSize;
+		return pendingRows.slice(startIndex, startIndex + pageSize);
+	}, [pendingRows, pendingPage]);
 
 	const tableColumns = useMemo<ColumnsType<MergeWorkflowRow>>(() => {
 		const getColumnWidth = (fieldName: string) => {
@@ -1649,8 +1713,9 @@ function SectionMergedContent({
 	// Calculate table height based on whether both sections exist
 	const hasBothSections = autoMergedRows.length > 0 && pendingRows.length > 0;
 	// If both sections exist, split the height; otherwise use full available height
-	const singleTableScrollY = "calc(100vh - 440px)";
-	const splitTableScrollY = "calc((100vh - 500px) / 2)";
+	// Reduced height to make room for pagination
+	const singleTableScrollY = "calc(100vh - 520px)";
+	const splitTableScrollY = "calc((100vh - 600px) / 2)";
 	const tableScrollY = hasBothSections ? splitTableScrollY : singleTableScrollY;
 
 	return (
@@ -1689,8 +1754,17 @@ function SectionMergedContent({
 					<Table<MergeWorkflowRow>
 						rowKey={(record) => record.key}
 						columns={tableColumns}
-						dataSource={autoMergedRows}
-						pagination={false}
+						dataSource={paginatedAutoMergedRows}
+						pagination={{
+							current: autoMergedPage,
+							pageSize: pageSize,
+							total: autoMergedRows.length,
+							showSizeChanger: false,
+							showTotal: (total) => `Total ${total} items`,
+							onChange: (page) => setAutoMergedPage(page),
+							size: "small",
+							position: ["bottomRight"],
+						}}
 						scroll={{ x: "max-content", y: tableScrollY }}
 						size="small"
 						locale={{
@@ -1698,7 +1772,7 @@ function SectionMergedContent({
 								<div className="py-4 text-xs text-grey-normal">No items.</div>
 							),
 						}}
-						className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#EDF7EE] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+						className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#EDF7EE] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-2 [&_.ant-pagination]:!px-2 [&_.ant-pagination]:!text-[10px]"
 					/>
 				</div>
 			)}
@@ -1751,8 +1825,17 @@ function SectionMergedContent({
 					<Table<MergeWorkflowRow>
 						rowKey={(record) => record.key}
 						columns={tableColumns}
-						dataSource={pendingRows}
-						pagination={false}
+						dataSource={paginatedPendingRows}
+						pagination={{
+							current: pendingPage,
+							pageSize: pageSize,
+							total: pendingRows.length,
+							showSizeChanger: false,
+							showTotal: (total) => `Total ${total} items`,
+							onChange: (page) => setPendingPage(page),
+							size: "small",
+							position: ["bottomRight"],
+						}}
 						scroll={{ x: "max-content", y: tableScrollY }}
 						size="small"
 						locale={{
@@ -1760,7 +1843,7 @@ function SectionMergedContent({
 								<div className="py-4 text-xs text-grey-normal">No items.</div>
 							),
 						}}
-						className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#FFF1F0] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+						className="[&_.ant-table]:!text-[10px] [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-cell]:!px-2 [&_.ant-table-tbody>tr>td]:!py-1.5 [&_.ant-table-thead>tr>th]:!bg-[#FFF1F0] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-2 [&_.ant-pagination]:!px-2 [&_.ant-pagination]:!text-[10px]"
 					/>
 				</div>
 			)}
@@ -3283,16 +3366,20 @@ export default function ManualMergeNewPage() {
 	}, [selectedFile]);
 
 	// Load unmerged data when switching to a file that hasn't loaded it yet
+	// Only load if we're in unmerged stage and data is not loaded
 	useEffect(() => {
 		if (!selectedFile || loading) {
 			return;
 		}
 
-		// If unmerged data is not loaded yet, load it
-		if (!selectedFile.mergeStatus.unmergedDataLoaded) {
+		// Only load unmerged data if we're in unmerged stage and data is not loaded yet
+		if (
+			selectedStage === "unmerged" &&
+			!selectedFile.mergeStatus.unmergedDataLoaded
+		) {
 			loadFileData(selectedFile.id);
 		}
-	}, [selectedFile, loading, loadFileData]);
+	}, [selectedFile, loading, loadFileData, selectedStage]);
 
 	const updateWorkflowFile = useCallback(
 		(
@@ -5066,7 +5153,7 @@ export default function ManualMergeNewPage() {
 															</div>
 
 															{/* Section content */}
-															<div className="min-h-0 flex-1 overflow-auto p-3">
+															<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
 																{selectedStage === "unmerged" ? (
 																	<SectionTable
 																		rows={section.rows}
