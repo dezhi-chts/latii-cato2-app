@@ -610,7 +610,6 @@ export default function TakeoffItemsTable({
 			</div>
 
 			<div className="flex min-h-0 flex-1">
-				<div className="rounded-l-lg h-[calc(100vh-310px)] border-[3px] border-forumBlue-normal" />
 				<div className="min-h-0 flex-1 overflow-hidden">
 					<Table<TakeoffItemRecord>
 						rowKey={(record) => record?.id}
@@ -618,16 +617,17 @@ export default function TakeoffItemsTable({
 						loading={loading}
 						columns={columns}
 						dataSource={filteredItems}
-						// pagination={{
-						// 	current: currentPage,
-						// 	pageSize: 30,
-						// 	total: filteredItems.length,
-						// 	position: ["bottomRight"],
-						// 	showSizeChanger: false,
-						// 	onChange: (page) => setCurrentPage(page),
-						// }}
-						pagination={false}
-						scroll={{ x: "max-content", y: "calc(100vh - 355px)" }}
+						pagination={{
+							current: currentPage,
+							pageSize: 30,
+							total: filteredItems.length,
+							position: ["bottomRight"],
+							showSizeChanger: false,
+							showTotal: (total) => `Total ${total} items`,
+							onChange: (page) => setCurrentPage(page),
+							size: "small",
+						}}
+						scroll={{ x: "max-content", y: "calc(100vh - 400px)" }}
 						onRow={(record) => ({
 							onClick: () => onSelectItem(record),
 						})}

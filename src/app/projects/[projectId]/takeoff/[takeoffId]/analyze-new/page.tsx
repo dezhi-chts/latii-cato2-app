@@ -684,7 +684,19 @@ export default function TakeoffListPage() {
 		setDownloadLoading(true);
 		try {
 			const response = await downloadTakeOffResult(takeoffId);
-			if (response.status === "success") {
+
+			if (response.status === "success" && response.data) {
+				const blob = response.data;
+				const filename = `take_off_${takeoffId}.zip`;
+				const url = window.URL.createObjectURL(blob);
+				const link = document.createElement("a");
+				link.href = url;
+				link.download = filename;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				window.URL.revokeObjectURL(url);
+
 				notification.success({
 					message: "Success",
 					description: "Take off result downloaded successfully",
@@ -695,6 +707,12 @@ export default function TakeoffListPage() {
 					description: "Failed to download take off result",
 				});
 			}
+		} catch (error) {
+			console.error("Download error:", error);
+			notification.error({
+				message: "Error",
+				description: "Failed to download take off result",
+			});
 		} finally {
 			setDownloadLoading(false);
 		}
