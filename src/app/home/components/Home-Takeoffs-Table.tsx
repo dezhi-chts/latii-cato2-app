@@ -1,10 +1,12 @@
 import { ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { ConfigProvider, Tooltip } from "antd";
+import { ConfigProvider, Spin, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
+import { getMergeStatusByTakeOffId } from "@/services/takeOffService";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -53,6 +55,13 @@ const HomeTakeoffsTable = ({
   totalPages,
 }: HomeTakeoffsTableProps) => {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [pageLoading, setPageLoading] = useState(false);
+  const [pageLoadingText, setPageLoadingText] = useState("Loading...");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -161,16 +170,31 @@ const HomeTakeoffsTable = ({
 
   const handleRowClick = useCallback(
     (record: ProjectRow) => ({
-      onClick: () => {
+      onClick: async () => {
+        if (pageLoading) return;
+
         if (record.status === 2) {
-          if (typeof record.project_file_ids === 'string' && record.project_file_ids.split(',').length > 1) {
-            // 如果有多个文件，且状态为已分析，跳转到手动合并页
+          setPageLoading(true);
+
+          // 获取takeoff文件状态
+          const mergeResult: any = await getMergeStatusByTakeOffId(record.id as any);
+
+          if (mergeResult.status === "success") {
+            if (mergeResult.data.take_off_completed) {
+              // 已合并完成，跳转到
+              router.push(
+                `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`,
+              );
+            } else {
+              // 未合并完成，跳转到手动合并页
+              router.push(
+                `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
+              );
+            }
+          } else {
+            // 合并状态为失败，跳转到合并页
             router.push(
               `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
-            );
-          } else {
-            router.push(
-              `/projects/${record.project_id}/takeoff/${record.id}/identification`,
             );
           }
         } else {
@@ -181,58 +205,68 @@ const HomeTakeoffsTable = ({
       },
       className: "cursor-pointer hover:bg-gray-50",
     }),
-    [router],
+    [pageLoading, router],
   );
 
   return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Table: {
-            headerBg: "#427CCE1A",
-          },
-        },
-      }}
-    >
-      <Table<ProjectRow>
-        rowKey={(r: any) => r.id}
-        columns={columns}
-        dataSource={takeoffs}
-        onRow={handleRowClick}
-        loading={tableLoading}
-        pagination={{
-          current: currentPage,
-          pageSize: 10,
-          showSizeChanger: false,
-          showQuickJumper: false,
-          itemRender: () => null,
-          position: ["bottomRight"],
-          showTotal: () => {
-            return (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>Page</span>
-                <select
-                  value={currentPage}
-                  onChange={(e) => setCurrentPage(Number(e.target.value))}
-                  className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
-                >
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
-                <span>of {totalPages}</span>
-              </div>
-            );
+    <>
+      {mounted &&
+        pageLoading &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70">
+            <Spin spinning size="large" />
+          </div>,
+          document.body,
+        )}
+      <ConfigProvider
+        theme={{
+          components: {
+            Table: {
+              headerBg: "#427CCE1A",
+            },
           },
         }}
-        size="middle"
-        sticky
-        className="rounded-lg"
-        rowClassName={() => "cursor-pointer transition-colors hover:bg-gray-50"}
-      />
-    </ConfigProvider>
+      >
+        <Table<ProjectRow>
+          rowKey={(r: any) => r.id}
+          columns={columns}
+          dataSource={takeoffs}
+          onRow={handleRowClick}
+          loading={tableLoading}
+          pagination={{
+            current: currentPage,
+            pageSize: 10,
+            showSizeChanger: false,
+            showQuickJumper: false,
+            itemRender: () => null,
+            position: ["bottomRight"],
+            showTotal: () => {
+              return (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>Page</span>
+                  <select
+                    value={currentPage}
+                    onChange={(e) => setCurrentPage(Number(e.target.value))}
+                    className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
+                  >
+                    {Array.from({ length: totalPages }).map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                  <span>of {totalPages}</span>
+                </div>
+              );
+            },
+          }}
+          size="middle"
+          sticky
+          className="rounded-lg"
+          rowClassName={() => "cursor-pointer transition-colors hover:bg-gray-50"}
+        />
+      </ConfigProvider>
+    </>
   );
 };
 

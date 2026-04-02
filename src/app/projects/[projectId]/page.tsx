@@ -10,6 +10,7 @@ import CreateTakeOffModal from "./components/Create-Takeoff/Create-Takeoff-Modal
 import {
   getTakeOffsByProjectId,
   deleteTakeOffById,
+  getMergeStatusByTakeOffId,
 } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
 import UploadFilesProgress from "./components/Upload-Files-Progress";
@@ -133,6 +134,38 @@ const Project = () => {
     },
   ];
 
+  const handleLocation = async (record: any) => {
+    if (record.status === 2) {
+      setFullLoading(true);
+
+      // 获取takeoff文件状态
+      const mergeResult: any = await getMergeStatusByTakeOffId(record.id as any);
+
+      if (mergeResult.status === "success") {
+        if (mergeResult.data.take_off_completed) {
+          // 已合并完成，跳转到
+          router.push(
+            `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`,
+          );
+        } else {
+          // 未合并完成，跳转到手动合并页
+          router.push(
+            `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
+          );
+        }
+      } else {
+        // 合并状态为失败，跳转到合并页
+        router.push(
+          `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
+        );
+      }
+    } else {
+      router.push(
+        `/projects/${record.project_id}/takeoff/${record.id}/identification`,
+      );
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-col gap-12 zoomed-container font-nunito">
@@ -189,17 +222,10 @@ const Project = () => {
                 if (!name.toLowerCase().includes(filter.toLowerCase()))
                   return null;
 
-                let status = takeOff?.take_off_result?.status || "";
-                let locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/identification`;
-                if (status === 2) {
-                  if (takeOff?.project_files?.length > 1) {
-                    locationUrl = `/projects/${projectId}/takeoff/${takeOff?.take_off_result?.id}/manual-merge-new`;
-                  }
-                }
                 return (
-                  <Link
+                  <div
                     key={index}
-                    href={locationUrl}
+                    onClick={() => handleLocation(takeOff.take_off_result)}
                   >
                     <div className="p-5 h-[140px] flex flex-row rounded-2xl border border-primaryN30 cursor-pointer hover:bg-primaryN10 transition-all duration-150">
                       <div>
@@ -247,7 +273,7 @@ const Project = () => {
                         />
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })
             ) : (
