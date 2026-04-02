@@ -24,7 +24,12 @@ import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Valid source types for source-level merge API
-const VALID_SOURCE_TYPES = ["Floor Plan", "Elevation", "Schedule"] as const;
+const VALID_SOURCE_TYPES = [
+	"Floor Plan",
+	"Elevation",
+	"Schedule",
+	"window_door_unit_list",
+] as const;
 
 const isValidSourceType = (sourceType?: string): boolean => {
 	if (!sourceType) return false;
@@ -260,6 +265,8 @@ export default function ManualMergeModal({
 	const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
 	const [evidenceMap, setEvidenceMap] = useState<EvidenceDataMap>({});
 	const [loadingEvidences, setLoadingEvidences] = useState(false);
+
+	console.log("[ManualMergeModal] sourceType:", sourceType);
 
 	// Determine evidence fetch mode based on sourceType (computed, not state to avoid timing issues)
 	const evidenceFetchMode = useMemo(():

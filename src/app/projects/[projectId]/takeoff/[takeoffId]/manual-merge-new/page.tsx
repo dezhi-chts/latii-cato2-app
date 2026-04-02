@@ -1862,7 +1862,10 @@ function MergedStageCard({
 	loadingActionKey,
 	onOpenManualMergeModal,
 	onOpenReferenceModal,
+	onAutoMergeFileLabels,
 	isFileCompleted = false,
+	canAutoMergeFileLabels = false,
+	hasUnresolvedConflicts = false,
 }: {
 	selectedFile: MergeWorkflowFile;
 	activeSection: MergeWorkflowSection | null;
@@ -1870,7 +1873,10 @@ function MergedStageCard({
 	loadingActionKey: string | null;
 	onOpenManualMergeModal: (context: ManualMergeContext) => void;
 	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
+	onAutoMergeFileLabels?: (fileId: number) => void;
 	isFileCompleted?: boolean;
+	canAutoMergeFileLabels?: boolean;
+	hasUnresolvedConflicts?: boolean;
 }) {
 	const quoteSection = getQuoteSection(selectedFile);
 
@@ -1978,6 +1984,34 @@ function MergedStageCard({
 			{selectedFile.operationType === FileOperationType.Quote &&
 			quoteSection?.autoMergeStarted ? (
 				<div className="space-y-5">
+					{/* Header with Auto Merge File Labels button */}
+					<div className="flex flex-wrap items-center justify-between gap-4">
+						<div>
+							<div className="text-sm text-grey-dark">
+								Merged Labels by Source Type
+							</div>
+							<div className="mt-1 text-xs text-grey-normal">
+								{quoteSection.pendingRows?.length
+									? "Resolve conflicts before proceeding to file-level merge."
+									: "All conflicts resolved. Ready for file-level merge."}
+							</div>
+						</div>
+						{canAutoMergeFileLabels && onAutoMergeFileLabels && (
+							<Button
+								className="custom-primary-btn !w-[180px]"
+								loading={loadingActionKey === `auto-sources-${selectedFile.id}`}
+								disabled={
+									Boolean(loadingActionKey) ||
+									isFileCompleted ||
+									hasUnresolvedConflicts
+								}
+								onClick={() => onAutoMergeFileLabels(selectedFile.id)}
+							>
+								Auto Merge File Labels
+							</Button>
+						)}
+					</div>
+
 					{quoteSection.pendingRows.length ? (
 						<>
 							<div>
@@ -1987,7 +2021,7 @@ function MergedStageCard({
 								/>
 								<MergeRowsTable
 									title="Auto Merged Items"
-									description="Mock auto merge results for the quote file."
+									description="Auto merge results for the quote file."
 									rows={quoteSection.autoMergedRows || []}
 									columns={columnNames}
 									emptyText="No auto merged rows."
@@ -2007,8 +2041,8 @@ function MergedStageCard({
 										onOpenManualMergeModal({
 											fileId: selectedFile.id,
 											mode: "section",
-											sectionKey: quoteSection?.key || "all-labels",
-											sourceType: quoteSection?.key || "all-labels",
+											sectionKey: quoteSection?.key || "window_door_unit_list",
+											sourceType: quoteSection?.key || "window_door_unit_list",
 										})
 									}
 								/>
@@ -2035,7 +2069,7 @@ function MergedStageCard({
 							/>
 							<MergeRowsTable
 								title="Merged Results"
-								description="The quote file has been fully merged."
+								description="The quote file has been fully merged. Click 'Auto Merge File Labels' to proceed."
 								rows={
 									quoteSection.autoMergedRows?.length
 										? quoteSection.autoMergedRows
@@ -3495,86 +3529,44 @@ export default function ManualMergeNewPage() {
 						});
 					});
 
-					// For Quote files, skip Merged stage and go directly to Ready
-					if (file.operationType === FileOperationType.Quote) {
-						updateWorkflowFile(fileId, (f) => ({
-							...f,
-							mergedSections,
-							// Quote files skip Merged stage, go directly to Ready
-							withinSourceCompleted: true,
-							betweenSourcesCompleted: true,
-							sourceMergeStarted: true,
-							mergeStatus: {
-								...f.mergeStatus,
-								sourceMergeStatus: sourceTypes.reduce(
-									(acc, sourceType) => {
-										const section = mergedSections.find(
-											(s) => s.key === sourceType,
-										);
-										const hasPending = (section?.pendingRows?.length || 0) > 0;
-										acc[sourceType] = {
-											autoMerged: true,
-											manualMergeCompleted: !hasPending,
-											dataLoaded: true,
-										};
-										return acc;
-									},
-									{ ...f.mergeStatus.sourceMergeStatus },
-								),
-							},
-						}));
+					// Both Quote and ArchDrawing files follow the same flow: Unmerged -> Merged -> Ready
+					updateWorkflowFile(fileId, (f) => ({
+						...f,
+						mergedSections,
+						// Update internal state flags after source-type auto merge is done
+						withinSourceCompleted: true, // Unmerged stage completed
+						betweenSourcesCompleted: false,
+						// Note: sourceMergeStarted should remain false here
+						// It should only be true when Ready stage merge is started
+						mergeStatus: {
+							...f.mergeStatus,
+							mergedDataLoaded: true,
+							sourceMergeStatus: sourceTypes.reduce(
+								(acc, sourceType) => {
+									const section = mergedSections.find(
+										(s) => s.key === sourceType,
+									);
+									const hasPending = (section?.pendingRows?.length || 0) > 0;
+									acc[sourceType] = {
+										autoMerged: true,
+										manualMergeCompleted: !hasPending,
+										dataLoaded: true,
+									};
+									return acc;
+								},
+								{ ...f.mergeStatus.sourceMergeStatus },
+							),
+						},
+					}));
 
-						// Load ready data for Quote file (file-level grouped data)
-						await loadReadyDataForFile(fileId);
+					// Auto switch to Merged stage after successful merge
+					console.log("Setting selectedStage to 'merged'");
+					setSelectedStage("merged");
 
-						// Switch to Ready stage for Quote files
-						console.log("Quote file: Setting selectedStage to 'ready'");
-						setSelectedStage("ready");
-
-						notification.success({
-							message: "Auto merge completed",
-							description:
-								"Quote file has been auto merged. Ready for final review.",
-						});
-					} else {
-						// For ArchDrawing files, go to Merged stage
-						updateWorkflowFile(fileId, (f) => ({
-							...f,
-							mergedSections,
-							// Update internal state flags after source-type auto merge is done
-							withinSourceCompleted: true, // Unmerged stage completed
-							betweenSourcesCompleted: false,
-							// Note: sourceMergeStarted should remain false here
-							// It should only be true when Ready stage merge is started
-							mergeStatus: {
-								...f.mergeStatus,
-								sourceMergeStatus: sourceTypes.reduce(
-									(acc, sourceType) => {
-										const section = mergedSections.find(
-											(s) => s.key === sourceType,
-										);
-										const hasPending = (section?.pendingRows?.length || 0) > 0;
-										acc[sourceType] = {
-											autoMerged: true,
-											manualMergeCompleted: !hasPending,
-											dataLoaded: true,
-										};
-										return acc;
-									},
-									{ ...f.mergeStatus.sourceMergeStatus },
-								),
-							},
-						}));
-
-						// Auto switch to Merged stage after successful merge
-						console.log("Setting selectedStage to 'merged'");
-						setSelectedStage("merged");
-
-						notification.success({
-							message: "Auto merge completed",
-							description: "All sources have been auto merged successfully.",
-						});
-					}
+					notification.success({
+						message: "Auto merge completed",
+						description: "All sources have been auto merged successfully.",
+					});
 				}
 			} catch (error) {
 				console.error("Error in auto merge all sources:", error);
@@ -4448,7 +4440,8 @@ export default function ManualMergeNewPage() {
 	}
 
 	const canAutoMergeSources = Boolean(
-		selectedFile?.operationType === FileOperationType.ArchitectureDrawing &&
+		(selectedFile?.operationType === FileOperationType.ArchitectureDrawing ||
+			selectedFile?.operationType === FileOperationType.Quote) &&
 		!selectedFile.sourceMergeStarted,
 	);
 	const isSelectedFileCompleted = Boolean(
@@ -5145,7 +5138,10 @@ export default function ManualMergeNewPage() {
 														onOpenReferenceModal={
 															handleOpenReferenceModalWithStage
 														}
+														onAutoMergeFileLabels={handleRequestSourceMerge}
 														isFileCompleted={isSelectedFileCompleted}
+														canAutoMergeFileLabels={canAutoMergeSources}
+														hasUnresolvedConflicts={hasUnresolvedSourceConflicts}
 													/>
 												) : null}
 
