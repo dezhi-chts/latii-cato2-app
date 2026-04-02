@@ -209,6 +209,17 @@ export const addTakeOffResultItem = async (data: any) => {
 	}
 };
 
+export const deleteTakeOffResultItem = async (result_id: string) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id?result_id=${result_id}`;
+		const response = await http.delete(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error deleting take off result item:", error);
+		return { data: null, status: "error" };
+	}
+};
+
 export const getTakeOffSummaryStats = async (take_off_id: any) => {
 	try {
 		const url = `/project/take_off_result/stats?take_off_id=${take_off_id}`;

@@ -3,6 +3,7 @@
 import {
 	AppstoreOutlined,
 	CopyOutlined,
+	DeleteOutlined,
 	EditOutlined,
 	MergeCellsOutlined,
 	SearchOutlined,
@@ -12,6 +13,7 @@ import {
 	Badge,
 	Button,
 	Input,
+	Modal,
 	Popover,
 	Table,
 	Tooltip,
@@ -25,6 +27,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	updateTakeOffResultItem,
 	addTakeOffResultItem,
+	deleteTakeOffResultItem,
 } from "@/services/takeOffService";
 
 import {
@@ -110,6 +113,7 @@ export default function TakeoffItemsTable({
 	} | null>(null);
 	const [selectedRowKey, setSelectedRowKey] = useState<number | null>(null);
 	const [copyLoading, setCopyLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	useEffect(() => {
 		setTableData(items);
@@ -243,6 +247,43 @@ export default function TakeoffItemsTable({
 		} finally {
 			setCopyLoading(false);
 		}
+	};
+
+	const handleDeleteItem = (record: TakeoffItemRecord) => {
+		Modal.confirm({
+			title: "Delete Item",
+			content: `Are you sure you want to delete this item: ${getResultValue(record, "Label")}?`,
+			okText: "Delete",
+			okButtonProps: { danger: true },
+			cancelText: "Cancel",
+			onOk: async () => {
+				setDeleteLoading(true);
+				try {
+					const response = await deleteTakeOffResultItem(String(record.id));
+					if (response.status === "success") {
+						notification.success({
+							message: "Success",
+							description: "Item deleted successfully",
+						});
+						setTableData((prev) =>
+							prev.filter((item) => item.id !== record.id),
+						);
+					} else {
+						notification.error({
+							message: "Error",
+							description: "Failed to delete item",
+						});
+					}
+				} catch (error) {
+					notification.error({
+						message: "Error",
+						description: "Failed to delete item",
+					});
+				} finally {
+					setDeleteLoading(false);
+				}
+			},
+		});
 	};
 
 	const columns = useMemo<ColumnsType<TakeoffItemRecord>>(() => {
@@ -489,28 +530,42 @@ export default function TakeoffItemsTable({
 			fixed: "right",
 			align: "center",
 			render: (_, record: any) => {
-				let isNewItem = !record.single_file_merge_result_ids;
-				if (isNewItem) {
-					return null;
-				}
+				const isNewItem = !record.single_file_merge_result_ids;
 
 				return (
-					<div className="flex items-center justify-center gap-1">
-						<button
-							type="button"
-							className={`flex h-6 items-center gap-1 px-2 text-[10px] transition-colors`}
+					<div className="flex items-center justify-center gap-2">
+						<div className="w-[30px]">
+							{isNewItem ? (
+								<div></div>
+							) : (
+								<button
+									type="button"
+									className="flex h-6 items-center gap-1 px-2 text-[10px] transition-colors hover:opacity-70"
+									onClick={(event) => {
+										event.stopPropagation();
+										onOpenReferencePanel(record);
+									}}
+									aria-label="Open reference panel"
+								>
+									<Image
+										src="/assets/icons/file-refrence.svg"
+										alt=""
+										width={14}
+										height={14}
+									/>
+								</button>
+							)}
+						</div>
+						<Image
+							src="/assets/icons/delete.svg"
+							alt=""
+							width={15}
+							height={15}
 							onClick={(event) => {
 								event.stopPropagation();
-								onOpenReferencePanel(record);
+								handleDeleteItem(record);
 							}}
-						>
-							<Image
-								src="/assets/icons/file-refrence.svg"
-								alt=""
-								width={14}
-								height={14}
-							/>
-						</button>
+						/>
 					</div>
 				);
 			},
