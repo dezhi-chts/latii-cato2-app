@@ -232,6 +232,7 @@ interface TableItem {
 interface EvidenceItem {
 	id: number;
 	index: number;
+	itemIndex: number; // The index of the item this evidence belongs to (1-based for display)
 	item_id: number;
 	evidence_selected: boolean;
 	s3_url: string;
@@ -259,6 +260,15 @@ export default function ManualMergeModal({
 	const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
 	const [evidenceMap, setEvidenceMap] = useState<EvidenceDataMap>({});
 	const [loadingEvidences, setLoadingEvidences] = useState(false);
+
+	// Determine evidence fetch mode based on sourceType (computed, not state to avoid timing issues)
+	const evidenceFetchMode = useMemo(():
+		| "item_id"
+		| "take_off_result_item_id" => {
+		return isValidSourceType(sourceType)
+			? "item_id"
+			: "take_off_result_item_id";
+	}, [sourceType]);
 
 	const [confirming, setConfirming] = useState(false);
 	const [showKeepAllModal, setShowKeepAllModal] = useState(false);
@@ -299,24 +309,35 @@ export default function ManualMergeModal({
 		const fetchEvidencesForGroup = async () => {
 			if (!open || !activeGroup) return;
 
-			// Collect all item IDs from the active group
-			const itemIds: number[] = [];
-			activeGroup.items.forEach((item) => {
-				if (item.id) {
-					itemIds.push(item.id);
-				}
-			});
+			// Use the computed evidenceFetchMode to determine which field to use
+			const idsToFetch: number[] = [];
 
-			if (itemIds.length === 0) return;
+			if (evidenceFetchMode === "item_id") {
+				// Source-level merge: use item.id directly
+				activeGroup.items.forEach((item) => {
+					if (item.id) {
+						idsToFetch.push(item.id);
+					}
+				});
+			} else {
+				// File-level or takeoff-level merge: use take_off_result_item_id_list
+				activeGroup.items.forEach((item) => {
+					if (Array.isArray(item.take_off_result_item_id_list)) {
+						idsToFetch.push(...item.take_off_result_item_id_list);
+					}
+				});
+			}
+
+			if (idsToFetch.length === 0) return;
 
 			setLoadingEvidences(true);
 			try {
-				// Join item IDs with comma for the API call
-				const resultItemIds = itemIds.join(",");
+				// Join IDs with comma for the API call
+				const resultItemIds = idsToFetch.join(",");
 				const result = await getTakeOffEvidenceUrlsByIds(resultItemIds);
 
 				if (result.status === "success" && result.data) {
-					// The API returns a map with item IDs as keys
+					// The API returns a map with IDs as keys
 					setEvidenceMap(result.data as EvidenceDataMap);
 				}
 			} catch (error) {
@@ -327,7 +348,7 @@ export default function ManualMergeModal({
 		};
 
 		fetchEvidencesForGroup();
-	}, [open, activeGroup]);
+	}, [open, activeGroup, evidenceFetchMode]);
 
 	// Use template fields if available, otherwise fallback to getFieldsFromItems
 	const fields = useMemo(() => {
@@ -353,7 +374,11 @@ export default function ManualMergeModal({
 	const generateEvidenceList = useCallback(
 		(items: any[]) => {
 			const evidences: EvidenceItem[] = [];
-			items.forEach((item: any, index: number) => {
+			let evidenceIndex = 0;
+
+			items.forEach((item: any, itemIdx: number) => {
+				const itemIndex = itemIdx + 1; // 1-based index for display
+
 				// First try to get from evidence_msg (if available)
 				const msg = item.evidence_msg;
 				if (msg) {
@@ -365,8 +390,9 @@ export default function ManualMergeModal({
 								: "";
 					if (url) {
 						evidences.push({
-							id: msg.id || item.evidence_id || 0,
-							index,
+							id: msg.id || item.evidence_id || evidenceIndex,
+							index: evidenceIndex++,
+							itemIndex,
 							item_id: item.id,
 							evidence_selected: true,
 							s3_url: url,
@@ -376,29 +402,61 @@ export default function ManualMergeModal({
 					}
 				}
 
-				// Try to find evidence from evidenceMap using item.id as key
-				const itemId = String(item.id);
-				const matchedEvidence = evidenceMap[itemId];
-				if (matchedEvidence) {
-					const imageUrl =
-						matchedEvidence.evidence_url || matchedEvidence.s3_url;
-					if (imageUrl) {
-						evidences.push({
-							id: matchedEvidence.id,
-							index,
-							item_id: item.id,
-							evidence_selected: true,
-							s3_url: imageUrl,
-							type: matchedEvidence.type || "",
-						});
+				// Try to find evidence from evidenceMap based on fetch mode
+				if (evidenceFetchMode === "item_id") {
+					// Source-level merge: match using item.id (one evidence per item)
+					const itemId = String(item.id);
+					const matchedEvidence = evidenceMap[itemId];
+					if (matchedEvidence) {
+						const imageUrl =
+							matchedEvidence.evidence_url || matchedEvidence.s3_url;
+						if (imageUrl) {
+							evidences.push({
+								id: matchedEvidence.id,
+								index: evidenceIndex++,
+								itemIndex,
+								item_id: item.id,
+								evidence_selected: true,
+								s3_url: imageUrl,
+								type: matchedEvidence.type || "",
+							});
+							return;
+						}
+					}
+				} else {
+					// File-level or takeoff-level merge: match using take_off_result_item_id_list
+					// One item may have multiple take_off_result_item_ids, each with its own evidence
+					const takeOffResultItemIds = item.take_off_result_item_id_list || [];
+					let foundAny = false;
+					for (const resultItemId of takeOffResultItemIds) {
+						const matchedEvidence = evidenceMap[String(resultItemId)];
+						if (matchedEvidence) {
+							const imageUrl =
+								matchedEvidence.evidence_url || matchedEvidence.s3_url;
+							if (imageUrl) {
+								evidences.push({
+									id: matchedEvidence.id,
+									index: evidenceIndex++,
+									itemIndex,
+									item_id: item.id,
+									evidence_selected: true,
+									s3_url: imageUrl,
+									type: matchedEvidence.type || "",
+								});
+								foundAny = true;
+							}
+						}
+					}
+					if (foundAny) {
 						return;
 					}
 				}
 
 				// Fallback: add item without evidence image
 				evidences.push({
-					id: item.evidence_id || 0,
-					index,
+					id: item.evidence_id || evidenceIndex,
+					index: evidenceIndex++,
+					itemIndex,
 					item_id: item.id,
 					evidence_selected: true,
 					s3_url: "",
@@ -407,20 +465,23 @@ export default function ManualMergeModal({
 			});
 			setEvidenceList(evidences);
 		},
-		[evidenceMap],
+		[evidenceMap, evidenceFetchMode],
 	);
 
+	// Generate table data when activeGroup changes
 	useEffect(() => {
 		if (!activeGroup) return;
 		generateTableData(activeGroup.items);
-		generateEvidenceList(activeGroup.items);
-	}, [activeGroup, generateTableData, generateEvidenceList]);
+	}, [activeGroup, generateTableData]);
 
-	// Re-generate evidence list when evidenceMap is loaded
+	// Generate evidence list when activeGroup or evidenceMap changes
+	// Wait for evidenceMap to be loaded before generating evidence list
 	useEffect(() => {
-		if (!activeGroup || Object.keys(evidenceMap).length === 0) return;
+		if (!activeGroup) return;
+		// Always generate evidence list - if evidenceMap is empty, items will use fallback (no image)
+		// This ensures the list is updated when evidenceMap is loaded
 		generateEvidenceList(activeGroup.items);
-	}, [evidenceMap, activeGroup, generateEvidenceList]);
+	}, [activeGroup, evidenceMap, generateEvidenceList]);
 
 	useEffect(() => {
 		if (!activeGroup) return;
@@ -1065,15 +1126,15 @@ export default function ManualMergeModal({
 										<div className="mb-4 min-h-0 flex-1 overflow-y-auto">
 											{evidenceList.length > 0 ? (
 												<div className="flex flex-row flex-wrap gap-4">
-													{evidenceList.map((item, index) => (
+													{evidenceList.map((item) => (
 														<div
-															key={item.id}
+															key={`evidence-${item.index}-${item.id}`}
 															className="relative min-w-[30%] max-w-[32%] flex-1 overflow-hidden rounded-lg border border-primaryN30"
 														>
 															<div className="flex flex-row gap-3 p-3">
 																<div className="shrink-0">
 																	<span className="inline-block rounded bg-primaryN30 px-1.5 py-0.5 text-xs text-grey-normal">
-																		{item.index + 1}
+																		{item.itemIndex}
 																	</span>
 																</div>
 																<div className="flex-1 overflow-hidden">
@@ -1099,7 +1160,9 @@ export default function ManualMergeModal({
 																				? "border-forumBlue-normal bg-forumBlue-normal/10"
 																				: "border-transparent"
 																		}`}
-																		onClick={() => handleEvidenceChecked(index)}
+																		onClick={() =>
+																			handleEvidenceChecked(item.index)
+																		}
 																	>
 																		<svg
 																			width="18"

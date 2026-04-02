@@ -101,6 +101,14 @@ interface FileMergeStatus {
 	readyManualMergeCompleted: boolean;
 }
 
+// API merge status values
+type ApiMergeStatus =
+	| "no_merge"
+	| "within_source_start_merge"
+	| "within_source_end_not_between_sources_merge"
+	| "between_sources_start_merge"
+	| "between_sources_end_merge";
+
 interface MergeWorkflowFile {
 	id: number;
 	fileName: string;
@@ -120,9 +128,11 @@ interface MergeWorkflowFile {
 	readyManualMergeCompleted: boolean;
 	// Flag to indicate if file has no data (empty result from API)
 	hasNoData?: boolean;
-	// API-synced status flags (from getMergeStatusByTakeOffId)
-	withinSourceCompleted?: boolean; // within_source_completed - merged stage completed
-	betweenSourcesCompleted?: boolean; // between_sources_completed - ready stage completed
+	// API-synced status (from getMergeStatusByTakeOffId)
+	apiMergeStatus?: ApiMergeStatus;
+	// Derived boolean flags for backward compatibility
+	withinSourceCompleted?: boolean;
+	betweenSourcesCompleted?: boolean;
 }
 
 const ARCHITECTURE_SECTION_ORDER = [
@@ -1045,6 +1055,75 @@ const hasArchitectureMergeStarted = (file: MergeWorkflowFile) => {
 	);
 };
 
+// Get stage states from API merge status
+const getStageStatesFromApiStatus = (
+	status: ApiMergeStatus | undefined,
+): { unmerged: StepState; merged: StepState; ready: StepState } => {
+	switch (status) {
+		case "no_merge":
+			// No merge done yet - unmerged is active
+			return { unmerged: "active", merged: "pending", ready: "pending" };
+		case "within_source_start_merge":
+			// Auto Merge has been clicked - unmerged completed, merged active
+			return { unmerged: "completed", merged: "active", ready: "pending" };
+		case "within_source_end_not_between_sources_merge":
+			// Source-type merge completed, ready for file-level merge
+			return { unmerged: "completed", merged: "active", ready: "pending" };
+		case "between_sources_start_merge":
+			// Auto Merge File Labels clicked - merged completed, ready active
+			return { unmerged: "completed", merged: "completed", ready: "active" };
+		case "between_sources_end_merge":
+			// All merges completed - ready completed
+			return { unmerged: "completed", merged: "completed", ready: "completed" };
+		default:
+			// Default to initial state
+			return { unmerged: "active", merged: "pending", ready: "pending" };
+	}
+};
+
+// Get recommended stage from API merge status
+const getRecommendedStageFromApiStatus = (
+	status: ApiMergeStatus | undefined,
+): WorkflowStage => {
+	switch (status) {
+		case "no_merge":
+			return "unmerged";
+		case "within_source_start_merge":
+		case "within_source_end_not_between_sources_merge":
+			return "merged";
+		case "between_sources_start_merge":
+		case "between_sources_end_merge":
+			return "ready";
+		default:
+			return "unmerged";
+	}
+};
+
+// Derive boolean flags from API status for initialization
+const deriveBooleanFlagsFromApiStatus = (
+	status: ApiMergeStatus | undefined,
+): { withinSourceCompleted: boolean; betweenSourcesCompleted: boolean } => {
+	switch (status) {
+		case "no_merge":
+			// No merge done yet
+			return { withinSourceCompleted: false, betweenSourcesCompleted: false };
+		case "within_source_start_merge":
+			// Auto Merge has been executed - Unmerged stage completed
+			return { withinSourceCompleted: true, betweenSourcesCompleted: false };
+		case "within_source_end_not_between_sources_merge":
+			// Source-type merge completed
+			return { withinSourceCompleted: true, betweenSourcesCompleted: false };
+		case "between_sources_start_merge":
+			// Auto Merge File Labels has been executed - Merged stage completed
+			return { withinSourceCompleted: true, betweenSourcesCompleted: true };
+		case "between_sources_end_merge":
+			// All merges completed
+			return { withinSourceCompleted: true, betweenSourcesCompleted: true };
+		default:
+			return { withinSourceCompleted: false, betweenSourcesCompleted: false };
+	}
+};
+
 const getFileRowsForReadyMerge = (file: MergeWorkflowFile) => {
 	return file.sections.flatMap((section) => {
 		if (section.autoMergeStarted) {
@@ -1064,15 +1143,13 @@ const getFileStageState = (
 		return "completed";
 	}
 
-	// Use API-synced status if available (takes priority)
-	// within_source_completed = source-type internal merge completed (unmerged stage done)
-	// between_sources_completed = cross-source merge completed (merged stage done, ready stage done)
+	// Use internal state variables (withinSourceCompleted, betweenSourcesCompleted)
+	// These are initialized from API status and updated by page operations
 	if (
 		file.withinSourceCompleted !== undefined ||
 		file.betweenSourcesCompleted !== undefined
 	) {
 		if (stage === "unmerged") {
-			// Unmerged is completed if within_source_completed is true
 			return file.withinSourceCompleted ? "completed" : "active";
 		}
 
@@ -1080,8 +1157,6 @@ const getFileStageState = (
 			if (!file.withinSourceCompleted) {
 				return "pending";
 			}
-			// Merged is active if within_source completed but between_sources not completed
-			// Merged is completed if between_sources_completed is true
 			return file.betweenSourcesCompleted ? "completed" : "active";
 		}
 
@@ -1089,10 +1164,10 @@ const getFileStageState = (
 		if (!file.betweenSourcesCompleted) {
 			return "pending";
 		}
-		// Ready is completed if between_sources_completed is true and no pending rows
 		return file.readyPendingRows.length === 0 ? "completed" : "active";
 	}
 
+	// Fallback to local state for files without status flags
 	if (file.operationType === FileOperationType.ArchitectureDrawing) {
 		const hasStartedMerge = hasArchitectureMergeStarted(file);
 
@@ -1148,21 +1223,17 @@ const getRecommendedStage = (file: MergeWorkflowFile): WorkflowStage => {
 		return "ready";
 	}
 
-	// Use API-synced status if available (takes priority)
-	// This ensures completed files show the correct stage
+	// Use internal state variables (initialized from API, updated by page operations)
 	if (
 		file.withinSourceCompleted !== undefined ||
 		file.betweenSourcesCompleted !== undefined
 	) {
-		// If between_sources_completed is true, file is fully merged - show ready
 		if (file.betweenSourcesCompleted) {
 			return "ready";
 		}
-		// If within_source_completed is true but between_sources not, show merged
 		if (file.withinSourceCompleted) {
 			return "merged";
 		}
-		// Otherwise show unmerged
 		return "unmerged";
 	}
 
@@ -2411,10 +2482,7 @@ export default function ManualMergeNewPage() {
 
 	// Store merge status from API for use during initialization and updates
 	const mergeStatusRef = useRef<{
-		files: Record<
-			string,
-			{ within_source_completed: boolean; between_sources_completed: boolean }
-		>;
+		files: Record<string, { status: ApiMergeStatus }>;
 		take_off_completed: boolean;
 	} | null>(null);
 
@@ -2429,13 +2497,18 @@ export default function ManualMergeNewPage() {
 			return files.map((file) => {
 				const fileStatus = statusData.files[String(file.id)];
 				if (fileStatus) {
+					const apiStatus = fileStatus.status;
+					const { withinSourceCompleted, betweenSourcesCompleted } =
+						deriveBooleanFlagsFromApiStatus(apiStatus);
+
 					return {
 						...file,
-						withinSourceCompleted: fileStatus.within_source_completed,
-						betweenSourcesCompleted: fileStatus.between_sources_completed,
+						apiMergeStatus: apiStatus,
+						withinSourceCompleted,
+						betweenSourcesCompleted,
 						// Also sync sourceMergeStarted for compatibility
 						sourceMergeStarted:
-							fileStatus.between_sources_completed || file.sourceMergeStarted,
+							betweenSourcesCompleted || file.sourceMergeStarted,
 					};
 				}
 				return file;
@@ -2461,7 +2534,7 @@ export default function ManualMergeNewPage() {
 				return { targetFileId: firstFile.id, targetStage: "unmerged" };
 			}
 
-			// Find the first incomplete file
+			// Find the first incomplete file based on API status
 			for (const file of files) {
 				const fileStatus = statusData.files[String(file.id)];
 
@@ -2470,23 +2543,28 @@ export default function ManualMergeNewPage() {
 					return { targetFileId: file.id, targetStage: "unmerged" };
 				}
 
-				// Check completion status
-				const { within_source_completed, between_sources_completed } =
-					fileStatus;
+				const apiStatus = fileStatus.status;
 
-				// If within_source not completed, start at unmerged stage
-				// (need to do source-type merge first)
-				if (!within_source_completed) {
-					return { targetFileId: file.id, targetStage: "unmerged" };
+				// Determine target stage based on API status
+				switch (apiStatus) {
+					case "no_merge":
+						// No merge done yet - start at unmerged
+						return { targetFileId: file.id, targetStage: "unmerged" };
+					case "within_source_start_merge":
+						// Auto merge started - show merged stage
+						return { targetFileId: file.id, targetStage: "merged" };
+					case "within_source_end_not_between_sources_merge":
+						// Source merge done, ready for file-level merge - show merged stage
+						return { targetFileId: file.id, targetStage: "merged" };
+					case "between_sources_start_merge":
+						// File-level merge started - show ready stage
+						return { targetFileId: file.id, targetStage: "ready" };
+					case "between_sources_end_merge":
+						// File complete, continue to next file
+						continue;
+					default:
+						return { targetFileId: file.id, targetStage: "unmerged" };
 				}
-
-				// If within_source completed but between_sources not completed, start at merged stage
-				// (show source-type merge results, user can then do file-level merge)
-				if (!between_sources_completed) {
-					return { targetFileId: file.id, targetStage: "merged" };
-				}
-
-				// If both completed, this file is complete, continue to next file
 			}
 
 			// All files are complete - check if takeoff merge is done
@@ -2537,26 +2615,15 @@ export default function ManualMergeNewPage() {
 			const preferredFields = await resolveColumnNames(1);
 
 			// Step 3: Determine which file to load based on API status
-			// First, build a temporary list to determine the target file
-			const tempFilesForStatusCheck = projectFiles.map((file) => ({
-				id: file.id,
-				withinSourceCompleted:
-					mergeStatusRef.current?.files?.[String(file.id)]
-						?.within_source_completed,
-				betweenSourcesCompleted:
-					mergeStatusRef.current?.files?.[String(file.id)]
-						?.between_sources_completed,
-			}));
-
 			// Find the target file to load based on status
 			let targetFileToLoad = projectFiles[0];
 			if (mergeStatusRef.current?.files) {
 				for (const file of projectFiles) {
 					const fileStatus = mergeStatusRef.current.files[String(file.id)];
+					// If no status or not fully completed, this is the target file
 					if (
 						!fileStatus ||
-						!fileStatus.within_source_completed ||
-						!fileStatus.between_sources_completed
+						fileStatus.status !== "between_sources_end_merge"
 					) {
 						targetFileToLoad = file;
 						break;
@@ -2730,6 +2797,10 @@ export default function ManualMergeNewPage() {
 
 					// Get merge status for this file from ref
 					const fileStatus = mergeStatusRef.current?.files?.[String(fileId)];
+					const apiStatus = fileStatus?.status;
+					const derivedFlags = apiStatus
+						? deriveBooleanFlagsFromApiStatus(apiStatus)
+						: null;
 
 					setWorkflowFiles((current) =>
 						current.map((file) => {
@@ -2748,21 +2819,26 @@ export default function ManualMergeNewPage() {
 								},
 								hasNoData,
 								// Preserve or apply API status
+								apiMergeStatus: file.apiMergeStatus ?? apiStatus,
 								withinSourceCompleted:
 									file.withinSourceCompleted ??
-									fileStatus?.within_source_completed,
+									derivedFlags?.withinSourceCompleted,
 								betweenSourcesCompleted:
 									file.betweenSourcesCompleted ??
-									fileStatus?.between_sources_completed,
+									derivedFlags?.betweenSourcesCompleted,
 								sourceMergeStarted:
 									file.sourceMergeStarted ||
-									(fileStatus?.between_sources_completed ?? false),
+									(derivedFlags?.betweenSourcesCompleted ?? false),
 							};
 						}),
 					);
 				} else {
 					// API returned no data or failed
 					const fileStatus = mergeStatusRef.current?.files?.[String(fileId)];
+					const apiStatus = fileStatus?.status;
+					const derivedFlags = apiStatus
+						? deriveBooleanFlagsFromApiStatus(apiStatus)
+						: null;
 
 					setWorkflowFiles((current) =>
 						current.map((file) => {
@@ -2778,15 +2854,16 @@ export default function ManualMergeNewPage() {
 								},
 								hasNoData: true,
 								// Preserve or apply API status
+								apiMergeStatus: file.apiMergeStatus ?? apiStatus,
 								withinSourceCompleted:
 									file.withinSourceCompleted ??
-									fileStatus?.within_source_completed,
+									derivedFlags?.withinSourceCompleted,
 								betweenSourcesCompleted:
 									file.betweenSourcesCompleted ??
-									fileStatus?.between_sources_completed,
+									derivedFlags?.betweenSourcesCompleted,
 								sourceMergeStarted:
 									file.sourceMergeStarted ||
-									(fileStatus?.between_sources_completed ?? false),
+									(derivedFlags?.betweenSourcesCompleted ?? false),
 							};
 						}),
 					);
@@ -2808,13 +2885,7 @@ export default function ManualMergeNewPage() {
 		const result = await getMergeStatusByTakeOffId(Number(takeoffId));
 		if (result.status === "success" && result.data) {
 			const statusData = result.data as {
-				files: Record<
-					string,
-					{
-						within_source_completed: boolean;
-						between_sources_completed: boolean;
-					}
-				>;
+				files: Record<string, { status: ApiMergeStatus }>;
 				take_off_completed: boolean;
 			};
 			mergeStatusRef.current = statusData;
@@ -2855,7 +2926,9 @@ export default function ManualMergeNewPage() {
 
 		// Check if this file needs merged data loaded based on API status
 		const fileStatus = mergeStatusRef.current?.files?.[String(selectedFile.id)];
-		if (!fileStatus?.within_source_completed) {
+		const apiStatus = fileStatus?.status;
+		// File is at unmerged stage if status is no_merge or undefined
+		if (!apiStatus || apiStatus === "no_merge") {
 			// File is at unmerged stage, no need to load merged data
 			loadedFileDataRef.current.add(selectedFile.id);
 			return;
@@ -2927,9 +3000,12 @@ export default function ManualMergeNewPage() {
 					}
 				}
 
-				// If between_sources is completed, also load ready stage data
+				// If between_sources is completed (ready stage), also load ready stage data
+				const isBetweenSourcesCompleted =
+					apiStatus === "between_sources_start_merge" ||
+					apiStatus === "between_sources_end_merge";
 				if (
-					fileStatus.between_sources_completed &&
+					isBetweenSourcesCompleted &&
 					selectedFile.readyAutoMergedRows.length === 0 &&
 					selectedFile.readyPendingRows.length === 0
 				) {
@@ -3228,8 +3304,9 @@ export default function ManualMergeNewPage() {
 					updateWorkflowFile(fileId, (f) => ({
 						...f,
 						mergedSections,
-						// Update withinSourceCompleted to true after source-type merge is done
-						withinSourceCompleted: true,
+						// Update internal state flags after source-type auto merge is done
+						withinSourceCompleted: true, // Unmerged stage completed
+						betweenSourcesCompleted: false,
 						// Note: sourceMergeStarted should remain false here
 						// It should only be true when Ready stage merge is started
 						mergeStatus: {
@@ -3251,20 +3328,6 @@ export default function ManualMergeNewPage() {
 							),
 						},
 					}));
-
-					// Also update the merge status ref
-					if (mergeStatusRef.current?.files) {
-						const currentStatus = mergeStatusRef.current.files[
-							String(fileId)
-						] || {
-							within_source_completed: false,
-							between_sources_completed: false,
-						};
-						mergeStatusRef.current.files[String(fileId)] = {
-							...currentStatus,
-							within_source_completed: true,
-						};
-					}
 
 					// Auto switch to Merged stage after successful merge
 					console.log("Setting selectedStage to 'merged'");
@@ -3643,27 +3706,14 @@ export default function ManualMergeNewPage() {
 						readyAutoMergedRows: autoMergedRows,
 						readyPendingRows: pendingRows,
 						readyManualMergeCompleted: pendingRows.length === 0,
-						// Update betweenSourcesCompleted to true after file-level merge is done
-						betweenSourcesCompleted: true,
+						// Update internal state flags after file-level auto merge is done
+						withinSourceCompleted: true,
+						betweenSourcesCompleted: true, // Merged stage completed
 						mergeStatus: {
 							...file.mergeStatus,
 							readyDataLoaded: true,
 						},
 					}));
-
-					// Also update the merge status ref
-					if (mergeStatusRef.current?.files) {
-						const currentStatus = mergeStatusRef.current.files[
-							String(fileId)
-						] || {
-							within_source_completed: true,
-							between_sources_completed: false,
-						};
-						mergeStatusRef.current.files[String(fileId)] = {
-							...currentStatus,
-							between_sources_completed: true,
-						};
-					}
 
 					setSelectedStage("ready");
 					notification.success({
@@ -3836,22 +3886,21 @@ export default function ManualMergeNewPage() {
 									? {
 											...cloneWorkflowFiles([initialFile])[0],
 											sourceMergeStarted: false,
-											// Clear API-synced status flags
+											// Reset internal state flags to initial state
 											withinSourceCompleted: false,
 											betweenSourcesCompleted: false,
+											// Clear merged and ready data
+											mergedSections: [],
+											readyAutoMergedRows: [],
+											readyPendingRows: [],
 										}
 									: file,
 							),
 						);
 					}
 
-					// Also update the merge status ref
-					if (mergeStatusRef.current?.files?.[String(fileId)]) {
-						mergeStatusRef.current.files[String(fileId)] = {
-							within_source_completed: false,
-							between_sources_completed: false,
-						};
-					}
+					// Remove from loaded file data ref so it can be reloaded if needed
+					loadedFileDataRef.current.delete(fileId);
 
 					setSelectedStage("unmerged");
 					lastStageSyncedFileIdRef.current = fileId;
@@ -4562,7 +4611,7 @@ export default function ManualMergeNewPage() {
 														}}
 														loading={mergeAllLoading}
 													>
-														Merge All File Labels
+														Auto Merge All File Labels
 													</Button>
 												) : (
 													<Button
