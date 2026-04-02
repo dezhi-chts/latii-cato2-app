@@ -2,6 +2,8 @@
 
 import {
 	AppstoreOutlined,
+	CopyOutlined,
+	DeleteOutlined,
 	EditOutlined,
 	MergeCellsOutlined,
 	SearchOutlined,
@@ -11,6 +13,7 @@ import {
 	Badge,
 	Button,
 	Input,
+	Modal,
 	Popover,
 	Table,
 	Tooltip,
@@ -21,7 +24,11 @@ import Image from "next/image";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { updateField } from "@/services/projectService";
+import {
+	updateTakeOffResultItem,
+	addTakeOffResultItem,
+	deleteTakeOffResultItem,
+} from "@/services/takeOffService";
 
 import {
 	formatCellValue,
@@ -38,12 +45,13 @@ interface TakeoffItemsTableProps {
 	searchValue: string;
 	selectedItemId: number | null;
 	reconcileCount: number;
+	takeoffId: string;
 	onSearchChange: (value: string) => void;
 	onToggleStatus: (item: TakeoffItemRecord, checked: boolean) => void;
 	onSelectItem: (item: TakeoffItemRecord) => void;
 	onOpenReferencePanel: (item: TakeoffItemRecord) => void;
 	onOpenReconcile: () => void;
-	onRefreshItems?: () => void;
+	onRefreshItems?: () => Promise<void> | void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -89,6 +97,7 @@ export default function TakeoffItemsTable({
 	searchValue,
 	selectedItemId,
 	reconcileCount,
+	takeoffId,
 	onSearchChange,
 	onToggleStatus,
 	onSelectItem,
@@ -102,6 +111,9 @@ export default function TakeoffItemsTable({
 		rowId: number;
 		columnName: string;
 	} | null>(null);
+	const [selectedRowKey, setSelectedRowKey] = useState<number | null>(null);
+	const [copyLoading, setCopyLoading] = useState(false);
+	const [deleteLoading, setDeleteLoading] = useState(false);
 
 	useEffect(() => {
 		setTableData(items);
@@ -146,14 +158,132 @@ export default function TakeoffItemsTable({
 
 	const rowSelection: TableProps<TakeoffItemRecord>["rowSelection"] = {
 		type: "radio",
-		selectedRowKeys: selectedItemId ? [selectedItemId] : [],
-		onChange: (_, selectedRows) => {
-			const nextSelectedItem = selectedRows?.[0];
-			if (nextSelectedItem) {
-				onSelectItem(nextSelectedItem);
-			}
+		selectedRowKeys: selectedRowKey ? [selectedRowKey] : [],
+		onChange: (selectedKeys) => {
+			const key = selectedKeys?.[0] as number | undefined;
+			setSelectedRowKey(key ?? null);
 		},
 		columnWidth: 42,
+	};
+
+	const generateUniqueCopyLabel = (originalLabel: string): string => {
+		const allLabels = tableData.map((item) => {
+			const label = getResultValue(item, "Label");
+			return typeof label === "object"
+				? JSON.stringify(label)
+				: String(label ?? "").trim();
+		});
+
+		let newLabel = `${originalLabel} Copy`;
+		if (!allLabels.includes(newLabel)) {
+			return newLabel;
+		}
+
+		let counter = 1;
+		while (allLabels.includes(`${originalLabel} Copy ${counter}`)) {
+			counter++;
+		}
+		return `${originalLabel} Copy ${counter}`;
+	};
+
+	const handleCopyItem = async () => {
+		if (!selectedRowKey) {
+			notification.warning({
+				message: "Warning",
+				description: "Please select an item to copy",
+			});
+			return;
+		}
+
+		const selectedItem = tableData.find((item) => item.id === selectedRowKey);
+		if (!selectedItem) {
+			notification.warning({
+				message: "Warning",
+				description: "Selected item not found",
+			});
+			return;
+		}
+
+		const originalResult = parseItemResult(selectedItem.result);
+		const originalLabel = String(originalResult["Label"] ?? "").trim();
+		const newLabel = generateUniqueCopyLabel(originalLabel);
+
+		const newResult = {
+			...originalResult,
+			Label: newLabel,
+		};
+
+		const requestBody = {
+			take_off_id: takeoffId,
+			single_file_merge_result_ids: "",
+			take_off_result_item_ids: "",
+			file_source_merge_result_ids: "",
+			result: JSON.stringify(newResult),
+			is_deleted: false,
+			is_merged: false,
+		};
+
+		setCopyLoading(true);
+		try {
+			const response = await addTakeOffResultItem(requestBody);
+			if (response.status === "success") {
+				notification.success({
+					message: "Success",
+					description: "Item copied successfully",
+				});
+				setSelectedRowKey(null);
+				await onRefreshItems?.();
+			} else {
+				notification.error({
+					message: "Error",
+					description: "Failed to copy item",
+				});
+			}
+		} catch (error) {
+			notification.error({
+				message: "Error",
+				description: "Failed to copy item",
+			});
+		} finally {
+			setCopyLoading(false);
+		}
+	};
+
+	const handleDeleteItem = (record: TakeoffItemRecord) => {
+		Modal.confirm({
+			title: "Delete Item",
+			content: `Are you sure you want to delete this item: ${getResultValue(record, "Label")}?`,
+			okText: "Delete",
+			okButtonProps: { danger: true },
+			cancelText: "Cancel",
+			onOk: async () => {
+				setDeleteLoading(true);
+				try {
+					const response = await deleteTakeOffResultItem(String(record.id));
+					if (response.status === "success") {
+						notification.success({
+							message: "Success",
+							description: "Item deleted successfully",
+						});
+						setTableData((prev) =>
+							prev.filter((item) => item.id !== record.id),
+						);
+					} else {
+						notification.error({
+							message: "Error",
+							description: "Failed to delete item",
+						});
+					}
+				} catch (error) {
+					notification.error({
+						message: "Error",
+						description: "Failed to delete item",
+					});
+				} finally {
+					setDeleteLoading(false);
+				}
+			},
+		});
 	};
 
 	const columns = useMemo<ColumnsType<TakeoffItemRecord>>(() => {
@@ -203,24 +333,47 @@ export default function TakeoffItemsTable({
 									typeof originalValue === "object"
 										? JSON.stringify(originalValue)
 										: String(originalValue ?? "");
-								const normalizedNextValue = event.target.value;
+								const normalizedNextValue = event.target.value.trim();
 
 								if (normalizedOriginalValue === normalizedNextValue) {
 									return;
 								}
 
+								// Check for duplicate Label
+								if (fieldName === "Label") {
+									const isDuplicate = tableData.some((item) => {
+										if (item.id === record.id) return false;
+										const itemLabel = getResultValue(item, "Label");
+										const normalizedItemLabel =
+											typeof itemLabel === "object"
+												? JSON.stringify(itemLabel)
+												: String(itemLabel ?? "").trim();
+										return normalizedItemLabel === normalizedNextValue;
+									});
+
+									if (isDuplicate) {
+										notification.warning({
+											message: "Warning",
+											description:
+												"Label already exists, please enter a different value",
+										});
+										return;
+									}
+								}
+
+								const originalResult = currentItem.result;
 								const nextResultObject = {
 									...parseItemResult(currentItem.result),
 									[fieldName]: normalizedNextValue,
 								};
-								const nextResult = JSON.stringify(nextResultObject);
 
+								// Optimistically update UI
 								setTableData((prev) => {
 									return prev.map((item) => {
 										if (item.id === record.id) {
 											return {
 												...item,
-												result: nextResult,
+												result: nextResultObject,
 											};
 										}
 
@@ -228,13 +381,32 @@ export default function TakeoffItemsTable({
 									});
 								});
 
-								const response = await updateField(record.id, nextResult);
-								if (response) {
+								// Call API
+								const response = await updateTakeOffResultItem(
+									String(record.id),
+									{ result: nextResultObject },
+								);
+
+								if (response.status === "success") {
 									if (fieldName === "Label") {
 										onRefreshItems?.();
 									}
 									return;
 								}
+
+								// Rollback on failure
+								setTableData((prev) => {
+									return prev.map((item) => {
+										if (item.id === record.id) {
+											return {
+												...item,
+												result: originalResult,
+											};
+										}
+
+										return item;
+									});
+								});
 
 								notification.error({
 									message: "Error",
@@ -292,16 +464,7 @@ export default function TakeoffItemsTable({
 					normalizedFieldName === "sub label" ||
 					normalizedFieldName === "sub-label" ||
 					normalizedFieldName === "sublabel";
-				let title = field?.name || "";
-				const splitArr = title.split(".");
-
-				if (splitArr.length > 1) {
-					title = splitArr
-						.map((item, index) => {
-							return index === 0 ? `${item}\n` : item;
-						})
-						.join("");
-				}
+				const title = field?.name || "";
 
 				const columnWidth = getColumnWidth(title);
 
@@ -359,37 +522,50 @@ export default function TakeoffItemsTable({
 		};
 
 		const evidenceColumn: ColumnsType<TakeoffItemRecord>[number] = {
-			title: <div className="text-center text-xs text-grey-normal" />,
+			title: (
+				<div className="text-center text-xs text-grey-normal">Reference</div>
+			),
 			key: "evidences",
 			width: 146,
 			fixed: "right",
 			align: "center",
-			render: (_, record) => {
-				const evidenceCount = getEvidenceIds(record).length;
+			render: (_, record: any) => {
+				const isNewItem = !record.single_file_merge_result_ids;
 
 				return (
-					<div className="flex items-center justify-center gap-1">
-						<button
-							type="button"
-							disabled={!evidenceCount}
-							className={`flex h-6 items-center gap-1 px-2 text-[10px] transition-colors`}
+					<div className="flex items-center justify-center gap-2">
+						<div className="w-[30px]">
+							{isNewItem ? (
+								<div></div>
+							) : (
+								<button
+									type="button"
+									className="flex h-6 items-center gap-1 px-2 text-[10px] transition-colors hover:opacity-70"
+									onClick={(event) => {
+										event.stopPropagation();
+										onOpenReferencePanel(record);
+									}}
+									aria-label="Open reference panel"
+								>
+									<Image
+										src="/assets/icons/file-refrence.svg"
+										alt=""
+										width={14}
+										height={14}
+									/>
+								</button>
+							)}
+						</div>
+						<Image
+							src="/assets/icons/delete.svg"
+							alt=""
+							width={15}
+							height={15}
 							onClick={(event) => {
 								event.stopPropagation();
-								if (evidenceCount) {
-									onOpenReferencePanel(record);
-								}
+								handleDeleteItem(record);
 							}}
-						>
-							<Image
-								src="/assets/icons/file-refrence.svg"
-								alt=""
-								width={14}
-								height={14}
-							/>
-							<span className="rounded-md bg-loadingGray px-[6px] text-[8px] leading-4 text-grey-dark">
-								{evidenceCount}
-							</span>
-						</button>
+						/>
 					</div>
 				);
 			},
@@ -399,7 +575,7 @@ export default function TakeoffItemsTable({
 			labelColumn,
 			...leftPinnedColumns,
 			...regularColumns,
-			statusColumn,
+			//statusColumn,
 			evidenceColumn,
 		];
 	}, [
@@ -424,40 +600,17 @@ export default function TakeoffItemsTable({
 					/>
 					<Button
 						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<EyeOutlined />}
-						onClick={() => onSearchChange("")}
+						icon={<CopyOutlined />}
+						loading={copyLoading}
+						onClick={handleCopyItem}
 					>
-						Show All
-					</Button>
-					<Button
-						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<AppstoreOutlined />}
-					>
-						Columns
-					</Button>
-					<Button
-						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<EditOutlined />}
-					>
-						Quick Edit
+						Copy Item
 					</Button>
 				</div>
-
-				<Button
-					className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-					onClick={onOpenReconcile}
-				>
-					Reconcile
-					<Badge
-						count={reconcileCount}
-						overflowCount={999}
-						className="ml-2 [&_.ant-badge-count]:!bg-[#717171] [&_.ant-badge-count]:!text-white [&_.ant-badge-count]:!shadow-none"
-					/>
-				</Button>
 			</div>
 
 			<div className="flex min-h-0 flex-1">
-				<div className="rounded-l-lg h-[calc(100vh-315px)] border-[3px] border-forumBlue-normal" />
+				<div className="rounded-l-lg h-[calc(100vh-310px)] border-[3px] border-forumBlue-normal" />
 				<div className="min-h-0 flex-1 overflow-hidden">
 					<Table<TakeoffItemRecord>
 						rowKey={(record) => record?.id}
@@ -465,14 +618,15 @@ export default function TakeoffItemsTable({
 						loading={loading}
 						columns={columns}
 						dataSource={filteredItems}
-						pagination={{
-							current: currentPage,
-							pageSize: 30,
-							total: filteredItems.length,
-							position: ["bottomRight"],
-							showSizeChanger: false,
-							onChange: (page) => setCurrentPage(page),
-						}}
+						// pagination={{
+						// 	current: currentPage,
+						// 	pageSize: 30,
+						// 	total: filteredItems.length,
+						// 	position: ["bottomRight"],
+						// 	showSizeChanger: false,
+						// 	onChange: (page) => setCurrentPage(page),
+						// }}
+						pagination={false}
 						scroll={{ x: "max-content", y: "calc(100vh - 355px)" }}
 						onRow={(record) => ({
 							onClick: () => onSelectItem(record),

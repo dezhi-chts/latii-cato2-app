@@ -14,6 +14,7 @@ interface TakeoffListHeaderProps {
 	files: ProjectFileRecord[];
 	selectedFileId: number;
 	summaryStats: SummaryStats;
+	downloadLoading?: boolean;
 	onSelectFile: (fileId: number) => void;
 	onResetTakeoff: () => void;
 	onDownload: () => void;
@@ -24,6 +25,7 @@ export default function TakeoffListHeader({
 	files,
 	selectedFileId,
 	summaryStats,
+	downloadLoading = false,
 	onSelectFile,
 	onResetTakeoff,
 	onDownload,
@@ -81,12 +83,12 @@ export default function TakeoffListHeader({
 					}}
 					trigger={["click"]}
 				>
-					<Button
+					{/* <Button
 						className="!h-[32px] !rounded-md !border-primaryN30 !px-3 !text-xs !text-grey-dark"
 						icon={<FileSearchOutlined />}
 					>
 						Files
-					</Button>
+					</Button> */}
 				</Dropdown>
 			</div>
 
@@ -104,25 +106,25 @@ export default function TakeoffListHeader({
 				<div className="flex items-center gap-10">
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.items || 0}
+							{summaryStats?.items ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Items</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.products || 0}
+							{summaryStats?.products ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Products</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.systems || 0}
+							{summaryStats?.systems ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Systems</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.boxedItems || 0}
+							{summaryStats?.boxed_items ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Boxed Items</span>
 					</div>
@@ -139,6 +141,7 @@ export default function TakeoffListHeader({
 				<Button
 					className="custom-primary-btn !w-auto !px-4"
 					icon={<DownloadOutlined />}
+					loading={downloadLoading}
 					onClick={onDownload}
 				>
 					Download

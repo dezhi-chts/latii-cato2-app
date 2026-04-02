@@ -47,6 +47,12 @@ const actionsField = {
 
 type Category = "Projects" | "Take Offs";
 
+// import { getTakeOffResultByFile } from "@/services/mergeService";
+// (async () => {
+//   const res =  await getTakeOffResultByFile(300, 392);
+//   console.log(res);
+// })();
+
 const Home = () => {
   const router = useRouter();
 
