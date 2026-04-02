@@ -32,6 +32,7 @@ import {
 
 import {
 	formatCellValue,
+	formatDisplayValue,
 	getEvidenceIds,
 	getResultValue,
 	parseItemResult,
@@ -289,10 +290,7 @@ export default function TakeoffItemsTable({
 	const columns = useMemo<ColumnsType<TakeoffItemRecord>>(() => {
 		const renderField = (record: TakeoffItemRecord, fieldName: string) => {
 			const fieldValue = getResultValue(record, fieldName);
-			const displayValue =
-				typeof fieldValue === "object"
-					? JSON.stringify(fieldValue)
-					: formatCellValue(fieldValue);
+			const displayValue = formatDisplayValue(fieldValue);
 			const isEditing =
 				editingCell?.rowId === record.id &&
 				editingCell?.columnName === fieldName;

@@ -71,6 +71,175 @@ export const formatCellValue = (value: unknown) => {
 	return String(value);
 };
 
+/**
+ * Format nested object into readable string
+ * e.g., { Type: "A", Size: "10" } => "Type: A, Size: 10"
+ */
+export const formatNestedObject = (obj: Record<string, unknown>): string => {
+	const parts: string[] = [];
+	for (const [key, val] of Object.entries(obj)) {
+		if (val === null || val === undefined || val === "") {
+			continue;
+		}
+		if (typeof val === "object" && val !== null) {
+			const nestedStr = formatNestedObject(val as Record<string, unknown>);
+			if (nestedStr && nestedStr !== "-") {
+				parts.push(`${key}: ${nestedStr}`);
+			}
+		} else {
+			parts.push(`${key}: ${String(val)}`);
+		}
+	}
+	return parts.length > 0 ? parts.join(", ") : "-";
+};
+
+/**
+ * Format value for display, handling arrays and nested objects
+ */
+export const formatDisplayValue = (value: unknown): string => {
+	if (value === null || value === undefined || value === "") {
+		return "-";
+	}
+
+	if (Array.isArray(value)) {
+		return value
+			.map((item) => {
+				if (typeof item === "object" && item !== null) {
+					return formatNestedObject(item as Record<string, unknown>);
+				}
+				return String(item);
+			})
+			.join(" / ");
+	}
+
+	if (typeof value === "object") {
+		return formatNestedObject(value as Record<string, unknown>);
+	}
+
+	return String(value);
+};
+
+/**
+ * Get value from nested object using dot notation path
+ * e.g., getNestedValue(obj, "Glass.Type") => obj.Glass.Type
+ */
+export const getNestedValue = (
+	obj: Record<string, unknown>,
+	path: string,
+): unknown => {
+	const parts = path.split(".");
+	let current: unknown = obj;
+
+	for (const part of parts) {
+		if (current === null || current === undefined) {
+			return undefined;
+		}
+		if (typeof current !== "object") {
+			return undefined;
+		}
+		current = (current as Record<string, unknown>)[part];
+	}
+
+	return current;
+};
+
+/**
+ * Normalize field name to standard format
+ */
+export const normalizeFieldName = (fieldName: string) => {
+	const lowered = fieldName.trim().toLowerCase();
+
+	if (lowered === "label") {
+		return "Label";
+	}
+
+	if (
+		lowered === "sub-label" ||
+		lowered === "sublabel" ||
+		lowered === "sub_label" ||
+		lowered === "sub label"
+	) {
+		return "Sub Label";
+	}
+
+	return fieldName;
+};
+
+/**
+ * Get display value by field name, supporting:
+ * 1. Direct field access
+ * 2. Dot notation for nested fields (e.g., "Glass.Type")
+ * 3. Searching in nested objects
+ * 4. Alternative field name formats
+ */
+export const getDisplayValueByField = (
+	result: Record<string, unknown>,
+	fieldName: string,
+): string => {
+	// Handle Sub Label variations
+	if (fieldName === "Sub Label") {
+		return formatDisplayValue(
+			result["Sub Label"] ??
+				result["Sub-Label"] ??
+				result["Sublabel"] ??
+				result["sub_label"],
+		);
+	}
+
+	// 1. Direct field access (exact match)
+	if (result[fieldName] !== undefined) {
+		return formatDisplayValue(result[fieldName]);
+	}
+
+	// 2. Check if fieldName contains dot notation (nested field path)
+	if (fieldName.includes(".")) {
+		const value = getNestedValue(result, fieldName);
+		if (value !== undefined) {
+			return formatDisplayValue(value);
+		}
+	}
+
+	// 3. Try to find the field in nested objects
+	for (const [key, val] of Object.entries(result)) {
+		if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+			const nestedResult = val as Record<string, unknown>;
+			if (nestedResult[fieldName] !== undefined) {
+				return formatDisplayValue(nestedResult[fieldName]);
+			}
+			// Recursively search deeper nested objects
+			for (const [, nestedVal] of Object.entries(nestedResult)) {
+				if (
+					typeof nestedVal === "object" &&
+					nestedVal !== null &&
+					!Array.isArray(nestedVal)
+				) {
+					const deepNestedResult = nestedVal as Record<string, unknown>;
+					if (deepNestedResult[fieldName] !== undefined) {
+						return formatDisplayValue(deepNestedResult[fieldName]);
+					}
+				}
+			}
+		}
+	}
+
+	// 4. Try alternative field name formats for dot notation
+	if (fieldName.includes(".")) {
+		const parts = fieldName.split(".");
+		for (let i = parts.length - 1; i >= 0; i--) {
+			const partialPath = parts.slice(i).join(".");
+			const value = getNestedValue(result, partialPath);
+			if (value !== undefined) {
+				return formatDisplayValue(value);
+			}
+			if (i === parts.length - 1 && result[parts[i]] !== undefined) {
+				return formatDisplayValue(result[parts[i]]);
+			}
+		}
+	}
+
+	return "-";
+};
+
 export const getEvidenceIds = (item?: TakeoffItemRecord | null) => {
 	return item?.evidence_id_list || [];
 };
