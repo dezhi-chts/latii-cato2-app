@@ -192,18 +192,6 @@ const createMockTakeoffItem = (
 	},
 });
 
-const MOCK_ARCHITECTURE_RESULT = testData.Arch_data;
-
-const MOCK_QUOTE_RESULT = testData.Quote_data;
-
-const MOCK_PROJECT_FILES: (ProjectFileRecord & { operation_type?: string })[] =
-	testData.file_list;
-
-const MOCK_FILE_RESULT_PAYLOADS: Record<number, unknown> = {
-	380: MOCK_ARCHITECTURE_RESULT,
-	381: MOCK_QUOTE_RESULT,
-};
-
 function TruncatedTextCell({ value }: { value: string }) {
 	const divRef = useRef<HTMLDivElement>(null);
 	const [isTruncated, setIsTruncated] = useState(false);
@@ -5141,7 +5129,9 @@ export default function ManualMergeNewPage() {
 														onAutoMergeFileLabels={handleRequestSourceMerge}
 														isFileCompleted={isSelectedFileCompleted}
 														canAutoMergeFileLabels={canAutoMergeSources}
-														hasUnresolvedConflicts={hasUnresolvedSourceConflicts}
+														hasUnresolvedConflicts={
+															hasUnresolvedSourceConflicts
+														}
 													/>
 												) : null}
 
@@ -5180,7 +5170,7 @@ export default function ManualMergeNewPage() {
 			{showOriginalRefModal && (
 				<OriginalItemReferenceModal
 					open={showOriginalRefModal}
-					files={MOCK_PROJECT_FILES || []}
+					files={[]}
 					projectId={projectId}
 					item={originalRefItem}
 					onClose={() => {
@@ -5193,7 +5183,7 @@ export default function ManualMergeNewPage() {
 			<MergedItemReferenceModal
 				open={showMergedRefModal}
 				projectId={projectId}
-				files={MOCK_PROJECT_FILES || []}
+				files={[]}
 				mergedItem={mergedRefItem}
 				onClose={() => {
 					setShowMergedRefModal(false);

@@ -14,6 +14,7 @@ interface TakeoffListHeaderProps {
 	files: ProjectFileRecord[];
 	selectedFileId: number;
 	summaryStats: SummaryStats;
+	downloadLoading?: boolean;
 	onSelectFile: (fileId: number) => void;
 	onResetTakeoff: () => void;
 	onDownload: () => void;
@@ -24,6 +25,7 @@ export default function TakeoffListHeader({
 	files,
 	selectedFileId,
 	summaryStats,
+	downloadLoading = false,
 	onSelectFile,
 	onResetTakeoff,
 	onDownload,
@@ -81,12 +83,12 @@ export default function TakeoffListHeader({
 					}}
 					trigger={["click"]}
 				>
-					<Button
+					{/* <Button
 						className="!h-[32px] !rounded-md !border-primaryN30 !px-3 !text-xs !text-grey-dark"
 						icon={<FileSearchOutlined />}
 					>
 						Files
-					</Button>
+					</Button> */}
 				</Dropdown>
 			</div>
 
@@ -139,6 +141,7 @@ export default function TakeoffListHeader({
 				<Button
 					className="custom-primary-btn !w-auto !px-4"
 					icon={<DownloadOutlined />}
+					loading={downloadLoading}
 					onClick={onDownload}
 				>
 					Download

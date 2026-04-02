@@ -161,3 +161,50 @@ export const getTakeOffEvidenceUrlsByIds = async (result_item_ids: string) => {
 		return { data: null, status: "error" };
 	}
 };
+
+export const downloadTakeOffResult = async (take_off_id: string) => {
+	try {
+		const url = `/project/take_off_result/download?take_off_id=${take_off_id}`;
+		const response = await http.post(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error downloading take off result:", error);
+		return { data: null, status: "error" };
+	}
+};
+
+export const resetTakeOff = async (take_off_id: string, file_ids: string) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/reset_take_off_and_hard_delete_by_take_off_and_files?take_off_id=${take_off_id}&file_ids=${file_ids}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error(
+			"Error resetting take off and hard deleting by take off and files:",
+			error,
+		);
+		return { data: null, status: "error" };
+	}
+};
+
+export const updateTakeOffResultItem = async (result_id: string, data: any) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/update_multiple_files_merge_result_by_id?result_id=${result_id}`;
+		const response = await http.post(url, data);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error updating take off result item:", error);
+		return { data: null, status: "error" };
+	}
+};
+
+export const addTakeOffResultItem = async (data: any) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/create_multiple_files_merge_result`;
+		const response = await http.post(url, data);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error adding take off result item:", error);
+		return { data: null, status: "error" };
+	}
+};

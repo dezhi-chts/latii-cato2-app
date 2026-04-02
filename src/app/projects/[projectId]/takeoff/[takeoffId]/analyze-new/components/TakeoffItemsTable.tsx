@@ -21,7 +21,7 @@ import Image from "next/image";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { updateField } from "@/services/projectService";
+import { updateTakeOffResultItem } from "@/services/takeOffService";
 
 import {
 	formatCellValue,
@@ -203,24 +203,47 @@ export default function TakeoffItemsTable({
 									typeof originalValue === "object"
 										? JSON.stringify(originalValue)
 										: String(originalValue ?? "");
-								const normalizedNextValue = event.target.value;
+								const normalizedNextValue = event.target.value.trim();
 
 								if (normalizedOriginalValue === normalizedNextValue) {
 									return;
 								}
 
+								// Check for duplicate Label
+								if (fieldName === "Label") {
+									const isDuplicate = tableData.some((item) => {
+										if (item.id === record.id) return false;
+										const itemLabel = getResultValue(item, "Label");
+										const normalizedItemLabel =
+											typeof itemLabel === "object"
+												? JSON.stringify(itemLabel)
+												: String(itemLabel ?? "").trim();
+										return normalizedItemLabel === normalizedNextValue;
+									});
+
+									if (isDuplicate) {
+										notification.warning({
+											message: "Warning",
+											description:
+												"Label already exists, please enter a different value",
+										});
+										return;
+									}
+								}
+
+								const originalResult = currentItem.result;
 								const nextResultObject = {
 									...parseItemResult(currentItem.result),
 									[fieldName]: normalizedNextValue,
 								};
-								const nextResult = JSON.stringify(nextResultObject);
 
+								// Optimistically update UI
 								setTableData((prev) => {
 									return prev.map((item) => {
 										if (item.id === record.id) {
 											return {
 												...item,
-												result: nextResult,
+												result: nextResultObject,
 											};
 										}
 
@@ -228,13 +251,32 @@ export default function TakeoffItemsTable({
 									});
 								});
 
-								const response = await updateField(record.id, nextResult);
-								if (response) {
+								// Call API
+								const response = await updateTakeOffResultItem(
+									String(record.id),
+									nextResultObject,
+								);
+
+								if (response.status === "success") {
 									if (fieldName === "Label") {
 										onRefreshItems?.();
 									}
 									return;
 								}
+
+								// Rollback on failure
+								setTableData((prev) => {
+									return prev.map((item) => {
+										if (item.id === record.id) {
+											return {
+												...item,
+												result: originalResult,
+											};
+										}
+
+										return item;
+									});
+								});
 
 								notification.error({
 									message: "Error",
@@ -292,16 +334,7 @@ export default function TakeoffItemsTable({
 					normalizedFieldName === "sub label" ||
 					normalizedFieldName === "sub-label" ||
 					normalizedFieldName === "sublabel";
-				let title = field?.name || "";
-				const splitArr = title.split(".");
-
-				if (splitArr.length > 1) {
-					title = splitArr
-						.map((item, index) => {
-							return index === 0 ? `${item}\n` : item;
-						})
-						.join("");
-				}
+				const title = field?.name || "";
 
 				const columnWidth = getColumnWidth(title);
 
@@ -359,25 +392,22 @@ export default function TakeoffItemsTable({
 		};
 
 		const evidenceColumn: ColumnsType<TakeoffItemRecord>[number] = {
-			title: <div className="text-center text-xs text-grey-normal" />,
+			title: (
+				<div className="text-center text-xs text-grey-normal">Reference</div>
+			),
 			key: "evidences",
 			width: 146,
 			fixed: "right",
 			align: "center",
 			render: (_, record) => {
-				const evidenceCount = getEvidenceIds(record).length;
-
 				return (
 					<div className="flex items-center justify-center gap-1">
 						<button
 							type="button"
-							disabled={!evidenceCount}
 							className={`flex h-6 items-center gap-1 px-2 text-[10px] transition-colors`}
 							onClick={(event) => {
 								event.stopPropagation();
-								if (evidenceCount) {
-									onOpenReferencePanel(record);
-								}
+								onOpenReferencePanel(record);
 							}}
 						>
 							<Image
@@ -386,9 +416,6 @@ export default function TakeoffItemsTable({
 								width={14}
 								height={14}
 							/>
-							<span className="rounded-md bg-loadingGray px-[6px] text-[8px] leading-4 text-grey-dark">
-								{evidenceCount}
-							</span>
 						</button>
 					</div>
 				);
@@ -399,7 +426,7 @@ export default function TakeoffItemsTable({
 			labelColumn,
 			...leftPinnedColumns,
 			...regularColumns,
-			statusColumn,
+			//statusColumn,
 			evidenceColumn,
 		];
 	}, [
@@ -422,7 +449,7 @@ export default function TakeoffItemsTable({
 						className="!h-[32px] !w-[365px] !rounded-md !border-primaryN30 text-xs"
 						placeholder="Search label"
 					/>
-					<Button
+					{/* <Button
 						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
 						icon={<EyeOutlined />}
 						onClick={() => onSearchChange("")}
@@ -440,10 +467,10 @@ export default function TakeoffItemsTable({
 						icon={<EditOutlined />}
 					>
 						Quick Edit
-					</Button>
+					</Button> */}
 				</div>
 
-				<Button
+				{/* <Button
 					className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
 					onClick={onOpenReconcile}
 				>
@@ -453,26 +480,27 @@ export default function TakeoffItemsTable({
 						overflowCount={999}
 						className="ml-2 [&_.ant-badge-count]:!bg-[#717171] [&_.ant-badge-count]:!text-white [&_.ant-badge-count]:!shadow-none"
 					/>
-				</Button>
+				</Button> */}
 			</div>
 
 			<div className="flex min-h-0 flex-1">
-				<div className="rounded-l-lg h-[calc(100vh-315px)] border-[3px] border-forumBlue-normal" />
+				<div className="rounded-l-lg h-[calc(100vh-310px)] border-[3px] border-forumBlue-normal" />
 				<div className="min-h-0 flex-1 overflow-hidden">
 					<Table<TakeoffItemRecord>
 						rowKey={(record) => record?.id}
-						rowSelection={rowSelection}
+						//rowSelection={rowSelection}
 						loading={loading}
 						columns={columns}
 						dataSource={filteredItems}
-						pagination={{
-							current: currentPage,
-							pageSize: 30,
-							total: filteredItems.length,
-							position: ["bottomRight"],
-							showSizeChanger: false,
-							onChange: (page) => setCurrentPage(page),
-						}}
+						// pagination={{
+						// 	current: currentPage,
+						// 	pageSize: 30,
+						// 	total: filteredItems.length,
+						// 	position: ["bottomRight"],
+						// 	showSizeChanger: false,
+						// 	onChange: (page) => setCurrentPage(page),
+						// }}
+						pagination={false}
 						scroll={{ x: "max-content", y: "calc(100vh - 355px)" }}
 						onRow={(record) => ({
 							onClick: () => onSelectItem(record),
