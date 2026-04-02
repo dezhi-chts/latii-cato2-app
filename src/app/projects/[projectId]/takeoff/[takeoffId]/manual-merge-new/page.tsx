@@ -93,6 +93,8 @@ interface SourceMergeStatus {
 interface FileMergeStatus {
 	// Stage 1: Unmerged data loaded
 	unmergedDataLoaded: boolean;
+	// Stage 2: Merged data loaded (source merge results)
+	mergedDataLoaded: boolean;
 	// Stage 2: Source merge status (for ArchDrawing: 3 sources, for Quote: 1 source)
 	sourceMergeStatus: Record<string, SourceMergeStatus>;
 	// Stage 3: All sources merged into one
@@ -1136,6 +1138,10 @@ const getArchitectureResolved = (file: MergeWorkflowFile) => {
 };
 
 const getQuoteSection = (file: MergeWorkflowFile) => {
+	// Prefer mergedSections if available (from API merged data)
+	if (file.mergedSections && file.mergedSections.length > 0) {
+		return file.mergedSections[0];
+	}
 	return file.sections[0];
 };
 
@@ -2479,6 +2485,7 @@ export default function ManualMergeNewPage() {
 
 			return {
 				unmergedDataLoaded: false,
+				mergedDataLoaded: false,
 				sourceMergeStatus,
 				allSourcesMerged: false,
 				readyDataLoaded: false,
@@ -2670,6 +2677,7 @@ export default function ManualMergeNewPage() {
 			// Step 3: Determine which file to load based on API status
 			// Find the target file to load based on status
 			let targetFileToLoad = projectFiles[0];
+			let targetFileApiStatus: ApiMergeStatus | undefined;
 			if (mergeStatusRef.current?.files) {
 				for (const file of projectFiles) {
 					const fileStatus = mergeStatusRef.current.files[String(file.id)];
@@ -2679,55 +2687,155 @@ export default function ManualMergeNewPage() {
 						fileStatus.status !== "between_sources_end_merge"
 					) {
 						targetFileToLoad = file;
+						targetFileApiStatus = fileStatus?.status;
 						break;
 					}
 				}
 			}
 
+			// Determine what data to load based on file status
+			const shouldLoadUnmergedData =
+				!targetFileApiStatus || targetFileApiStatus === "no_merge";
+			const shouldLoadMergedData =
+				targetFileApiStatus === "within_source_start_merge" ||
+				targetFileApiStatus === "within_source_end_not_between_sources_merge" ||
+				targetFileApiStatus === "between_sources_start_merge" ||
+				targetFileApiStatus === "between_sources_end_merge";
+			const shouldLoadReadyData =
+				targetFileApiStatus === "between_sources_start_merge" ||
+				targetFileApiStatus === "between_sources_end_merge";
+
+			// Initialize data containers
 			const fileResultsByFileId: Record<number, NormalizedFileSection[]> = {};
+			let targetFileMergedSections: MergeWorkflowSection[] = [];
+			let targetFileReadyAutoMergedRows: MergeWorkflowRow[] = [];
+			let targetFileReadyPendingRows: MergeWorkflowRow[] = [];
 
-			// Load data for the target file
-			const resultResponse = await getTakeOffResultByFile(
-				Number(takeoffId),
-				targetFileToLoad.id,
-			);
-			console.log(
-				"resultResponse for target file",
-				targetFileToLoad.id,
-				resultResponse,
-			);
+			// Load data based on file status
+			if (shouldLoadUnmergedData) {
+				// Load unmerged (raw) data
+				const resultResponse = await getTakeOffResultByFile(
+					Number(takeoffId),
+					targetFileToLoad.id,
+				);
+				console.log(
+					"resultResponse for target file (unmerged)",
+					targetFileToLoad.id,
+					resultResponse,
+				);
 
-			if (resultResponse.status === "success" && resultResponse.data) {
-				fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
-					targetFileToLoad.operation_type || "",
-					resultResponse.data,
+				if (resultResponse.status === "success" && resultResponse.data) {
+					fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
+						targetFileToLoad.operation_type || "",
+						resultResponse.data,
+					);
+				} else {
+					fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
+						targetFileToLoad.operation_type || "",
+						null,
+					);
+				}
+			}
+
+			if (shouldLoadMergedData) {
+				// Load merged data
+				const sourceTypes =
+					targetFileToLoad.operation_type ===
+					FileOperationType.ArchitectureDrawing
+						? [PageType.FloorPlan, PageType.Elevation, PageType.Schedule]
+						: ["window_door_unit_list"];
+
+				const mergedResult = await getMergeResultByFileSourceList(
+					Number(takeoffId),
+					targetFileToLoad.id,
+					sourceTypes,
 				);
-			} else {
-				fileResultsByFileId[targetFileToLoad.id] = normalizeFileSections(
-					targetFileToLoad.operation_type || "",
-					null,
+				console.log(
+					"mergedResult for target file",
+					targetFileToLoad.id,
+					mergedResult,
 				);
+
+				if (mergedResult.status === "success" && mergedResult.data) {
+					for (const sourceType of sourceTypes) {
+						const sourceData = mergedResult.data[sourceType];
+						if (!sourceData) continue;
+
+						const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+							sourceData,
+							{
+								fileId: targetFileToLoad.id,
+								sourceType,
+								preferredFields,
+							},
+						);
+
+						targetFileMergedSections.push({
+							key: sourceType,
+							title: sourceType,
+							rows: [],
+							autoMergeStarted: true,
+							autoMergedRows,
+							pendingRows,
+							groupedRows: {},
+							manualMergeCompleted: false,
+						});
+					}
+				}
+			}
+
+			if (shouldLoadReadyData) {
+				// Load ready stage data
+				const groupedResult = await getAllGroupedByFile(
+					Number(takeoffId),
+					targetFileToLoad.id,
+				);
+				console.log(
+					"groupedResult for target file (ready)",
+					targetFileToLoad.id,
+					groupedResult,
+				);
+
+				if (groupedResult.status === "success" && groupedResult.data) {
+					const { autoMergedRows, pendingRows } = parseFileSourceMergeResult(
+						groupedResult.data,
+						{
+							fileId: targetFileToLoad.id,
+							sourceType: "single_file",
+							preferredFields,
+						},
+					);
+					targetFileReadyAutoMergedRows = autoMergedRows;
+					targetFileReadyPendingRows = pendingRows;
+				}
 			}
 
 			// Build workflow files - only target file has data loaded
 			const nextWorkflowFiles = projectFiles.map((file) => {
 				const isTargetFile = file.id === targetFileToLoad.id;
-				const unmergedSections = isTargetFile
-					? buildSectionsFromData(
-							file.id,
-							file.operation_type || "",
-							fileResultsByFileId[file.id] || [],
-							preferredFields,
-						)
-					: [];
+				const unmergedSections =
+					isTargetFile && shouldLoadUnmergedData
+						? buildSectionsFromData(
+								file.id,
+								file.operation_type || "",
+								fileResultsByFileId[file.id] || [],
+								preferredFields,
+							)
+						: [];
 
 				// Check if target file has no data (all sections have 0 rows)
 				const hasNoData =
 					isTargetFile &&
+					shouldLoadUnmergedData &&
 					unmergedSections.every((section) => section.rows.length === 0);
 
 				const mergeStatus = createInitialMergeStatus(file.operation_type || "");
-				mergeStatus.unmergedDataLoaded = isTargetFile;
+				// Mark data as loaded based on what we fetched
+				if (isTargetFile) {
+					mergeStatus.unmergedDataLoaded = shouldLoadUnmergedData;
+					mergeStatus.mergedDataLoaded = shouldLoadMergedData;
+					mergeStatus.readyDataLoaded = shouldLoadReadyData;
+				}
 
 				return {
 					id: file.id,
@@ -2745,11 +2853,13 @@ export default function ManualMergeNewPage() {
 					),
 					mergeStatus,
 					unmergedSections,
-					mergedSections: [],
-					readyAutoMergedRows: [],
-					readyPendingRows: [],
+					mergedSections: isTargetFile ? targetFileMergedSections : [],
+					readyAutoMergedRows: isTargetFile
+						? targetFileReadyAutoMergedRows
+						: [],
+					readyPendingRows: isTargetFile ? targetFileReadyPendingRows : [],
 					sections: unmergedSections,
-					sourceMergeStarted: false,
+					sourceMergeStarted: isTargetFile && shouldLoadReadyData,
 					readyManualMergeCompleted: false,
 					hasNoData,
 				};
@@ -3555,10 +3665,7 @@ export default function ManualMergeNewPage() {
 			return;
 		}
 
-		setCreateTakeoffLoading(true);
-		setTimeout(() => {
-			router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
-		}, 2000);
+		router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
 	};
 
 	const handleOpenReferenceModal = useCallback(
