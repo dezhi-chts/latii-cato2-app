@@ -208,3 +208,14 @@ export const addTakeOffResultItem = async (data: any) => {
 		return { data: null, status: "error" };
 	}
 };
+
+export const getTakeOffSummaryStats = async (take_off_id: any) => {
+	try {
+		const url = `/project/take_off_result/stats?take_off_id=${take_off_id}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error copying take off result item:", error);
+		return { data: null, status: "error" };
+	}
+};

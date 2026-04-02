@@ -2,6 +2,7 @@
 
 import {
 	AppstoreOutlined,
+	CopyOutlined,
 	EditOutlined,
 	MergeCellsOutlined,
 	SearchOutlined,
@@ -21,7 +22,10 @@ import Image from "next/image";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { updateTakeOffResultItem } from "@/services/takeOffService";
+import {
+	updateTakeOffResultItem,
+	addTakeOffResultItem,
+} from "@/services/takeOffService";
 
 import {
 	formatCellValue,
@@ -38,12 +42,13 @@ interface TakeoffItemsTableProps {
 	searchValue: string;
 	selectedItemId: number | null;
 	reconcileCount: number;
+	takeoffId: string;
 	onSearchChange: (value: string) => void;
 	onToggleStatus: (item: TakeoffItemRecord, checked: boolean) => void;
 	onSelectItem: (item: TakeoffItemRecord) => void;
 	onOpenReferencePanel: (item: TakeoffItemRecord) => void;
 	onOpenReconcile: () => void;
-	onRefreshItems?: () => void;
+	onRefreshItems?: () => Promise<void> | void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -89,6 +94,7 @@ export default function TakeoffItemsTable({
 	searchValue,
 	selectedItemId,
 	reconcileCount,
+	takeoffId,
 	onSearchChange,
 	onToggleStatus,
 	onSelectItem,
@@ -102,6 +108,8 @@ export default function TakeoffItemsTable({
 		rowId: number;
 		columnName: string;
 	} | null>(null);
+	const [selectedRowKey, setSelectedRowKey] = useState<number | null>(null);
+	const [copyLoading, setCopyLoading] = useState(false);
 
 	useEffect(() => {
 		setTableData(items);
@@ -146,14 +154,95 @@ export default function TakeoffItemsTable({
 
 	const rowSelection: TableProps<TakeoffItemRecord>["rowSelection"] = {
 		type: "radio",
-		selectedRowKeys: selectedItemId ? [selectedItemId] : [],
-		onChange: (_, selectedRows) => {
-			const nextSelectedItem = selectedRows?.[0];
-			if (nextSelectedItem) {
-				onSelectItem(nextSelectedItem);
-			}
+		selectedRowKeys: selectedRowKey ? [selectedRowKey] : [],
+		onChange: (selectedKeys) => {
+			const key = selectedKeys?.[0] as number | undefined;
+			setSelectedRowKey(key ?? null);
 		},
 		columnWidth: 42,
+	};
+
+	const generateUniqueCopyLabel = (originalLabel: string): string => {
+		const allLabels = tableData.map((item) => {
+			const label = getResultValue(item, "Label");
+			return typeof label === "object"
+				? JSON.stringify(label)
+				: String(label ?? "").trim();
+		});
+
+		let newLabel = `${originalLabel} Copy`;
+		if (!allLabels.includes(newLabel)) {
+			return newLabel;
+		}
+
+		let counter = 1;
+		while (allLabels.includes(`${originalLabel} Copy ${counter}`)) {
+			counter++;
+		}
+		return `${originalLabel} Copy ${counter}`;
+	};
+
+	const handleCopyItem = async () => {
+		if (!selectedRowKey) {
+			notification.warning({
+				message: "Warning",
+				description: "Please select an item to copy",
+			});
+			return;
+		}
+
+		const selectedItem = tableData.find((item) => item.id === selectedRowKey);
+		if (!selectedItem) {
+			notification.warning({
+				message: "Warning",
+				description: "Selected item not found",
+			});
+			return;
+		}
+
+		const originalResult = parseItemResult(selectedItem.result);
+		const originalLabel = String(originalResult["Label"] ?? "").trim();
+		const newLabel = generateUniqueCopyLabel(originalLabel);
+
+		const newResult = {
+			...originalResult,
+			Label: newLabel,
+		};
+
+		const requestBody = {
+			take_off_id: takeoffId,
+			single_file_merge_result_ids: "",
+			take_off_result_item_ids: "",
+			file_source_merge_result_ids: "",
+			result: JSON.stringify(newResult),
+			is_deleted: false,
+			is_merged: false,
+		};
+
+		setCopyLoading(true);
+		try {
+			const response = await addTakeOffResultItem(requestBody);
+			if (response.status === "success") {
+				notification.success({
+					message: "Success",
+					description: "Item copied successfully",
+				});
+				setSelectedRowKey(null);
+				await onRefreshItems?.();
+			} else {
+				notification.error({
+					message: "Error",
+					description: "Failed to copy item",
+				});
+			}
+		} catch (error) {
+			notification.error({
+				message: "Error",
+				description: "Failed to copy item",
+			});
+		} finally {
+			setCopyLoading(false);
+		}
 	};
 
 	const columns = useMemo<ColumnsType<TakeoffItemRecord>>(() => {
@@ -254,7 +343,7 @@ export default function TakeoffItemsTable({
 								// Call API
 								const response = await updateTakeOffResultItem(
 									String(record.id),
-									nextResultObject,
+									{ result: nextResultObject },
 								);
 
 								if (response.status === "success") {
@@ -399,7 +488,12 @@ export default function TakeoffItemsTable({
 			width: 146,
 			fixed: "right",
 			align: "center",
-			render: (_, record) => {
+			render: (_, record: any) => {
+				let isNewItem = !record.single_file_merge_result_ids;
+				if (isNewItem) {
+					return null;
+				}
+
 				return (
 					<div className="flex items-center justify-center gap-1">
 						<button
@@ -449,38 +543,15 @@ export default function TakeoffItemsTable({
 						className="!h-[32px] !w-[365px] !rounded-md !border-primaryN30 text-xs"
 						placeholder="Search label"
 					/>
-					{/* <Button
-						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<EyeOutlined />}
-						onClick={() => onSearchChange("")}
-					>
-						Show All
-					</Button>
 					<Button
 						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<AppstoreOutlined />}
+						icon={<CopyOutlined />}
+						loading={copyLoading}
+						onClick={handleCopyItem}
 					>
-						Columns
+						Copy Item
 					</Button>
-					<Button
-						className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-						icon={<EditOutlined />}
-					>
-						Quick Edit
-					</Button> */}
 				</div>
-
-				{/* <Button
-					className="!h-[32px] !rounded-md !border-primaryN30 !px-4 !text-xs !text-grey-dark"
-					onClick={onOpenReconcile}
-				>
-					Reconcile
-					<Badge
-						count={reconcileCount}
-						overflowCount={999}
-						className="ml-2 [&_.ant-badge-count]:!bg-[#717171] [&_.ant-badge-count]:!text-white [&_.ant-badge-count]:!shadow-none"
-					/>
-				</Button> */}
 			</div>
 
 			<div className="flex min-h-0 flex-1">
@@ -488,7 +559,7 @@ export default function TakeoffItemsTable({
 				<div className="min-h-0 flex-1 overflow-hidden">
 					<Table<TakeoffItemRecord>
 						rowKey={(record) => record?.id}
-						//rowSelection={rowSelection}
+						rowSelection={rowSelection}
 						loading={loading}
 						columns={columns}
 						dataSource={filteredItems}

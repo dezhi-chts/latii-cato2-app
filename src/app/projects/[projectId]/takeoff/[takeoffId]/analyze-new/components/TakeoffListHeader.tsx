@@ -106,25 +106,25 @@ export default function TakeoffListHeader({
 				<div className="flex items-center gap-10">
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.items || 0}
+							{summaryStats?.items ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Items</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.products || 0}
+							{summaryStats?.products ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Products</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.systems || 0}
+							{summaryStats?.systems ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Systems</span>
 					</div>
 					<div className="flex flex-col">
 						<span className="text-lg leading-5">
-							{summaryStats?.boxedItems || 0}
+							{summaryStats?.boxed_items ?? 0}
 						</span>
 						<span className="text-sm text-grey-normal">Boxed Items</span>
 					</div>

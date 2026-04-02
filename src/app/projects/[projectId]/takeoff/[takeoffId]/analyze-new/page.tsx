@@ -10,6 +10,7 @@ import { changeCheckedItem } from "@/services/projectService";
 import {
 	downloadTakeOffResult,
 	getTakeOffById,
+	getTakeOffSummaryStats,
 	resetTakeOff,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
@@ -323,6 +324,7 @@ export default function TakeoffListPage() {
 	const [evidencesByFile, setEvidencesByFile] = useState<
 		Record<number, EvidenceRecord[]>
 	>({});
+	const [summaryStats, setSummaryStats] = useState<any>({});
 
 	const files = useMemo<ProjectFileRecord[]>(() => {
 		return takeoffData?.project_files || [];
@@ -346,10 +348,6 @@ export default function TakeoffListPage() {
 	const selectedItem = useMemo(() => {
 		return parsedItems.find((item) => item?.id === selectedItemId) || null;
 	}, [parsedItems, selectedItemId]);
-
-	const summaryStats = useMemo(() => {
-		return getSummaryStats(takeoffData);
-	}, [takeoffData]);
 
 	const currentFile = useMemo(() => {
 		return files.find((file) => file?.id === selectedFileId);
@@ -535,9 +533,38 @@ export default function TakeoffListPage() {
 		}
 	}, [fetchAllFileEvidences, fetchDynamicFields, takeoffId]);
 
+	const getSummaryStats = useCallback(async () => {
+		try {
+			const summaryStats = await getTakeOffSummaryStats(takeoffId);
+			if (summaryStats.status === "success") {
+				setSummaryStats(summaryStats.data);
+			}
+		} catch (error) {
+			console.error("Error refreshing summary stats:", error);
+		}
+	}, [takeoffId]);
+
+	const refreshItemsOnly = useCallback(async () => {
+		try {
+			const groupedResponse = await getAllGroupedByTakeOff(Number(takeoffId));
+			if (groupedResponse.status === "success" && groupedResponse.data) {
+				const preferredFields =
+					columnNames.length > 0 ? columnNames : ["Label", "Sub Label"];
+				const items = parseTakeoffMergeResult(
+					groupedResponse.data,
+					preferredFields,
+				);
+				setParsedItems(items);
+			}
+		} catch (error) {
+			console.error("Error refreshing items:", error);
+		}
+	}, [takeoffId, columnNames]);
+
 	useEffect(() => {
 		fetchTakeoff();
-	}, [fetchTakeoff]);
+		getSummaryStats();
+	}, [takeoffId]);
 
 	useEffect(() => {
 		if (!selectedItemId) {
@@ -742,12 +769,13 @@ export default function TakeoffListPage() {
 						typeof selectedItem?.id === "number" ? selectedItem.id : null
 					}
 					reconcileCount={reconcileCount}
+					takeoffId={takeoffId}
 					onSearchChange={setSearchValue}
 					onToggleStatus={handleToggleStatus}
 					onSelectItem={(item) => setSelectedItemId(item?.id)}
 					onOpenReferencePanel={handleOpenReferencePanel}
 					onOpenReconcile={handleOpenReconcile}
-					onRefreshItems={fetchTakeoff}
+					onRefreshItems={refreshItemsOnly}
 				/>
 
 				{/* <EvidenceSidebar

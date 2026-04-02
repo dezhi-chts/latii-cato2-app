@@ -75,7 +75,7 @@ export interface SummaryStats {
   items: number;
   products: number;
   systems: number;
-  boxedItems: number;
+  boxed_items: number;
 }
 
 export interface EvidenceBoxBounds {
