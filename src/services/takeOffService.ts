@@ -232,3 +232,32 @@ export const getTakeOffSummaryStats = async (take_off_id: any) => {
 		return { data: null, status: "error" };
 	}
 };
+
+export const getEvidenceByProjectFileAndPage = async (
+	project_file_id: number,
+	project_file_page_number: number,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_evidence_by_project_file_and_page?project_file_id=${project_file_id}&project_file_page_number=${project_file_page_number}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error getting evidence by project file and page:", error);
+		return { data: null, status: "error" };
+	}
+};
+
+export const analyzeNewEvidencesByProjectFile = async (
+	take_off_id: string,
+	project_file_id: string,
+	evidenceList: object[],
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/analyze_new_evidences_by_project_file?take_off_id=${take_off_id}&project_file_id=${project_file_id}`;
+		const response = await http.post(url, evidenceList);
+		return { data: response as any, status: "success" };
+	} catch (error) {
+		console.error("Error analyze new evidences by project file:", error);
+		return { data: null, status: "error" };
+	}
+};

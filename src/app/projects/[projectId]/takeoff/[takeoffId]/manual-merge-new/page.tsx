@@ -16,8 +16,7 @@ import {
 import { FileViewStep, useTakeoff } from "@/context/TakeoffContext";
 
 import ManualMergeModal from "./components/ManualMergeModal";
-import OriginalItemReferenceModal from "./components/OriginalItemReferenceModal";
-import MergedItemReferenceModal from "./components/MergedItemReferenceModal";
+import ManualDrawModal from "./components/ManualDrawModal";
 import ItemTraceabilityModal from "./components/ItemTraceabilityModal";
 import { ProjectFileRecord, TakeoffItemRecord } from "../analyze-new/types";
 import {
@@ -1237,11 +1236,15 @@ function SectionTable({
 	rows,
 	columns,
 	onOpenReferenceModal,
+	onOpenManualDrawModal,
+	showManualDrawButton = false,
 	pageSize = 20,
 }: {
 	rows: MergeWorkflowRow[];
 	columns: string[];
 	onOpenReferenceModal: (row: MergeWorkflowRow) => void;
+	onOpenManualDrawModal?: (row: MergeWorkflowRow) => void;
+	showManualDrawButton?: boolean;
 	pageSize?: number;
 }) {
 	const [currentPage, setCurrentPage] = useState(1);
@@ -1316,8 +1319,63 @@ function SectionTable({
 			),
 		};
 
-		return [...dataColumns, referenceColumn];
-	}, [columns, onOpenReferenceModal]);
+		const actionColumns = [referenceColumn];
+
+		// Add manual draw column if enabled
+		if (showManualDrawButton && onOpenManualDrawModal) {
+			const manualDrawColumn: ColumnsType<MergeWorkflowRow>[number] = {
+				title: (
+					<div className="text-center text-[10px] text-grey-normal">Draw</div>
+				),
+				key: "manualDraw",
+				width: 50,
+				fixed: "right",
+				align: "center",
+				render: (_: unknown, record: MergeWorkflowRow) => (
+					<Tooltip title="Manual Draw Box">
+						<button
+							type="button"
+							className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-grey-light-hover"
+							onClick={(e) => {
+								e.stopPropagation();
+								onOpenManualDrawModal(record);
+							}}
+						>
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 16 16"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M2 4C2 2.89543 2.89543 2 4 2H12C13.1046 2 14 2.89543 14 4V12C14 13.1046 13.1046 14 12 14H4C2.89543 14 2 13.1046 2 12V4Z"
+									stroke="#666"
+									strokeWidth="1.5"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+								/>
+								<path
+									d="M5 5H11M5 8H11M5 11H8"
+									stroke="#666"
+									strokeWidth="1.5"
+									strokeLinecap="round"
+								/>
+							</svg>
+						</button>
+					</Tooltip>
+				),
+			};
+			actionColumns.push(manualDrawColumn);
+		}
+
+		return [...dataColumns, ...actionColumns];
+	}, [
+		columns,
+		onOpenReferenceModal,
+		showManualDrawButton,
+		onOpenManualDrawModal,
+	]);
 
 	if (!rows.length) {
 		return (
@@ -2107,10 +2165,6 @@ export default function ManualMergeNewPage() {
 	const [showOriginalRefModal, setShowOriginalRefModal] = useState(false);
 	const [originalRefItem, setOriginalRefItem] =
 		useState<MergeWorkflowRow | null>(null);
-	const [showMergedRefModal, setShowMergedRefModal] = useState(false);
-	const [mergedRefItem, setMergedRefItem] = useState<MergeWorkflowRow | null>(
-		null,
-	);
 	const [showTraceabilityModal, setShowTraceabilityModal] = useState(false);
 	const [traceabilityItem, setTraceabilityItem] =
 		useState<MergeWorkflowRow | null>(null);
@@ -2132,6 +2186,15 @@ export default function ManualMergeNewPage() {
 	);
 	const [mergeAllLoading, setMergeAllLoading] = useState(false);
 	const [takeOffCompleted, setTakeOffCompleted] = useState(false);
+	// Manual draw modal state
+	const [showManualDrawModal, setShowManualDrawModal] = useState(false);
+	const [manualDrawItem, setManualDrawItem] = useState<MergeWorkflowRow | null>(
+		null,
+	);
+	// Store original project files for accessing parse_detail (PDF URL)
+	const [projectFilesMap, setProjectFilesMap] = useState<
+		Record<number, ProjectFileRecord>
+	>({});
 
 	const { setTakeOff, setFileList, setSelectedFileId, setFileViewStep } =
 		useTakeoff();
@@ -2509,6 +2572,13 @@ export default function ManualMergeNewPage() {
 				return;
 			}
 
+			// Store project files map for accessing parse_detail (PDF URL)
+			const filesMap: Record<number, ProjectFileRecord> = {};
+			projectFiles.forEach((file) => {
+				filesMap[file.id] = file;
+			});
+			setProjectFilesMap(filesMap);
+
 			// Step 2: Fetch template column names once (will be cached for subsequent use)
 			const preferredFields = await resolveColumnNames(1);
 
@@ -2786,14 +2856,15 @@ export default function ManualMergeNewPage() {
 
 	// Load data for a single file (used when switching to next file)
 	const loadFileData = useCallback(
-		async (fileId: number) => {
+		async (fileId: number, forceRefresh: boolean = false) => {
 			const targetFile = workflowFiles.find((f) => f.id === fileId);
+			console.log("targetFile 888", targetFile);
 			if (!targetFile) {
 				return;
 			}
 
 			// If unmerged data is already loaded, skip
-			if (targetFile.mergeStatus.unmergedDataLoaded) {
+			if (!forceRefresh && targetFile.mergeStatus.unmergedDataLoaded) {
 				return;
 			}
 
@@ -3544,6 +3615,18 @@ export default function ManualMergeNewPage() {
 		[handleOpenReferenceModal, selectedStage, isMergeAllMode],
 	);
 
+	// Handle opening manual draw modal
+	const handleOpenManualDrawModal = useCallback((row: MergeWorkflowRow) => {
+		setManualDrawItem(row);
+		setShowManualDrawModal(true);
+	}, []);
+
+	// Handle closing manual draw modal
+	const handleCloseManualDrawModal = useCallback(() => {
+		setShowManualDrawModal(false);
+		setManualDrawItem(null);
+	}, []);
+
 	const handleOpenManualMergeModal = useCallback(
 		(context: ManualMergeContext) => {
 			setManualMergeContext(context);
@@ -3623,104 +3706,6 @@ export default function ManualMergeNewPage() {
 		notification.success({
 			message: "Mock auto merge complete",
 			description: "The merged board now shows auto merged and pending rows.",
-		});
-		setLoadingActionKey(null);
-	};
-
-	const handleAutoMergeAllSections = async (fileId: number) => {
-		const actionKey = `auto-all-sections-${fileId}`;
-		setLoadingActionKey(actionKey);
-		await mockRequestDelay();
-
-		updateWorkflowFile(fileId, (file) => {
-			const sections = file.sections.map((section) => {
-				const { autoMergedRows, pendingRows } = splitSectionRowsForMockMerge(
-					section.groupedRows,
-					section.title,
-				);
-
-				return {
-					...section,
-					autoMergeStarted: true,
-					autoMergedRows,
-					pendingRows,
-					manualMergeCompleted: pendingRows.length === 0,
-				};
-			});
-
-			return {
-				...file,
-				sections,
-			};
-		});
-
-		setSelectedStage(WorkflowStage.Merged);
-		notification.success({
-			message: "Auto merge complete",
-			description: "All sections have been auto merged.",
-		});
-		setLoadingActionKey(null);
-	};
-
-	const handleManualMergeSection = async (
-		fileId: number,
-		sectionKey: string,
-	) => {
-		const actionKey = `manual-section-${fileId}-${sectionKey}`;
-		setLoadingActionKey(actionKey);
-		await mockRequestDelay();
-
-		updateWorkflowFile(fileId, (file) => {
-			const sections = file.sections.map((section) => {
-				if (section.key !== sectionKey) {
-					return section;
-				}
-
-				const mergeResult = applyFullManualMerge(
-					section.autoMergedRows,
-					section.pendingRows,
-					section.title,
-				);
-
-				return {
-					...section,
-					autoMergeStarted: true,
-					autoMergedRows: mergeResult.autoMergedRows,
-					pendingRows: mergeResult.pendingRows,
-					manualMergeCompleted: mergeResult.completed,
-				};
-			});
-
-			const nextFile = {
-				...file,
-				sections,
-			};
-
-			if (file.operationType === FileOperationType.Quote) {
-				const quoteSection = sections[0];
-				return {
-					...nextFile,
-					sourceMergeStarted: quoteSection?.pendingRows.length === 0,
-					readyAutoMergedRows:
-						quoteSection?.pendingRows.length === 0
-							? quoteSection?.autoMergedRows || []
-							: [],
-					readyPendingRows: quoteSection?.pendingRows.length === 0 ? [] : [],
-					readyManualMergeCompleted: quoteSection?.pendingRows.length === 0,
-				};
-			}
-
-			return nextFile;
-		});
-
-		if (selectedFile?.operationType === FileOperationType.Quote) {
-			setSelectedStage(WorkflowStage.Ready);
-		}
-
-		notification.success({
-			message: "Mock manual merge complete",
-			description:
-				"The pending rows have been merged into a single result list.",
 		});
 		setLoadingActionKey(null);
 	};
@@ -4261,6 +4246,17 @@ export default function ManualMergeNewPage() {
 		selectedFile &&
 		getFileStageState(selectedFile, WorkflowStage.Unmerged) ===
 			FileStageState.Completed,
+	);
+	// Check if manual draw button should be shown
+	// Only show when: unmerged stage is active (not completed) AND merged/ready stages have not started
+	const canShowManualDrawButton = Boolean(
+		selectedFile &&
+		selectedStage === WorkflowStage.Unmerged &&
+		!isUnmergedStageCompleted &&
+		getFileStageState(selectedFile, WorkflowStage.Merged) ===
+			FileStageState.Pending &&
+		getFileStageState(selectedFile, WorkflowStage.Ready) ===
+			FileStageState.Pending,
 	);
 	const hasOtherUnfinishedFiles = workflowFiles.some(
 		(file) => file.id !== selectedFileId && !isFileCompleted(file),
@@ -4903,6 +4899,12 @@ export default function ManualMergeNewPage() {
 																		onOpenReferenceModal={
 																			handleOpenReferenceModalWithStage
 																		}
+																		onOpenManualDrawModal={
+																			handleOpenManualDrawModal
+																		}
+																		showManualDrawButton={
+																			canShowManualDrawButton
+																		}
 																	/>
 																) : (
 																	<SectionMergedContent
@@ -4996,29 +4998,6 @@ export default function ManualMergeNewPage() {
 				)}
 			</div>
 
-			{showOriginalRefModal && (
-				<OriginalItemReferenceModal
-					open={showOriginalRefModal}
-					files={[]}
-					projectId={projectId}
-					item={originalRefItem}
-					onClose={() => {
-						setShowOriginalRefModal(false);
-						setOriginalRefItem(null);
-					}}
-				/>
-			)}
-
-			<MergedItemReferenceModal
-				open={showMergedRefModal}
-				projectId={projectId}
-				files={[]}
-				mergedItem={mergedRefItem}
-				onClose={() => {
-					setShowMergedRefModal(false);
-					setMergedRefItem(null);
-				}}
-			/>
 			{showItemsMergeModal && (
 				<ManualMergeModal
 					open={showItemsMergeModal}
@@ -5048,6 +5027,30 @@ export default function ManualMergeNewPage() {
 					}}
 				/>
 			)}
+
+			{/* Manual Draw Box Modal */}
+			<ManualDrawModal
+				open={showManualDrawModal}
+				item={
+					manualDrawItem
+						? {
+								id: manualDrawItem.id,
+								key: manualDrawItem.key,
+								result: manualDrawItem.result,
+								sourceType: manualDrawItem.sourceType,
+							}
+						: null
+				}
+				fileInfo={
+					selectedFileId ? projectFilesMap[selectedFileId] || null : null
+				}
+				projectId={projectId}
+				onClose={handleCloseManualDrawModal}
+				onSuccess={() => {
+					setShowManualDrawModal(false);
+					loadFileData(selectedFileId, true);
+				}}
+			/>
 		</div>
 	);
 }
