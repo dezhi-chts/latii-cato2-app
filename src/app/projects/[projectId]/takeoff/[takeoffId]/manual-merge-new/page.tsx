@@ -21,9 +21,6 @@ import MergedItemReferenceModal from "./components/MergedItemReferenceModal";
 import ItemTraceabilityModal from "./components/ItemTraceabilityModal";
 import { ProjectFileRecord, TakeoffItemRecord } from "../analyze-new/types";
 import {
-	formatDisplayValue,
-	formatNestedObject,
-	getNestedValue,
 	getDisplayValueByField,
 	normalizeFieldName,
 	parseItemResult as parseItemResultUtil,
@@ -50,12 +47,36 @@ import {
 } from "@/services/mergeService";
 import { getTemplateById } from "@/services/templateService";
 
-type WorkflowStage = "unmerged" | "merged" | "ready" | "merge-all";
-type StepState = "pending" | "active" | "completed";
+// Workflow stage enum for internal UI state
+enum WorkflowStage {
+	Unmerged = "unmerged",
+	Merged = "merged",
+	Ready = "ready",
+	MergeAll = "merge-all",
+}
+
+// File stage state enum for tracking progress
+enum FileStageState {
+	Pending = "pending",
+	Active = "active",
+	Completed = "completed",
+}
+
+// Table header type enum for UI display
+enum TableHeaderType {
+	Merged = "merged",
+	Unmerged = "unmerged",
+}
+
+// Manual merge mode enum
+enum ManualMergeMode {
+	Section = "section",
+	Ready = "ready",
+}
 
 interface ManualMergeContext {
 	fileId: number;
-	mode: "section" | "ready";
+	mode: ManualMergeMode;
 	sectionKey?: string;
 	sourceType?: string;
 }
@@ -110,13 +131,15 @@ interface FileMergeStatus {
 	readyManualMergeCompleted: boolean;
 }
 
-// API merge status values
-type ApiMergeStatus =
-	| "no_merge"
-	| "within_source_start_merge"
-	| "within_source_end_not_between_sources_merge"
-	| "between_sources_start_merge"
-	| "between_sources_end_merge";
+// API merge status enum from backend
+enum ApiMergeStatus {
+	NoMerge = "no_merge",
+	WithinSourceStartMerge = "within_source_start_merge",
+	WithinSourceEndNotBetweenSourcesMerge = "within_source_end_not_between_sources_merge",
+	BetweenSourcesStartMerge = "between_sources_start_merge",
+	BetweenSourcesEndMerge = "between_sources_end_merge",
+	TakeOffCompleted = "take_off_completed",
+}
 
 interface MergeWorkflowFile {
 	id: number;
@@ -154,19 +177,19 @@ const STAGE_META: Record<
 	WorkflowStage,
 	{ title: string; description: string }
 > = {
-	unmerged: {
+	[WorkflowStage.Unmerged]: {
 		title: "Unmerged",
 		description: "Original extracted labels before auto merge",
 	},
-	merged: {
+	[WorkflowStage.Merged]: {
 		title: "Merged",
 		description: "Auto merge results and manual merge follow-up",
 	},
-	ready: {
+	[WorkflowStage.Ready]: {
 		title: "Ready",
 		description: "File-level merge results ready for final review",
 	},
-	"merge-all": {
+	[WorkflowStage.MergeAll]: {
 		title: "Merge All",
 		description: "All files merged results",
 	},
@@ -221,14 +244,14 @@ function MergeTableHeader({
 	loadingActionKey,
 	disabled = false,
 }: {
-	type: "merged" | "unmerged";
+	type: TableHeaderType;
 	count: number;
 	showManualMergeButton?: boolean;
 	onManualMerge?: () => void;
 	loadingActionKey?: string | null;
 	disabled?: boolean;
 }) {
-	const isMerged = type === "merged";
+	const isMerged = type === TableHeaderType.Merged;
 
 	return (
 		<div className="mb-4 flex items-center justify-between">
@@ -312,11 +335,11 @@ function MergeRowsTable({
 	emptyText: string;
 	onOpenReferenceModal: (
 		row: MergeWorkflowRow,
-		context?: { stage?: string; isMergeAllMode?: boolean },
+		context?: { stage?: WorkflowStage; isMergeAllMode?: boolean },
 	) => void;
 	hideHeader?: boolean;
 	scrollY?: string;
-	stage?: string;
+	stage?: WorkflowStage;
 	isMergeAllMode?: boolean;
 	pageSize?: number;
 }) {
@@ -768,12 +791,6 @@ const parseFileSourceMergeResult = (
 	return { autoMergedRows, pendingRows };
 };
 
-const getArchitectureAutoMerged = (file: MergeWorkflowFile) => {
-	return file.sections.every(
-		(section) => section.autoMergeStarted || section.rows.length === 0,
-	);
-};
-
 const getRowGroupKey = (row: MergeWorkflowRow) => {
 	const label = String(row?.result?.Label || "");
 	const subLabel = String(row?.result?.["Sub Label"] || "");
@@ -886,12 +903,6 @@ const groupRowsByLabelAndSubLabel = (rows: MergeWorkflowRow[]) => {
 	}, {});
 };
 
-const splitFileRowsForReadyMerge = (rows: MergeWorkflowRow[]) => {
-	const groupedRows = groupRowsByLabelAndSubLabel(rows);
-
-	return splitGroupedRowsForMockProgress(groupedRows, "Ready Merge");
-};
-
 const applyFullManualMerge = (
 	autoMergedRows: MergeWorkflowRow[],
 	pendingRows: MergeWorkflowRow[],
@@ -918,15 +929,6 @@ const applyFullManualMerge = (
 		pendingRows: [],
 		completed: true,
 	};
-};
-
-const getArchitectureResolved = (file: MergeWorkflowFile) => {
-	return file.sections.every((section) => {
-		return (
-			(section.autoMergeStarted || section.rows.length === 0) &&
-			section.pendingRows.length === 0
-		);
-	});
 };
 
 const getQuoteSection = (file: MergeWorkflowFile) => {
@@ -959,68 +961,25 @@ const hasArchitectureMergeStarted = (file: MergeWorkflowFile) => {
 	);
 };
 
-// Get stage states from API merge status
-const getStageStatesFromApiStatus = (
-	status: ApiMergeStatus | undefined,
-): { unmerged: StepState; merged: StepState; ready: StepState } => {
-	switch (status) {
-		case "no_merge":
-			// No merge done yet - unmerged is active
-			return { unmerged: "active", merged: "pending", ready: "pending" };
-		case "within_source_start_merge":
-			// Auto Merge has been clicked - unmerged completed, merged active
-			return { unmerged: "completed", merged: "active", ready: "pending" };
-		case "within_source_end_not_between_sources_merge":
-			// Source-type merge completed, ready for file-level merge
-			return { unmerged: "completed", merged: "active", ready: "pending" };
-		case "between_sources_start_merge":
-			// Auto Merge File Labels clicked - merged completed, ready active
-			return { unmerged: "completed", merged: "completed", ready: "active" };
-		case "between_sources_end_merge":
-			// All merges completed - ready completed
-			return { unmerged: "completed", merged: "completed", ready: "completed" };
-		default:
-			// Default to initial state
-			return { unmerged: "active", merged: "pending", ready: "pending" };
-	}
-};
-
-// Get recommended stage from API merge status
-const getRecommendedStageFromApiStatus = (
-	status: ApiMergeStatus | undefined,
-): WorkflowStage => {
-	switch (status) {
-		case "no_merge":
-			return "unmerged";
-		case "within_source_start_merge":
-		case "within_source_end_not_between_sources_merge":
-			return "merged";
-		case "between_sources_start_merge":
-		case "between_sources_end_merge":
-			return "ready";
-		default:
-			return "unmerged";
-	}
-};
-
 // Derive boolean flags from API status for initialization
 const deriveBooleanFlagsFromApiStatus = (
 	status: ApiMergeStatus | undefined,
 ): { withinSourceCompleted: boolean; betweenSourcesCompleted: boolean } => {
 	switch (status) {
-		case "no_merge":
+		case ApiMergeStatus.NoMerge:
 			// No merge done yet
 			return { withinSourceCompleted: false, betweenSourcesCompleted: false };
-		case "within_source_start_merge":
+		case ApiMergeStatus.WithinSourceStartMerge:
 			// Auto Merge has been executed - Unmerged stage completed
 			return { withinSourceCompleted: true, betweenSourcesCompleted: false };
-		case "within_source_end_not_between_sources_merge":
+		case ApiMergeStatus.WithinSourceEndNotBetweenSourcesMerge:
 			// Source-type merge completed
 			return { withinSourceCompleted: true, betweenSourcesCompleted: false };
-		case "between_sources_start_merge":
+		case ApiMergeStatus.BetweenSourcesStartMerge:
 			// Auto Merge File Labels has been executed - Merged stage completed
 			return { withinSourceCompleted: true, betweenSourcesCompleted: true };
-		case "between_sources_end_merge":
+		case ApiMergeStatus.BetweenSourcesEndMerge:
+		case ApiMergeStatus.TakeOffCompleted:
 			// All merges completed
 			return { withinSourceCompleted: true, betweenSourcesCompleted: true };
 		default:
@@ -1028,23 +987,13 @@ const deriveBooleanFlagsFromApiStatus = (
 	}
 };
 
-const getFileRowsForReadyMerge = (file: MergeWorkflowFile) => {
-	return file.sections.flatMap((section) => {
-		if (section.autoMergeStarted) {
-			return section.autoMergedRows;
-		}
-
-		return section.rows;
-	});
-};
-
 const getFileStageState = (
 	file: MergeWorkflowFile,
 	stage: WorkflowStage,
-): StepState => {
+): FileStageState => {
 	// If file has no data, all stages are considered completed
 	if (file.hasNoData) {
-		return "completed";
+		return FileStageState.Completed;
 	}
 
 	// Use internal state variables (withinSourceCompleted, betweenSourcesCompleted)
@@ -1053,45 +1002,55 @@ const getFileStageState = (
 		file.withinSourceCompleted !== undefined ||
 		file.betweenSourcesCompleted !== undefined
 	) {
-		if (stage === "unmerged") {
-			return file.withinSourceCompleted ? "completed" : "active";
+		if (stage === WorkflowStage.Unmerged) {
+			return file.withinSourceCompleted
+				? FileStageState.Completed
+				: FileStageState.Active;
 		}
 
-		if (stage === "merged") {
+		if (stage === WorkflowStage.Merged) {
 			if (!file.withinSourceCompleted) {
-				return "pending";
+				return FileStageState.Pending;
 			}
-			return file.betweenSourcesCompleted ? "completed" : "active";
+			return file.betweenSourcesCompleted
+				? FileStageState.Completed
+				: FileStageState.Active;
 		}
 
 		// Ready stage
 		if (!file.betweenSourcesCompleted) {
-			return "pending";
+			return FileStageState.Pending;
 		}
-		return file.readyPendingRows.length === 0 ? "completed" : "active";
+		return file.readyPendingRows.length === 0
+			? FileStageState.Completed
+			: FileStageState.Active;
 	}
 
 	// Fallback to local state for files without status flags
 	if (file.operationType === FileOperationType.ArchitectureDrawing) {
 		const hasStartedMerge = hasArchitectureMergeStarted(file);
 
-		if (stage === "unmerged") {
-			return hasStartedMerge ? "completed" : "active";
+		if (stage === WorkflowStage.Unmerged) {
+			return hasStartedMerge ? FileStageState.Completed : FileStageState.Active;
 		}
 
-		if (stage === "merged") {
+		if (stage === WorkflowStage.Merged) {
 			if (!hasStartedMerge) {
-				return "pending";
+				return FileStageState.Pending;
 			}
 
-			return file.sourceMergeStarted ? "completed" : "active";
+			return file.sourceMergeStarted
+				? FileStageState.Completed
+				: FileStageState.Active;
 		}
 
 		if (!file.sourceMergeStarted) {
-			return "pending";
+			return FileStageState.Pending;
 		}
 
-		return file.readyPendingRows.length === 0 ? "completed" : "active";
+		return file.readyPendingRows.length === 0
+			? FileStageState.Completed
+			: FileStageState.Active;
 	}
 
 	const quoteSection = getQuoteSection(file);
@@ -1102,29 +1061,33 @@ const getFileStageState = (
 		(quoteSection.autoMergedRows.length > 0 ||
 			quoteSection.pendingRows.length > 0);
 
-	if (stage === "unmerged") {
-		return hasQuoteMergeStarted ? "completed" : "active";
+	if (stage === WorkflowStage.Unmerged) {
+		return hasQuoteMergeStarted
+			? FileStageState.Completed
+			: FileStageState.Active;
 	}
 
-	if (stage === "merged") {
+	if (stage === WorkflowStage.Merged) {
 		if (!hasQuoteMergeStarted) {
-			return "pending";
+			return FileStageState.Pending;
 		}
 
-		return quoteSection.pendingRows.length === 0 ? "completed" : "active";
+		return quoteSection.pendingRows.length === 0
+			? FileStageState.Completed
+			: FileStageState.Active;
 	}
 
 	if (!hasQuoteMergeStarted || quoteSection.pendingRows.length > 0) {
-		return "pending";
+		return FileStageState.Pending;
 	}
 
-	return "completed";
+	return FileStageState.Completed;
 };
 
 const getRecommendedStage = (file: MergeWorkflowFile): WorkflowStage => {
 	// If file has no data, show ready stage
 	if (file.hasNoData) {
-		return "ready";
+		return WorkflowStage.Ready;
 	}
 
 	// Use internal state variables (initialized from API, updated by page operations)
@@ -1133,25 +1096,25 @@ const getRecommendedStage = (file: MergeWorkflowFile): WorkflowStage => {
 		file.betweenSourcesCompleted !== undefined
 	) {
 		if (file.betweenSourcesCompleted) {
-			return "ready";
+			return WorkflowStage.Ready;
 		}
 		if (file.withinSourceCompleted) {
-			return "merged";
+			return WorkflowStage.Merged;
 		}
-		return "unmerged";
+		return WorkflowStage.Unmerged;
 	}
 
 	// Fallback to local state for files without API status
 	if (file.operationType === FileOperationType.ArchitectureDrawing) {
 		if (!hasArchitectureMergeStarted(file)) {
-			return "unmerged";
+			return WorkflowStage.Unmerged;
 		}
 
 		if (!file.sourceMergeStarted) {
-			return "merged";
+			return WorkflowStage.Merged;
 		}
 
-		return "ready";
+		return WorkflowStage.Ready;
 	}
 
 	const quoteSection = getQuoteSection(file);
@@ -1160,25 +1123,25 @@ const getRecommendedStage = (file: MergeWorkflowFile): WorkflowStage => {
 		(quoteSection.autoMergedRows.length > 0 ||
 			quoteSection.pendingRows.length > 0);
 	if (!hasQuoteMergeStarted) {
-		return "unmerged";
+		return WorkflowStage.Unmerged;
 	}
 
 	if (quoteSection.pendingRows.length > 0) {
-		return "merged";
+		return WorkflowStage.Merged;
 	}
 
-	return "ready";
+	return WorkflowStage.Ready;
 };
 
 const getSectionCountByStage = (
 	section: MergeWorkflowSection,
 	stage: WorkflowStage,
 ) => {
-	if (stage === "unmerged") {
+	if (stage === WorkflowStage.Unmerged) {
 		return section.rows.length;
 	}
 
-	if (stage === "merged") {
+	if (stage === WorkflowStage.Merged) {
 		if (!section.autoMergeStarted) {
 			return section.rows.length;
 		}
@@ -1198,17 +1161,17 @@ const cloneWorkflowFiles = (files: MergeWorkflowFile[]) => {
 };
 
 const getFileStatusMeta = (file: MergeWorkflowFile) => {
-	const readyState = getFileStageState(file, "ready");
-	const mergedState = getFileStageState(file, "merged");
+	const readyState = getFileStageState(file, WorkflowStage.Ready);
+	const mergedState = getFileStageState(file, WorkflowStage.Merged);
 
-	if (readyState === "completed") {
+	if (readyState === FileStageState.Completed) {
 		return {
 			label: "Ready",
 			className: "bg-[#EEF5FF] text-forumBlue-normal",
 		};
 	}
 
-	if (mergedState !== "pending") {
+	if (mergedState !== FileStageState.Pending) {
 		return {
 			label: "Merged",
 			className: "bg-[#F4FBF6] text-green-normal",
@@ -1222,7 +1185,9 @@ const getFileStatusMeta = (file: MergeWorkflowFile) => {
 };
 
 const isFileCompleted = (file: MergeWorkflowFile) => {
-	return getFileStageState(file, "ready") === "completed";
+	return (
+		getFileStageState(file, WorkflowStage.Ready) === FileStageState.Completed
+	);
 };
 
 const getFileListStatusMeta = (
@@ -1237,8 +1202,8 @@ const getFileListStatusMeta = (
 	}
 
 	// Check if file has started merge (unmerged stage completed)
-	const unmergedState = getFileStageState(file, "unmerged");
-	const mergedState = getFileStageState(file, "merged");
+	const unmergedState = getFileStageState(file, WorkflowStage.Unmerged);
+	const mergedState = getFileStageState(file, WorkflowStage.Merged);
 
 	if (file.id === selectedFileId) {
 		return {
@@ -1248,9 +1213,9 @@ const getFileListStatusMeta = (
 	}
 
 	// If unmerged stage is completed, show as "Merged" status
-	if (unmergedState === "completed") {
+	if (unmergedState === FileStageState.Completed) {
 		// If merged stage is also completed, show as "Ready"
-		if (mergedState === "completed") {
+		if (mergedState === FileStageState.Completed) {
 			return {
 				label: "Ready",
 				dotClassName: "bg-[#52c41a]",
@@ -1595,7 +1560,7 @@ function SectionMergedContent({
 							onClick={() =>
 								onOpenManualMergeModal({
 									fileId,
-									mode: "section",
+									mode: ManualMergeMode.Section,
 									sectionKey: section.key,
 									sourceType: section.key,
 								})
@@ -1769,7 +1734,7 @@ function MergedStageCard({
 						<>
 							<div>
 								<MergeTableHeader
-									type="merged"
+									type={TableHeaderType.Merged}
 									count={activeSection.autoMergedRows.length}
 								/>
 								<MergeRowsTable
@@ -1784,7 +1749,7 @@ function MergedStageCard({
 
 							<div>
 								<MergeTableHeader
-									type="unmerged"
+									type={TableHeaderType.Unmerged}
 									count={activeSection.pendingRows.length}
 									showManualMergeButton
 									loadingActionKey={loadingActionKey}
@@ -1792,7 +1757,7 @@ function MergedStageCard({
 									onManualMerge={() =>
 										onOpenManualMergeModal({
 											fileId: selectedFile.id,
-											mode: "section",
+											mode: ManualMergeMode.Section,
 											sectionKey: activeSection.key,
 											sourceType: activeSection.key,
 										})
@@ -1811,7 +1776,7 @@ function MergedStageCard({
 					) : (
 						<div>
 							<MergeTableHeader
-								type="merged"
+								type={TableHeaderType.Merged}
 								count={
 									activeSection.autoMergedRows.length ||
 									activeSection.rows.length
@@ -1869,7 +1834,7 @@ function MergedStageCard({
 						<>
 							<div>
 								<MergeTableHeader
-									type="merged"
+									type={TableHeaderType.Merged}
 									count={quoteSection.autoMergedRows?.length || 0}
 								/>
 								<MergeRowsTable
@@ -1885,7 +1850,7 @@ function MergedStageCard({
 
 							<div>
 								<MergeTableHeader
-									type="unmerged"
+									type={TableHeaderType.Unmerged}
 									count={quoteSection.pendingRows?.length || 0}
 									showManualMergeButton
 									loadingActionKey={loadingActionKey}
@@ -1893,7 +1858,7 @@ function MergedStageCard({
 									onManualMerge={() =>
 										onOpenManualMergeModal({
 											fileId: selectedFile.id,
-											mode: "section",
+											mode: ManualMergeMode.Section,
 											sectionKey: quoteSection?.key || "window_door_unit_list",
 											sourceType: quoteSection?.key || "window_door_unit_list",
 										})
@@ -1913,7 +1878,7 @@ function MergedStageCard({
 					) : (
 						<div>
 							<MergeTableHeader
-								type="merged"
+								type={TableHeaderType.Merged}
 								count={
 									quoteSection.autoMergedRows?.length ||
 									quoteSection.rows?.length ||
@@ -2055,7 +2020,7 @@ function ReadyStageCard({
 								onClick={() =>
 									onOpenManualMergeModal({
 										fileId: selectedFile.id,
-										mode: "ready",
+										mode: ManualMergeMode.Ready,
 										sourceType: "all-labels",
 									})
 								}
@@ -2133,7 +2098,9 @@ export default function ManualMergeNewPage() {
 		"Sub Label",
 	]);
 	const [selectedFileId, setSelectedFileIdLocal] = useState<number>(-1);
-	const [selectedStage, setSelectedStage] = useState<WorkflowStage>("unmerged");
+	const [selectedStage, setSelectedStage] = useState<WorkflowStage>(
+		WorkflowStage.Unmerged,
+	);
 	const [activeSectionKeys, setActiveSectionKeys] = useState<
 		Record<number, string>
 	>({});
@@ -2180,7 +2147,8 @@ export default function ManualMergeNewPage() {
 
 		// Determine which sections to use based on current stage
 		const sectionsToUse =
-			selectedStage === "merged" && selectedFile.mergedSections.length > 0
+			selectedStage === WorkflowStage.Merged &&
+			selectedFile.mergedSections.length > 0
 				? selectedFile.mergedSections
 				: selectedFile.unmergedSections.length > 0
 					? selectedFile.unmergedSections
@@ -2382,51 +2350,6 @@ export default function ManualMergeNewPage() {
 		[],
 	);
 
-	const buildWorkflowFiles = useCallback(
-		(
-			projectFiles: (ProjectFileRecord & { operation_type?: string })[],
-			preferredFields: string[],
-			fileResultsByFileId: Record<number, NormalizedFileSection[]>,
-		): MergeWorkflowFile[] => {
-			return projectFiles.map((file) => {
-				const unmergedSections = buildSectionsFromData(
-					file.id,
-					file.operation_type || "",
-					fileResultsByFileId[file.id] || [],
-					preferredFields,
-				);
-
-				const mergeStatus = createInitialMergeStatus(file.operation_type || "");
-				mergeStatus.unmergedDataLoaded = true;
-
-				return {
-					id: file.id,
-					fileName: file.file_name || `File ${file.id}`,
-					fileType:
-						file.operation_type === FileOperationType.ArchitectureDrawing
-							? "Architecture Drawing"
-							: file.operation_type === FileOperationType.Quote
-								? "Quote"
-								: file.operation_type || "Unknown",
-					operationType: file.operation_type || "",
-					labelsCount: unmergedSections.reduce(
-						(sum, section) => sum + section.rows.length,
-						0,
-					),
-					mergeStatus,
-					unmergedSections,
-					mergedSections: [],
-					readyAutoMergedRows: [],
-					readyPendingRows: [],
-					sections: unmergedSections,
-					sourceMergeStarted: false,
-					readyManualMergeCompleted: false,
-				};
-			});
-		},
-		[buildSectionsFromData, createInitialMergeStatus],
-	);
-
 	// Store merge status from API for use during initialization and updates
 	const mergeStatusRef = useRef<{
 		files: Record<string, { status: ApiMergeStatus }>;
@@ -2478,7 +2401,10 @@ export default function ManualMergeNewPage() {
 
 			// If no status data, use default flow (first file, first stage)
 			if (!statusData?.files) {
-				return { targetFileId: firstFile.id, targetStage: "unmerged" };
+				return {
+					targetFileId: firstFile.id,
+					targetStage: WorkflowStage.Unmerged,
+				};
 			}
 
 			// Find the first incomplete file based on API status
@@ -2487,30 +2413,49 @@ export default function ManualMergeNewPage() {
 
 				// If no status for this file, it's incomplete - start here
 				if (!fileStatus) {
-					return { targetFileId: file.id, targetStage: "unmerged" };
+					return {
+						targetFileId: file.id,
+						targetStage: WorkflowStage.Unmerged,
+					};
 				}
 
-				const apiStatus = fileStatus.status;
+				const apiStatus = fileStatus.status as ApiMergeStatus;
 
 				// Determine target stage based on API status
 				switch (apiStatus) {
-					case "no_merge":
+					case ApiMergeStatus.NoMerge:
 						// No merge done yet - start at unmerged
-						return { targetFileId: file.id, targetStage: "unmerged" };
-					case "within_source_start_merge":
+						return {
+							targetFileId: file.id,
+							targetStage: WorkflowStage.Unmerged,
+						};
+					case ApiMergeStatus.WithinSourceStartMerge:
 						// Auto merge started - show merged stage
-						return { targetFileId: file.id, targetStage: "merged" };
-					case "within_source_end_not_between_sources_merge":
+						return {
+							targetFileId: file.id,
+							targetStage: WorkflowStage.Merged,
+						};
+					case ApiMergeStatus.WithinSourceEndNotBetweenSourcesMerge:
 						// Source merge done, ready for file-level merge - show merged stage
-						return { targetFileId: file.id, targetStage: "merged" };
-					case "between_sources_start_merge":
+						return {
+							targetFileId: file.id,
+							targetStage: WorkflowStage.Merged,
+						};
+					case ApiMergeStatus.BetweenSourcesStartMerge:
 						// File-level merge started - show ready stage
-						return { targetFileId: file.id, targetStage: "ready" };
-					case "between_sources_end_merge":
+						return {
+							targetFileId: file.id,
+							targetStage: WorkflowStage.Ready,
+						};
+					case ApiMergeStatus.BetweenSourcesEndMerge:
+					case ApiMergeStatus.TakeOffCompleted:
 						// File complete, continue to next file
 						continue;
 					default:
-						return { targetFileId: file.id, targetStage: "unmerged" };
+						return {
+							targetFileId: file.id,
+							targetStage: WorkflowStage.Unmerged,
+						};
 				}
 			}
 
@@ -2518,12 +2463,18 @@ export default function ManualMergeNewPage() {
 			if (statusData.take_off_completed) {
 				// Everything is done, show merge-all stage as completed
 				const lastFile = files[files.length - 1];
-				return { targetFileId: lastFile.id, targetStage: "merge-all" };
+				return {
+					targetFileId: lastFile.id,
+					targetStage: WorkflowStage.MergeAll,
+				};
 			}
 
 			// All files complete but takeoff not merged - show merge-all stage
 			// User should click "Merge All File Labels"
-			return { targetFileId: firstFile.id, targetStage: "merge-all" };
+			return {
+				targetFileId: firstFile.id,
+				targetStage: WorkflowStage.MergeAll,
+			};
 		},
 		[],
 	);
@@ -2572,10 +2523,10 @@ export default function ManualMergeNewPage() {
 					// If no status or not fully completed, this is the target file
 					if (
 						!fileStatus ||
-						fileStatus.status !== "between_sources_end_merge"
+						fileStatus.status !== ApiMergeStatus.BetweenSourcesEndMerge
 					) {
 						targetFileToLoad = file;
-						targetFileApiStatus = fileStatus?.status;
+						targetFileApiStatus = fileStatus?.status as ApiMergeStatus;
 						foundIncompleteFile = true;
 						break;
 					}
@@ -2584,21 +2535,22 @@ export default function ManualMergeNewPage() {
 				if (!foundIncompleteFile && projectFiles.length > 0) {
 					const firstFileStatus =
 						mergeStatusRef.current.files[String(projectFiles[0].id)];
-					targetFileApiStatus = firstFileStatus?.status;
+					targetFileApiStatus = firstFileStatus?.status as ApiMergeStatus;
 				}
 			}
 
 			// Determine what data to load based on file status
 			const shouldLoadUnmergedData =
-				!targetFileApiStatus || targetFileApiStatus === "no_merge";
+				!targetFileApiStatus || targetFileApiStatus === ApiMergeStatus.NoMerge;
 			const shouldLoadMergedData =
-				targetFileApiStatus === "within_source_start_merge" ||
-				targetFileApiStatus === "within_source_end_not_between_sources_merge" ||
-				targetFileApiStatus === "between_sources_start_merge" ||
-				targetFileApiStatus === "between_sources_end_merge";
+				targetFileApiStatus === ApiMergeStatus.WithinSourceStartMerge ||
+				targetFileApiStatus ===
+					ApiMergeStatus.WithinSourceEndNotBetweenSourcesMerge ||
+				targetFileApiStatus === ApiMergeStatus.BetweenSourcesStartMerge ||
+				targetFileApiStatus === ApiMergeStatus.BetweenSourcesEndMerge;
 			const shouldLoadReadyData =
-				targetFileApiStatus === "between_sources_start_merge" ||
-				targetFileApiStatus === "between_sources_end_merge";
+				targetFileApiStatus === ApiMergeStatus.BetweenSourcesStartMerge ||
+				targetFileApiStatus === ApiMergeStatus.BetweenSourcesEndMerge;
 
 			// Initialize data containers
 			const fileResultsByFileId: Record<number, NormalizedFileSection[]> = {};
@@ -2792,7 +2744,7 @@ export default function ManualMergeNewPage() {
 				lastStageSyncedFileIdRef.current = targetFileId;
 
 				// If target stage is merge-all, load merge-all data
-				if (targetStage === "merge-all") {
+				if (targetStage === WorkflowStage.MergeAll) {
 					setIsMergeAllMode(true);
 					// Load merge-all results
 					const groupedRes = await getAllGroupedByTakeOff(Number(takeoffId));
@@ -3003,9 +2955,9 @@ export default function ManualMergeNewPage() {
 
 		// Check if this file needs merged data loaded based on API status
 		const fileStatus = mergeStatusRef.current?.files?.[String(selectedFile.id)];
-		const apiStatus = fileStatus?.status;
+		const apiStatus = fileStatus?.status as ApiMergeStatus | undefined;
 		// File is at unmerged stage if status is no_merge or undefined
-		if (!apiStatus || apiStatus === "no_merge") {
+		if (!apiStatus || apiStatus === ApiMergeStatus.NoMerge) {
 			// File is at unmerged stage, no need to load merged data
 			loadedFileDataRef.current.add(selectedFile.id);
 			return;
@@ -3079,8 +3031,8 @@ export default function ManualMergeNewPage() {
 
 				// If between_sources is completed (ready stage), also load ready stage data
 				const isBetweenSourcesCompleted =
-					apiStatus === "between_sources_start_merge" ||
-					apiStatus === "between_sources_end_merge";
+					apiStatus === ApiMergeStatus.BetweenSourcesStartMerge ||
+					apiStatus === ApiMergeStatus.BetweenSourcesEndMerge;
 				if (
 					isBetweenSourcesCompleted &&
 					selectedFile.readyAutoMergedRows.length === 0 &&
@@ -3164,7 +3116,7 @@ export default function ManualMergeNewPage() {
 
 		// Only load unmerged data if we're in unmerged stage and data is not loaded yet
 		if (
-			selectedStage === "unmerged" &&
+			selectedStage === WorkflowStage.Unmerged &&
 			!selectedFile.mergeStatus.unmergedDataLoaded
 		) {
 			loadFileData(selectedFile.id);
@@ -3426,7 +3378,7 @@ export default function ManualMergeNewPage() {
 
 					// Auto switch to Merged stage after successful merge
 					console.log("Setting selectedStage to 'merged'");
-					setSelectedStage("merged");
+					setSelectedStage(WorkflowStage.Merged);
 
 					notification.success({
 						message: "Auto merge completed",
@@ -3498,20 +3450,15 @@ export default function ManualMergeNewPage() {
 			}
 
 			// Switch to ready stage for completed files
-			setSelectedStage("ready");
+			setSelectedStage(WorkflowStage.Ready);
 		}
-	};
-
-	const handleSelectSection = (fileId: number, sectionKey: string) => {
-		setActiveSectionKeys((current) => ({
-			...current,
-			[fileId]: sectionKey,
-		}));
 	};
 
 	const canCreateTakeoff = useMemo(() => {
 		const allDone = workflowFiles.every(
-			(file) => getFileStageState(file, "ready") === "completed",
+			(file) =>
+				getFileStageState(file, WorkflowStage.Ready) ===
+				FileStageState.Completed,
 		);
 		if (!allDone) return false;
 		if (!isMergeAllMode || !mergeAllResult) return false;
@@ -3549,7 +3496,7 @@ export default function ManualMergeNewPage() {
 	const handleOpenReferenceModal = useCallback(
 		(
 			row: MergeWorkflowRow,
-			context?: { stage?: string; isMergeAllMode?: boolean },
+			context?: { stage?: WorkflowStage; isMergeAllMode?: boolean },
 		) => {
 			// Determine the traceability level based on context and row data
 			let level: "multiple_files" | "single_file" | "file_source" | "original" =
@@ -3557,19 +3504,22 @@ export default function ManualMergeNewPage() {
 
 			// Check stage first to determine the appropriate level
 			// merge-all stage: items are from multiple files merge
-			if (context?.isMergeAllMode || context?.stage === "merge-all") {
+			if (
+				context?.isMergeAllMode ||
+				context?.stage === WorkflowStage.MergeAll
+			) {
 				level = row.isMerged ? "multiple_files" : "single_file";
 			}
 			// ready stage: items are from single file merge (file internal merge)
-			else if (context?.stage === "ready") {
+			else if (context?.stage === WorkflowStage.Ready) {
 				level = row.isMerged ? "single_file" : "file_source";
 			}
 			// merged stage: items are from file source merge (source type merge)
-			else if (context?.stage === "merged") {
+			else if (context?.stage === WorkflowStage.Merged) {
 				level = row.isMerged ? "file_source" : "original";
 			}
 			// unmerged stage: items are original items
-			else if (context?.stage === "unmerged") {
+			else if (context?.stage === WorkflowStage.Unmerged) {
 				level = "original";
 			}
 			// Fallback: check row data for level hints
@@ -3601,7 +3551,7 @@ export default function ManualMergeNewPage() {
 			let pendingRows: any[] = [];
 			const file = workflowFiles.find((f) => f.id === context.fileId);
 			if (file) {
-				if (context.mode === "ready") {
+				if (context.mode === ManualMergeMode.Ready) {
 					pendingRows = file.readyPendingRows || [];
 				} else if (context.sectionKey) {
 					// First try to get from mergedSections (new API flow)
@@ -3669,7 +3619,7 @@ export default function ManualMergeNewPage() {
 			};
 		});
 
-		setSelectedStage("merged");
+		setSelectedStage(WorkflowStage.Merged);
 		notification.success({
 			message: "Mock auto merge complete",
 			description: "The merged board now shows auto merged and pending rows.",
@@ -3704,7 +3654,7 @@ export default function ManualMergeNewPage() {
 			};
 		});
 
-		setSelectedStage("merged");
+		setSelectedStage(WorkflowStage.Merged);
 		notification.success({
 			message: "Auto merge complete",
 			description: "All sections have been auto merged.",
@@ -3764,7 +3714,7 @@ export default function ManualMergeNewPage() {
 		});
 
 		if (selectedFile?.operationType === FileOperationType.Quote) {
-			setSelectedStage("ready");
+			setSelectedStage(WorkflowStage.Ready);
 		}
 
 		notification.success({
@@ -3829,7 +3779,7 @@ export default function ManualMergeNewPage() {
 						},
 					}));
 
-					setSelectedStage("ready");
+					setSelectedStage(WorkflowStage.Ready);
 					notification.success({
 						message: "Auto Merge Sources Complete",
 						description: `Successfully merged sources. ${autoMergedRows.length} merged, ${pendingRows.length} pending.`,
@@ -3853,33 +3803,6 @@ export default function ManualMergeNewPage() {
 		[takeoffId, resolveColumnNames, updateWorkflowFile],
 	);
 
-	const handleAutoMergeReady = async (fileId: number) => {
-		const actionKey = `auto-ready-${fileId}`;
-		setLoadingActionKey(actionKey);
-		await mockRequestDelay();
-
-		updateWorkflowFile(fileId, (file) => {
-			const mergeResult = applyFullManualMerge(
-				file.readyAutoMergedRows,
-				file.readyPendingRows,
-				"Ready Merge",
-			);
-
-			return {
-				...file,
-				readyAutoMergedRows: mergeResult.autoMergedRows,
-				readyPendingRows: mergeResult.pendingRows,
-				readyManualMergeCompleted: mergeResult.completed,
-			};
-		});
-
-		notification.success({
-			message: "Mock ready auto merge complete",
-			description: "The file is now fully merged in the ready board.",
-		});
-		setLoadingActionKey(null);
-	};
-
 	const handleMoveToNextFile = async () => {
 		const currentIndex = workflowFiles.findIndex(
 			(file) => file.id === selectedFileId,
@@ -3889,13 +3812,18 @@ export default function ManualMergeNewPage() {
 		}
 
 		const unfinishedFiles = workflowFiles.filter(
-			(file) => getFileStageState(file, "ready") !== "completed",
+			(file) =>
+				getFileStageState(file, WorkflowStage.Ready) !==
+				FileStageState.Completed,
 		);
 		const nextFile =
 			workflowFiles
 				.slice(currentIndex + 1)
-				.find((file) => getFileStageState(file, "ready") !== "completed") ||
-			unfinishedFiles[0];
+				.find(
+					(file) =>
+						getFileStageState(file, WorkflowStage.Ready) !==
+						FileStageState.Completed,
+				) || unfinishedFiles[0];
 		if (!nextFile) {
 			notification.info({
 				message: "Info",
@@ -3911,7 +3839,7 @@ export default function ManualMergeNewPage() {
 		await loadFileData(nextFile.id);
 
 		// Reset to unmerged stage for the new file
-		setSelectedStage("unmerged");
+		setSelectedStage(WorkflowStage.Unmerged);
 	};
 
 	// Skip file with no data and mark as completed
@@ -4016,7 +3944,7 @@ export default function ManualMergeNewPage() {
 					// Remove from loaded file data ref so it can be reloaded if needed
 					loadedFileDataRef.current.delete(fileId);
 
-					setSelectedStage("unmerged");
+					setSelectedStage(WorkflowStage.Unmerged);
 					lastStageSyncedFileIdRef.current = fileId;
 
 					notification.success({
@@ -4146,15 +4074,10 @@ export default function ManualMergeNewPage() {
 		// Set context for takeoff-level merge (no fileId, no sourceType)
 		setManualMergeContext({
 			fileId: 0, // 0 indicates takeoff-level merge
-			mode: "ready",
+			mode: ManualMergeMode.Ready,
 			sourceType: undefined,
 		});
 		setShowItemsMergeModal(true);
-	};
-
-	const handleExitMergeAllMode = () => {
-		setIsMergeAllMode(false);
-		setMergeAllResult(null);
 	};
 
 	const handleItemsMergeConfirm = useCallback(
@@ -4204,7 +4127,7 @@ export default function ManualMergeNewPage() {
 					return;
 				}
 
-				if (manualMergeContext?.mode === "ready") {
+				if (manualMergeContext?.mode === ManualMergeMode.Ready) {
 					// Refresh ready data
 					await loadReadyDataForFile(fileId);
 					updateWorkflowFile(fileId, (file) => ({
@@ -4335,7 +4258,9 @@ export default function ManualMergeNewPage() {
 	);
 	// Check if unmerged stage is already completed (auto merge has been done)
 	const isUnmergedStageCompleted = Boolean(
-		selectedFile && getFileStageState(selectedFile, "unmerged") === "completed",
+		selectedFile &&
+		getFileStageState(selectedFile, WorkflowStage.Unmerged) ===
+			FileStageState.Completed,
 	);
 	const hasOtherUnfinishedFiles = workflowFiles.some(
 		(file) => file.id !== selectedFileId && !isFileCompleted(file),
@@ -4563,12 +4488,6 @@ export default function ManualMergeNewPage() {
 									Review the merged results from all files
 								</div>
 							</div>
-							<Button
-								className="custom-default-btn !w-[130px]"
-								onClick={handleExitMergeAllMode}
-							>
-								Back to Files
-							</Button>
 						</div>
 
 						<div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
@@ -4611,7 +4530,7 @@ export default function ManualMergeNewPage() {
 											? "calc((100vh - 520px) / 2)"
 											: "calc(100vh - 350px)"
 									}
-									stage="merge-all"
+									stage={WorkflowStage.MergeAll}
 									isMergeAllMode={true}
 								/>
 							</div>
@@ -4669,7 +4588,7 @@ export default function ManualMergeNewPage() {
 										emptyText="No unmerged labels."
 										onOpenReferenceModal={handleOpenReferenceModal}
 										scrollY="calc((100vh - 520px) / 2)"
-										stage="merge-all"
+										stage={WorkflowStage.MergeAll}
 										isMergeAllMode={true}
 									/>
 								) : (
@@ -4796,7 +4715,11 @@ export default function ManualMergeNewPage() {
 											<div className="flex-1 flex justify-center">
 												<div className="flex min-w-max items-center gap-4 rounded-[20px] border border-primaryN30 bg-[#FCFCFD] px-5 py-3">
 													{(
-														["unmerged", "merged", "ready"] as WorkflowStage[]
+														[
+															WorkflowStage.Unmerged,
+															WorkflowStage.Merged,
+															WorkflowStage.Ready,
+														] as WorkflowStage[]
 													).map((stage, index) => {
 														const state = getFileStageState(
 															selectedFile,
@@ -4804,9 +4727,9 @@ export default function ManualMergeNewPage() {
 														);
 														const isSelected = selectedStage === stage;
 														const circleClassName =
-															state === "completed"
+															state === FileStageState.Completed
 																? "bg-forumBlue-normal"
-																: state === "active"
+																: state === FileStageState.Active
 																	? "bg-green-normal"
 																	: "bg-[#DCDCDC]";
 
@@ -4818,7 +4741,7 @@ export default function ManualMergeNewPage() {
 																<button
 																	type="button"
 																	className="flex items-center gap-2 text-left disabled:cursor-not-allowed"
-																	disabled={state === "pending"}
+																	disabled={state === FileStageState.Pending}
 																	onClick={() => {
 																		setSelectedStage(stage);
 																	}}
@@ -4890,17 +4813,17 @@ export default function ManualMergeNewPage() {
 										{/* Architecture Drawing: 3-column layout for sections */}
 										{selectedFile.operationType ===
 											FileOperationType.ArchitectureDrawing &&
-										selectedStage !== "ready" ? (
+										selectedStage !== WorkflowStage.Ready ? (
 											<div className="mt-5 flex min-h-0 flex-1 flex-col">
 												{/* Section action buttons */}
 												<div className="mb-4 flex shrink-0 items-center justify-between">
 													<div className="text-sm text-grey-dark">
-														{selectedStage === "unmerged"
+														{selectedStage === WorkflowStage.Unmerged
 															? "Raw Labels by Source Type"
 															: "Merged Labels by Source Type"}
 													</div>
 													<div className="flex items-center gap-3">
-														{selectedStage === "unmerged" ? (
+														{selectedStage === WorkflowStage.Unmerged ? (
 															<Button
 																className="custom-primary-btn !w-[150px]"
 																loading={
@@ -4919,7 +4842,7 @@ export default function ManualMergeNewPage() {
 																Auto Merge
 															</Button>
 														) : null}
-														{selectedStage === "merged" &&
+														{selectedStage === WorkflowStage.Merged &&
 														canAutoMergeSources ? (
 															<Button
 																className="custom-primary-btn !w-[150px]"
@@ -4944,7 +4867,7 @@ export default function ManualMergeNewPage() {
 
 												{/* 3-column grid for sections */}
 												<div className="grid min-h-0 flex-1 grid-cols-3 gap-4">
-													{(selectedStage === "merged" &&
+													{(selectedStage === WorkflowStage.Merged &&
 													selectedFile.mergedSections.length > 0
 														? selectedFile.mergedSections
 														: selectedFile.unmergedSections.length > 0
@@ -4973,7 +4896,7 @@ export default function ManualMergeNewPage() {
 
 															{/* Section content */}
 															<div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">
-																{selectedStage === "unmerged" ? (
+																{selectedStage === WorkflowStage.Unmerged ? (
 																	<SectionTable
 																		rows={section.rows}
 																		columns={columnNames}
@@ -5004,9 +4927,9 @@ export default function ManualMergeNewPage() {
 
 										{/* Quote type or Ready stage: single column */}
 										{(selectedFile.operationType === FileOperationType.Quote ||
-											selectedStage === "ready") && (
+											selectedStage === WorkflowStage.Ready) && (
 											<div className="mt-6 space-y-5">
-												{selectedStage === "unmerged" ? (
+												{selectedStage === WorkflowStage.Unmerged ? (
 													<UnmergedStageCard
 														selectedFile={selectedFile}
 														activeSection={activeSection}
@@ -5022,7 +4945,7 @@ export default function ManualMergeNewPage() {
 													/>
 												) : null}
 
-												{selectedStage === "merged" ? (
+												{selectedStage === WorkflowStage.Merged ? (
 													<MergedStageCard
 														selectedFile={selectedFile}
 														activeSection={activeSection}
@@ -5041,7 +4964,7 @@ export default function ManualMergeNewPage() {
 													/>
 												) : null}
 
-												{selectedStage === "ready" ? (
+												{selectedStage === WorkflowStage.Ready ? (
 													<ReadyStageCard
 														selectedFile={selectedFile}
 														columnNames={columnNames}
