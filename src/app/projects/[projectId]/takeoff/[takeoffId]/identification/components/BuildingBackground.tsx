@@ -2,28 +2,39 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Progress } from "antd";
 
-const CircleProgress = ({ size = 78 }: { size?: number }) => {
+const DEFAULT_DURATION_SECONDS = 180; // Default 3 minutes
+
+const CircleProgress = ({
+	size = 78,
+	durationSeconds = DEFAULT_DURATION_SECONDS,
+}: {
+	size?: number;
+	durationSeconds?: number;
+}) => {
 	const [progress, setProgress] = useState(0);
 
 	useEffect(() => {
+		if (durationSeconds <= 0) return;
+
+		const intervalMs = (durationSeconds * 1000) / 100;
 		let interval: NodeJS.Timeout;
 
 		const startProgress = () => {
 			interval = setInterval(() => {
 				setProgress((prev) => {
-					if (prev >= 90) {
+					if (prev >= 100) {
 						clearInterval(interval);
-						return prev;
+						return 100;
 					}
 					return prev + 1;
 				});
-			}, 1000);
+			}, intervalMs);
 		};
 
 		startProgress();
 
 		return () => clearInterval(interval);
-	}, []);
+	}, [durationSeconds]);
 
 	return (
 		<div>
@@ -55,12 +66,18 @@ const ActiveCircle = () => {
 	);
 };
 
-const CircleProgressView = ({ size = 78 }: { size?: number }) => {
+const CircleProgressView = ({
+	size = 78,
+	durationSeconds,
+}: {
+	size?: number;
+	durationSeconds?: number;
+}) => {
 	return (
 		<div
 			className={`w-[${size}px] h-[${size}px] flex items-center justify-center relative`}
 		>
-			<CircleProgress size={size} />
+			<CircleProgress size={size} durationSeconds={durationSeconds} />
 			<div className="absolute w-full h-full flex justify-center items-center">
 				<div className="w-[32px] h-[32px] rounded-full bg-forumBlue-normal flex items-center justify-center">
 					<Image
@@ -227,7 +244,15 @@ export enum BuildLoadingStep {
 	PageTakeOff = "page-takeoff",
 }
 
-const BuildingBackground = ({ step }: { step: string }) => {
+interface BuildingBackgroundProps {
+	step: string;
+	durationSeconds?: number;
+}
+
+const BuildingBackground = ({
+	step,
+	durationSeconds,
+}: BuildingBackgroundProps) => {
 	const stepMap: any = {
 		"page-label": {
 			title: "Processing your request...",
@@ -249,7 +274,7 @@ const BuildingBackground = ({ step }: { step: string }) => {
 		},
 	};
 
-	const { title, subTitle, description, stepComponent } =
+	const { title, subTitle, description } =
 		stepMap[step] || stepMap["page-label"];
 
 	return (
@@ -264,7 +289,7 @@ const BuildingBackground = ({ step }: { step: string }) => {
 				/>
 			</div>
 			<div className="w-[608px] flex flex-col gap-5 items-center">
-				<CircleProgressView size={130} />
+				<CircleProgressView size={130} durationSeconds={durationSeconds} />
 				<div className="text-[22px] text-forumBlue-normal">{title}</div>
 				<div className="text-base text-center whitespace-pre-line">
 					{subTitle}
