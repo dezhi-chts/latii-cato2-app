@@ -958,7 +958,9 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				</div>
 			</div>
 			{fullLoading && <LoadingScreen isLoading={fullLoading} />}
-			{buildLoading && <BuildingBackground step={"page-merge"} />}
+			{buildLoading && (
+				<BuildingBackground step={"page-merge"} durationSeconds={20 * 60} />
+			)}
 			<NewLogicBoxModal
 				isOpen={showNewLogicBoxModal}
 				onClose={handleCloseModal}
