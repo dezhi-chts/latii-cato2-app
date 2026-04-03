@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Button,
 	Checkbox,
@@ -10,6 +17,7 @@ import {
 	notification,
 	Spin,
 	Table,
+	Tooltip,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams } from "next/navigation";
@@ -20,6 +28,7 @@ import {
 	manualMergeByTakeOff,
 } from "@/services/mergeService";
 import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
+import { getDisplayValueByField } from "../../analyze-new/takeoffUtils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -220,6 +229,53 @@ const getFieldsFromItems = (items: any[]): string[] => {
 };
 
 type MergeMode = "customize" | "keepAll";
+
+const getColumnWidth = (title: string): number => {
+	if (!title) return 100;
+	if (title.length >= 25) return 200;
+	if (title.length >= 15) return 150;
+	if (title.length >= 10) return 120;
+	return 100;
+};
+
+const MAX_CELL_WIDTH = 200;
+
+function TruncatedTextCell({ value }: { value: string }) {
+	const divRef = useRef<HTMLDivElement>(null);
+	const [isTruncated, setIsTruncated] = useState(false);
+
+	useLayoutEffect(() => {
+		const element = divRef.current;
+		if (element) {
+			setIsTruncated(element.scrollWidth > element.clientWidth);
+		}
+	}, [value]);
+
+	return (
+		<div ref={divRef} className="min-h-[20px] truncate">
+			{isTruncated ? (
+				<Tooltip
+					title={value}
+					placement="topLeft"
+					color="white"
+					styles={{
+						body: {
+							backgroundColor: "#ffffff",
+							color: "#333",
+							fontSize: "12px",
+							maxWidth: "300px",
+							wordBreak: "break-word",
+						},
+					}}
+				>
+					<span>{value}</span>
+				</Tooltip>
+			) : (
+				<span>{value}</span>
+			)}
+		</div>
+	);
+}
 
 interface TableItem {
 	id: number;
@@ -888,39 +944,44 @@ export default function ManualMergeModal({
 			),
 		};
 
-		const fieldCols: ColumnsType<any> = fields.map((field) => ({
-			title: (
-				<span className="whitespace-nowrap text-xs text-grey-normal">
-					{field}
-				</span>
-			),
-			key: field,
-			width: field.length > 15 ? 150 : 100,
-			align: "center" as const,
-			render: (_: unknown, record: any) => {
-				const result = safeParseResult(record.result, record.originalResult);
-				const value = formatCellValue(result[field]);
-				const isSelected =
-					mergeMode === "customize" &&
-					(record.selectFields || []).includes(field);
-				const isLabel = field === "Label";
+		const fieldCols: ColumnsType<any> = fields.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					const result = safeParseResult(record.result, record.originalResult);
+					const value = getDisplayValueByField(result, field);
+					const isSelected =
+						mergeMode === "customize" &&
+						(record.selectFields || []).includes(field);
+					const isLabel = field === "Label";
 
-				return (
-					<div
-						className={`cursor-pointer rounded px-1.5 py-0.5 text-xs transition-all ${
-							isLabel
-								? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
-								: isSelected
-									? "border border-forumBlue-normal bg-[#EEF5FF]/50 text-grey-dark"
-									: "border border-transparent text-grey-normal hover:border-primaryN30 hover:bg-[#FCFCFD]"
-						}`}
-						onClick={() => handleToggleField(record.id, field)}
-					>
-						{value}
-					</div>
-				);
-			},
-		}));
+					return (
+						<div
+							className={`mx-auto w-full cursor-pointer overflow-hidden rounded px-1.5 py-0.5 text-xs transition-all ${
+								isLabel
+									? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
+									: isSelected
+										? "border border-forumBlue-normal bg-[#EEF5FF]/50 text-grey-dark"
+										: "border border-transparent text-grey-normal hover:border-primaryN30 hover:bg-[#FCFCFD]"
+							}`}
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+							onClick={() => handleToggleField(record.id, field)}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
 
 		return [indexCol, idCol, ...fieldCols];
 	}, [activeGroup, fields, mergeMode, handleToggleField]);
@@ -934,20 +995,31 @@ export default function ManualMergeModal({
 			render: () => <Checkbox checked className="pointer-events-none" />,
 		};
 
-		const fieldCols: ColumnsType<any> = mergedHeaders.map((field) => ({
-			title: (
-				<span className="whitespace-nowrap text-xs text-grey-normal">
-					{field}
-				</span>
-			),
-			key: field,
-			width: field.length > 15 ? 150 : 100,
-			align: "center" as const,
-			render: (_: unknown, record: any) => {
-				const value = formatCellValue(record[field]);
-				return <span className="text-xs text-grey-dark">{value}</span>;
-			},
-		}));
+		const fieldCols: ColumnsType<any> = mergedHeaders.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					const value = getDisplayValueByField(record, field);
+					return (
+						<div
+							className="mx-auto w-full overflow-hidden text-xs text-grey-dark"
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
 
 		return [indexCol, ...fieldCols];
 	}, [mergedHeaders]);
