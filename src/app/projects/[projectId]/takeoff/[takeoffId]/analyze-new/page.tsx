@@ -1,6 +1,6 @@
 "use client";
 
-import { notification, Spin } from "antd";
+import { Modal, notification, Spin } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -20,7 +20,12 @@ import EvidenceSidebar from "./components/EvidenceSidebar";
 import TakeoffListHeader from "./components/TakeoffListHeader";
 import TakeoffItemsTable from "./components/TakeoffItemsTable";
 import ItemTraceabilityModal from "../manual-merge-new/components/ItemTraceabilityModal";
-import { getFallbackDynamicFields, getSummaryStats } from "./takeoffUtils";
+import {
+	getFallbackDynamicFields,
+	getDisplayValueByField,
+	getSummaryStats,
+	parseItemResult,
+} from "./takeoffUtils";
 import {
 	EvidenceRecord,
 	ProjectFileRecord,
@@ -29,128 +34,7 @@ import {
 	TemplateField,
 } from "./types";
 import { FileOperationType } from "../types/evidence";
-
-// Helper functions for parsing data (same as manual-merge-new)
-const parseItemResult = (result: any): Record<string, unknown> => {
-	if (!result) return {};
-	if (typeof result === "string") {
-		try {
-			return JSON.parse(result);
-		} catch {
-			return {};
-		}
-	}
-	return result;
-};
-
-const formatNestedObject = (obj: Record<string, unknown>): string => {
-	const parts: string[] = [];
-	for (const [key, value] of Object.entries(obj)) {
-		if (value === null || value === undefined) continue;
-		if (typeof value === "object" && !Array.isArray(value)) {
-			const nestedStr = formatNestedObject(value as Record<string, unknown>);
-			if (nestedStr) {
-				parts.push(`${key}: {${nestedStr}}`);
-			}
-		} else if (Array.isArray(value)) {
-			parts.push(`${key}: [${value.join(", ")}]`);
-		} else {
-			parts.push(`${key}: ${value}`);
-		}
-	}
-	return parts.join(", ");
-};
-
-const getNestedValue = (
-	obj: Record<string, unknown>,
-	path: string,
-): unknown => {
-	const parts = path.split(".");
-	let current: unknown = obj;
-	for (const part of parts) {
-		if (current === null || current === undefined) return undefined;
-		if (typeof current !== "object") return undefined;
-		current = (current as Record<string, unknown>)[part];
-	}
-	return current;
-};
-
-const formatValue = (value: unknown): string => {
-	if (value === null || value === undefined) return "-";
-	if (Array.isArray(value)) {
-		if (value.length === 0) return "-";
-		return value
-			.map((item) => {
-				if (typeof item === "object" && item !== null) {
-					return formatNestedObject(item as Record<string, unknown>);
-				}
-				return String(item);
-			})
-			.join("; ");
-	}
-	if (typeof value === "object") {
-		return formatNestedObject(value as Record<string, unknown>);
-	}
-	return String(value);
-};
-
-const getDisplayValueByField = (
-	result: Record<string, unknown>,
-	fieldName: string,
-): string => {
-	if (fieldName === "Sub Label") {
-		const subLabel = result["Sub Label"] ?? result["sub_label"];
-		return formatValue(subLabel);
-	}
-
-	if (result[fieldName] !== undefined) {
-		return formatValue(result[fieldName]);
-	}
-
-	if (fieldName.includes(".")) {
-		const value = getNestedValue(result, fieldName);
-		if (value !== undefined) {
-			return formatValue(value);
-		}
-	}
-
-	for (const [key, val] of Object.entries(result)) {
-		if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-			const nestedResult = val as Record<string, unknown>;
-			if (nestedResult[fieldName] !== undefined) {
-				return formatValue(nestedResult[fieldName]);
-			}
-			for (const [, nestedVal] of Object.entries(nestedResult)) {
-				if (
-					typeof nestedVal === "object" &&
-					nestedVal !== null &&
-					!Array.isArray(nestedVal)
-				) {
-					const deepNestedResult = nestedVal as Record<string, unknown>;
-					if (deepNestedResult[fieldName] !== undefined) {
-						return formatValue(deepNestedResult[fieldName]);
-					}
-				}
-			}
-		}
-	}
-
-	if (fieldName.includes(".")) {
-		const parts = fieldName.split(".");
-		for (let i = parts.length - 1; i >= 0; i--) {
-			const partialPath = parts.slice(i).join(".");
-			const value = getNestedValue(result, partialPath);
-			if (value !== undefined) {
-				return formatValue(value);
-			}
-			if (i === parts.length - 1 && result[parts[i]] !== undefined) {
-				return formatValue(result[parts[i]]);
-			}
-		}
-	}
-
-	return "-";
-};
+import LoadingScreen from "@/components/loading-screen";
 
 interface ParsedTakeoffItem {
 	id: number | string;
@@ -325,6 +209,7 @@ export default function TakeoffListPage() {
 		Record<number, EvidenceRecord[]>
 	>({});
 	const [summaryStats, setSummaryStats] = useState<any>({});
+	const [fullLoading, setFullLoading] = useState(false);
 
 	const files = useMemo<ProjectFileRecord[]>(() => {
 		return takeoffData?.project_files || [];
@@ -662,22 +547,35 @@ export default function TakeoffListPage() {
 		});
 	};
 
-	const handleResetTakeoff = async () => {
-		let fileIds = files.map((file) => file.id).join(",");
-		const response = await resetTakeOff(takeoffId, fileIds);
-		if (response.status === "success") {
-			notification.success({
-				message: "Success",
-				description: "Take off reset successfully",
-			});
-			// 返回到合并前的页面
-			router.push(`/projects/${projectId}/takeoff/${takeoffId}/identification`);
-		} else {
-			notification.error({
-				message: "Error",
-				description: "Failed to reset take off",
-			});
-		}
+	const handleResetTakeoff = () => {
+		Modal.confirm({
+			title: "Reset Takeoff",
+			content:
+				"Are you sure you want to reset this takeoff? This action cannot be undone.",
+			okText: "Reset",
+			okButtonProps: { danger: true },
+			cancelText: "Cancel",
+			onOk: async () => {
+				setFullLoading(true);
+				let fileIds = files.map((file) => file.id).join(",");
+				const response = await resetTakeOff(takeoffId, fileIds);
+				setFullLoading(false);
+				if (response.status === "success") {
+					notification.success({
+						message: "Success",
+						description: "Take off reset successfully",
+					});
+					router.push(
+						`/projects/${projectId}/takeoff/${takeoffId}/identification`,
+					);
+				} else {
+					notification.error({
+						message: "Error",
+						description: "Failed to reset take off",
+					});
+				}
+			},
+		});
 	};
 
 	const handleDownload = async () => {
@@ -830,6 +728,7 @@ export default function TakeoffListPage() {
 					setReferenceItem(null);
 				}}
 			/>
+			{fullLoading && <LoadingScreen isLoading={fullLoading} />}
 		</div>
 	);
 }
