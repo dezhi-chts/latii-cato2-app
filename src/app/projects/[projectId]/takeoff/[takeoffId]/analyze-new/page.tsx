@@ -204,12 +204,12 @@ export default function TakeoffListPage() {
 	const [fileFilter, setFileFilter] = useState("all");
 	const [showAddBoxModal, setShowAddBoxModal] = useState(false);
 	const [showReferenceModal, setShowReferenceModal] = useState(false);
-	const [downloadLoading, setDownloadLoading] = useState(false);
 	const [evidencesByFile, setEvidencesByFile] = useState<
 		Record<number, EvidenceRecord[]>
 	>({});
 	const [summaryStats, setSummaryStats] = useState<any>({});
 	const [fullLoading, setFullLoading] = useState(false);
+	const [downloadLoading, setDownloadLoading] = useState(false);
 
 	const files = useMemo<ProjectFileRecord[]>(() => {
 		return takeoffData?.project_files || [];
@@ -581,24 +581,27 @@ export default function TakeoffListPage() {
 	const handleDownload = async () => {
 		setDownloadLoading(true);
 		try {
-			const response = await downloadTakeOffResult(takeoffId);
+			const response: any = await downloadTakeOffResult(takeoffId);
 
 			if (response.status === "success" && response.data) {
-				const blob = response.data;
-				const filename = `take_off_${takeoffId}.zip`;
-				const url = window.URL.createObjectURL(blob);
-				const link = document.createElement("a");
-				link.href = url;
-				link.download = filename;
-				document.body.appendChild(link);
-				link.click();
-				document.body.removeChild(link);
-				window.URL.revokeObjectURL(url);
-
-				notification.success({
-					message: "Success",
-					description: "Take off result downloaded successfully",
-				});
+				if (response.data) {
+					let fileName =
+						response.data["file_name"] || `take_off_${takeoffId}.zip`;
+					let fileUrl = response.data["download_url"] || "";
+					if (fileUrl) {
+						const link = document.createElement("a");
+						link.href = fileUrl;
+						link.download = fileName;
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+					} else {
+						notification.error({
+							message: "Error",
+							description: "No file url found",
+						});
+					}
+				}
 			} else {
 				notification.error({
 					message: "Error",

@@ -165,10 +165,8 @@ export const getTakeOffEvidenceUrlsByIds = async (result_item_ids: string) => {
 export const downloadTakeOffResult = async (take_off_id: string) => {
 	try {
 		const url = `/project/take_off_result/download?take_off_id=${take_off_id}`;
-		const response = await http.post(url, null, undefined, {
-			responseType: "blob",
-		});
-		return { data: response as unknown as Blob, status: "success" };
+		const response = await http.post(url);
+		return { data: response, status: "success" };
 	} catch (error) {
 		console.error("Error downloading take off result:", error);
 		return { data: null, status: "error" };
