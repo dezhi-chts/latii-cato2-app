@@ -65,6 +65,7 @@ import { useUser } from "@/context/UserContext";
 import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
+import { enrichElevationFloorPlanByEvidenceIds, generateFileKeysByProjectFileIds } from "@/services/takeOffService";
 
 const { confirm } = Modal;
 
@@ -618,6 +619,43 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		}
 	};
 
+	const handleFileKeys = async () => {
+		setFullLoading(true);
+		let fileIds = fileList.map((file: any) => file.id);
+		let res = await generateFileKeysByProjectFileIds(fileIds.join(","));
+		if (res.status === "success") {
+			// 获取文件中所有的evidence
+			handleEvidenceItems();
+		} else {
+			notification.error({
+				message: "Error",
+				description: res?.data?.detail || "Failed to generate file keys",
+			});
+		}
+	};
+
+	const handleEvidenceItems = async () => {
+		// 获取所有文件的evidence列表中类型为Floor Plan和Elevation的id集合
+		let floorPlanIds = fileEvidence.filter(
+			(item: EvidenceType) =>
+				item.type === PageType.FloorPlan ||
+				item.type === PageType.Elevation,
+		).map((item: EvidenceType) => item.id);
+		let res = await enrichElevationFloorPlanByEvidenceIds(floorPlanIds.join(","));
+		if (res.status === "success") {
+			// 跳转到合并前页面
+			router.push(
+				`/projects/${projectId}/takeoff/${takeOffId}/merge-before`,
+			);
+		} else {
+			notification.error({
+				message: "Error",
+				description: res?.data?.detail || "Failed to get evidence items",
+			});
+		}
+		setFullLoading(false);
+	};
+
 	const handleFileStatus = (oldFileId: number, newFileId: number) => {
 		setSelectedFileId(newFileId);
 		setFileList((prev) => {
@@ -678,7 +716,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				//     return file;
 				//   });
 				// });
-				await handleAnaylize();
+				//await handleAnaylize();
+				handleFileKeys();
 			}
 		}
 	};

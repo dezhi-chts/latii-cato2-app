@@ -167,9 +167,9 @@ export const downloadTakeOffResult = async (take_off_id: string) => {
 		const url = `/project/take_off_result/download?take_off_id=${take_off_id}`;
 		const response = await http.post(url);
 		return { data: response, status: "success" };
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error downloading take off result:", error);
-		return { data: null, status: "error" };
+		return { data: error?.response?.data, status: "error" };
 	}
 };
 
@@ -257,5 +257,71 @@ export const analyzeNewEvidencesByProjectFile = async (
 	} catch (error) {
 		console.error("Error analyze new evidences by project file:", error);
 		return { data: null, status: "error" };
+	}
+};
+
+/**
+ * 根据file_id生成所有立面图，平面图，schedule，key note框对应的s3_key
+ * @param project_file_ids
+ * @returns
+ */
+export const generateFileKeysByProjectFileIds = async (
+	project_file_ids: string,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/generate_file_keys_by_project_file_ids?project_file_ids=${project_file_ids}`;
+		const response = await http.post(url);
+		return { data: response as any, status: "success" };
+	} catch (error: any) {
+		console.error("Error generating file keys by project file ids:", error);
+		return { data: error?.response?.data, status: "error" };
+	}
+};
+
+/**
+ * 根据evidence_ids获取立面图，平面图里的小item存到evidences表
+ * @param evidence_idsevidence_ids
+ * @returns
+ */
+export const enrichElevationFloorPlanByEvidenceIds = async (
+	evidence_ids: string,
+) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/enrich_elevation_floor_plan_by_evidence_ids?evidence_ids=${evidence_ids}`;
+		const response = await http.post(url);
+		return { data: response as any, status: "success" };
+	} catch (error: any) {
+		console.error(
+			"Error enriching elevation floor plan by evidence ids:",
+			error,
+		);
+		return { data: error?.response?.data, status: "error" };
+	}
+};
+
+/**
+ * 获取立面图，平面图evidence对应小item
+ * @param evidence_ids
+ * @returns
+ */
+export const getEvidenceBySubTextEvidenceIds = async (evidence_ids: string) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_evidence_by_sub_text_evidence_ids?evidence_ids=${evidence_ids}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error: any) {
+		console.error("Error getting evidence by sub text evidence ids:", error);
+		return { data: error?.response?.data, status: "error" };
+	}
+};
+
+export const getEvidenceUrlsByEvidenceIds = async (evidence_ids: string) => {
+	try {
+		const url = `/drawing-ai/drawing_ai/get_evidence_urls_by_evidence_ids?evidence_ids=${evidence_ids}`;
+		const response = await http.get(url);
+		return { data: response as any, status: "success" };
+	} catch (error: any) {
+		console.error("Error getting evidence urls by evidence ids:", error);
+		return { data: error?.response?.data, status: "error" };
 	}
 };
