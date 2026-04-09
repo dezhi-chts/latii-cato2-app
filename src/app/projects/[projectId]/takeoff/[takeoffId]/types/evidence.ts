@@ -328,6 +328,7 @@ export interface PdfWrapperProps {
   onUpdateSafeZoom?: (zoom: number) => void; // 更新安全缩放比例
   onSuccessOCRText?: (text: string) => void; // OCR识别成功后，通知父组件
   onItemEvidenceConfirm?: (evidenceInfo: any) => void; // 确认evidence item后，通知父组件
+  onChangeSelectedEvidence?: (evidenceIds: number[]) => void; // 选中的evidence ids变化时，通知父组件
 }
 
 export interface PdfWrapperRefMethods {

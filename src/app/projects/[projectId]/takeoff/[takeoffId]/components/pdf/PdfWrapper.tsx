@@ -182,6 +182,7 @@ const PdfWrapper = forwardRef(
 			onUpdateSafeZoom,
 			onSuccessOCRText,
 			onItemEvidenceConfirm,
+			onChangeSelectedEvidence,
 		}: PdfWrapperProps,
 		ref: any,
 	) => {
@@ -2403,8 +2404,10 @@ const PdfWrapper = forwardRef(
 
 														if (selectedShapeId === evid.id) {
 															setSelectedShapeId(null);
+															onChangeSelectedEvidence?.([]);
 														} else {
 															setSelectedShapeId(evid.id);
+															onChangeSelectedEvidence?.([evid.id]);
 														}
 													}}
 													onCircleDragStart={(e, bounds) => {
@@ -3064,10 +3067,6 @@ const ShapeWrapper = ({
 
 	if (draggingShapeId === shape.id) {
 		color = "#FF4500";
-	}
-
-	if (!shapeDraggable && selectedShapeId === shape.id) {
-		color = "#008000";
 	}
 
 	if (itemEvidences?.find((item) => item.id === shape.id)) {

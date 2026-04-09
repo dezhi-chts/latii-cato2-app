@@ -29,6 +29,7 @@ import EvidenceThumbailList from "./components/EvidenceThumbailList";
 import LabelConfirmModal from "./components/LabelConfirmModal";
 import { evidenceBatchSubmit } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";
+import { set } from "lodash";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
@@ -338,7 +339,12 @@ export default function MergeBeforePage() {
 		});
 	};
 
-
+	const handleChangeSelectedEvidence = (evidenceIds: number[]) => {
+		// 获取evidenceIds
+		if (evidenceIds.length > 0) {
+			setSelectedEvidenceIds(evidenceIds);
+		}
+	};
 
 	return (
 		<div className="flex h-screen flex-col overflow-hidden bg-white font-nunito">
@@ -453,6 +459,7 @@ export default function MergeBeforePage() {
 								onDeleteEvidence={handleDeleteEvidence}
 								onUpdateEvidence={handleUpdateEvidence}
 								onItemEvidenceConfirm={handleItemEvidenceConfirm}
+								onChangeSelectedEvidence={handleChangeSelectedEvidence}
 							/>
 						) : (
 							<div className="flex h-full items-center justify-center text-grey-normal">
