@@ -1,4 +1,4 @@
-import { updateDrawingIndexType } from "@/services/drawingIndexService";
+import { updatePageType } from "@/services/drawingIndexService";
 import { Button, Checkbox, Select, notification } from "antd";
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
@@ -20,6 +20,7 @@ const selectOptions = [
 ]
 
 const ContentView = ({
+  fileId,
   contentData,
   setContentData,
   drawingTypeList,
@@ -31,14 +32,18 @@ const ContentView = ({
   const [filterType, setFilterType] = useState("");
   const handleChangeType = async (item: any, value: string) => {
     if (item.type === value) return;
-    setContentData((prev: any) =>
-      prev.map((i: any) => ({
+    setContentData((prev: any) => {
+      return prev.map((i: any) => ({
         ...i,
-        type: i.id === item.id ? value : i.type,
-      })),
-    );
+        type: i.page_number === item.page_number ? value : i.type,
+      }))
+    });
     // 本地更改完后，同步服务端
-    let res = await updateDrawingIndexType(item.id, { new_type: value });
+    let res = await updatePageType({
+      fileId: fileId,
+      pageNum: item.page_number,
+      newType: value,
+    });
     if (res.status === "error") {
       notification.error({
         message: "Error",
@@ -75,10 +80,10 @@ const ContentView = ({
       item.type !== "Unknown" && item.type !== "" && item.type !== null;
     return (
       <div
-        key={item.id}
-        className="pl-2 my-2 min-h-[28px] flex flex-row items-center text-xs"
+        key={item.page_number + '_' + item.index}
+        className="w-[500px] my-2 min-h-[28px] flex flex-row items-center text-xs"
       >
-        <div className="w-[20px]">
+        <div className="w-[50px] flex flex-row items-center justify-center">
           <div
             className={`w-[15px] h-[15px] rounded-full flex items-center justify-center ${checked ? "bg-forumBlue-normal" : "border border-primaryN30"}`}
           >
@@ -88,17 +93,22 @@ const ContentView = ({
           </div>
         </div>
         <div
-          className={`mx-1 w-[60%] text-xs cursor-pointer ${checked ? "text-forumBlue-normal" : ""}`}
+          className={`mx-1 w-[60px] text-center text-xs cursor-pointer ${checked ? "text-forumBlue-normal" : ""}`}
           onClick={() => handleMatchPage(item)}
         >
-          {item.sheet_id ?? ""}
-          <span className="ml-2">{item.title ?? ""}</span>
+          <span>{item.page_number ?? ""}</span>
         </div>
-        <div className="w-[40%] text-center">
+        <div
+          className={`w-[250px] text-xs cursor-pointer text-center ${checked ? "text-forumBlue-normal" : ""}`}
+          onClick={() => handleMatchPage(item)}
+        >
+          <span className="ml-2">{item.index ?? ""}</span>
+        </div>
+        <div className="w-[200px] text-center">
           <Select
             className="w-[150px] h-[28px] text-xs"
             placeholder="Floor Plan,etc."
-            value={item.type === "Unknown" || !item.type ? null : item.type}
+            value={!item.type ? null : item.type}
             onChange={(value) => handleChangeType(item, value)}
           >
             {drawingTypeList.map((item: any, index: number) => (
@@ -138,8 +148,10 @@ const ContentView = ({
       {!isEmptyContent ? (
         <>
           <div className="h-[28px] flex flex-row items-center bg-forumBlue-light text-xs text-forumBlue-normal rounded-tl-md rounded-tr-md">
-            <div className="w-[50%] text-center">Index</div>
-            <div className="w-[50%] text-center">Type</div>
+            <div className="w-[50px] text-center"></div>
+            <div className="w-[60px] text-center">Page</div>
+            <div className="w-[200px] text-center">Index</div>
+            <div className="w-[200px] text-center">Type</div>
           </div>
           <div className="pr-2 flex-1 overflow-y-auto">
             {filteredData?.map((item: any) => contentItem(item))}
