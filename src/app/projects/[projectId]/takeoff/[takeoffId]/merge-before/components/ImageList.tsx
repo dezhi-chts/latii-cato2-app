@@ -11,9 +11,15 @@ interface EvidenceImage {
 
 interface ImageListProps {
 	imagesData: EvidenceImage[];
+	showPreview?: boolean;
 }
 
-export default function ImageList({ imagesData }: ImageListProps) {
+export default function ImageList({
+	imagesData,
+	showPreview = true
+}:
+	ImageListProps
+) {
 	const [images, setImages] = useState<EvidenceImage[]>([]);
 
 	useEffect(() => {
@@ -23,10 +29,10 @@ export default function ImageList({ imagesData }: ImageListProps) {
 	return (
 		<div className="mb-2 flex h-full min-h-0 flex-col">
 			<div className="mb-2 text-sm font-medium text-forumBlue-normal">
-				Evidence Images
+				Schedule Images
 			</div>
 			<div className="flex-1 min-h-0 overflow-y-auto pr-1">
-				<div className="grid grid-cols-1 gap-2">
+				<div className="grid grid-cols-1 gap-4">
 					{images.map((image) => (
 						<div
 							key={image.id}
@@ -36,7 +42,7 @@ export default function ImageList({ imagesData }: ImageListProps) {
 								src={image.evidence_url || ""}
 								alt={"Evidence"}
 								className="object-cover"
-								preview={true}
+								preview={showPreview}
 							/>
 						</div>
 					))}

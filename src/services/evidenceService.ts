@@ -75,7 +75,7 @@ export const evidenceBatchSubmit = async (evidenceList: object[]) => {
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error evidence batch submit:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
