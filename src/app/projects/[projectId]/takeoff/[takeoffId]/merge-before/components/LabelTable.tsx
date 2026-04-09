@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, Radio, Table, notification } from "antd";
+import { Button, Input, Radio, Table, notification, Modal } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { evidenceBatchDelete, evidenceBatchUpdate } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";
 import Image from "next/image";
+const { confirm } = Modal;
 
 interface LabelItem {
 	id: string | number;
@@ -46,6 +47,8 @@ export default function LabelTable({
 	} | null>(null);
 	const submittingCellKeyRef = useRef<string | null>(null);
 	const [fullLoading, setFullLoading] = useState(false);
+	const tableRef = useRef<HTMLDivElement>(null);
+	const selectedRowRef = useRef<HTMLTableRowElement>(null);
 
 	const parseOcrText = (ocrText: unknown) => {
 		if (!ocrText) {
@@ -77,6 +80,23 @@ export default function LabelTable({
 		});
 		setRows(nextRows);
 	}, [data]);
+
+	// 当选中行变化时，滚动到可视区域
+	useEffect(() => {
+		if (selectedId && selectedRowRef.current && tableRef.current) {
+			const rowElement = selectedRowRef.current;
+			const tableElement = tableRef.current;
+			const tableRect = tableElement.getBoundingClientRect();
+			const rowRect = rowElement.getBoundingClientRect();
+
+			// 检查行是否在可视区域内
+			const isInViewport = rowRect.top >= tableRect.top && rowRect.bottom <= tableRect.bottom;
+
+			if (!isInViewport) {
+				rowElement.scrollIntoView({ behavior: "smooth", block: "center" });
+			}
+		}
+	}, [selectedId]);
 
 	const isEditingCell = (record: LabelItem, field: "label" | "subLabel") =>
 		editingCell?.id === record.id && editingCell?.field === field;
@@ -161,28 +181,36 @@ export default function LabelTable({
 			return;
 		}
 
-		const prevRows = rows;
-		const nextRows = rows.filter((row) => row.id !== record.id);
-		setRows(nextRows);
-		setFullLoading(true);
-		const response = await evidenceBatchDelete([rowId]);
-		setFullLoading(false);
+		confirm({
+			title: "Delete Item",
+			content: `Are you sure you want to delete this item: ${record.label}`,
+			okText: "Delete",
+			onOk: async () => {
+				const prevRows = rows;
+				const nextRows = rows.filter((row) => row.id !== record.id);
+				setRows(nextRows);
+				setFullLoading(true);
+				const response = await evidenceBatchDelete([rowId]);
+				setFullLoading(false);
 
-		if (response.status === "success") {
-			notification.success({
-				message: "Success",
-				description: `${title} item deleted.`,
-			});
-			onDeleteSuccess?.(rowId);
-			return;
-		}
+				if (response.status === "success") {
+					notification.success({
+						message: "Success",
+						description: `${title} item deleted.`,
+					});
+					onDeleteSuccess?.(rowId);
+					return;
+				}
 
-		setRows(prevRows);
-		notification.error({
-			message: "Error",
-			description: "Failed to delete item. The table has been restored.",
+				setRows(prevRows);
+				notification.error({
+					message: "Error",
+					description: "Failed to delete item. The table has been restored.",
+				});
+			},
 		});
-	};
+	}
+
 
 	const columns: ColumnsType<LabelItem> = useMemo(
 		() => [
@@ -190,17 +218,25 @@ export default function LabelTable({
 				title: "",
 				key: "radio",
 				width: 40,
+				align: "center",
 				render: (_: unknown, record: LabelItem) => (
-					<Radio
-						checked={selectedId === record.id}
-						onChange={() => onSelect(record)}
-					/>
+					<span
+						ref={selectedId === record.id ? selectedRowRef : undefined}
+						data-selected={selectedId === record.id}
+					>
+						<Radio
+							checked={selectedId === record.id}
+							onChange={() => onSelect(record)}
+						/>
+					</span>
 				),
 			},
 			{
 				title: "Label",
 				key: "label",
 				dataIndex: "label",
+				width: 100,
+				align: "center",
 				render: (text: string, record: LabelItem) =>
 					isEditingCell(record, "label") ? (
 						<Input
@@ -230,6 +266,7 @@ export default function LabelTable({
 				title: "Sub Label",
 				key: "subLabel",
 				dataIndex: "subLabel",
+				align: "center",
 				render: (text: string, record: LabelItem) =>
 					isEditingCell(record, "subLabel") ? (
 						<Input
@@ -258,7 +295,8 @@ export default function LabelTable({
 			{
 				title: "",
 				key: "action",
-				width: 76,
+				width: 40,
+				align: "center",
 				render: (_: string, record: LabelItem) => (
 					<Button
 						type="link"
@@ -266,7 +304,7 @@ export default function LabelTable({
 						className="px-0"
 						onClick={() => handleDeleteRow(record)}
 					>
-						<Image src='/assets/icons/delete.svg' width={15} height={15} />
+						<Image alt="Delete" src='/assets/icons/delete.svg' width={15} height={15} />
 					</Button>
 				),
 			},
@@ -277,18 +315,23 @@ export default function LabelTable({
 	return (
 		<div className="mb-2">
 			<div className="mb-2 text-sm font-medium text-forumBlue-normal flex justify-between items-center">
-				<div>{title}</div>
+				<div>
+					<span className="mr-2">{title}</span>
+					<span className="text-xs text-grey-dark">{rows.length} items</span>
+				</div>
 				<div className="underline cursor-pointer" onClick={() => setShowScheduleModal(true)}>Schedule Images</div>
 			</div>
-			<Table
-				size="small"
-				columns={columns}
-				dataSource={rows}
-				pagination={false}
-				rowKey="id"
-				scroll={{ y: "calc(100vh - 240px)" }}
-				className="border border-primaryN30 rounded-md"
-			/>
+			<div ref={tableRef} className="overflow-auto">
+				<Table
+					size="small"
+					columns={columns}
+					dataSource={rows}
+					pagination={false}
+					rowKey="id"
+					scroll={{ y: "calc(100vh - 240px)" }}
+					className="border border-primaryN30 rounded-md"
+				/>
+			</div>
 			{fullLoading && <LoadingScreen isLoading={fullLoading} />}
 		</div>
 	);
