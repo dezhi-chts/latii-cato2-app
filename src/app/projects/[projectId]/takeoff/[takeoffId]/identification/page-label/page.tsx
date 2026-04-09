@@ -433,11 +433,25 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			// 更新tags中的数据
 			setPageTypeList((prev: any) => {
 				let list = [...prev];
-				let oldTypeItem = list.find((item: any) => item.type === oldType);
-				let newTypeItem = list.find((item: any) => item.type === newType);
+				let oldTypeItem = list.find((item: any) => {
+					if (oldType === PageType.Unknown) {
+						return item.type === PageType.NotUsed
+					} else {
+						return item.type === oldType
+					}
+
+				});
+				let newTypeItem = list.find((item: any) => {
+					if (newType === PageType.Unknown) {
+						return item.type === PageType.NotUsed
+					} else {
+						return item.type === newType
+					}
+				});
 				let activePagesItem = list.find(
 					(item: any) => item.type === PageType.ActivePages,
 				);
+
 				// 页面旧类型集合数量减1
 				oldTypeItem.count =
 					(oldTypeItem?.count || 0) - 1 < 0 ? 0 : (oldTypeItem?.count || 0) - 1;
