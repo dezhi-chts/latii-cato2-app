@@ -30,11 +30,11 @@ const Weblink = ({
   }, [value, internalValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange?.(e);
-
-    if (!onChange && !onBlur && value === undefined) {
+    if (value === undefined) {
       setInternalValue(e.target.value);
     }
+
+    onChange?.(e);
   };
 
   const handleOpenLink = () => {
