@@ -636,12 +636,48 @@ export default function ManualMergeModal({
 	const handleKeepAllClick = useCallback(() => {
 		if (!activeGroup || tableData.length === 0) return;
 
-		// Generate items with copy1, copy2 suffix for Label
-		const itemsWithCopySuffix = tableData.map((item, index) => {
+		const copySuffixRegex = /^(.*)\s+copy(\d+)$/i;
+		const usedCopyIndexesByBase = new Map<string, Set<number>>();
+
+		// First pass: collect existing "copyN" suffixes so we can keep them.
+		tableData.forEach((item) => {
 			const result = safeParseResult(item.result, item.originalResult);
-			const originalLabel = result.Label || "";
-			const newLabel =
-				index === 0 ? originalLabel : `${originalLabel} copy${index}`;
+			const label = formatCellValue(result.Label);
+			const matched = label.match(copySuffixRegex);
+			if (!matched) return;
+
+			const baseLabel = matched[1].trim();
+			const copyIndex = Number(matched[2]);
+			if (!baseLabel || Number.isNaN(copyIndex)) return;
+
+			if (!usedCopyIndexesByBase.has(baseLabel)) {
+				usedCopyIndexesByBase.set(baseLabel, new Set<number>());
+			}
+			usedCopyIndexesByBase.get(baseLabel)!.add(copyIndex);
+		});
+
+		const seenRawLabels = new Set<string>();
+		const itemsWithCopySuffix = tableData.map((item) => {
+			const result = safeParseResult(item.result, item.originalResult);
+			const originalLabel = formatCellValue(result.Label);
+			const matched = originalLabel.match(copySuffixRegex);
+
+			let newLabel = originalLabel;
+			if (!matched) {
+				// Keep existing label for first occurrence, only suffix duplicated raw labels.
+				const baseLabel = originalLabel.trim();
+				if (seenRawLabels.has(baseLabel)) {
+					const usedIndexes = usedCopyIndexesByBase.get(baseLabel) || new Set();
+					let nextCopyIndex = 1;
+					while (usedIndexes.has(nextCopyIndex)) {
+						nextCopyIndex += 1;
+					}
+					newLabel = `${baseLabel} copy${nextCopyIndex}`;
+					usedIndexes.add(nextCopyIndex);
+					usedCopyIndexesByBase.set(baseLabel, usedIndexes);
+				}
+				seenRawLabels.add(baseLabel);
+			}
 
 			return {
 				...item,
@@ -1024,6 +1060,71 @@ export default function ManualMergeModal({
 		return [indexCol, ...fieldCols];
 	}, [mergedHeaders]);
 
+	const keepAllColumns = useMemo<ColumnsType<any>>(() => {
+		const indexCol: ColumnsType<any>[number] = {
+			title: <span className="text-xs text-grey-normal">#</span>,
+			key: "_index",
+			width: 50,
+			align: "center",
+			fixed: "left",
+			render: (_: unknown, __: unknown, index: number) => (
+				<span className="inline-flex h-5 w-5 items-center justify-center rounded bg-forumBlue-normal text-[10px] text-white">
+					{index + 1}
+				</span>
+			),
+		};
+
+		const idCol: ColumnsType<any>[number] = {
+			title: <span className="text-xs text-grey-normal">ID</span>,
+			key: "_id",
+			width: 60,
+			align: "center",
+			fixed: "left",
+			render: (_: unknown, record: any) => (
+				<span className="text-xs text-grey-normal">{record.id}</span>
+			),
+		};
+
+		const fieldCols: ColumnsType<any> = fields.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				ellipsis: true,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					// Keep All preview should show the latest modified label in `result`.
+					const result =
+						safeParseResult(record.result) ||
+						safeParseResult(record.originalResult);
+					const value = getDisplayValueByField(result, field);
+					const isLabel = field === "Label";
+
+					return (
+						<div
+							className={`mx-auto w-full overflow-hidden rounded px-1.5 py-0.5 text-xs ${
+								isLabel
+									? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
+									: "text-grey-normal"
+							}`}
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
+
+		return [indexCol, idCol, ...fieldCols];
+	}, [fields]);
+
 	const totalCount = conflictGroups.length;
 
 	return (
@@ -1117,6 +1218,8 @@ export default function ManualMergeModal({
 											}`}
 											onClick={() => {
 												setActiveGroupIndex(index);
+												setMergeMode("customize");
+												setShowKeepAllModal(false);
 											}}
 										>
 											<div
@@ -1315,7 +1418,7 @@ export default function ManualMergeModal({
 				open={showKeepAllModal}
 				onCancel={() => setShowKeepAllModal(false)}
 				footer={null}
-				width={1000}
+				width={"80vw"}
 				centered
 				destroyOnClose
 				className="[&_.ant-modal-content]:!p-0"
@@ -1355,58 +1458,7 @@ export default function ManualMergeModal({
 						<div className="h-full overflow-auto rounded-lg border border-primaryN30">
 							<Table
 								rowKey={(record) => record.id || Math.random()}
-								columns={[
-									{
-										title: <span className="text-xs text-grey-normal">#</span>,
-										key: "_index",
-										width: 50,
-										align: "center",
-										fixed: "left",
-										render: (_: unknown, __: unknown, index: number) => (
-											<span className="inline-flex h-5 w-5 items-center justify-center rounded bg-forumBlue-normal text-[10px] text-white">
-												{index + 1}
-											</span>
-										),
-									},
-									{
-										title: <span className="text-xs text-grey-normal">ID</span>,
-										key: "_id",
-										width: 60,
-										align: "center",
-										fixed: "left",
-										render: (_: unknown, record: any) => (
-											<span className="text-xs text-grey-normal">
-												{record.id}
-											</span>
-										),
-									},
-									...fields.map((field) => ({
-										title: (
-											<span className="whitespace-nowrap text-xs text-grey-normal">
-												{field}
-											</span>
-										),
-										key: field,
-										width: field.length > 15 ? 150 : 100,
-										align: "center" as const,
-										render: (_: unknown, record: any) => {
-											const value = formatCellValue(record.result?.[field]);
-											const isLabel = field === "Label";
-
-											return (
-												<div
-													className={`rounded px-1.5 py-0.5 text-xs ${
-														isLabel
-															? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
-															: "text-grey-normal"
-													}`}
-												>
-													{value}
-												</div>
-											);
-										},
-									})),
-								]}
+								columns={keepAllColumns}
 								dataSource={keepAllItems}
 								pagination={false}
 								scroll={{

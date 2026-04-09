@@ -157,6 +157,8 @@ const itemBoxTypes = [
 	itemBoxType.WindowDoorUnitListItem,
 ];
 
+const showItemConfirmBtnTypes = ['Floor Plan Item', 'Elevation Item'];
+
 const PdfWrapper = forwardRef(
 	(
 		{
@@ -170,6 +172,7 @@ const PdfWrapper = forwardRef(
 			selectedEvidenceIds,
 			typeList,
 			pdfOperationType = FileOperationType.ArchitectureDrawing,
+			evidenceDraggable = true,
 			onChangePage,
 			onTotalPages,
 			onAppendEvidence,
@@ -178,6 +181,7 @@ const PdfWrapper = forwardRef(
 			onCropSectionsCount,
 			onUpdateSafeZoom,
 			onSuccessOCRText,
+			onItemEvidenceConfirm,
 		}: PdfWrapperProps,
 		ref: any,
 	) => {
@@ -628,6 +632,7 @@ const PdfWrapper = forwardRef(
 			const uploadData = list.map((section: GroupFrame) => {
 				let rotateAngle: number = (viewport as any).rotation ?? 0;
 				return {
+					groupId: section.id,
 					project_id: project_id,
 					project_file_id: project_file_id,
 					project_file_page_number: page,
@@ -1031,17 +1036,17 @@ const PdfWrapper = forwardRef(
 
 				pdfPolygons: currentViewportRef.current
 					? [
-							{
-								x: currentViewportRef.current.convertToPdfPoint(
-									pos.x,
-									pos.y,
-								)[0],
-								y: currentViewportRef.current.convertToPdfPoint(
-									pos.x,
-									pos.y,
-								)[1],
-							},
-						]
+						{
+							x: currentViewportRef.current.convertToPdfPoint(
+								pos.x,
+								pos.y,
+							)[0],
+							y: currentViewportRef.current.convertToPdfPoint(
+								pos.x,
+								pos.y,
+							)[1],
+						},
+					]
 					: [],
 				bounds: {
 					minX: pos.x,
@@ -1178,23 +1183,23 @@ const PdfWrapper = forwardRef(
 
 			const pdfPoints = viewPort
 				? [
-						{
-							x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-							y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-							y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-							y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-							y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-						},
-					]
+					{
+						x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+						y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+						y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+						y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+						y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+					},
+				]
 				: [];
 
 			const groupFrame = {
@@ -1227,7 +1232,7 @@ const PdfWrapper = forwardRef(
 					.then(() => {
 						// 保存成功后，添加默认选中功能
 					})
-					.catch(() => {});
+					.catch(() => { });
 			}
 		};
 
@@ -1340,23 +1345,23 @@ const PdfWrapper = forwardRef(
 
 			const pdfPoints = viewPort
 				? [
-						{
-							x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
-							y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
-							y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
-							y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
-						},
-						{
-							x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
-							y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
-						},
-					]
+					{
+						x: viewPort.convertToPdfPoint(p1.x, p1.y)[0],
+						y: viewPort.convertToPdfPoint(p1.x, p1.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p2.x, p2.y)[0],
+						y: viewPort.convertToPdfPoint(p2.x, p2.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p3.x, p3.y)[0],
+						y: viewPort.convertToPdfPoint(p3.x, p3.y)[1],
+					},
+					{
+						x: viewPort.convertToPdfPoint(p4.x, p4.y)[0],
+						y: viewPort.convertToPdfPoint(p4.x, p4.y)[1],
+					},
+				]
 				: [];
 
 			const groupFrame = {
@@ -2275,9 +2280,9 @@ const PdfWrapper = forwardRef(
 
 				const viewPoints = Array.isArray(pdfPolygons)
 					? pdfPolygons.map((p: Point) => {
-							const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
-							return { x: px, y: py };
-						})
+						const [px, py] = viewPort.convertToViewportPoint(p.x, p.y);
+						return { x: px, y: py };
+					})
 					: [];
 
 				return { ...item, viewportPolygons: viewPoints };
@@ -2309,10 +2314,10 @@ const PdfWrapper = forwardRef(
 							style={
 								operationMode === "edit"
 									? {
-											display: "grid",
-											alignItems: "center",
-											justifyItems: "center",
-										}
+										display: "grid",
+										alignItems: "center",
+										justifyItems: "center",
+									}
 									: {}
 							}
 						>
@@ -2373,6 +2378,7 @@ const PdfWrapper = forwardRef(
 													itemEvidences={itemEvidences}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
+													evidenceDraggable={evidenceDraggable}
 													onDragStart={() => {
 														setDraggingShapeId(evid.id);
 														// 设置新的选中元素
@@ -2440,6 +2446,7 @@ const PdfWrapper = forwardRef(
 													itemEvidences={itemEvidences}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
+													evidenceDraggable={evidenceDraggable}
 													onDragStart={() => {
 														setDraggingShapeId(crop.id);
 														// 设置新的选中元素
@@ -2505,10 +2512,12 @@ const PdfWrapper = forwardRef(
 									let showSelectGroup = false;
 									// 是否显示左上角的按钮
 									let showNumBtn = false;
+									// 是否显示删除按钮
+									let showDeleteBtn = false;
 
 									if (
 										showSelectGroupTypes.includes(type) &&
-										pdfOperationType === FileOperationType.ArchitectureDrawing
+										pdfOperationType === FileOperationType.ArchitectureDrawing && !item.isParentEvidence
 									) {
 										// ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
 										showSelectGroup = true;
@@ -2528,6 +2537,11 @@ const PdfWrapper = forwardRef(
 											showCopyBtn = true;
 											color = findType.color || colorList["forumBlue-normal"];
 										}
+									}
+
+									if (selectedShapeId === item.id && !item.isParentEvidence) {
+										// 如果当前选中的元素是当前Evidence，那么显示删除按钮
+										showDeleteBtn = true;
 									}
 
 									return (
@@ -2573,20 +2587,24 @@ const PdfWrapper = forwardRef(
 															}}
 														/>
 													)}
-													<Popconfirm
-														title="Are you sure you want to delete this evidence?"
-														onConfirm={() => batchDelete([item.id])}
-													>
-														<div className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md">
-															<Image
-																src="/assets/icons/delete-dark.svg"
-																alt="delete icon"
-																width={15}
-																height={15}
-																preview={false}
-															/>
-														</div>
-													</Popconfirm>
+													{
+														showDeleteBtn && (
+															<Popconfirm
+																title="Are you sure you want to delete this evidence?"
+																onConfirm={() => batchDelete([item.id])}
+															>
+																<div className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md">
+																	<Image
+																		src="/assets/icons/delete-dark.svg"
+																		alt="delete icon"
+																		width={15}
+																		height={15}
+																		preview={false}
+																	/>
+																</div>
+															</Popconfirm>
+														)
+													}
 												</div>
 											</div>
 											{
@@ -2668,7 +2686,7 @@ const PdfWrapper = forwardRef(
 															<div
 																className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
 																style={{ backgroundColor: color }}
-																onClick={() => {}}
+																onClick={() => { }}
 															>
 																<Popover
 																	placement="rightBottom"
@@ -2775,7 +2793,7 @@ const PdfWrapper = forwardRef(
 												style={{
 													left: showReadBtnGroupTypes.includes(group.type)
 														? width - 110
-														: showConfirmBtnGroupTypes.includes(group.type)
+														: (showConfirmBtnGroupTypes.includes(group.type) || showItemConfirmBtnTypes.includes(group.type))
 															? width - 90
 															: showSelectGroup
 																? width - 68
@@ -2820,6 +2838,22 @@ const PdfWrapper = forwardRef(
 														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
 														onClick={() => {
 															evidencSubmit(group.id);
+														}}
+													>
+														Confirm
+													</div>
+												)}
+
+												{showItemConfirmBtnTypes.includes(group.type) && (
+													<div
+														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
+														onClick={() => {
+															let revertCropSectionsData = getRevertCropSectionsData();
+															if (!revertCropSectionsData) return;
+															let findItem = revertCropSectionsData.find(
+																(item: any) => item.groupId === group.id,
+															);
+															onItemEvidenceConfirm?.(findItem);
 														}}
 													>
 														Confirm
@@ -2944,6 +2978,7 @@ const ShapeWrapper = ({
 	itemEvidences,
 	typeList,
 	pdfOperationType,
+	evidenceDraggable,
 	onDragStart,
 	onDragMove,
 	onDragEnd,
@@ -2960,6 +2995,7 @@ const ShapeWrapper = ({
 	itemEvidences: EvidenceType[] | null;
 	typeList?: any[];
 	pdfOperationType: FileOperationType;
+	evidenceDraggable?: boolean; // 是否可拖动evidence
 	onDragStart: () => void;
 	onDragMove: (x: number, y: number) => void;
 	onDragEnd: () => void;
@@ -3024,16 +3060,30 @@ const ShapeWrapper = ({
 		}
 	}
 
+	const shapeDraggable = !(type === "evidence" && !evidenceDraggable);
+
 	if (draggingShapeId === shape.id) {
 		color = "#FF4500";
+	}
+
+	if (!shapeDraggable && selectedShapeId === shape.id) {
+		color = "#008000";
 	}
 
 	if (itemEvidences?.find((item) => item.id === shape.id)) {
 		color = "#FF4500";
 	}
 
+	if (shape?.isParentEvidence) {
+		color = "#FF4500";
+	}
+
+
+
 	if (selectedShapeId === shape.id) {
-		circlePoints = getCriclePoints(width, height);
+		if (shapeDraggable) {
+			circlePoints = getCriclePoints(width, height);
+		}
 	}
 
 	return (
@@ -3041,10 +3091,11 @@ const ShapeWrapper = ({
 			{/** 填充区域  */}
 			<Path
 				data={pathData}
-				fill={color + "30"}
+				fill={shape?.isParentEvidence ? undefined : color + "30"}
 				stroke={color}
-				strokeWidth={1}
-				draggable={!(type === "evidence" && operationMode === "view")}
+				strokeWidth={shape?.isParentEvidence ? 3 : 1}
+				dash={shape?.isParentEvidence ? [10, 5] : undefined}
+				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {
 					const stage = e.target.getStage();
@@ -3141,6 +3192,7 @@ const ShapeWrapper = ({
 		</Group>
 	);
 };
+
 
 PdfWrapper.displayName = "PdfWrapper";
 export default PdfWrapper;

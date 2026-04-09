@@ -605,7 +605,8 @@ export default function TakeoffListPage() {
 			} else {
 				notification.error({
 					message: "Error",
-					description: "Failed to download take off result",
+					description:
+						response?.data?.detail || "Failed to download take off result",
 				});
 			}
 		} catch (error) {
