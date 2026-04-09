@@ -218,6 +218,11 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 							...item,
 							count: count,
 						};
+					} else if (item.type === PageType.NotUsed) {
+						return {
+							...item,
+							count: page_classification?.['Unknown'] ?? 0,
+						};
 					} else {
 						return {
 							...item,
@@ -352,11 +357,18 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			return [...thumbnailList];
 
 		if (currentType === PageType.All) return [...thumbnailList];
-		if (currentType === PageType.ActivePages)
+		else if (currentType === PageType.ActivePages) {
 			return [...thumbnailList].filter(
 				(item: any) => item.type && validPageType.includes(item.type),
 			);
-		return [...thumbnailList].filter((item: any) => item.type === currentType);
+		}
+		else if (currentType === PageType.NotUsed) {
+			return [...thumbnailList].filter(
+				(item: any) => item.type === PageType.NotUsed || item.type === PageType.Unknown,
+			);
+		} else {
+			return [...thumbnailList].filter((item: any) => item.type === currentType);
+		}
 	}, [selectedFileId, fileList, currentType, thumbnailList]);
 
 	const getItemPage = (item: any, index: number) => {
