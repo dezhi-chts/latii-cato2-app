@@ -4,12 +4,14 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Empty, Image, Input, Modal, Segmented, Spin, Table, Tag, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams } from "next/navigation";
+import { CheckCircleFilled } from "@ant-design/icons";
 
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
   getFileSourceMergeResultsByLabel,
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
+  getTakeOffEvidenceUrlsByIds,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -25,6 +27,8 @@ interface LabelOption {
   key: string;
   label: string;
   count?: number;
+  isMerged?: boolean;
+  idList?: number[];
 }
 
 const SOURCE_ALIAS: Record<SourceKey, string[]> = {
@@ -41,11 +45,28 @@ const toArray = (value: any): any[] => (Array.isArray(value) ? value : []);
 const ensureLabelFieldsFirst = (fields: string[]) => {
   const hasLabel = fields.includes("Label");
   const hasSubLabel = fields.includes("Sub Label");
-  const others = fields.filter((f) => f !== "Label" && f !== "Sub Label");
+  const hasQuantity = fields.includes("Quantity");
+  const hasOperability = fields.includes("Operability");
+  // 过滤掉 Label、Sub Label 和 Quantity，保留其他字段（包括 Operability）
+  const others = fields.filter((f) => f !== "Label" && f !== "Sub Label" && f !== "Quantity");
   const result: string[] = [];
   if (hasLabel) result.push("Label");
   if (hasSubLabel) result.push("Sub Label");
+  // 将其他字段添加到结果中
   result.push(...others);
+  // 如果同时有 Quantity 和 Operability，且 Quantity 不在 Operability 后面，则将 Quantity 插入到 Operability 后面
+  if (hasQuantity && hasOperability) {
+    const operabilityIndex = result.indexOf("Operability");
+    if (operabilityIndex !== -1) {
+      // 在 Operability 后面插入 Quantity
+      result.splice(operabilityIndex + 1, 0, "Quantity");
+    } else {
+      result.push("Quantity");
+    }
+  } else if (hasQuantity) {
+    // 只有 Quantity 没有 Operability，放到最后
+    result.push("Quantity");
+  }
   return result;
 };
 
@@ -92,8 +113,34 @@ function TruncatedTextCell({ value }: { value: string }) {
   );
 }
 
-const extractEvidenceUrls = (item: any): string[] => {
+const getTakeOffResultItemIds = (item: any): string[] => {
+  const listIds = Array.isArray(item?.take_off_result_item_id_list)
+    ? item.take_off_result_item_id_list.map((id: any) => String(id)).filter(Boolean)
+    : [];
+  if (listIds.length > 0) return listIds;
+
+  if (typeof item?.take_off_result_item_ids === "string" && item.take_off_result_item_ids) {
+    try {
+      const parsed = JSON.parse(item.take_off_result_item_ids);
+      if (Array.isArray(parsed)) {
+        return parsed.map((id: any) => String(id)).filter(Boolean);
+      }
+    } catch (error) {
+      console.error("Failed to parse take_off_result_item_ids:", error);
+    }
+  }
+  return [];
+};
+
+const extractEvidenceUrls = (
+  item: any,
+  evidenceUrlByResultItemId: Record<string, string>,
+): string[] => {
   const urls: string[] = [];
+  getTakeOffResultItemIds(item).forEach((resultItemId) => {
+    const mappedUrl = evidenceUrlByResultItemId[resultItemId];
+    if (mappedUrl) urls.push(mappedUrl);
+  });
   if (typeof item?.evidence_url === "string" && item.evidence_url) urls.push(item.evidence_url);
   if (typeof item?.s3_url === "string" && item.s3_url) urls.push(item.s3_url);
   if (typeof item?.evidence_msg?.s3_url === "string" && item.evidence_msg.s3_url) {
@@ -197,23 +244,75 @@ export default function ManualMergeV2Page() {
   const [editingValue, setEditingValue] = useState("");
   const [scheduleChanges, setScheduleChanges] = useState<Record<string, any>>({});
 
-  const [viewMode, setViewMode] = useState<Record<"floorPlan" | "elevation", ViewMode>>({
+  const [viewMode, setViewMode] = useState<Record<"schedule" | "floorPlan" | "elevation", ViewMode>>({
+    schedule: "items",
     floorPlan: "items",
     elevation: "items",
   });
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [evidenceUrlByResultItemId, setEvidenceUrlByResultItemId] = useState<
+    Record<string, string>
+  >({});
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
 
+  const scheduleEvidenceUrls = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          scheduleRows.flatMap((item) =>
+            extractEvidenceUrls(item, evidenceUrlByResultItemId),
+          ),
+        ),
+      ),
+    [evidenceUrlByResultItemId, scheduleRows],
+  );
   const floorPlanEvidenceUrls = useMemo(
-    () => Array.from(new Set(floorPlanRows.flatMap((item) => extractEvidenceUrls(item)))),
-    [floorPlanRows],
+    () =>
+      Array.from(
+        new Set(
+          floorPlanRows.flatMap((item) =>
+            extractEvidenceUrls(item, evidenceUrlByResultItemId),
+          ),
+        ),
+      ),
+    [evidenceUrlByResultItemId, floorPlanRows],
   );
   const elevationEvidenceUrls = useMemo(
-    () => Array.from(new Set(elevationRows.flatMap((item) => extractEvidenceUrls(item)))),
-    [elevationRows],
+    () =>
+      Array.from(
+        new Set(
+          elevationRows.flatMap((item) =>
+            extractEvidenceUrls(item, evidenceUrlByResultItemId),
+          ),
+        ),
+      ),
+    [evidenceUrlByResultItemId, elevationRows],
   );
+
+  const fetchEvidenceUrlsByRows = useCallback(async (rows: any[]) => {
+    const ids = Array.from(new Set(rows.flatMap((item) => getTakeOffResultItemIds(item))));
+    if (ids.length === 0) {
+      setEvidenceUrlByResultItemId({});
+      return;
+    }
+
+    const response = await getTakeOffEvidenceUrlsByIds(ids.join(","));
+    if (response.status !== "success") {
+      setEvidenceUrlByResultItemId({});
+      return;
+    }
+
+    const payload = response.data?.data ?? response.data ?? {};
+    const nextMap: Record<string, string> = {};
+    Object.entries(payload).forEach(([resultItemId, evidence]: [string, any]) => {
+      if (typeof evidence?.evidence_url === "string" && evidence.evidence_url) {
+        nextMap[resultItemId] = evidence.evidence_url;
+      }
+    });
+    setEvidenceUrlByResultItemId(nextMap);
+  }, []);
 
   const fetchColumns = useCallback(async () => {
     const result = await getTemplateById(1);
@@ -231,11 +330,16 @@ export default function ManualMergeV2Page() {
     setColumns(["Label", "Sub Label", "Product", "Product Type", "Quantity"]);
   }, []);
 
-  const fetchLabelData = useCallback(async (label: string) => {
+  const fetchLabelData = useCallback(async (label: string, fileIdOverride?: string) => {
     if (!label) return;
+    const resolvedFileId = fileIdOverride || fileId;
+    if (!takeoffId || !resolvedFileId) return;
     setLoading(true);
+    setScheduleRows([]);
+    setFloorPlanRows([]);
+    setElevationRows([]);
     try {
-      const response = await getFileSourceMergeResultsByLabel(takeoffId, fileId, label);
+      const response = await getFileSourceMergeResultsByLabel(takeoffId, resolvedFileId, label);
       if (response.status !== "success") {
         notification.error({
           message: "Error",
@@ -245,16 +349,75 @@ export default function ManualMergeV2Page() {
       }
 
       const payload = response.data?.data ?? response.data ?? [];
-      setScheduleRows(normalizeRows(collectSourceRows(payload, "schedule")));
-      setFloorPlanRows(normalizeRows(collectSourceRows(payload, "floorPlan")));
-      setElevationRows(normalizeRows(collectSourceRows(payload, "elevation")));
+      const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule"));
+      const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan"));
+      const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation"));
+
+      setScheduleRows(nextScheduleRows);
+      setFloorPlanRows(nextFloorPlanRows);
+      setElevationRows(nextElevationRows);
+      await fetchEvidenceUrlsByRows([
+        ...nextScheduleRows,
+        ...nextFloorPlanRows,
+        ...nextElevationRows,
+      ]);
       setScheduleChanges({});
       setEditingCell(null);
       setEditingValue("");
     } finally {
       setLoading(false);
     }
-  }, [fileId, takeoffId]);
+  }, [fetchEvidenceUrlsByRows, fileId, takeoffId]);
+
+  const fetchLabelsAndMaybeLoadData = useCallback(
+    async (resolvedFileId: string, preferredLabel?: string) => {
+      if (!takeoffId || !resolvedFileId) return;
+      const labelsRes = await getGroupedLabelsByFileAndTakeOff(takeoffId, resolvedFileId);
+      if (labelsRes.status !== "success") {
+        notification.error({
+          message: "Error",
+          description: "Failed to load grouped labels.",
+        });
+        return;
+      }
+
+      const rawLabels = toArray(labelsRes.data);
+      const nextLabels: LabelOption[] = rawLabels
+        .map((item: any, index: number) => {
+          if (typeof item === "string") {
+            return { key: `${item}-${index}`, label: item, count: undefined };
+          }
+          const label =
+            item?.label || item?.name || item?.group_label || item?.groupLabel || "";
+          if (!label) return null;
+          return {
+            key: `${label}-${index}`,
+            label,
+            count: Number(item?.count || item?.total || 0) || undefined,
+            isMerged: Boolean(item?.is_merged),
+            idList: Array.isArray(item?.id_list) ? item.id_list : [],
+          };
+        })
+        .filter(Boolean) as LabelOption[];
+
+      setLabels(nextLabels);
+      if (nextLabels.length === 0) {
+        setSelectedLabel("");
+        setScheduleRows([]);
+        setFloorPlanRows([]);
+        setElevationRows([]);
+        setScheduleChanges({});
+        return;
+      }
+
+      const hasPreferredLabel =
+        !!preferredLabel && nextLabels.some((item) => item.label === preferredLabel);
+      const nextSelectedLabel = hasPreferredLabel ? (preferredLabel as string) : nextLabels[0].label;
+      setSelectedLabel(nextSelectedLabel);
+      await fetchLabelData(nextSelectedLabel, resolvedFileId);
+    },
+    [fetchLabelData, takeoffId],
+  );
 
   const initPage = useCallback(async () => {
     if (!takeoffId) return;
@@ -279,41 +442,11 @@ export default function ManualMergeV2Page() {
       }
       setFileId(String(firstFileId));
 
-      const labelsRes = await getGroupedLabelsByFileAndTakeOff(takeoffId, String(firstFileId));
-      if (labelsRes.status !== "success") {
-        notification.error({
-          message: "Error",
-          description: "Failed to load grouped labels.",
-        });
-        return;
-      }
-
-      const rawLabels = toArray(labelsRes.data);
-      const nextLabels: LabelOption[] = rawLabels
-        .map((item: any, index: number) => {
-          if (typeof item === "string") {
-            return { key: `${item}-${index}`, label: item, count: undefined };
-          }
-          const label =
-            item?.label || item?.name || item?.group_label || item?.groupLabel || "";
-          if (!label) return null;
-          return {
-            key: `${label}-${index}`,
-            label,
-            count: Number(item?.count || item?.total || 0) || undefined,
-          };
-        })
-        .filter(Boolean) as LabelOption[];
-
-      setLabels(nextLabels);
-      if (nextLabels.length > 0) {
-        setSelectedLabel(nextLabels[0].label);
-        await fetchLabelData(nextLabels[0].label);
-      }
+      await fetchLabelsAndMaybeLoadData(String(firstFileId));
     } finally {
       setLoading(false);
     }
-  }, [fetchLabelData, takeoffId]);
+  }, [fetchLabelsAndMaybeLoadData, takeoffId]);
 
   useEffect(() => {
     fetchColumns();
@@ -329,6 +462,11 @@ export default function ManualMergeV2Page() {
       });
       return;
     }
+    setViewMode({
+      schedule: "items",
+      floorPlan: "items",
+      elevation: "items",
+    });
     setSelectedLabel(label);
     await fetchLabelData(label);
   };
@@ -370,11 +508,25 @@ export default function ManualMergeV2Page() {
 
   const handleSubmitChanges = async () => {
     if (!takeoffId || !fileId) return;
-    const ids = Object.keys(scheduleChanges);
-    if (ids.length === 0) {
+    const modifiedItems = Object.values(scheduleChanges);
+    if (modifiedItems.length === 0) {
       notification.info({
         message: "No Changes",
         description: "No Schedule changes to submit.",
+      });
+      return;
+    }
+    const allItemIds = Array.from(
+      new Set(
+        [...scheduleRows, ...floorPlanRows, ...elevationRows]
+          .map((item) => String(item?.id || ""))
+          .filter(Boolean),
+      ),
+    );
+    if (allItemIds.length === 0) {
+      notification.warning({
+        message: "No Items",
+        description: "No items found to submit.",
       });
       return;
     }
@@ -384,16 +536,16 @@ export default function ManualMergeV2Page() {
       const response = await checkFileSourceMergeResultsAndCreateSingleFileResults(
         takeoffId,
         fileId,
-        ids.join(","),
-        Object.values(scheduleChanges),
+        allItemIds.join(","),
+        modifiedItems,
       );
       if (response.status === "success") {
         notification.success({
           message: "Success",
-          description: `Submitted ${ids.length} modified rows.`,
+          description: `Submitted ${modifiedItems.length} modified rows.`,
         });
         setScheduleChanges({});
-        await fetchLabelData(selectedLabel);
+        await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
         return;
       }
 
@@ -441,9 +593,8 @@ export default function ManualMergeV2Page() {
         }
         return (
           <div
-            className={`mx-auto w-full max-w-[300px] overflow-hidden text-xs ${
-              editable ? "cursor-text" : ""
-            }`}
+            className={`mx-auto w-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
+              }`}
             onClick={() => {
               if (editable) startEdit(record, fieldName);
             }}
@@ -455,7 +606,7 @@ export default function ManualMergeV2Page() {
     }));
 
     const actionColumn: ColumnsType<any>[number] = {
-      title: <div className="text-center text-xs text-grey-normal">Action</div>,
+      title: <div className="text-center text-xs text-grey-normal">Reference</div>,
       key: "action",
       width: 90,
       align: "center",
@@ -466,7 +617,7 @@ export default function ManualMergeV2Page() {
             type="link"
             size="small"
             onClick={() => {
-              const urls = extractEvidenceUrls(record);
+              const urls = extractEvidenceUrls(record, evidenceUrlByResultItemId);
               if (urls.length === 0) {
                 notification.info({
                   message: "No Evidence",
@@ -478,7 +629,13 @@ export default function ManualMergeV2Page() {
               setPreviewOpen(true);
             }}
           >
-            View
+            <Image
+              src="/assets/icons/file-refrence.svg"
+              alt=""
+              width={14}
+              height={14}
+              preview={false}
+            />
           </Button>
         ) : null,
     };
@@ -489,7 +646,7 @@ export default function ManualMergeV2Page() {
         columns={withEvidenceAction ? [...dataColumns, actionColumn] : dataColumns}
         dataSource={rows}
         pagination={false}
-        scroll={{ x: "max-content", y: 260 }}
+        scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
         locale={{
           emptyText: (
             <div className="py-10 text-xs text-grey-normal">
@@ -497,7 +654,7 @@ export default function ManualMergeV2Page() {
             </div>
           ),
         }}
-        className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+        className="h-full [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
       />
     );
   };
@@ -511,14 +668,6 @@ export default function ManualMergeV2Page() {
             Review labels and submit manually edited Schedule items.
           </p>
         </div>
-        <Button
-          type="primary"
-          className="custom-primary-btn"
-          loading={submitting}
-          onClick={handleSubmitChanges}
-        >
-          Submit Label
-        </Button>
       </header>
 
       <div className="flex min-h-0 flex-1 gap-4 p-4">
@@ -538,8 +687,15 @@ export default function ManualMergeV2Page() {
                   className={`w-full rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
                     }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate">{item.label}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-1 text-left">
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                        {item.isMerged ? (
+                          <CheckCircleFilled className="text-green-normal" />
+                        ) : null}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </span>
                     {typeof item.count === "number" ? (
                       <span className="text-grey-normal">{item.count}</span>
                     ) : null}
@@ -553,14 +709,55 @@ export default function ManualMergeV2Page() {
         <div className="min-w-0 grid grid-cols-3 gap-4">
           <div className="rounded-xl border border-primaryN30 bg-white p-3">
             <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex w-1/3 items-center gap-2">
                 <Tag color="blue">Base</Tag>
                 <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
                 <span className="text-xs text-grey-normal">{scheduleRows.length} items</span>
               </div>
-              <div className="text-xs text-grey-normal">Modified: {modifiedCount}</div>
+              <div className="flex-1 flex flex-row justify-end mr-2">
+                <Button
+                  type="primary"
+                  size="small"
+                  className="custom-primary-btn"
+                  loading={submitting}
+                  onClick={handleSubmitChanges}
+                >
+                  Submit Changes
+                </Button>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Segmented
+                  size="small"
+                  value={viewMode.schedule}
+                  onChange={(value) =>
+                    setViewMode((prev) => ({ ...prev, schedule: value as ViewMode }))
+                  }
+                  options={[
+                    { label: "Items", value: "items" },
+                    { label: "Evidence", value: "evidence" },
+                  ]}
+                />
+              </div>
             </div>
-            {renderTable(scheduleRows, true, false)}
+            {viewMode.schedule === "items" ? (
+              renderTable(scheduleRows, true, true)
+            ) : scheduleEvidenceUrls.length > 0 ? (
+              <div className="max-h-[420px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {scheduleEvidenceUrls.map((url, index) => (
+                    <Image
+                      key={`${url}-${index}`}
+                      src={url}
+                      alt="Schedule Evidence"
+                      className="w-full rounded-md border border-primaryN30"
+                      preview={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
+            )}
           </div>
 
           <div className="rounded-xl border border-primaryN30 bg-white p-3">
@@ -584,16 +781,18 @@ export default function ManualMergeV2Page() {
             {viewMode.floorPlan === "items" ? (
               renderTable(floorPlanRows, false, true)
             ) : floorPlanEvidenceUrls.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {floorPlanEvidenceUrls.map((url) => (
-                  <Image
-                    key={url}
-                    src={url}
-                    alt="Floor Plan Evidence"
-                    className="w-full rounded-md border border-primaryN30"
-                    preview={false}
-                  />
-                ))}
+              <div className="max-h-[420px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {floorPlanEvidenceUrls.map((url) => (
+                    <Image
+                      key={url}
+                      src={url}
+                      alt="Floor Plan Evidence"
+                      className="w-full rounded-md border border-primaryN30"
+                      preview={false}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
@@ -621,16 +820,18 @@ export default function ManualMergeV2Page() {
             {viewMode.elevation === "items" ? (
               renderTable(elevationRows, false, true)
             ) : elevationEvidenceUrls.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {elevationEvidenceUrls.map((url) => (
-                  <Image
-                    key={url}
-                    src={url}
-                    alt="Elevation Evidence"
-                    className="w-full rounded-md border border-primaryN30"
-                    preview={false}
-                  />
-                ))}
+              <div className="max-h-[420px] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {elevationEvidenceUrls.map((url) => (
+                    <Image
+                      key={url}
+                      src={url}
+                      alt="Elevation Evidence"
+                      className="w-full rounded-md border border-primaryN30"
+                      preview={false}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
@@ -654,6 +855,7 @@ export default function ManualMergeV2Page() {
                 src={url}
                 alt="Evidence Preview"
                 className="w-full rounded-md border border-primaryN30"
+                preview={false}
               />
             ))}
           </div>
