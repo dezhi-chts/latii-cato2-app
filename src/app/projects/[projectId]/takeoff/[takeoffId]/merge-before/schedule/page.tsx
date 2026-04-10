@@ -20,6 +20,7 @@ import {
   getTakeOffResultItemsByEvidenceIds,
   updateTakeOffResultItemResultById,
   deleteTakeOffResultItemById,
+  reconcileTakeOffResultItemsByTakeOffAndFile
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -27,6 +28,7 @@ import {
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
 } from "../../analyze-new/takeoffUtils";
+import BuildingBackground from "../../identification/components/BuildingBackground";
 
 export default function SchedulePage() {
   const router = useRouter();
@@ -48,6 +50,7 @@ export default function SchedulePage() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
+  const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
@@ -337,14 +340,44 @@ export default function SchedulePage() {
     [getItemsByPageEvidences, pageEvidenceId],
   );
 
+  const handleReconcileTakeOff = async () => {
+    setBuildingLoading(true);
+    let res = await reconcileTakeOffResultItemsByTakeOffAndFile(takeOffId as string, selectedFileId as any)
+    setBuildingLoading(false);
+    if (res.status === "success") {
+      notification.success({
+        message: "Success",
+        description: "Take off result items reconciled successfully.",
+      });
+      // 跳转到下一个take off result items
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v2`);
+    } else {
+      notification.error({
+        message: "Error",
+        description: "Failed to reconcile take off result items.",
+      });
+    }
+  }
+
   const handleNext = () => {
+    handleReconcileTakeOff();
+  };
+
+  const handleBack = () => {
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/merge-before/floor-plan`);
   };
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
       <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
-        <div className="flex items-center gap-3">
+        <div>
+          <div className="cursor-pointer" onClick={handleBack}>
+            <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
+          </div>
+        </div>
+
+        <div className="ml-6 flex-1 flex items-center gap-3">
           {files.map((file) => (
             <button
               key={file.id}
@@ -422,6 +455,7 @@ export default function SchedulePage() {
         </div>
       </div>
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
+      {buildingLoading && <BuildingBackground step={'page-merge'} />}
     </div>
   );
 }

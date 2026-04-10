@@ -432,11 +432,18 @@ export default function FloorPlanPage() {
     eventSourceRef.current = sseConnection;
   };
 
+  const handleBack = () => {
+    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+  };
+
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
       <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
-        <div className="flex items-center gap-3">
+        <div className="cursor-pointer" onClick={handleBack}>
+          <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
+        </div>
+        <div className="flex-1 ml-6 flex items-center gap-3">
           {files.map((file) => (
             <button
               key={file.id}
