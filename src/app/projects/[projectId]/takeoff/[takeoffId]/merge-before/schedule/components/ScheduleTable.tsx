@@ -34,6 +34,7 @@ export interface ScheduleSourceSection {
 interface ScheduleTableProps {
 	columns: string[];
 	sections: any[];
+	tableLoading: boolean;
 	onUpdateField: (
 		updatedItem: any,
 		fieldName: string,
@@ -102,6 +103,7 @@ const getColumnWidth = (title: string) => {
 export default function ScheduleTable({
 	columns,
 	sections,
+	tableLoading,
 	onUpdateField,
 	onDeleteItem,
 }: ScheduleTableProps) {
@@ -258,6 +260,7 @@ export default function ScheduleTable({
 					columns={tableColumns}
 					dataSource={sections}
 					pagination={false}
+					loading={tableLoading}
 					scroll={{
 						x: "max-content",
 						y: "calc(100vh - 500px)",

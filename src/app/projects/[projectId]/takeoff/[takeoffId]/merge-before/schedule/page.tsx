@@ -47,6 +47,7 @@ export default function SchedulePage() {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
+  const [tableLoading, setTableLoading] = useState<boolean>(false);
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
@@ -100,7 +101,9 @@ export default function SchedulePage() {
     async (id: number) => {
       if (id) {
         setItemBoxList([]);
+        setTableLoading(true);
         let res = await getTakeOffResultItemsByEvidenceIds(id.toString());
+        setTableLoading(false);
         if (res.status === "success" && res.data) {
           let values: any = Object.values(res.data || {}) || [];
           let list = values.flatMap((item: any) => item || []);
@@ -412,6 +415,7 @@ export default function SchedulePage() {
           <ScheduleTable
             columns={columns}
             sections={itemBoxList}
+            tableLoading={tableLoading}
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
           />
