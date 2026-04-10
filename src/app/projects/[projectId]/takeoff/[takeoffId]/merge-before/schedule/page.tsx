@@ -371,11 +371,11 @@ export default function SchedulePage() {
     <div className="flex h-screen flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
       <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
-        <div>
+        {/* <div>
           <div className="cursor-pointer" onClick={handleBack}>
             <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
           </div>
-        </div>
+        </div> */}
 
         <div className="ml-6 flex-1 flex items-center gap-3">
           {files.map((file) => (

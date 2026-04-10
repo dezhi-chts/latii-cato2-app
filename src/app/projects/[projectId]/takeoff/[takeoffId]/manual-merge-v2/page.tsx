@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, Empty, Image, Input, Modal, Segmented, Spin, Table, Tag, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { CheckCircleFilled } from "@ant-design/icons";
 
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
+  autoCreateMultipleFilesMergeResultByTakeOffId,
   getFileSourceMergeResultsByLabel,
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
@@ -19,6 +20,7 @@ import {
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
 } from "../analyze-new/takeoffUtils";
+import BuildingBackground from "../identification/components/BuildingBackground";
 
 type ViewMode = "items" | "evidence";
 type SourceKey = "schedule" | "floorPlan" | "elevation";
@@ -227,10 +229,14 @@ const collectSourceRows = (payload: any, source: SourceKey): any[] => {
 };
 
 export default function ManualMergeV2Page() {
+  const router = useRouter();
+  const projectId = useParams().projectId as string;
   const takeoffId = useParams().takeoffId as string;
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [buildLoading, setBuildLoading] = useState(false);
+  const [files, setFiles] = useState<any[]>([]);
   const [fileId, setFileId] = useState<string>("");
   const [labels, setLabels] = useState<LabelOption[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<string>("");
@@ -256,6 +262,11 @@ export default function ManualMergeV2Page() {
   >({});
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
+  const selectedLabelMeta = useMemo(
+    () => labels.find((item) => item.label === selectedLabel) || null,
+    [labels, selectedLabel],
+  );
+  const isSelectedLabelMerged = Boolean(selectedLabelMeta?.isMerged);
 
   const scheduleEvidenceUrls = useMemo(
     () =>
@@ -370,7 +381,11 @@ export default function ManualMergeV2Page() {
   }, [fetchEvidenceUrlsByRows, fileId, takeoffId]);
 
   const fetchLabelsAndMaybeLoadData = useCallback(
-    async (resolvedFileId: string, preferredLabel?: string) => {
+    async (
+      resolvedFileId: string,
+      preferredLabel?: string,
+      autoSwitchFromMergedCurrent: boolean = false,
+    ) => {
       if (!takeoffId || !resolvedFileId) return;
       const labelsRes = await getGroupedLabelsByFileAndTakeOff(takeoffId, resolvedFileId);
       if (labelsRes.status !== "success") {
@@ -412,8 +427,27 @@ export default function ManualMergeV2Page() {
 
       const hasPreferredLabel =
         !!preferredLabel && nextLabels.some((item) => item.label === preferredLabel);
-      const nextSelectedLabel = hasPreferredLabel ? (preferredLabel as string) : nextLabels[0].label;
+      let nextSelectedLabel = hasPreferredLabel ? (preferredLabel as string) : nextLabels[0].label;
+
+      if (autoSwitchFromMergedCurrent && hasPreferredLabel) {
+        const currentIndex = nextLabels.findIndex((item) => item.label === preferredLabel);
+        const currentItem = currentIndex >= 0 ? nextLabels[currentIndex] : null;
+        if (currentItem?.isMerged) {
+          const nextUnmerged =
+            nextLabels.slice(Math.max(currentIndex + 1, 0)).find((item) => !item.isMerged) ||
+            nextLabels.find((item) => !item.isMerged);
+          if (nextUnmerged?.label) {
+            nextSelectedLabel = nextUnmerged.label;
+          }
+        }
+      }
+
       setSelectedLabel(nextSelectedLabel);
+      setViewMode({
+        schedule: "items",
+        floorPlan: "items",
+        elevation: "items",
+      });
       await fetchLabelData(nextSelectedLabel, resolvedFileId);
     },
     [fetchLabelData, takeoffId],
@@ -433,6 +467,7 @@ export default function ManualMergeV2Page() {
       }
 
       const firstFileId = takeoffRes.data?.project_files?.[0]?.id;
+      setFiles(takeoffRes.data?.project_files || []);
       if (!firstFileId) {
         notification.warning({
           message: "Warning",
@@ -471,6 +506,24 @@ export default function ManualMergeV2Page() {
     await fetchLabelData(label);
   };
 
+  const handleSwitchFile = async (nextFileId: string) => {
+    if (!nextFileId || nextFileId === fileId) return;
+    if (modifiedCount > 0) {
+      Modal.warning({
+        title: "Unsaved Changes",
+        content: "You have unsaved Schedule edits. Please merge complete before switching file.",
+      });
+      return;
+    }
+    setViewMode({
+      schedule: "items",
+      floorPlan: "items",
+      elevation: "items",
+    });
+    setFileId(nextFileId);
+    await fetchLabelsAndMaybeLoadData(nextFileId);
+  };
+
   const startEdit = (record: any, fieldName: string) => {
     const id = String(record.id);
     setEditingCell({ id, field: fieldName });
@@ -479,6 +532,7 @@ export default function ManualMergeV2Page() {
   };
 
   const commitEdit = (record: any, fieldName: string) => {
+    if (isSelectedLabelMerged) return;
     const id = String(record.id);
     const oldDisplay = getDisplayValueByField(record?.result || {}, fieldName);
     const oldValue = oldDisplay === "-" ? "" : oldDisplay;
@@ -509,13 +563,6 @@ export default function ManualMergeV2Page() {
   const handleSubmitChanges = async () => {
     if (!takeoffId || !fileId) return;
     const modifiedItems = Object.values(scheduleChanges);
-    if (modifiedItems.length === 0) {
-      notification.info({
-        message: "No Changes",
-        description: "No Schedule changes to submit.",
-      });
-      return;
-    }
     const allItemIds = Array.from(
       new Set(
         [...scheduleRows, ...floorPlanRows, ...elevationRows]
@@ -542,10 +589,13 @@ export default function ManualMergeV2Page() {
       if (response.status === "success") {
         notification.success({
           message: "Success",
-          description: `Submitted ${modifiedItems.length} modified rows.`,
+          description:
+            modifiedItems.length > 0
+              ? `Merged complete with ${modifiedItems.length} modified rows.`
+              : "Merged complete without manual edits.",
         });
         setScheduleChanges({});
-        await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
+        await fetchLabelsAndMaybeLoadData(fileId, selectedLabel, true);
         return;
       }
 
@@ -555,6 +605,24 @@ export default function ManualMergeV2Page() {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCreateMergeResult = async () => {
+    if (!takeoffId) return;
+    setBuildLoading(true);
+    try {
+      const response = await autoCreateMultipleFilesMergeResultByTakeOffId(takeoffId);
+      if (response.status === "success") {
+        router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
+        return;
+      }
+      notification.error({
+        message: "Error",
+        description: response.data?.detail || "Failed to create merge result.",
+      });
+    } finally {
+      setBuildLoading(false);
     }
   };
 
@@ -596,7 +664,7 @@ export default function ManualMergeV2Page() {
             className={`mx-auto w-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
               }`}
             onClick={() => {
-              if (editable) startEdit(record, fieldName);
+              if (editable && !isSelectedLabelMerged) startEdit(record, fieldName);
             }}
           >
             <TruncatedTextCell value={value || "-"} />
@@ -660,14 +728,26 @@ export default function ManualMergeV2Page() {
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white font-nunito">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
       <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10">
-        <div>
-          <p className="text-base font-semibold text-forumBlue-normal">Manual Merge V2</p>
-          <p className="text-xs text-grey-normal">
-            Review labels and submit manually edited Schedule items.
-          </p>
+        <div className="flex items-center gap-3">
+          {files.map((file) => (
+            <button
+              key={file.id}
+              type="button"
+              className={`flex h-[50px] min-w-[140px] flex-col items-start justify-center rounded-lg px-4 text-left transition-all ${String(file.id) === fileId ? "bg-primaryN30" : "border border-primaryN30"
+                }`}
+              onClick={() => handleSwitchFile(String(file.id))}
+            >
+              <span className="max-w-[180px] truncate text-sm text-grey-dark">
+                {file.file_name || `File ${file.id}`}
+              </span>
+            </button>
+          ))}
         </div>
+        <Button type="primary" className="custom-primary-btn !w-[150px]" onClick={handleCreateMergeResult}>
+          Create Merge Result
+        </Button>
       </header>
 
       <div className="flex min-h-0 flex-1 gap-4 p-4">
@@ -706,31 +786,74 @@ export default function ManualMergeV2Page() {
           </div>
         </div>
 
-        <div className="min-w-0 grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-primaryN30 bg-white p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex w-1/3 items-center gap-2">
-                <Tag color="blue">Base</Tag>
-                <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
-                <span className="text-xs text-grey-normal">{scheduleRows.length} items</span>
+        <div className="min-w-0 flex-1 overflow-x-auto">
+          <div className="flex min-w-max gap-4 pb-2">
+            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex w-1/3 items-center gap-2">
+                  <Tag color="blue">Base</Tag>
+                  <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
+                  <span className="text-xs text-grey-normal">{scheduleRows.length} items</span>
+                </div>
+                <div className="mr-2 flex flex-1 flex-row justify-end items-center gap-2">
+                  {!isSelectedLabelMerged ? (
+                    <Button
+                      type="primary"
+                      size="small"
+                      className="custom-primary-btn"
+                      loading={submitting}
+                      onClick={handleSubmitChanges}
+                    >
+                      Merge Complete
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Segmented
+                    size="small"
+                    value={viewMode.schedule}
+                    onChange={(value) =>
+                      setViewMode((prev) => ({ ...prev, schedule: value as ViewMode }))
+                    }
+                    options={[
+                      { label: "Items", value: "items" },
+                      { label: "Evidence", value: "evidence" },
+                    ]}
+                  />
+                </div>
               </div>
-              <div className="flex-1 flex flex-row justify-end mr-2">
-                <Button
-                  type="primary"
-                  size="small"
-                  className="custom-primary-btn"
-                  loading={submitting}
-                  onClick={handleSubmitChanges}
-                >
-                  Submit Changes
-                </Button>
-              </div>
-              <div className="flex justify-end gap-2">
+              {viewMode.schedule === "items" ? (
+                renderTable(scheduleRows, !isSelectedLabelMerged, true)
+              ) : scheduleEvidenceUrls.length > 0 ? (
+                <div className="max-h-[420px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    {scheduleEvidenceUrls.map((url, index) => (
+                      <Image
+                        key={`${url}-${index}`}
+                        src={url}
+                        alt="Schedule Evidence"
+                        className="w-full rounded-md border border-primaryN30"
+                        preview={false}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
+              )}
+            </div>
+
+            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-forumBlue-normal">Floor Plan</span>
+                  <span className="text-xs text-grey-normal">{floorPlanRows.length} items</span>
+                </div>
                 <Segmented
                   size="small"
-                  value={viewMode.schedule}
+                  value={viewMode.floorPlan}
                   onChange={(value) =>
-                    setViewMode((prev) => ({ ...prev, schedule: value as ViewMode }))
+                    setViewMode((prev) => ({ ...prev, floorPlan: value as ViewMode }))
                   }
                   options={[
                     { label: "Items", value: "items" },
@@ -738,104 +861,65 @@ export default function ManualMergeV2Page() {
                   ]}
                 />
               </div>
-            </div>
-            {viewMode.schedule === "items" ? (
-              renderTable(scheduleRows, true, true)
-            ) : scheduleEvidenceUrls.length > 0 ? (
-              <div className="max-h-[420px] overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-3">
-                  {scheduleEvidenceUrls.map((url, index) => (
-                    <Image
-                      key={`${url}-${index}`}
-                      src={url}
-                      alt="Schedule Evidence"
-                      className="w-full rounded-md border border-primaryN30"
-                      preview={false}
-                    />
-                  ))}
+              {viewMode.floorPlan === "items" ? (
+                renderTable(floorPlanRows, false, true)
+              ) : floorPlanEvidenceUrls.length > 0 ? (
+                <div className="max-h-[420px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    {floorPlanEvidenceUrls.map((url) => (
+                      <Image
+                        key={url}
+                        src={url}
+                        alt="Floor Plan Evidence"
+                        className="w-full rounded-md border border-primaryN30"
+                        preview={false}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-            )}
-          </div>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
+              )}
+            </div>
 
-          <div className="rounded-xl border border-primaryN30 bg-white p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-forumBlue-normal">Floor Plan</span>
-                <span className="text-xs text-grey-normal">{floorPlanRows.length} items</span>
-              </div>
-              <Segmented
-                size="small"
-                value={viewMode.floorPlan}
-                onChange={(value) =>
-                  setViewMode((prev) => ({ ...prev, floorPlan: value as ViewMode }))
-                }
-                options={[
-                  { label: "Items", value: "items" },
-                  { label: "Evidence", value: "evidence" },
-                ]}
-              />
-            </div>
-            {viewMode.floorPlan === "items" ? (
-              renderTable(floorPlanRows, false, true)
-            ) : floorPlanEvidenceUrls.length > 0 ? (
-              <div className="max-h-[420px] overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-3">
-                  {floorPlanEvidenceUrls.map((url) => (
-                    <Image
-                      key={url}
-                      src={url}
-                      alt="Floor Plan Evidence"
-                      className="w-full rounded-md border border-primaryN30"
-                      preview={false}
-                    />
-                  ))}
+            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-forumBlue-normal">Elevation</span>
+                  <span className="text-xs text-grey-normal">{elevationRows.length} items</span>
                 </div>
+                <Segmented
+                  size="small"
+                  value={viewMode.elevation}
+                  onChange={(value) =>
+                    setViewMode((prev) => ({ ...prev, elevation: value as ViewMode }))
+                  }
+                  options={[
+                    { label: "Items", value: "items" },
+                    { label: "Evidence", value: "evidence" },
+                  ]}
+                />
               </div>
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-            )}
-          </div>
-
-          <div className="rounded-xl border border-primaryN30 bg-white p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-forumBlue-normal">Elevation</span>
-                <span className="text-xs text-grey-normal">{elevationRows.length} items</span>
-              </div>
-              <Segmented
-                size="small"
-                value={viewMode.elevation}
-                onChange={(value) =>
-                  setViewMode((prev) => ({ ...prev, elevation: value as ViewMode }))
-                }
-                options={[
-                  { label: "Items", value: "items" },
-                  { label: "Evidence", value: "evidence" },
-                ]}
-              />
-            </div>
-            {viewMode.elevation === "items" ? (
-              renderTable(elevationRows, false, true)
-            ) : elevationEvidenceUrls.length > 0 ? (
-              <div className="max-h-[420px] overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-3">
-                  {elevationEvidenceUrls.map((url) => (
-                    <Image
-                      key={url}
-                      src={url}
-                      alt="Elevation Evidence"
-                      className="w-full rounded-md border border-primaryN30"
-                      preview={false}
-                    />
-                  ))}
+              {viewMode.elevation === "items" ? (
+                renderTable(elevationRows, false, true)
+              ) : elevationEvidenceUrls.length > 0 ? (
+                <div className="max-h-[420px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    {elevationEvidenceUrls.map((url) => (
+                      <Image
+                        key={url}
+                        src={url}
+                        alt="Elevation Evidence"
+                        className="w-full rounded-md border border-primaryN30"
+                        preview={false}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-            )}
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -869,6 +953,7 @@ export default function ManualMergeV2Page() {
           <Spin />
         </div>
       )}
+      {buildLoading && <BuildingBackground step={"page-takeoff"} />}
     </div>
   );
 }
