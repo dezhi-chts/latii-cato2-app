@@ -367,3 +367,60 @@ export const getEvidencesWindowTableQuoteWithUrlByProjectFileId = async (
     return { data: error?.response?.data, status: "error" };
   }
 };
+
+/**
+ * 获取evidence_ids对应的take off result items
+ * @param evidence_ids
+ * @returns
+ */
+export const getTakeOffResultItemsByEvidenceIds = async (
+  evidence_id: string,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/get_take_off_result_items_by_evidence_ids?evidence_id=${evidence_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error getting take off result items by evidence ids:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+/**
+ * 更新take off result item result
+ * @param take_off_result_item_id
+ * @returns
+ */
+export const updateTakeOffResultItemResultById = async (
+  take_off_result_item_id: string,
+  data: any,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/update_take_off_result_item_result_by_id?take_off_result_item_id=${take_off_result_item_id}`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error updating take off result item result by id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除take off result item
+ * @param take_off_result_item_id
+ * @returns
+ */
+export const deleteTakeOffResultItemById = async (
+  take_off_result_item_id: string,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_by_id?take_off_result_item_id=${take_off_result_item_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error deleting take off result item by id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
+

@@ -35,25 +35,22 @@ const LabelConfirmModal = ({
       onCancel={onCancel}
       footer={null}
       closable={true}
-      width="60%"
+      width="500px"
     >
-      <div className="h-[80vh] max-h-[80vh] flex flex-col">
+      <div className="flex flex-col font-nunito">
         <div className="text-lg text-forumBlue-normal">
           Label Confirm
         </div>
         <div className="flex flex-row gap-2 overflow-hidden">
-          <div className="w-[50%] font-nunito">
+          <div className="flex-1 flex flex-col">
             <div className="mt-6 flex flex-row">
               <div className="w-[100px] text-sm">Label:</div>
-              <Input value={formData?.Label} onChange={(e) => { setFormData({ ...formData, Label: e.target.value }) }} type="text" />
+              <Input className="flex-1" value={formData?.Label} onChange={(e) => { setFormData({ ...formData, Label: e.target.value }) }} type="text" />
             </div>
             <div className="my-2 flex flex-row">
               <div className="w-[100px] text-sm">Sub Label:</div>
-              <Input value={formData?.['Sub Label']} onChange={(e) => { setFormData({ ...formData, ['Sub Label']: e.target.value }) }} type="text" />
+              <Input className="flex-1" value={formData?.['Sub Label']} onChange={(e) => { setFormData({ ...formData, ['Sub Label']: e.target.value }) }} type="text" />
             </div>
-          </div>
-          <div className="flex">
-            {children}
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

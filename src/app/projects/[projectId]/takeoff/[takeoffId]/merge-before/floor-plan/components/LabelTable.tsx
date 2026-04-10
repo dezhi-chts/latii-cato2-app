@@ -78,6 +78,26 @@ export default function LabelTable({
 				sourceItem: item,
 			};
 		});
+
+		// 按 label 逐位字母排序
+		nextRows.sort((a, b) => {
+			const labelA = a.label.toUpperCase();
+			const labelB = b.label.toUpperCase();
+			const minLength = Math.min(labelA.length, labelB.length);
+
+			// 逐位比较
+			for (let i = 0; i < minLength; i++) {
+				const charA = labelA.charAt(i);
+				const charB = labelB.charAt(i);
+				if (charA !== charB) {
+					return charA.localeCompare(charB);
+				}
+			}
+
+			// 如果前面都相同，较短的排在前面
+			return labelA.length - labelB.length;
+		});
+
 		setRows(nextRows);
 	}, [data]);
 

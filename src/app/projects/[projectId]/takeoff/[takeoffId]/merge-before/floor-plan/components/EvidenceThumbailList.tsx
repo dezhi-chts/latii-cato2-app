@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { CloseOutlined } from "@ant-design/icons";
 import { notification, Select, Dropdown, Space } from "antd";
 import { DownOutlined } from "@ant-design/icons";
-import { allPageTypes, PageType } from "../../types/evidence";
+import { allPageTypes, PageType, GroupType } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 const LazyImage = ({
 	src,
 	alt,
@@ -57,9 +57,8 @@ const LazyImage = ({
 			<img
 				ref={imgRef}
 				alt={alt}
-				className={`w-full h-full object-top transition-opacity duration-300 ${
-					loaded ? "opacity-100" : "opacity-0"
-				}`}
+				className={`w-full h-full object-top transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"
+					}`}
 				onError={onError}
 				loading="lazy"
 			/>
@@ -141,6 +140,13 @@ const EvidenceThumbailList = ({
 	};
 
 	const pageTypeInfo = (info: any) => {
+		if (info.type === GroupType.WindowDoorUnit || info.type === GroupType.Table
+		) {
+			return categoryList?.find((item) => {
+				return item.type === PageType.Schedule;
+			}) || {};
+		}
+
 		let category = categoryList.find((item) => {
 			return item.type === info.type;
 		});
@@ -172,11 +178,10 @@ const EvidenceThumbailList = ({
 								<div
 									id={`thumbnail-evidence-${info.id}`}
 									key={info.id}
-									className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${
-										info.id === evidenceId
-											? "border-forumBlue-normal"
-											: "border-transparent hover:border-forumBlue-normal/50"
-									}`}
+									className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${info.id === evidenceId
+										? "border-forumBlue-normal"
+										: "border-transparent hover:border-forumBlue-normal/50"
+										}`}
 									style={{
 										height: size === "default" ? "150px" : "220px",
 									}}
