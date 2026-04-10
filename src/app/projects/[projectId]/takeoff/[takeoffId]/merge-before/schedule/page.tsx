@@ -285,7 +285,7 @@ export default function SchedulePage() {
 
       const updateRes = await updateTakeOffResultItemResultById(
         itemId.toString(),
-        updatedItem,
+        updatedItem?.result || {},
       );
       if (updateRes.status === "success") {
         notification.success({
