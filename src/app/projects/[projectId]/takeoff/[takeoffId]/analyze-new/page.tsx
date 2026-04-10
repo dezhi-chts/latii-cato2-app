@@ -19,7 +19,7 @@ import AddBoxModal from "./components/AddBoxModal";
 import EvidenceSidebar from "./components/EvidenceSidebar";
 import TakeoffListHeader from "./components/TakeoffListHeader";
 import TakeoffItemsTable from "./components/TakeoffItemsTable";
-import ItemTraceabilityModal from "../manual-merge-new/components/ItemTraceabilityModal";
+import TakeoffReferenceByTypeModal from "./components/TakeoffReferenceByTypeModal";
 import {
 	getFallbackDynamicFields,
 	getDisplayValueByField,
@@ -744,11 +744,9 @@ export default function TakeoffListPage() {
 				onChangeFileEvidences={handleChangeFileEvidences}
 				onClose={() => setShowAddBoxModal(false)}
 			/>
-			<ItemTraceabilityModal
+			<TakeoffReferenceByTypeModal
 				open={showReferenceModal}
 				item={referenceItem}
-				level="multiple_files"
-				columnNames={columnNames}
 				onClose={() => {
 					setShowReferenceModal(false);
 					setReferenceItem(null);
