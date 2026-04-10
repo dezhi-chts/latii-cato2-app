@@ -73,11 +73,16 @@ const ensureLabelFieldsFirst = (fields: string[]) => {
 };
 
 const normalizeRows = (rows: any[]) =>
-  toArray(rows).map((row) => ({
+  toArray(rows).map((row, index) => ({
     ...row,
-    id: row?.id ?? `${Math.random()}`,
+    id: row?.id ?? null,
+    __rowKey: row?.id ?? `row-${index}`,
     result: parseItemResultUtil(row?.result as any),
   }));
+
+const toValidItemId = (item: any): string | null => {
+  return item.id || null;
+};
 
 function TruncatedTextCell({ value }: { value: string }) {
   const divRef = useRef<HTMLDivElement>(null);
@@ -168,64 +173,16 @@ const extractEvidenceUrls = (
 };
 
 const collectSourceRows = (payload: any, source: SourceKey): any[] => {
-  if (!payload) return [];
+  if (!Array.isArray(payload)) return [];
 
-  // New API shape:
-  // [
-  //   { source_type: "Elevation", list: [...] },
-  //   { source_type: "Floor Plan", list: [...] },
-  //   { source_type: "Schedule", list: [...] }
-  // ]
-  if (Array.isArray(payload)) {
-    const sourceNode = payload.find((node: any) => {
-      const nodeType = normalizeKey(String(node?.source_type || node?.mapped_source_type || ""));
-      return SOURCE_ALIAS[source].some((alias) =>
-        nodeType.includes(normalizeKey(alias)),
-      );
-    });
-    if (sourceNode && Array.isArray(sourceNode?.list)) {
-      return sourceNode.list;
-    }
-
-    const filtered = payload.filter((item: any) => {
-      const typeText = String(
-        item?.page_type || item?.source_type || item?.sourceType || item?.type || "",
-      );
-      const normalizedType = normalizeKey(typeText);
-      return SOURCE_ALIAS[source].some((alias) =>
-        normalizedType.includes(normalizeKey(alias)),
-      );
-    });
-    return filtered.length > 0 ? filtered : payload;
-  }
-
-  if (payload && typeof payload === "object") {
-    const nodeType = normalizeKey(String(payload?.source_type || payload?.mapped_source_type || ""));
-    const matchedNode = SOURCE_ALIAS[source].some((alias) =>
-      nodeType.includes(normalizeKey(alias)),
+  const sourceNode = payload.find((node: any) => {
+    const nodeType = normalizeKey(String(node?.source_type || ""));
+    return SOURCE_ALIAS[source].some(
+      (alias) => nodeType === normalizeKey(alias),
     );
-    if (matchedNode && Array.isArray(payload?.list)) {
-      return payload.list;
-    }
-  }
+  });
 
-  const entries = Object.entries(payload || {});
-  for (const [key, value] of entries) {
-    const normalized = normalizeKey(key);
-    const matched = SOURCE_ALIAS[source].some((alias) =>
-      normalized.includes(normalizeKey(alias)),
-    );
-    if (matched && Array.isArray(value)) return value;
-  }
-
-  for (const [, value] of entries) {
-    if (value && typeof value === "object") {
-      const nestedRows = collectSourceRows(value, source);
-      if (nestedRows.length > 0) return nestedRows;
-    }
-  }
-
-  return [];
+  return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
 
 export default function ManualMergeV2Page() {
@@ -560,15 +517,12 @@ export default function ManualMergeV2Page() {
     );
   };
 
-  const handleSubmitChanges = async () => {
+  const handleSubmitChanges = useCallback(async () => {
     if (!takeoffId || !fileId) return;
-    const modifiedItems = Object.values(scheduleChanges);
+    const scheduleAllItems = [...scheduleRows];
     const allItemIds = Array.from(
-      new Set(
-        [...scheduleRows, ...floorPlanRows, ...elevationRows]
-          .map((item) => String(item?.id || ""))
-          .filter(Boolean),
-      ),
+      [...scheduleRows, ...floorPlanRows, ...elevationRows]
+        .map((item) => toValidItemId(item))
     );
     if (allItemIds.length === 0) {
       notification.warning({
@@ -584,15 +538,15 @@ export default function ManualMergeV2Page() {
         takeoffId,
         fileId,
         allItemIds.join(","),
-        modifiedItems,
+        scheduleAllItems,
       );
       if (response.status === "success") {
         notification.success({
           message: "Success",
           description:
-            modifiedItems.length > 0
-              ? `Merged complete with ${modifiedItems.length} modified rows.`
-              : "Merged complete without manual edits.",
+            scheduleAllItems.length > 0
+              ? `Merged complete with ${scheduleAllItems.length} schedule rows.`
+              : "Merged complete.",
         });
         setScheduleChanges({});
         await fetchLabelsAndMaybeLoadData(fileId, selectedLabel, true);
@@ -606,9 +560,9 @@ export default function ManualMergeV2Page() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [scheduleRows, floorPlanRows, elevationRows]);
 
-  const handleCreateMergeResult = async () => {
+  const handleCreateMergeResult = useCallback(async () => {
     if (!takeoffId) return;
     setBuildLoading(true);
     try {
@@ -624,7 +578,7 @@ export default function ManualMergeV2Page() {
     } finally {
       setBuildLoading(false);
     }
-  };
+  }, [takeoffId]);
 
   const renderTable = (
     rows: any[],
@@ -710,7 +664,7 @@ export default function ManualMergeV2Page() {
 
     return (
       <Table<any>
-        rowKey={(record) => record.id}
+        rowKey={(record) => record.id ?? record.__rowKey}
         columns={withEvidenceAction ? [...dataColumns, actionColumn] : dataColumns}
         dataSource={rows}
         pagination={false}
