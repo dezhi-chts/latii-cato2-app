@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
 import { getMergeStatusByTakeOffId } from "@/services/takeOffService";
+import { TakeOffFileStatus } from "@/types/home";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -173,9 +174,14 @@ const HomeTakeoffsTable = ({
       onClick: async () => {
         if (pageLoading) return;
 
+        let floorPlanUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/floor-plan`;
+        let scheduleUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/schedule`;
+        let manualMergeUrl = `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-v2`;
+        let analyzeUrl = `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`;
+        let identificationUrl = `/projects/${record.project_id}/takeoff/${record.id}/identification`;
+
         if (record.status === 2) {
           setPageLoading(true);
-
           // 获取takeoff文件状态
           const mergeResult: any = await getMergeStatusByTakeOffId(record.id as any);
 
@@ -186,21 +192,36 @@ const HomeTakeoffsTable = ({
                 `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`,
               );
             } else {
-              // 未合并完成，跳转到手动合并页
-              router.push(
-                `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
-              );
+              const labelList = Object.values(mergeResult.data?.files || {});
+              if (!labelList || labelList.length === 0) return;
+
+              let firstFile = labelList[0];
+              switch (firstFile?.status) {
+                case TakeOffFileStatus.STATUS_UNPROCESSED:
+                case TakeOffFileStatus.STATUS_ELEVATION_FLOOR_REVIEWING:
+                  router.push(floorPlanUrl);
+                  break;
+                case TakeOffFileStatus.STATUS_ELEVATION_FLOOR_REVIEWED:
+                case TakeOffFileStatus.STATUS_SCHEDULE_REVIEWING:
+                  router.push(scheduleUrl);
+                  break;
+                case TakeOffFileStatus.STATUS_SCHEDULE_REVIEWED:
+                  router.push(manualMergeUrl);
+                  break;
+                case TakeOffFileStatus.STATUS_MERGED:
+                  router.push(analyzeUrl);
+                  break;
+                default:
+                  setPageLoading(false);
+                  break;
+              }
             }
           } else {
-            // 合并状态为失败，跳转到合并页
-            router.push(
-              `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-new`,
-            );
+            setPageLoading(false);
           }
         } else {
-          router.push(
-            `/projects/${record.project_id}/takeoff/${record.id}/identification`,
-          );
+          setPageLoading(false);
+          router.push(identificationUrl);
         }
       },
       className: "cursor-pointer hover:bg-gray-50",

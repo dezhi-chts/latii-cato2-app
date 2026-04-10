@@ -498,6 +498,22 @@ export const checkFileSourceMergeResultsAndCreateSingleFileResults = async (
   }
 }
 
+/**
+ * 自动创建多个文件的合并结果
+ * @param take_off_id 
+ * @returns 
+ */
+export const autoCreateMultipleFilesMergeResultByTakeOffId = async (take_off_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/auto_create_multiple_files_merge_result_by_take_off_id?take_off_id=${take_off_id}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error auto creating multiple files merge result by take off id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
 

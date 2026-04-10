@@ -671,7 +671,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		if (res.status === "success") {
 			// 跳转到合并前页面
 			router.push(
-				`/projects/${projectId}/takeoff/${takeOffId}/merge-before`,
+				`/projects/${projectId}/takeoff/${takeOffId}/merge-before/floor-plan`,
 			);
 		} else {
 			notification.error({
