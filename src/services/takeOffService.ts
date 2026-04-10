@@ -514,6 +514,22 @@ export const autoCreateMultipleFilesMergeResultByTakeOffId = async (take_off_id:
   }
 }
 
+/**
+ * 获取take off result items
+ * @param take_off_id 
+ * @returns 
+ */
+export const getAllTakeOffResultItemsByTakeOffId = async (take_off_id: string) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/get_all_multiple_files_merge_results_sorted_by_label?take_off_id=${take_off_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error getting all take off result items by take off id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
 
