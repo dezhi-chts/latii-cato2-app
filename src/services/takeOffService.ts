@@ -367,3 +367,137 @@ export const getEvidencesWindowTableQuoteWithUrlByProjectFileId = async (
     return { data: error?.response?.data, status: "error" };
   }
 };
+
+/**
+ * 获取evidence_ids对应的take off result items
+ * @param evidence_ids
+ * @returns
+ */
+export const getTakeOffResultItemsByEvidenceIds = async (
+  evidence_id: string,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/get_take_off_result_items_by_evidence_ids?evidence_id=${evidence_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error getting take off result items by evidence ids:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+/**
+ * 更新take off result item result
+ * @param take_off_result_item_id
+ * @returns
+ */
+export const updateTakeOffResultItemResultById = async (
+  take_off_result_item_id: string,
+  data: any,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/update_take_off_result_item_result_by_id?take_off_result_item_id=${take_off_result_item_id}`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error updating take off result item result by id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除take off result item
+ * @param take_off_result_item_id
+ * @returns
+ */
+export const deleteTakeOffResultItemById = async (
+  take_off_result_item_id: string,
+) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_by_id?take_off_result_item_id=${take_off_result_item_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  } catch (error: any) {
+    console.error("Error deleting take off result item by id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 合并take off result items
+ * @param take_off_id 
+ * @param file_id 
+ * @returns 
+ */
+export const reconcileTakeOffResultItemsByTakeOffAndFile = async (
+  take_off_id: string | number, 
+  file_id: string | number
+) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/reconcile_take_off_result_items_by_take_off_and_file?take_off_id=${take_off_id}&file_id=${file_id}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error reconciling take off result items by take off and file:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 获取take off result items的合并label
+ * @param take_off_id 
+ * @param file_id 
+ * @returns 
+ */
+export const getGroupedLabelsByFileAndTakeOff = async (take_off_id: string, file_id: string) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/get_grouped_labels_by_file_and_take_off?take_off_id=${take_off_id}&file_id=${file_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error getting grouped labels by file and take off:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 获取take off result items的合并label对应的文件源合并结果
+ * @param label 
+ * @returns 
+ */
+export const getFileSourceMergeResultsByLabel = async (
+  take_off_id: string,
+  file_id: string,
+  label: string) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/get_file_source_merge_results_by_label?take_off_id=${take_off_id}&file_id=${file_id}&label=${label}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error getting file source merge results by label:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 检查文件源合并结果并创建单文件结果
+ * @param data 
+ * @returns 
+ */
+export const checkFileSourceMergeResultsAndCreateSingleFileResults = async (
+  take_off_id: string,
+  file_id: string,
+  ids: string,
+  data: any) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/check_file_source_merge_results_and_create_single_file_results?take_off_id=${take_off_id}&file_id=${file_id}&ids=${ids}`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error checking file source merge results and create single file results:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
+
+
