@@ -5,13 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getEvidenceByFileId } from "@/services/evidenceService";
-import { getAllGroupedByTakeOff } from "@/services/mergeService";
 import { changeCheckedItem } from "@/services/projectService";
 import {
 	downloadTakeOffResult,
 	getTakeOffById,
 	getTakeOffSummaryStats,
 	resetTakeOff,
+	getAllTakeOffResultItemsByTakeOffId
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 
@@ -54,6 +54,80 @@ const parseTakeoffMergeResult = (
 	sourceData: any,
 	preferredFields: string[],
 ): ParsedTakeoffItem[] => {
+	const parseIdList = (item: any, listKey: string, textKey: string): number[] => {
+		if (Array.isArray(item?.[listKey])) {
+			return item[listKey]
+				.map((value: any) => Number(value))
+				.filter((value: number) => Number.isFinite(value));
+		}
+		const textValue = item?.[textKey];
+		if (typeof textValue !== "string" || !textValue.trim()) {
+			return [];
+		}
+		const matches = textValue.match(/\d+/g) || [];
+		return matches
+			.map((value) => Number(value))
+			.filter((value) => Number.isFinite(value));
+	};
+
+	const toParsedItem = (
+		item: any,
+		index: number,
+		fallbackMerged: boolean,
+	): ParsedTakeoffItem => {
+		const rawResult = parseItemResult(item?.result);
+		const displayResult = preferredFields.reduce(
+			(acc: Record<string, string>, fieldName: string) => {
+				acc[fieldName] = getDisplayValueByField(rawResult, fieldName);
+				return acc;
+			},
+			{},
+		);
+
+		return {
+			...item,
+			id: item?.id ?? `item-${index}`,
+			key: `item-${item?.id ?? index}`,
+			result: displayResult,
+			originalResult: rawResult,
+			isMerged:
+				typeof item?.is_merged === "boolean"
+					? item.is_merged
+					: fallbackMerged,
+			take_off_result_item_id_list: parseIdList(
+				item,
+				"take_off_result_item_id_list",
+				"take_off_result_item_ids",
+			),
+			single_file_merge_result_id_list: parseIdList(
+				item,
+				"single_file_merge_result_id_list",
+				"single_file_merge_result_ids",
+			),
+			file_source_merge_result_id_list: parseIdList(
+				item,
+				"file_source_merge_result_id_list",
+				"file_source_merge_result_ids",
+			),
+			mergedFromRows: item?.mergedFromRows || [item],
+		};
+	};
+
+	// New API shape: single item object or item array
+	if (Array.isArray(sourceData)) {
+		return sourceData.map((item, index) =>
+			toParsedItem(item, index, Boolean(item?.is_merged)),
+		);
+	}
+	if (
+		sourceData &&
+		typeof sourceData === "object" &&
+		typeof sourceData?.id !== "undefined" &&
+		sourceData?.result
+	) {
+		return [toParsedItem(sourceData, 0, Boolean(sourceData?.is_merged))];
+	}
+
 	const inMergeResult =
 		sourceData?.in_multiple_files_merge_result ||
 		sourceData?.in_single_file_merge_result ||
@@ -79,42 +153,16 @@ const parseTakeoffMergeResult = (
 
 		if (listItems.length > 0) {
 			listItems.forEach((item: any, itemIndex: number) => {
-				const result = parseItemResult(item?.result);
-				const displayResult = preferredFields.reduce(
-					(acc: Record<string, string>, fieldName: string) => {
-						acc[fieldName] = getDisplayValueByField(result, fieldName);
-						return acc;
-					},
-					{},
-				);
 				items.push({
-					...item,
-					id: item?.id || `merged-${groupIndex}-${itemIndex}`,
-					key: `merged-${item?.id || `${groupIndex}-${itemIndex}`}`,
-					result: displayResult,
-					originalResult: item?.result,
-					isMerged: true,
+					...toParsedItem(item, itemIndex, true),
 					groupLabel,
 					groupSubLabel,
 					mergedFromRows: item?.mergedFromRows || listItems,
 				});
 			});
 		} else {
-			const result = parseItemResult(group?.result || group);
-			const displayResult = preferredFields.reduce(
-				(acc: Record<string, string>, fieldName: string) => {
-					acc[fieldName] = getDisplayValueByField(result, fieldName);
-					return acc;
-				},
-				{},
-			);
 			items.push({
-				...group,
-				id: group?.id || `merged-${groupIndex}`,
-				key: `merged-${group?.id || groupIndex}`,
-				result: displayResult,
-				originalResult: group?.result || group,
-				isMerged: true,
+				...toParsedItem(group, groupIndex, true),
 				groupLabel,
 				groupSubLabel,
 				mergedFromRows: group?.mergedFromRows || [group],
@@ -134,42 +182,16 @@ const parseTakeoffMergeResult = (
 
 		if (listItems.length > 0) {
 			listItems.forEach((item: any, itemIndex: number) => {
-				const result = parseItemResult(item?.result);
-				const displayResult = preferredFields.reduce(
-					(acc: Record<string, string>, fieldName: string) => {
-						acc[fieldName] = getDisplayValueByField(result, fieldName);
-						return acc;
-					},
-					{},
-				);
 				items.push({
-					...item,
-					id: item?.id || `unmerged-${groupIndex}-${itemIndex}`,
-					key: `unmerged-${item?.id || `${groupIndex}-${itemIndex}`}`,
-					result: displayResult,
-					originalResult: item?.result,
-					isMerged: false,
+					...toParsedItem(item, itemIndex, false),
 					groupLabel,
 					groupSubLabel,
 					mergedFromRows: item?.mergedFromRows || listItems,
 				});
 			});
 		} else {
-			const result = parseItemResult(group?.result || group);
-			const displayResult = preferredFields.reduce(
-				(acc: Record<string, string>, fieldName: string) => {
-					acc[fieldName] = getDisplayValueByField(result, fieldName);
-					return acc;
-				},
-				{},
-			);
 			items.push({
-				...group,
-				id: group?.id || `unmerged-${groupIndex}`,
-				key: `unmerged-${group?.id || groupIndex}`,
-				result: displayResult,
-				originalResult: group?.result || group,
-				isMerged: false,
+				...toParsedItem(group, groupIndex, false),
 				groupLabel,
 				groupSubLabel,
 				mergedFromRows: group?.mergedFromRows || [group],
@@ -380,8 +402,8 @@ export default function TakeoffListPage() {
 			const preferredFields =
 				fields.length > 0 ? fields : ["Label", "Sub Label"];
 
-			// Step 3: Get merged data from getAllGroupedByTakeOff
-			const groupedResponse = await getAllGroupedByTakeOff(Number(takeoffId));
+			// Step 3: Get merged data from getAllTakeOffResultItemsByTakeOffId
+			const groupedResponse = await getAllTakeOffResultItemsByTakeOffId(takeoffId);
 
 			let items: ParsedTakeoffItem[] = [];
 			if (groupedResponse.status === "success" && groupedResponse.data) {
@@ -431,7 +453,7 @@ export default function TakeoffListPage() {
 
 	const refreshItemsOnly = useCallback(async () => {
 		try {
-			const groupedResponse = await getAllGroupedByTakeOff(Number(takeoffId));
+			const groupedResponse = await getAllTakeOffResultItemsByTakeOffId(takeoffId);
 			if (groupedResponse.status === "success" && groupedResponse.data) {
 				const preferredFields =
 					columnNames.length > 0 ? columnNames : ["Label", "Sub Label"];
