@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Spin, Modal, Image } from "antd";
+import { Button, notification, Image, Popover } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
   EvidenceType,
   FileOperationType,
-  GroupType,
-  PageType,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import EvidenceThumbailList from "../floor-plan/components/EvidenceThumbailList";
@@ -20,7 +18,7 @@ import {
   getTakeOffResultItemsByEvidenceIds,
   updateTakeOffResultItemResultById,
   deleteTakeOffResultItemById,
-  reconcileTakeOffResultItemsByTakeOffAndFile
+  reconcileTakeOffResultItemsByTakeOffAndFile,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -29,6 +27,7 @@ import {
   parseItemResult as parseItemResultUtil,
 } from "../../analyze-new/takeoffUtils";
 import BuildingBackground from "../../identification/components/BuildingBackground";
+import CreateItemModal from "./components/CreateItemModal";
 
 export default function SchedulePage() {
   const router = useRouter();
@@ -51,6 +50,7 @@ export default function SchedulePage() {
   const [columns, setColumns] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
+  const [createItemOpen, setCreateItemOpen] = useState(false);
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
@@ -280,6 +280,13 @@ export default function SchedulePage() {
       const itemId = Number(updatedItem?.id);
       if (!itemId) return false;
       if (oldValue === newValue) return true;
+      if (fieldName === "Label" && !String(newValue || "").trim()) {
+        notification.error({
+          message: "Error",
+          description: "Label cannot be empty.",
+        });
+        return false;
+      }
 
       setItemBoxList((prev) => prev.map((item) => (item.id === itemId ? updatedItem : item)));
 
@@ -317,6 +324,14 @@ export default function SchedulePage() {
     [],
   );
 
+  const hasEmptyLabelInTable = useMemo(() => {
+    return itemBoxList.some((item) => {
+      const parsedResult = parseItemResultUtil((item as any)?.result as any);
+      const labelValue = String(parsedResult?.Label ?? "").trim();
+      return !labelValue || labelValue === "-";
+    });
+  }, [itemBoxList]);
+
   const handleDeleteScheduleItem = useCallback(
     async (itemId: number) => {
       if (!itemId) return false;
@@ -340,6 +355,36 @@ export default function SchedulePage() {
     [getItemsByPageEvidences, pageEvidenceId],
   );
 
+  const getDefaultNextLabel = useCallback(() => {
+    const lastItem = itemBoxList[itemBoxList.length - 1] as any;
+    const lastLabel = String(
+      getDisplayValueByField(lastItem?.result || {}, "Label") || "",
+    )
+      .replace(/^-$/, "")
+      .trim();
+
+    if (!lastLabel) return "Label 1";
+
+    const trailingNumberMatch = lastLabel.match(/^(.*?)(\d+)$/);
+    if (trailingNumberMatch) {
+      const prefix = trailingNumberMatch[1];
+      const number = Number(trailingNumberMatch[2]);
+      if (Number.isFinite(number)) {
+        return `${prefix}${number + 1}`.trim();
+      }
+    }
+
+    return `${lastLabel} 1`;
+  }, [itemBoxList]);
+
+  const handleOpenCreateItemModal = useCallback(() => {
+    setCreateItemOpen(true);
+  }, []);
+
+  const handleCancelCreateItem = useCallback(() => {
+    setCreateItemOpen(false);
+  }, []);
+
   const handleReconcileTakeOff = async () => {
     setBuildingLoading(true);
     let res = await reconcileTakeOffResultItemsByTakeOffAndFile(takeOffId as string, selectedFileId as any)
@@ -354,12 +399,19 @@ export default function SchedulePage() {
     } else {
       notification.error({
         message: "Error",
-        description: "Failed to reconcile take off result items.",
+        description: res?.data?.detail || "Failed to reconcile take off result items.",
       });
     }
   }
 
   const handleNext = () => {
+    if (hasEmptyLabelInTable) {
+      notification.warning({
+        message: "Label Required",
+        description: "Please make sure all labels are not empty before clicking Next.",
+      });
+      return;
+    }
     handleReconcileTakeOff();
   };
 
@@ -399,13 +451,31 @@ export default function SchedulePage() {
             </button>
           ))}
         </div>
-        <Button
-          type="primary"
-          className="custom-primary-btn"
-          onClick={handleNext}
-        >
-          Next
-        </Button>
+        <div className="flex flex-row items-end gap-2">
+          <Popover
+            placement="rightBottom"
+            title={null}
+            content={
+              <div className="py-1 w-[240px] flex flex-col">
+                Please make sure all labels are not empty.
+              </div>
+            }
+            trigger="hover"
+          >
+            <Image
+              src="/assets/icons/info-forum-blue.svg"
+              alt="info circle icon"
+              className="cursor-pointer"
+              preview={false}
+            ></Image>
+          </Popover>
+          <Button
+            className="custom-primary-btn"
+            onClick={handleNext}
+          >
+            Next
+          </Button>
+        </div>
       </header>
 
       {/* Content */}
@@ -439,12 +509,22 @@ export default function SchedulePage() {
         >
           {/* Images */}
           <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center">
-            <Image src={imageUrl} alt="Schedule Evidence" preview={false} />
+            {
+              imageUrl && <Image src={imageUrl} alt="Schedule Evidence" preview={false} />
+            }
           </div>
         </div>
         {/** right view */}
         <div className="h-full w-[50%] shrink-0 border-l border-primaryN30 bg-white p-4 overflow-hidden">
-          <div className="mb-2 text-xs text-grey-normal">{itemBoxList.length} items</div>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="text-xs text-grey-normal">{itemBoxList.length} items</div>
+            <Button
+              className="custom-primary-btn !w-[60px] !text-xs"
+              onClick={handleOpenCreateItemModal}
+            >
+              + Item
+            </Button>
+          </div>
           <ScheduleTable
             columns={columns}
             sections={itemBoxList}
@@ -454,6 +534,16 @@ export default function SchedulePage() {
           />
         </div>
       </div>
+      <CreateItemModal
+        open={createItemOpen}
+        columns={columns}
+        takeOffId={String(takeOffId || "")}
+        selectedFileId={selectedFileId}
+        pageEvidenceId={pageEvidenceId}
+        defaultLabel={getDefaultNextLabel()}
+        onCancel={handleCancelCreateItem}
+        onSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
+      />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildingLoading && <BuildingBackground step={'page-merge'} />}
     </div>

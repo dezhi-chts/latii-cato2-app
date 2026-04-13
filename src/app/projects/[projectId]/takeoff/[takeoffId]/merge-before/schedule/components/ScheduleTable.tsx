@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Input, Modal, Table, Tooltip } from "antd";
+import { Button, Input, Modal, Table, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
@@ -139,6 +139,15 @@ export default function ScheduleTable({
 
 		if (submittingCellKeyRef.current === submitKey) return;
 		if (newValue === oldValue) {
+			cancelEdit();
+			return;
+		}
+		if (fieldName === "Label" && !newValue) {
+			notification.error({
+				message: "Error",
+				description: "Label cannot be empty.",
+			});
+			// Exit editing mode and keep previous value from parent state.
 			cancelEdit();
 			return;
 		}

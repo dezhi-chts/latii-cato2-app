@@ -530,6 +530,27 @@ export const getAllTakeOffResultItemsByTakeOffId = async (take_off_id: string) =
   }
 }
 
+export const addTakeOffResultItemByEvidenceId = async (
+  take_off_id: string, 
+  project_file_id: string, 
+  evidence_id: string, 
+  result: object) => { 
+  try{ 
+    const url = `/drawing-ai/drawing_ai/add_take_off_result_item`;
+    const response = await http.post(url, {
+      take_off_id,
+      project_file_id,
+      evidence_id,
+      result,
+    });
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+
+}
+
 
 
 

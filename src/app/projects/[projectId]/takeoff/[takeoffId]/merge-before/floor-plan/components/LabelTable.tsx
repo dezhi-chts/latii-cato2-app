@@ -12,6 +12,7 @@ interface LabelItem {
 	id: string | number;
 	label: string;
 	subLabel: string;
+	hasMissingLabel: boolean;
 	evidenceId?: number;
 	sourceItem: Record<string, any>;
 }
@@ -70,10 +71,12 @@ export default function LabelTable({
 	useEffect(() => {
 		const nextRows = (data || []).map((item) => {
 			const { evidenceId, result } = parseOcrText(item?.ocr_text);
+			const rawLabelValue = String(result?.Label ?? "").trim();
 			return {
 				id: item?.id,
 				label: String(result?.Label || "-"),
 				subLabel: String(result?.["Sub Label"] || "-"),
+				hasMissingLabel: !rawLabelValue,
 				evidenceId,
 				sourceItem: item,
 			};
@@ -134,9 +137,20 @@ export default function LabelTable({
 
 	const handleSubmitEdit = async (record: LabelItem, field: "label" | "subLabel") => {
 		const trimmedValue = editingValue.trim();
-		const nextDisplayValue = trimmedValue || "-";
 		const submitKey = `${record.id}-${field}`;
 		if (submittingCellKeyRef.current === submitKey) return;
+
+		// 只有 Label 需要校验是否为空，Sub Label 可以为空
+		if (field === "label" && !trimmedValue) {
+			handleCancelEdit();
+			notification.warning({
+				message: "Warning",
+				description: "Label cannot be empty.",
+			});
+			return;
+		}
+
+		const nextDisplayValue = trimmedValue || "-";
 		if (nextDisplayValue === record[field]) {
 			handleCancelEdit();
 			return;
@@ -163,6 +177,8 @@ export default function LabelTable({
 				? {
 					...row,
 					[field]: nextDisplayValue,
+					hasMissingLabel:
+						field === "label" ? nextDisplayValue.trim() === "-" : row.hasMissingLabel,
 					sourceItem: updatedItem,
 				}
 				: row,
@@ -346,6 +362,7 @@ export default function LabelTable({
 					size="small"
 					columns={columns}
 					dataSource={rows}
+					rowClassName={(record) => (record.hasMissingLabel ? "bg-red-50" : "")}
 					pagination={false}
 					rowKey="id"
 					scroll={{ y: "calc(100vh - 240px)" }}
