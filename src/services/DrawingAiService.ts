@@ -151,6 +151,26 @@ export const AnalyzeItemBySourceTypeSSE = (
 	const eventSource = new EventSource(url);
 	let isCompleted = false;
 
+	const parseSSEErrorMessage = (rawError: any): string => {
+		if (!rawError) return "Analysis failed";
+		if (typeof rawError === "string") {
+			try {
+				const parsed = JSON.parse(rawError);
+				const errMessage =
+					parsed?.err?.message || parsed?.message || parsed?.error;
+				return errMessage || rawError;
+			} catch {
+				return rawError;
+			}
+		}
+		if (typeof rawError === "object") {
+			const errMessage =
+				rawError?.err?.message || rawError?.message || rawError?.error;
+			return errMessage || "Analysis failed";
+		}
+		return "Analysis failed";
+	};
+
 	eventSource.onopen = () => {
 		console.log("[SSE] Connection opened");
 		callbacks.onConnected?.();
@@ -184,6 +204,19 @@ export const AnalyzeItemBySourceTypeSSE = (
 		} catch (error) {
 			console.error("[SSE] Failed to parse completed data:", event.data, error);
 			callbacks.onError?.("Failed to parse server response");
+		}
+		eventSource.close();
+	});
+
+	eventSource.addEventListener("error", (event: MessageEvent) => {
+		console.log("[SSE] Server error event:", event.data);
+		isCompleted = true;
+		try {
+			const data: SSEEventData & { err?: { message?: string } } = JSON.parse(event.data);
+			callbacks.onError?.(parseSSEErrorMessage(data));
+		} catch (error) {
+			console.error("[SSE] Failed to parse error data:", event.data, error);
+			callbacks.onError?.(parseSSEErrorMessage(event.data));
 		}
 		eventSource.close();
 	});

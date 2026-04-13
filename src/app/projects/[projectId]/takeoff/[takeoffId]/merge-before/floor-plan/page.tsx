@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Spin, Modal } from "antd";
+import { Button, notification, Spin, Modal, Popover } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -116,7 +116,6 @@ export default function FloorPlanPage() {
           (a?.project_file_page_number || 0) -
           (b?.project_file_page_number || 0),
       );
-      console.log('########### thumbnailData', thumbnailData);
       setThumbnailData(data);
       if (data.length > 0) {
         setCurrentPage(data[0].project_file_page_number || 0);
@@ -384,9 +383,61 @@ export default function FloorPlanPage() {
     [evidenceType, floorPlanData, elevationData],
   );
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
+    let findLabelEmpty = (data: any) => {
+      return data.find((item: any) => {
+        try {
+          let label = JSON.parse(item?.ocr_text)?.result?.Label;
+          return label === "" || label === null;
+        } catch (error) {
+          console.log('error', error);
+          return false;
+        }
+      });
+    };
+    if (evidenceType === PageType.FloorPlan && floorPlanData?.length > 0 && findLabelEmpty(floorPlanData)) {
+      notification.error({
+        message: "Please fill in all the labels.",
+      });
+      return;
+    }
+    if (evidenceType === PageType.Elevation && elevationData?.length > 0 && findLabelEmpty(elevationData)) {
+      notification.error({
+        message: "Please fill in all the labels.",
+      });
+      return;
+    }
     handleAnaylize();
-  };
+  }, [evidenceType, floorPlanData, elevationData]);
+
+  const formatAnalyzeErrorMessage = useCallback((error: unknown) => {
+    if (!error) return "Failed to analyze the file.";
+
+    const parseServerError = (payload: any) => {
+      if (payload?.status === "error") {
+        return payload?.err?.message || payload?.message || "Failed to analyze the file.";
+      }
+      return payload?.message || payload?.error || "";
+    };
+
+    if (typeof error === "string") {
+      try {
+        const parsed = JSON.parse(error);
+        const parsedError = parseServerError(parsed);
+        if (parsedError) return parsedError;
+      } catch {
+        return error;
+      }
+      return error;
+    }
+
+    if (typeof error === "object") {
+      const parsedError = parseServerError(error);
+      if (parsedError) return parsedError;
+    }
+
+    return "Failed to analyze the file.";
+  }, []);
 
   const handleChangeSelectedEvidence = (evidenceIds: number[]) => {
     // 获取evidenceIds
@@ -397,7 +448,6 @@ export default function FloorPlanPage() {
 
   const handleAnaylize = async () => {
     setBuildLoading(true);
-
     // Close existing SSE connection if any
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -422,9 +472,10 @@ export default function FloorPlanPage() {
         console.error("[SSE] Analysis error:", error);
         setBuildLoading(false);
         eventSourceRef.current = null;
+        const formattedError = formatAnalyzeErrorMessage(error);
         notification.error({
           message: "Error",
-          description: error || "Failed to analyze the file",
+          description: formattedError,
         });
       },
     });
@@ -440,9 +491,9 @@ export default function FloorPlanPage() {
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
       <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
-        <div className="cursor-pointer" onClick={handleBack}>
+        {/* <div className="cursor-pointer" onClick={handleBack}>
           <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
-        </div>
+        </div> */}
         <div className="flex-1 ml-6 flex items-center gap-3">
           {files.map((file) => (
             <button
@@ -465,13 +516,33 @@ export default function FloorPlanPage() {
             </button>
           ))}
         </div>
-        <Button
-          type="primary"
-          className="custom-primary-btn"
-          onClick={handleNext}
-        >
-          Next
-        </Button>
+        <div className="flex flex-row items-end gap-2">
+          <Popover
+            placement="rightBottom"
+            title={null}
+            content={
+              <div className="py-1 w-[240px] flex flex-col">
+                Please make sure all labels are not empty.
+              </div>
+            }
+            trigger="hover"
+          >
+            <Image
+              src="/assets/icons/info-forum-blue.svg"
+              alt="info circle icon"
+              className="cursor-pointer"
+              width={14}
+              height={14}
+            ></Image>
+          </Popover>
+          <Button
+            type="primary"
+            className="custom-primary-btn"
+            onClick={handleNext}
+          >
+            Next
+          </Button>
+        </div>
       </header>
       {/* Content */}
       <div className="pl-6 pr-14 py-2 flex-1 flex flex-row overflow-hidden">

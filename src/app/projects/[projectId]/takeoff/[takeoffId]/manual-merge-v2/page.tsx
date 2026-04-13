@@ -443,7 +443,7 @@ export default function ManualMergeV2Page() {
   useEffect(() => {
     fetchColumns();
     initPage();
-  }, [fetchColumns, initPage]);
+  }, []);
 
   const handleSwitchLabel = async (label: string) => {
     if (label === selectedLabel) return;
