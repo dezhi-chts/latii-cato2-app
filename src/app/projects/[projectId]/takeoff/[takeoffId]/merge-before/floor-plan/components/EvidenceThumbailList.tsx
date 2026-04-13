@@ -80,6 +80,7 @@ interface EvidenceThumbailListProps {
 	fixed?: boolean; // 是否固定位置
 	showCategory?: boolean; // 是否显示分类
 	showShadow?: boolean; // 是否显示阴影
+	showDownload?: boolean; // 是否显示下载按钮
 	size?: "default" | "larger"; // 缩略图大小
 	categoryList?: { type: string; color: string; icon: string }[]; // 页面分类
 }
@@ -91,6 +92,7 @@ const EvidenceThumbailList = ({
 	onChangeEvidenceId,
 	fixed = false, // 是否固定位置
 	showCategory = false, // 是否显示分类
+	showDownload = false, // 是否显示下载按钮
 	size = "default", // 缩略图大小
 	categoryList = [], // 页面分类
 }: EvidenceThumbailListProps) => {
@@ -192,6 +194,28 @@ const EvidenceThumbailList = ({
 											<p className="mb-3 text-xxs text-grey-normal">
 												{itemPageNum}
 											</p>
+											{
+												showDownload && (
+													<div
+														onClick={(e) => {
+															e.stopPropagation();
+															if (info.evidence_url) {
+																const link = document.createElement('a');
+																link.href = info.evidence_url;
+																link.download = `evidence_${info.id}.png`;
+																document.body.appendChild(link);
+																link.click();
+																document.body.removeChild(link);
+															}
+														}}
+														className="cursor-pointer"
+													>
+														<p className="text-xs text-forumBlue-normal underline">
+															download
+														</p>
+													</div>
+												)
+											}
 											{showCategory && (
 												<div
 													className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white"

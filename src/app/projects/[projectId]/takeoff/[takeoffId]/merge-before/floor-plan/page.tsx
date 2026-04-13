@@ -487,6 +487,7 @@ export default function FloorPlanPage() {
             onChangeEvidenceId={handlePageEvidenceChange}
             showShadow={false}
             showCategory={true}
+            showDownload={true}
             categoryList={ArchDrawingSummaryPageTypes}
             size={
               selectedFile?.operation_type === FileOperationType.Quote
