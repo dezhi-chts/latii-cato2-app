@@ -671,6 +671,7 @@ const PdfWrapper = forwardRef(
 			const rotateAngle: number = (viewport as any).rotation ?? 0;
 
 			let data = {
+				...evid,
 				id: evid.id,
 				polygon: polygonStr,
 				device_pixel_ratio: window.devicePixelRatio || 1,
@@ -1836,114 +1837,114 @@ const PdfWrapper = forwardRef(
 				x: p.x + dx,
 				y: p.y + dy,
 			}));
-			let scrollPolygons = [...polygons];
+			// let scrollPolygons = [...polygons];
 
-			let adjustedDx = dx;
-			let adjustedDy = dy;
-			let scrollDx = dx;
-			let scrollDy = dy;
+			// let adjustedDx = dx;
+			// let adjustedDy = dy;
+			// let scrollDx = dx;
+			// let scrollDy = dy;
 
-			if (scrollRef.current) {
-				const containerScrollWidth = stageWidth;
-				const containerScrollHeight = stageHeight;
-				const gap = 8;
+			// if (scrollRef.current) {
+			// 	const containerScrollWidth = stageWidth;
+			// 	const containerScrollHeight = stageHeight;
+			// 	const gap = 8;
 
-				let bounds = getZoneBounds(newPolygons);
+			// 	let bounds = getZoneBounds(newPolygons);
 
-				if (bounds.minX < 0) {
-					scrollDx = scrollDx - bounds.minX;
-					adjustedDx = scrollDx + gap;
-				}
+			// 	if (bounds.minX < 0) {
+			// 		scrollDx = scrollDx - bounds.minX;
+			// 		adjustedDx = scrollDx + gap;
+			// 	}
 
-				if (bounds.minX + bounds.width > containerScrollWidth) {
-					scrollDx =
-						scrollDx - (bounds.minX + bounds.width - containerScrollWidth);
-					adjustedDx = scrollDx - gap;
-				}
+			// 	if (bounds.minX + bounds.width > containerScrollWidth) {
+			// 		scrollDx =
+			// 			scrollDx - (bounds.minX + bounds.width - containerScrollWidth);
+			// 		adjustedDx = scrollDx - gap;
+			// 	}
 
-				if (bounds.minY < 0) {
-					scrollDy = scrollDy - bounds.minY;
-					adjustedDy = scrollDy + gap;
-				}
+			// 	if (bounds.minY < 0) {
+			// 		scrollDy = scrollDy - bounds.minY;
+			// 		adjustedDy = scrollDy + gap;
+			// 	}
 
-				if (bounds.minY + bounds.height > containerScrollHeight) {
-					scrollDy =
-						scrollDy - (bounds.minY + bounds.height - containerScrollHeight);
-					adjustedDy = scrollDy - gap;
-				}
+			// 	if (bounds.minY + bounds.height > containerScrollHeight) {
+			// 		scrollDy =
+			// 			scrollDy - (bounds.minY + bounds.height - containerScrollHeight);
+			// 		adjustedDy = scrollDy - gap;
+			// 	}
 
-				newPolygons = polygons.map((p: any) => ({
-					x: p.x + adjustedDx,
-					y: p.y + adjustedDy,
-				}));
-				scrollPolygons = polygons.map((p: any) => ({
-					x: p.x + scrollDx,
-					y: p.y + scrollDy,
-				}));
-			}
+			// 	newPolygons = polygons.map((p: any) => ({
+			// 		x: p.x + adjustedDx,
+			// 		y: p.y + adjustedDy,
+			// 	}));
+			// 	scrollPolygons = polygons.map((p: any) => ({
+			// 		x: p.x + scrollDx,
+			// 		y: p.y + scrollDy,
+			// 	}));
+			// }
 
-			if (scrollRef.current) {
-				const container = scrollRef.current;
-				const containerWidth = container.clientWidth;
-				const containerHeight = container.clientHeight;
-				const containerScrollWidth = stageWidth;
-				const containerScrollHeight = stageHeight;
+			// if (scrollRef.current) {
+			// 	const container = scrollRef.current;
+			// 	const containerWidth = container.clientWidth;
+			// 	const containerHeight = container.clientHeight;
+			// 	const containerScrollWidth = stageWidth;
+			// 	const containerScrollHeight = stageHeight;
 
-				const bounds = getZoneBounds(scrollPolygons);
+			// 	const bounds = getZoneBounds(scrollPolygons);
 
-				const scrollLeft = container.scrollLeft;
-				const scrollTop = container.scrollTop;
+			// 	const scrollLeft = container.scrollLeft;
+			// 	const scrollTop = container.scrollTop;
 
-				const immediateScroll = (
-					element: HTMLElement,
-					targetLeft: number,
-					targetTop: number,
-				) => {
-					element.scrollLeft = targetLeft;
-					element.scrollTop = targetTop;
-				};
+			// 	const immediateScroll = (
+			// 		element: HTMLElement,
+			// 		targetLeft: number,
+			// 		targetTop: number,
+			// 	) => {
+			// 		element.scrollLeft = targetLeft;
+			// 		element.scrollTop = targetTop;
+			// 	};
 
-				let targetScrollLeft = scrollLeft;
-				let targetScrollTop = scrollTop;
+			// 	let targetScrollLeft = scrollLeft;
+			// 	let targetScrollTop = scrollTop;
 
-				if (bounds.minX < scrollLeft) {
-					const overflowDistance = Math.max(0, scrollLeft - bounds.minX);
+			// 	if (bounds.minX < scrollLeft) {
+			// 		const overflowDistance = Math.max(0, scrollLeft - bounds.minX);
 
-					targetScrollLeft = Math.max(0, scrollLeft - overflowDistance);
-				} else if (bounds.minX + bounds.width > scrollLeft + containerWidth) {
-					const overflowDistance =
-						bounds.minX + bounds.width - (scrollLeft + containerWidth);
+			// 		targetScrollLeft = Math.max(0, scrollLeft - overflowDistance);
+			// 	} else if (bounds.minX + bounds.width > scrollLeft + containerWidth) {
+			// 		const overflowDistance =
+			// 			bounds.minX + bounds.width - (scrollLeft + containerWidth);
 
-					const maxAllowedScroll = Math.max(
-						0,
-						containerScrollWidth - containerWidth,
-					);
-					targetScrollLeft = Math.min(
-						maxAllowedScroll,
-						scrollLeft + overflowDistance,
-					);
-				}
+			// 		const maxAllowedScroll = Math.max(
+			// 			0,
+			// 			containerScrollWidth - containerWidth,
+			// 		);
+			// 		targetScrollLeft = Math.min(
+			// 			maxAllowedScroll,
+			// 			scrollLeft + overflowDistance,
+			// 		);
+			// 	}
 
-				if (bounds.minY < scrollTop) {
-					const overflowDistance = Math.max(0, scrollTop - bounds.minY);
+			// 	if (bounds.minY < scrollTop) {
+			// 		const overflowDistance = Math.max(0, scrollTop - bounds.minY);
 
-					targetScrollTop = Math.max(0, scrollTop - overflowDistance);
-				} else if (bounds.minY + bounds.height > scrollTop + containerHeight) {
-					const overflowDistance =
-						bounds.minY + bounds.height - (scrollTop + containerHeight);
+			// 		targetScrollTop = Math.max(0, scrollTop - overflowDistance);
+			// 	} else if (bounds.minY + bounds.height > scrollTop + containerHeight) {
+			// 		const overflowDistance =
+			// 			bounds.minY + bounds.height - (scrollTop + containerHeight);
 
-					const maxAllowedScroll = Math.max(
-						0,
-						containerScrollHeight - containerHeight,
-					);
-					targetScrollTop = Math.min(
-						maxAllowedScroll,
-						scrollTop + overflowDistance,
-					);
-				}
+			// 		const maxAllowedScroll = Math.max(
+			// 			0,
+			// 			containerScrollHeight - containerHeight,
+			// 		);
+			// 		targetScrollTop = Math.min(
+			// 			maxAllowedScroll,
+			// 			scrollTop + overflowDistance,
+			// 		);
+			// 	}
 
-				immediateScroll(container, targetScrollLeft, targetScrollTop);
-			}
+			// 	immediateScroll(container, targetScrollLeft, targetScrollTop);
+			// }
 			return newPolygons;
 		};
 
@@ -2299,11 +2300,12 @@ const PdfWrapper = forwardRef(
 				selectedEvidenceIds.includes(item.id),
 			);
 
-			if (evid.length > 0) {
+			// 只有在没有拖动时才调整居中，避免拖动时 PDF 跳动
+			if (evid.length > 0 && !draggingShapeId) {
 				adjustToCenter("evidence", evid[0]);
 			}
 			return evid;
-		}, [pageEvidence, selectedEvidenceIds]);
+		}, [pageEvidence, selectedEvidenceIds, draggingShapeId]);
 
 		return (
 			<div className="w-full h-full flex relative">
@@ -2454,12 +2456,20 @@ const PdfWrapper = forwardRef(
 														setDraggingShapeId(crop.id);
 														// 设置新的选中元素
 														setSelectedShapeId(crop.id);
+														// 禁止 PDF 容器滚动
+														if (scrollRef.current) {
+															//scrollRef.current.style.overflow = 'hidden';
+														}
 													}}
 													onDragMove={(x, y) => {
 														dragCropMoveByOffset(crop.id, x, y);
 													}}
 													onDragEnd={() => {
 														setDraggingShapeId(null);
+														// 恢复 PDF 容器滚动
+														if (scrollRef.current) {
+															//scrollRef.current.style.overflow = 'auto';
+														}
 													}}
 													onClick={() => {
 														if (selectedShapeId === crop.id) {
@@ -3063,7 +3073,13 @@ const ShapeWrapper = ({
 		}
 	}
 
-	const shapeDraggable = !(type === "evidence" && !evidenceDraggable);
+	let shapeDraggable = evidenceDraggable ?? true;
+	if (type === "evidence") {
+		if (itemBoxType?.isParentEvidence) {
+			shapeDraggable = false;
+		}
+	}
+	!(type === "evidence" && !evidenceDraggable);
 
 	if (draggingShapeId === shape.id) {
 		color = "#FF4500";
@@ -3130,6 +3146,9 @@ const ShapeWrapper = ({
 				}}
 				onClick={(e) => {
 					e.cancelBubble = true;
+					if (shape?.isParentEvidence) {
+						return;
+					}
 					onClick?.();
 				}}
 			/>

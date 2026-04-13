@@ -272,7 +272,7 @@ export default function ScheduleTable({
 					loading={tableLoading}
 					scroll={{
 						x: "max-content",
-						y: "calc(100vh - 500px)",
+						y: "calc(100vh - 280px)",
 					}}
 					locale={{
 						emptyText: (

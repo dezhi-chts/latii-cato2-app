@@ -21,6 +21,7 @@ import {
   parseItemResult as parseItemResultUtil,
 } from "../analyze-new/takeoffUtils";
 import BuildingBackground from "../identification/components/BuildingBackground";
+import MergePanel from "./components/MergePanel";
 
 type ViewMode = "items" | "evidence";
 type SourceKey = "schedule" | "floorPlan" | "elevation";
@@ -668,7 +669,7 @@ export default function ManualMergeV2Page() {
         columns={withEvidenceAction ? [...dataColumns, actionColumn] : dataColumns}
         dataSource={rows}
         pagination={false}
-        scroll={{ x: "max-content", y: "calc(100vh - 260px)" }}
+        scroll={{ x: "max-content", y: "calc(100vh - 220px)" }}
         locale={{
           emptyText: (
             <div className="py-10 text-xs text-grey-normal">
@@ -683,7 +684,7 @@ export default function ManualMergeV2Page() {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
-      <header className="flex h-[88px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10">
+      <header className="flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10">
         <div className="flex items-center gap-3">
           {files.map((file) => (
             <button
@@ -704,7 +705,7 @@ export default function ManualMergeV2Page() {
         </Button>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-4 p-4">
+      <div className="flex flex-1 gap-4 p-4 overflow-y-hidden">
         <div className="w-[260px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
@@ -740,140 +741,41 @@ export default function ManualMergeV2Page() {
           </div>
         </div>
 
-        <div className="min-w-0 flex-1 overflow-x-auto">
+        <div className="min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex min-w-max gap-4 pb-2">
-            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex w-1/3 items-center gap-2">
-                  <Tag color="blue">Base</Tag>
-                  <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
-                  <span className="text-xs text-grey-normal">{scheduleRows.length} items</span>
-                </div>
-                <div className="mr-2 flex flex-1 flex-row justify-end items-center gap-2">
-                  {!isSelectedLabelMerged ? (
-                    <Button
-                      type="primary"
-                      size="small"
-                      className="custom-primary-btn"
-                      loading={submitting}
-                      onClick={handleSubmitChanges}
-                    >
-                      Merge Complete
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Segmented
-                    size="small"
-                    value={viewMode.schedule}
-                    onChange={(value) =>
-                      setViewMode((prev) => ({ ...prev, schedule: value as ViewMode }))
-                    }
-                    options={[
-                      { label: "Items", value: "items" },
-                      { label: "Evidence", value: "evidence" },
-                    ]}
-                  />
-                </div>
-              </div>
-              {viewMode.schedule === "items" ? (
-                renderTable(scheduleRows, !isSelectedLabelMerged, true)
-              ) : scheduleEvidenceUrls.length > 0 ? (
-                <div className="max-h-[420px] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-3">
-                    {scheduleEvidenceUrls.map((url, index) => (
-                      <Image
-                        key={`${url}-${index}`}
-                        src={url}
-                        alt="Schedule Evidence"
-                        className="w-full rounded-md border border-primaryN30"
-                        preview={false}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-              )}
-            </div>
+            <MergePanel
+              type="schedule"
+              title="Schedule"
+              rows={scheduleRows}
+              evidenceUrls={scheduleEvidenceUrls}
+              viewMode={viewMode.schedule}
+              onViewModeChange={(mode) => setViewMode((prev) => ({ ...prev, schedule: mode }))}
+              renderTable={renderTable}
+              isMerged={isSelectedLabelMerged}
+              submitting={submitting}
+              onSubmit={handleSubmitChanges}
+              showTag={true}
+            />
 
-            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-forumBlue-normal">Floor Plan</span>
-                  <span className="text-xs text-grey-normal">{floorPlanRows.length} items</span>
-                </div>
-                <Segmented
-                  size="small"
-                  value={viewMode.floorPlan}
-                  onChange={(value) =>
-                    setViewMode((prev) => ({ ...prev, floorPlan: value as ViewMode }))
-                  }
-                  options={[
-                    { label: "Items", value: "items" },
-                    { label: "Evidence", value: "evidence" },
-                  ]}
-                />
-              </div>
-              {viewMode.floorPlan === "items" ? (
-                renderTable(floorPlanRows, false, true)
-              ) : floorPlanEvidenceUrls.length > 0 ? (
-                <div className="max-h-[420px] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-3">
-                    {floorPlanEvidenceUrls.map((url) => (
-                      <Image
-                        key={url}
-                        src={url}
-                        alt="Floor Plan Evidence"
-                        className="w-full rounded-md border border-primaryN30"
-                        preview={false}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-              )}
-            </div>
+            <MergePanel
+              type="floorPlan"
+              title="Floor Plan"
+              rows={floorPlanRows}
+              evidenceUrls={floorPlanEvidenceUrls}
+              viewMode={viewMode.floorPlan}
+              onViewModeChange={(mode) => setViewMode((prev) => ({ ...prev, floorPlan: mode }))}
+              renderTable={renderTable}
+            />
 
-            <div className="w-[800px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-forumBlue-normal">Elevation</span>
-                  <span className="text-xs text-grey-normal">{elevationRows.length} items</span>
-                </div>
-                <Segmented
-                  size="small"
-                  value={viewMode.elevation}
-                  onChange={(value) =>
-                    setViewMode((prev) => ({ ...prev, elevation: value as ViewMode }))
-                  }
-                  options={[
-                    { label: "Items", value: "items" },
-                    { label: "Evidence", value: "evidence" },
-                  ]}
-                />
-              </div>
-              {viewMode.elevation === "items" ? (
-                renderTable(elevationRows, false, true)
-              ) : elevationEvidenceUrls.length > 0 ? (
-                <div className="max-h-[420px] overflow-y-auto pr-1">
-                  <div className="grid grid-cols-2 gap-3">
-                    {elevationEvidenceUrls.map((url) => (
-                      <Image
-                        key={url}
-                        src={url}
-                        alt="Elevation Evidence"
-                        className="w-full rounded-md border border-primaryN30"
-                        preview={false}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-              )}
-            </div>
+            <MergePanel
+              type="elevation"
+              title="Elevation"
+              rows={elevationRows}
+              evidenceUrls={elevationEvidenceUrls}
+              viewMode={viewMode.elevation}
+              onViewModeChange={(mode) => setViewMode((prev) => ({ ...prev, elevation: mode }))}
+              renderTable={renderTable}
+            />
           </div>
         </div>
       </div>
