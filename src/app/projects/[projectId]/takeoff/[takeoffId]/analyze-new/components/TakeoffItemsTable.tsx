@@ -8,6 +8,8 @@ import {
 	MergeCellsOutlined,
 	SearchOutlined,
 	EyeOutlined,
+	UpOutlined,
+	DownOutlined,
 } from "@ant-design/icons";
 import {
 	Badge,
@@ -107,7 +109,6 @@ export default function TakeoffItemsTable({
 	onRefreshItems,
 }: TakeoffItemsTableProps) {
 	const [tableData, setTableData] = useState<TakeoffItemRecord[]>([]);
-	const [currentPage, setCurrentPage] = useState(1);
 	const [editingCell, setEditingCell] = useState<{
 		rowId: number;
 		columnName: string;
@@ -115,27 +116,135 @@ export default function TakeoffItemsTable({
 	const [selectedRowKey, setSelectedRowKey] = useState<number | null>(null);
 	const [copyLoading, setCopyLoading] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
+	const [collapsedGroupMap, setCollapsedGroupMap] = useState<Record<string, boolean>>({});
 
 	useEffect(() => {
 		setTableData(items);
 	}, [items]);
 
-	useEffect(() => {
-		setCurrentPage(1);
-	}, [items, searchValue]);
+	const normalizeLabel = (value: unknown) => formatCellValue(value).trim().toLowerCase();
+	const getLabelKey = (item: TakeoffItemRecord) =>
+		normalizeLabel(getResultValue(item, "Label"));
+	const getSubLabelText = (item: TakeoffItemRecord) =>
+		formatCellValue(getResultValue(item, "Sub Label")).trim();
 
-	const filteredItems = useMemo(() => {
-		const normalizedKeyword = searchValue.trim().toLowerCase();
+	interface LabelGroup {
+		groupKey: string;
+		labelText: string;
+		parent: TakeoffItemRecord;
+		children: TakeoffItemRecord[];
+		isSystemGroup: boolean;
+	}
 
-		if (!normalizedKeyword) {
-			return tableData;
-		}
+	type DisplayRow = TakeoffItemRecord & {
+		__isSystemParent?: boolean;
+		__isSystemChild?: boolean;
+		__groupKey?: string;
+	};
 
-		return tableData.filter((item) => {
-			const labelValue = formatCellValue(getResultValue(item, "Label"));
-			return labelValue.toLowerCase().includes(normalizedKeyword);
+	const labelGroups = useMemo<LabelGroup[]>(() => {
+		const groupedMap = new Map<string, TakeoffItemRecord[]>();
+		tableData.forEach((item) => {
+			const key = getLabelKey(item);
+			if (!key) return;
+			if (!groupedMap.has(key)) groupedMap.set(key, []);
+			groupedMap.get(key)?.push(item);
 		});
-	}, [searchValue, tableData]);
+
+		const visited = new Set<string>();
+		const groups: LabelGroup[] = [];
+		tableData.forEach((item) => {
+			const key = getLabelKey(item);
+			if (!key || visited.has(key)) return;
+			visited.add(key);
+			const sameLabelItems = groupedMap.get(key) || [item];
+
+			if (sameLabelItems.length < 2) {
+				groups.push({
+					groupKey: key,
+					labelText: formatCellValue(getResultValue(item, "Label")),
+					parent: item,
+					children: [],
+					isSystemGroup: false,
+				});
+				return;
+			}
+
+			const parent =
+				sameLabelItems.find((row) => getSubLabelText(row) === "") || sameLabelItems[0];
+			const children = sameLabelItems.filter((row) => row.id !== parent.id);
+			groups.push({
+				groupKey: key,
+				labelText: formatCellValue(getResultValue(parent, "Label")),
+				parent,
+				children,
+				isSystemGroup: true,
+			});
+		});
+
+		return groups;
+	}, [tableData]);
+
+	useEffect(() => {
+		setCollapsedGroupMap((prev) => {
+			const next: Record<string, boolean> = {};
+			labelGroups.forEach((group) => {
+				if (!group.isSystemGroup) return;
+				next[group.groupKey] = prev[group.groupKey] ?? true;
+			});
+			return next;
+		});
+	}, [labelGroups]);
+
+	const displayedItems = useMemo<DisplayRow[]>(() => {
+		const keyword = searchValue.trim().toLowerCase();
+		const hasKeyword = keyword.length > 0;
+		const result: DisplayRow[] = [];
+
+		labelGroups.forEach((group) => {
+			const parentMatched =
+				!hasKeyword || group.labelText.toLowerCase().includes(keyword);
+			if (!group.isSystemGroup) {
+				if (parentMatched) result.push(group.parent);
+				return;
+			}
+
+			const visibleChildren = group.children.filter((child) => {
+				const childLabel = formatCellValue(getResultValue(child, "Label")).toLowerCase();
+				return !hasKeyword || childLabel.includes(keyword);
+			});
+			if (!parentMatched && visibleChildren.length === 0) return;
+
+			result.push({
+				...group.parent,
+				__isSystemParent: true,
+				__groupKey: group.groupKey,
+			});
+
+			const collapsed = collapsedGroupMap[group.groupKey] ?? true;
+			if (!collapsed) {
+				result.push(
+					...visibleChildren.map((child) => ({
+						...child,
+						__isSystemChild: true,
+						__groupKey: group.groupKey,
+					})),
+				);
+			}
+		});
+
+		return result;
+	}, [collapsedGroupMap, labelGroups, searchValue]);
+
+	const hasSystemGroups = useMemo(
+		() => labelGroups.some((group) => group.isSystemGroup),
+		[labelGroups],
+	);
+	const allCollapsed = useMemo(() => {
+		const systemGroups = labelGroups.filter((group) => group.isSystemGroup);
+		if (systemGroups.length === 0) return false;
+		return systemGroups.every((group) => collapsedGroupMap[group.groupKey] ?? false);
+	}, [collapsedGroupMap, labelGroups]);
 
 	const getColumnWidth = (title: string) => {
 		if (!title) {
@@ -165,6 +274,17 @@ export default function TakeoffItemsTable({
 			setSelectedRowKey(key ?? null);
 		},
 		columnWidth: 42,
+	};
+
+	const handleToggleShowCollapseAll = () => {
+		setCollapsedGroupMap((prev) => {
+			const next = { ...prev };
+			labelGroups.forEach((group) => {
+				if (!group.isSystemGroup) return;
+				next[group.groupKey] = !allCollapsed;
+			});
+			return next;
+		});
 	};
 
 	const generateUniqueCopyLabel = (originalLabel: string): string => {
@@ -446,7 +566,35 @@ export default function TakeoffItemsTable({
 			fixed: "left",
 			align: "center",
 			render: (_: unknown, record: TakeoffItemRecord) => {
-				return renderField(record, "Label");
+				const row = record as DisplayRow;
+				if (!row.__isSystemParent || !row.__groupKey) {
+					return renderField(record, "Label");
+				}
+				const isCollapsed = collapsedGroupMap[row.__groupKey] ?? true;
+				return (
+					<div className="relative w-full">
+						<div>{renderField(record, "Label")}</div>
+						<Button
+							type="text"
+							size="small"
+							className="!absolute !right-0 !top-1/2 !h-5 !w-5 !min-w-5 !-translate-y-1/2 !p-0"
+							onClick={(event) => {
+								event.stopPropagation();
+								const groupKey = row.__groupKey as string;
+								setCollapsedGroupMap((prev) => ({
+									...prev,
+									[groupKey]: !(prev[groupKey] ?? true),
+								}));
+							}}
+						>
+							{isCollapsed ? (
+								<DownOutlined className="text-[12px] text-grey-normal" />
+							) : (
+								<UpOutlined className="text-[12px] text-grey-normal" />
+							)}
+						</Button>
+					</div>
+				);
 			},
 		} as any;
 
@@ -502,11 +650,10 @@ export default function TakeoffItemsTable({
 					<div className="flex items-center justify-center">
 						<button
 							type="button"
-							className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
-								record?.is_checked
-									? "border-green-normal bg-green-normal text-white"
-									: "border-basicLightGray bg-transparent text-transparent"
-							}`}
+							className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${record?.is_checked
+								? "border-green-normal bg-green-normal text-white"
+								: "border-basicLightGray bg-transparent text-transparent"
+								}`}
 							onClick={(event) => {
 								event.stopPropagation();
 								onToggleStatus(record, !record?.is_checked);
@@ -577,6 +724,7 @@ export default function TakeoffItemsTable({
 			evidenceColumn,
 		];
 	}, [
+		collapsedGroupMap,
 		dynamicFields,
 		editingCell,
 		onOpenReferencePanel,
@@ -604,6 +752,21 @@ export default function TakeoffItemsTable({
 					>
 						Copy Item
 					</Button>
+					<Button
+						className="rounded-full text-xs h-6 flex items-center gap-2 "
+						disabled={!hasSystemGroups}
+						onClick={handleToggleShowCollapseAll}
+					>
+						<p className="text-basicGray">
+							{allCollapsed ? "Show All" : "Collapse All"}
+						</p>
+						<Image
+							src={`/assets/icons/${allCollapsed ? "eye" : "eye-closed"}.svg`}
+							alt="eye-closed icon"
+							width={20}
+							height={12}
+						/>
+					</Button>
 				</div>
 			</div>
 
@@ -614,22 +777,17 @@ export default function TakeoffItemsTable({
 						rowSelection={rowSelection}
 						loading={loading}
 						columns={columns}
-						dataSource={filteredItems}
-						pagination={{
-							current: currentPage,
-							pageSize: 30,
-							total: filteredItems.length,
-							position: ["bottomRight"],
-							showSizeChanger: false,
-							showTotal: (total) => `Total ${total} items`,
-							onChange: (page) => setCurrentPage(page),
-							size: "small",
-						}}
+						dataSource={displayedItems}
+						// 暂时取消分页，后续需求可能恢复。
+						pagination={false}
 						scroll={{ x: "max-content", y: "calc(100vh - 400px)" }}
 						onRow={(record) => ({
 							onClick: () => onSelectItem(record),
 						})}
-						rowClassName={() => "cursor-pointer"}
+						rowClassName={(record) => {
+							const row = record as DisplayRow;
+							return `cursor-pointer ${row.__isSystemChild ? "[&>td]:!bg-[#F8FAFC]" : ""}`;
+						}}
 						className="h-full [&_.ant-pagination]:!m-0 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!py-3 [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-pagination]:!border-t [&_.ant-table-pagination]:!border-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
 						locale={{
 							emptyText: (
@@ -639,6 +797,9 @@ export default function TakeoffItemsTable({
 							),
 						}}
 					/>
+					<div className="pt-2 pr-1 text-right text-xs text-grey-normal">
+						Total {items.length} items
+					</div>
 				</div>
 			</div>
 		</div>

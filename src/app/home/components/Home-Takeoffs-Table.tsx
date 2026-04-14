@@ -176,7 +176,7 @@ const HomeTakeoffsTable = ({
 
         let floorPlanUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/floor-plan`;
         let scheduleUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/schedule`;
-        let manualMergeUrl = `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-v2`;
+        let manualMergeUrl = `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-v3`;
         let analyzeUrl = `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`;
         let identificationUrl = `/projects/${record.project_id}/takeoff/${record.id}/identification`;
 
