@@ -39,6 +39,11 @@ interface FinalItemRow extends Record<string, any> {
   __systemGroupKey?: string;
 }
 
+interface EvidenceInfo {
+  evidenceId: string;
+  url: string;
+}
+
 const SOURCE_ALIAS: Record<SourceKey, string[]> = {
   schedule: ["schedule", "window table", "table", "window_door_unit_list"],
   floorPlan: ["floor plan", "floor_plan", "floorplan"],
@@ -147,14 +152,22 @@ const getTakeOffResultItemIds = (item: any): string[] => {
   return [];
 };
 
+const getEvidenceId = (evidence: any, fallback: string = ""): string =>
+  String(
+    evidence?.evidence_id ??
+    evidence?.evidenceId ??
+    evidence?.id ??
+    fallback,
+  );
+
 const extractEvidenceUrls = (
   item: any,
-  evidenceUrlByResultItemId: Record<string, string>,
+  evidenceByResultItemId: Record<string, EvidenceInfo>,
 ): string[] => {
   const urls: string[] = [];
   getTakeOffResultItemIds(item).forEach((resultItemId) => {
-    const mappedUrl = evidenceUrlByResultItemId[resultItemId];
-    if (mappedUrl) urls.push(mappedUrl);
+    const mappedEvidence = evidenceByResultItemId[resultItemId];
+    if (mappedEvidence?.url) urls.push(mappedEvidence.url);
   });
   if (typeof item?.evidence_url === "string" && item.evidence_url) urls.push(item.evidence_url);
   if (typeof item?.s3_url === "string" && item.s3_url) urls.push(item.s3_url);
@@ -178,6 +191,83 @@ const extractEvidenceUrls = (
     });
   }
   return Array.from(new Set(urls));
+};
+
+const extractEvidenceEntries = (
+  item: any,
+  evidenceByResultItemId: Record<string, EvidenceInfo>,
+): EvidenceInfo[] => {
+  const entries: EvidenceInfo[] = [];
+
+  getTakeOffResultItemIds(item).forEach((resultItemId) => {
+    const mappedEvidence = evidenceByResultItemId[resultItemId];
+    if (mappedEvidence?.url) {
+      entries.push({
+        evidenceId: mappedEvidence.evidenceId || resultItemId,
+        url: mappedEvidence.url,
+      });
+    }
+  });
+
+  if (typeof item?.evidence_url === "string" && item.evidence_url) {
+    entries.push({ evidenceId: getEvidenceId(item, item.evidence_url), url: item.evidence_url });
+  }
+  if (typeof item?.s3_url === "string" && item.s3_url) {
+    entries.push({ evidenceId: getEvidenceId(item, item.s3_url), url: item.s3_url });
+  }
+  if (typeof item?.evidence_msg?.s3_url === "string" && item.evidence_msg.s3_url) {
+    entries.push({
+      evidenceId: getEvidenceId(item?.evidence_msg, item.evidence_msg.s3_url),
+      url: item.evidence_msg.s3_url,
+    });
+  }
+  if (Array.isArray(item?.evidence_urls)) {
+    item.evidence_urls.forEach((url: any, index: number) => {
+      if (typeof url === "string" && url) {
+        entries.push({ evidenceId: getEvidenceId(item, `${url}-${index}`), url });
+      }
+    });
+  }
+  if (Array.isArray(item?.evidence_msg)) {
+    item.evidence_msg.forEach((msg: any, index: number) => {
+      if (typeof msg?.s3_url === "string" && msg.s3_url) {
+        entries.push({
+          evidenceId: getEvidenceId(msg, `${msg.s3_url}-${index}`),
+          url: msg.s3_url,
+        });
+      }
+    });
+  }
+  if (Array.isArray(item?.evidences)) {
+    item.evidences.forEach((ev: any, index: number) => {
+      if (typeof ev?.s3_url === "string" && ev.s3_url) {
+        entries.push({
+          evidenceId: getEvidenceId(ev, `${ev.s3_url}-${index}`),
+          url: ev.s3_url,
+        });
+      }
+      if (typeof ev?.evidence_url === "string" && ev.evidence_url) {
+        entries.push({
+          evidenceId: getEvidenceId(ev, `${ev.evidence_url}-${index}`),
+          url: ev.evidence_url,
+        });
+      }
+    });
+  }
+
+  const dedupMap = new Map<string, string>();
+  entries.forEach((entry) => {
+    if (!entry.url) return;
+    const dedupeKey = entry.evidenceId || entry.url;
+    if (!dedupMap.has(dedupeKey)) {
+      dedupMap.set(dedupeKey, entry.url);
+    }
+  });
+
+  return Array.from(dedupMap.entries()).map(([evidenceId, url]) => ({
+    evidenceId,
+    url,
+  }));
 };
 
 const collectSourceRows = (payload: any, source: SourceKey): any[] => {
@@ -220,8 +310,8 @@ export default function ManualMergeV2Page() {
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [evidenceUrlByResultItemId, setEvidenceUrlByResultItemId] = useState<
-    Record<string, string>
+  const [evidenceByResultItemId, setEvidenceByResultItemId] = useState<
+    Record<string, EvidenceInfo>
   >({});
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
@@ -234,35 +324,35 @@ export default function ManualMergeV2Page() {
   const scheduleEvidenceUrls = useMemo(
     () =>
       Array.from(
-        new Set(
-          scheduleRows.flatMap((item) =>
-            extractEvidenceUrls(item, evidenceUrlByResultItemId),
-          ),
-        ),
+        new Map(
+          scheduleRows
+            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
+            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
+        ).values(),
       ),
-    [evidenceUrlByResultItemId, scheduleRows],
+    [evidenceByResultItemId, scheduleRows],
   );
   const floorPlanEvidenceUrls = useMemo(
     () =>
       Array.from(
-        new Set(
-          floorPlanRows.flatMap((item) =>
-            extractEvidenceUrls(item, evidenceUrlByResultItemId),
-          ),
-        ),
+        new Map(
+          floorPlanRows
+            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
+            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
+        ).values(),
       ),
-    [evidenceUrlByResultItemId, floorPlanRows],
+    [evidenceByResultItemId, floorPlanRows],
   );
   const elevationEvidenceUrls = useMemo(
     () =>
       Array.from(
-        new Set(
-          elevationRows.flatMap((item) =>
-            extractEvidenceUrls(item, evidenceUrlByResultItemId),
-          ),
-        ),
+        new Map(
+          elevationRows
+            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
+            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
+        ).values(),
       ),
-    [evidenceUrlByResultItemId, elevationRows],
+    [evidenceByResultItemId, elevationRows],
   );
 
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
@@ -319,24 +409,27 @@ export default function ManualMergeV2Page() {
   const fetchEvidenceUrlsByRows = useCallback(async (rows: any[]) => {
     const ids = Array.from(new Set(rows.flatMap((item) => getTakeOffResultItemIds(item))));
     if (ids.length === 0) {
-      setEvidenceUrlByResultItemId({});
+      setEvidenceByResultItemId({});
       return;
     }
 
     const response = await getTakeOffEvidenceUrlsByIds(ids.join(","));
     if (response.status !== "success") {
-      setEvidenceUrlByResultItemId({});
+      setEvidenceByResultItemId({});
       return;
     }
 
     const payload = response.data?.data ?? response.data ?? {};
-    const nextMap: Record<string, string> = {};
+    const nextMap: Record<string, EvidenceInfo> = {};
     Object.entries(payload).forEach(([resultItemId, evidence]: [string, any]) => {
       if (typeof evidence?.evidence_url === "string" && evidence.evidence_url) {
-        nextMap[resultItemId] = evidence.evidence_url;
+        nextMap[resultItemId] = {
+          evidenceId: getEvidenceId(evidence, resultItemId),
+          url: evidence.evidence_url,
+        };
       }
     });
-    setEvidenceUrlByResultItemId(nextMap);
+    setEvidenceByResultItemId(nextMap);
   }, []);
 
   const fetchColumns = useCallback(async () => {
@@ -777,7 +870,7 @@ export default function ManualMergeV2Page() {
             type="link"
             size="small"
             onClick={() => {
-              const urls = extractEvidenceUrls(record, evidenceUrlByResultItemId);
+              const urls = extractEvidenceUrls(record, evidenceByResultItemId);
               if (urls.length === 0) {
                 notification.info({
                   message: "No Evidence",
