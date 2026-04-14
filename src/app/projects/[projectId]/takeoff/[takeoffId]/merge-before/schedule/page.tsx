@@ -434,7 +434,7 @@ export default function SchedulePage() {
         description: "Take off result items reconciled successfully.",
       });
       // 跳转到下一个take off result items
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v2`);
+      router.push(`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`);
     } else {
       notification.error({
         message: "Error",
