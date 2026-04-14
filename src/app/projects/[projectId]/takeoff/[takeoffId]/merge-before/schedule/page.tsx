@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Image, Popover } from "antd";
+import { Button, notification, Image, Popover, Modal } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -19,6 +19,7 @@ import {
   updateTakeOffResultItemResultById,
   deleteTakeOffResultItemById,
   reconcileTakeOffResultItemsByTakeOffAndFile,
+  deleteTakeOffResultItemByEvidenceId,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -28,7 +29,7 @@ import {
 } from "../../analyze-new/takeoffUtils";
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import CreateItemModal from "./components/CreateItemModal";
-
+const { confirm } = Modal;
 export default function SchedulePage() {
   const router = useRouter();
   const projectId = useParams().projectId;
@@ -90,7 +91,14 @@ export default function SchedulePage() {
       let list = response.data || [];
       setScheduleList(list);
       if (list.length > 0) {
-        setPageEvidenceId(list[0].id);
+        let exitScheduleEvidence = list.find(
+          (item: any) => item.id === pageEvidenceId,
+        );
+        if (exitScheduleEvidence) {
+          setPageEvidenceId(exitScheduleEvidence.id);
+        } else {
+          setPageEvidenceId(list[0].id);
+        }
       }
     } else {
       notification.error({
@@ -98,7 +106,7 @@ export default function SchedulePage() {
         description: "Failed to load schedule evidence data.",
       });
     }
-  }, []);
+  }, [pageEvidenceId]);
 
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
@@ -355,6 +363,37 @@ export default function SchedulePage() {
     [getItemsByPageEvidences, pageEvidenceId],
   );
 
+  const handleDeleteScheduleEvidence = useCallback(
+    async (evidenceInfo: any) => {
+      confirm({
+        title: "Delete Schedule Evidence",
+        content: `Are you sure you want to delete this schedule evidence?`,
+        okText: "Delete",
+        okType: "danger",
+        cancelText: "Cancel",
+        onOk: async () => {
+          let res = await deleteTakeOffResultItemByEvidenceId(evidenceInfo.id);
+          if (res.status === "success") {
+            notification.success({
+              message: "Success",
+              description: "Evidence deleted successfully.",
+            });
+            // 刷新take off result items
+            if (selectedFileId) {
+              fetchScheduleEvidenceList(selectedFileId);
+            }
+          } else {
+            notification.error({
+              message: "Error",
+              description: "Failed to delete evidence.",
+            });
+          }
+        }
+      })
+    },
+    [getItemsByPageEvidences, pageEvidenceId],
+  );
+
   const getDefaultNextLabel = useCallback(() => {
     const lastItem = itemBoxList[itemBoxList.length - 1] as any;
     const lastLabel = String(
@@ -501,6 +540,7 @@ export default function SchedulePage() {
                 ? "larger"
                 : "default"
             }
+            onClickDelete={handleDeleteScheduleEvidence}
           />
         </div>
         {/* Right: PDF Viewer with Controls */}
