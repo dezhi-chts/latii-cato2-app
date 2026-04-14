@@ -613,6 +613,7 @@ export default function FloorPlanPage() {
                   : FileOperationType.ArchitectureDrawing
               }
               evidenceDraggable={true}
+              showAddBtnOnBox={true}
               onChangePage={handlePageChange}
               onTotalPages={handleTotalPages}
               onDeleteEvidence={handleDeleteEvidence}

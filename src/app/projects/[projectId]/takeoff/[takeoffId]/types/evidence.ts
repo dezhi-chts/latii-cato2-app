@@ -218,6 +218,7 @@ export interface GroupFrame {
   completed: boolean; //绘制是否已经完成
   types?: TypeItem[]; //所选择的type类型
   bounds: Bounds; //边界
+  isParentEvidence?: boolean; //是否是父evidence
 }
 
 //evidence结构
@@ -240,7 +241,7 @@ export interface EvidenceType {
   page_height_pdf: number; //pdf页面高度
 
   evidence_url: string; //图片URL
-  isParentEvidence: boolean; //是否是父evidence
+  isParentEvidence?: boolean; //是否是父evidence
 }
 
 // 增，删，改 矩形框后返回的所有结构
@@ -319,6 +320,7 @@ export interface PdfWrapperProps {
   typeList?: any[]; //当前文件所有框的全部类型
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
   evidenceDraggable?: boolean; //是否可拖动evidence
+  showAddBtnOnBox?: boolean; //是否在框上显示添加按钮
   onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
   onAppendEvidence?: (evidenceResult: EvidenceResult) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新

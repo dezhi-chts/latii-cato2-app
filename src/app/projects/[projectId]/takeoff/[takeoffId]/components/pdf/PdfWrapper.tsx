@@ -173,6 +173,7 @@ const PdfWrapper = forwardRef(
 			typeList,
 			pdfOperationType = FileOperationType.ArchitectureDrawing,
 			evidenceDraggable = true,
+			showAddBtnOnBox = false,
 			onChangePage,
 			onTotalPages,
 			onAppendEvidence,
@@ -2083,8 +2084,8 @@ const PdfWrapper = forwardRef(
 			let groupObj = sections.find((e: any) => e.id === group.id);
 			if (!groupObj) return;
 
-			let gapX = 2;
-			let gapY = 2;
+			let gapX = 20;
+			let gapY = 20;
 
 			let {
 				minX: baseMinX,
@@ -2220,17 +2221,35 @@ const PdfWrapper = forwardRef(
 			return crop;
 		};
 
-		const copyGroupShape = (
+		const copyGroupShape = useCallback((
+			type: string, //类型 group || evidence
 			group: GroupFrame,
 			direction: "right" | "bottom",
 		) => {
-			setCropSections((prev) => {
-				let list = [...prev];
-				let crop = handleCopyShape(list, group, direction);
-				if (!crop) return list;
-				return [...list, crop];
+			let groupFrame: any = { ...group };
+			if (type === 'evidence') {
+				if (groupFrame?.viewportPolygons?.length > 0) {
+					groupFrame.polygons = groupFrame.viewportPolygons;
+					groupFrame.bounds = getZoneBounds(groupFrame.viewportPolygons);
+				}
+			}
+
+			let pageEvidenceList: any = [];
+			pageEvidence.forEach((item: any) => {
+				if (item?.viewportPolygons?.length > 0) {
+					item.polygons = item.viewportPolygons;
+					item.bounds = getZoneBounds(item.viewportPolygons);
+					pageEvidenceList.push(item);
+				}
 			});
-		};
+
+			setCropSections((prev) => {
+				let AllList = [...prev, ...pageEvidenceList]; // evidence框和自定义group框的集合
+				let crop = handleCopyShape(AllList, groupFrame, direction);
+				if (!crop) return prev;
+				return [...prev, crop];
+			});
+		}, [cropSections, pageEvidence]);
 
 		useEffect(() => {
 			if (!showEvidence) {
@@ -2602,11 +2621,22 @@ const PdfWrapper = forwardRef(
 													)}
 													{
 														showDeleteBtn && (
-															<Popconfirm
-																title="Are you sure you want to delete this evidence?"
-																onConfirm={() => batchDelete([item.id])}
-															>
-																<div className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md">
+															<>
+																{/* <Popconfirm
+																	title="Are you sure you want to delete this evidence?"
+																	onConfirm={() => batchDelete([item.id])}
+																>
+																	<div className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md">
+																		<Image
+																			src="/assets/icons/delete-dark.svg"
+																			alt="delete icon"
+																			width={15}
+																			height={15}
+																			preview={false}
+																		/>
+																	</div>
+																</Popconfirm> */}
+																<div className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md" onClick={() => batchDelete([item.id])}>
 																	<Image
 																		src="/assets/icons/delete-dark.svg"
 																		alt="delete icon"
@@ -2615,7 +2645,7 @@ const PdfWrapper = forwardRef(
 																		preview={false}
 																	/>
 																</div>
-															</Popconfirm>
+															</>
 														)
 													}
 												</div>
@@ -2745,6 +2775,59 @@ const PdfWrapper = forwardRef(
 														</div>
 													</div>
 												)
+											}
+											{showAddBtnOnBox &&
+												<div
+													className="transition-all"
+													style={{
+														position: "absolute",
+														left:
+															maxX > stageWidth - 30
+																? width - 30 + "px"
+																: maxX - minX + 6 + "px",
+														top: height / 2 - 10 + "px",
+														display:
+															selectedShapeId === item.id ? "block" : "none",
+													}}
+												>
+													<div
+														className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
+														style={{
+															backgroundColor: color,
+														}}
+														onClick={() => {
+															copyGroupShape('evidence', item, "right");
+														}}
+													>
+														<span className="">+</span>
+													</div>
+												</div>}
+											{
+												showAddBtnOnBox && <div
+													className="transition-all"
+													style={{
+														position: "absolute",
+														left: width / 2 - 10 + "px",
+														top:
+															maxY > stageHeight - 10
+																? height - 30 + "px"
+																: height + 6 + "px",
+														display:
+															selectedShapeId === item.id ? "block" : "none",
+													}}
+												>
+													<div
+														className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
+														style={{
+															backgroundColor: color,
+														}}
+														onClick={() => {
+															copyGroupShape('evidence', item, "bottom");
+														}}
+													>
+														<span className="inline-block">+</span>
+													</div>
+												</div>
 											}
 										</div>
 									);
@@ -2888,56 +2971,60 @@ const PdfWrapper = forwardRef(
 													/>
 												</div>
 											</div>
-											{/* <div
-                        className="transition-all"
-                        style={{
-                          position: "absolute",
-                          left:
-                            maxX > stageWidth - 30
-                              ? width - 30 + "px"
-                              : maxX - minX + 6 + "px",
-                          top: height / 2 - 10 + "px",
-                          display:
-                            selectedShapeId === group.id ? "block" : "none",
-                        }}
-                      >
-                        <div
-                          className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
-                          style={{
-                            backgroundColor: color,
-                          }}
-                          onClick={() => {
-                            copyGroupShape(group, "right");
-                          }}
-                        >
-                          <span className="">+</span>
-                        </div>
-                      </div>
-                      <div
-                        className="transition-all"
-                        style={{
-                          position: "absolute",
-                          left: width / 2 - 10 + "px",
-                          top:
-                            maxY > stageHeight - 10
-                              ? height - 30 + "px"
-                              : height + 6 + "px",
-                          display:
-                            selectedShapeId === group.id ? "block" : "none",
-                        }}
-                      >
-                        <div
-                          className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
-                          style={{
-                            backgroundColor: color,
-                          }}
-                          onClick={() => {
-                            copyGroupShape(group, "bottom");
-                          }}
-                        >
-                          <span className="inline-block">+</span>
-                        </div>
-                      </div> */}
+
+											{showAddBtnOnBox && <div
+												className="transition-all"
+												style={{
+													position: "absolute",
+													left:
+														maxX > stageWidth - 30
+															? width - 30 + "px"
+															: maxX - minX + 6 + "px",
+													top: height / 2 - 10 + "px",
+													display:
+														selectedShapeId === group.id ? "block" : "none",
+												}}
+											>
+												<div
+													className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
+													style={{
+														backgroundColor: color,
+													}}
+													onClick={() => {
+														copyGroupShape('group', group, "right");
+													}}
+												>
+													<span className="">+</span>
+												</div>
+											</div>
+											}
+											{showAddBtnOnBox &&
+												<div
+													className="transition-all"
+													style={{
+														position: "absolute",
+														left: width / 2 - 10 + "px",
+														top:
+															maxY > stageHeight - 10
+																? height - 30 + "px"
+																: height + 6 + "px",
+														display:
+															selectedShapeId === group.id ? "block" : "none",
+													}}
+												>
+													<div
+														className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
+														style={{
+															backgroundColor: color,
+														}}
+														onClick={() => {
+															copyGroupShape('group', group, "bottom");
+														}}
+													>
+														<span className="inline-block">+</span>
+													</div>
+												</div>
+											}
 										</div>
 									);
 								})}
@@ -3075,7 +3162,8 @@ const ShapeWrapper = ({
 
 	let shapeDraggable = evidenceDraggable ?? true;
 	if (type === "evidence") {
-		if (itemBoxType?.isParentEvidence) {
+		if (shape?.isParentEvidence) {
+			// 如果是父级红色外框，则不允许点击和移动
 			shapeDraggable = false;
 		}
 	}
@@ -3092,8 +3180,6 @@ const ShapeWrapper = ({
 	if (shape?.isParentEvidence) {
 		color = "#FF4500";
 	}
-
-
 
 	if (selectedShapeId === shape.id) {
 		if (shapeDraggable) {
@@ -3114,6 +3200,9 @@ const ShapeWrapper = ({
 				dragDistance={2}
 				onMouseEnter={(e) => {
 					const stage = e.target.getStage();
+					if (shape?.isParentEvidence) {
+						return;
+					}
 					if (stage && operationMode === "edit") {
 						stage.container().style.cursor = "move";
 					}

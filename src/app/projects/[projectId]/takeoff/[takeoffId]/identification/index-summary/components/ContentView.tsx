@@ -81,42 +81,35 @@ const ContentView = ({
     return (
       <div
         key={item.page_number + '_' + item.index}
-        className="w-[500px] my-2 min-h-[28px] flex flex-row items-center text-xs"
+        className="w-full my-2 min-h-[28px] flex flex-row items-center text-xs"
       >
-        <div className="w-[50px] flex flex-row items-center justify-center">
-          <div
-            className={`w-[15px] h-[15px] rounded-full flex items-center justify-center ${checked ? "bg-forumBlue-normal" : "border border-primaryN30"}`}
-          >
-            {checked && (
-              <div className=" text-white text-xxs font-sans">{"✓"}</div>
-            )}
-          </div>
-        </div>
         <div
-          className={`mx-1 w-[60px] text-center text-xs cursor-pointer ${checked ? "text-forumBlue-normal" : ""}`}
+          className={`mx-1 w-[80px] text-center text-xs cursor-pointer ${checked ? "text-forumBlue-normal" : ""}`}
           onClick={() => handleMatchPage(item)}
         >
           <span>{item.page_number ?? ""}</span>
         </div>
         <div
-          className={`w-[250px] text-xs cursor-pointer text-center ${checked ? "text-forumBlue-normal" : ""}`}
+          className={`flex-1 text-xs cursor-pointer text-center ${checked ? "text-forumBlue-normal" : ""}`}
           onClick={() => handleMatchPage(item)}
         >
           <span className="ml-2">{item.index ?? ""}</span>
         </div>
-        <div className="w-[200px] text-center">
-          <Select
-            className="w-[150px] h-[28px] text-xs"
-            placeholder="Floor Plan,etc."
-            value={!item.type ? null : item.type}
-            onChange={(value) => handleChangeType(item, value)}
-          >
-            {drawingTypeList.map((item: any, index: number) => (
-              <Select.Option key={item.type + "_" + index} value={item.type}>
-                {item.type}
-              </Select.Option>
-            ))}
-          </Select>
+        <div className="w-[200px] flex items-center justify-center">
+          <div>
+            <Select
+              className="w-[160px] h-[28px] text-xs"
+              placeholder="Floor Plan,etc."
+              value={!item.type ? null : item.type}
+              onChange={(value) => handleChangeType(item, value)}
+            >
+              {drawingTypeList.map((item: any, index: number) => (
+                <Select.Option key={item.type + "_" + index} value={item.type}>
+                  {item.type}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
     );
@@ -146,17 +139,16 @@ const ContentView = ({
         </div>
       </div>
       {!isEmptyContent ? (
-        <>
-          <div className="h-[28px] flex flex-row items-center bg-forumBlue-light text-xs text-forumBlue-normal rounded-tl-md rounded-tr-md">
-            <div className="w-[50px] text-center"></div>
-            <div className="w-[60px] text-center">Page</div>
-            <div className="w-[200px] text-center">Index</div>
+        <div className="w-[500px]">
+          <div className="w-full h-[28px] flex flex-row items-center bg-forumBlue-light text-xs text-forumBlue-normal rounded-tl-md rounded-tr-md">
+            <div className="w-[100px] text-center">Page</div>
+            <div className="flex-1 text-center">Index</div>
             <div className="w-[200px] text-center">Type</div>
           </div>
           <div className="pr-2 flex-1 overflow-y-auto">
             {filteredData?.map((item: any) => contentItem(item))}
           </div>
-        </>
+        </div>
       ) : (
         <div className="mt-8 text-xs">
           Sorry, we were unable to categorize the pages automatically, please
