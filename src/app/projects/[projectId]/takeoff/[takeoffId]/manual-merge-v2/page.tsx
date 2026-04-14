@@ -709,9 +709,9 @@ export default function ManualMergeV2Page() {
         <div className="w-[260px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
-            <span className="text-xs text-grey-normal">{labels.length} items</span>
+            <span className="text-xs text-grey-normal">{labels.length}</span>
           </div>
-          <div className="space-y-2 overflow-auto max-h-[calc(100vh-180px)]">
+          <div className="space-y-2 overflow-auto max-h-[calc(100vh-200px)]">
             {labels.map((item) => {
               const active = item.label === selectedLabel;
               return (

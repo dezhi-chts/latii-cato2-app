@@ -548,7 +548,22 @@ export const addTakeOffResultItemByEvidenceId = async (
     console.error("Error:", error);
     return { data: error?.response?.data, status: "error" };
   }
+}
 
+/**
+ * 删除take off result item和evidence
+ * @param evidence_id 
+ * @returns 
+ */
+export const deleteTakeOffResultItemByEvidenceId = async (evidence_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_and_evidence_by_evidence_id?evidence_id=${evidence_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
 }
 
 

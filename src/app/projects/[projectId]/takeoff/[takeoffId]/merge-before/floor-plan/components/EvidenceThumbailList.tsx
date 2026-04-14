@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CloseOutlined } from "@ant-design/icons";
-import { notification, Select, Dropdown, Space } from "antd";
-import { DownOutlined } from "@ant-design/icons";
 import { allPageTypes, PageType, GroupType } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
+import { CloseCircleOutlined } from "@ant-design/icons";
+import { col } from "framer-motion/m";
 const LazyImage = ({
 	src,
 	alt,
@@ -83,6 +82,7 @@ interface EvidenceThumbailListProps {
 	showDownload?: boolean; // 是否显示下载按钮
 	size?: "default" | "larger"; // 缩略图大小
 	categoryList?: { type: string; color: string; icon: string }[]; // 页面分类
+	onClickDelete?: (info: any) => void; // 删除按钮点击事件
 }
 
 const EvidenceThumbailList = ({
@@ -95,6 +95,7 @@ const EvidenceThumbailList = ({
 	showDownload = false, // 是否显示下载按钮
 	size = "default", // 缩略图大小
 	categoryList = [], // 页面分类
+	onClickDelete,
 }: EvidenceThumbailListProps) => {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -180,7 +181,7 @@ const EvidenceThumbailList = ({
 								<div
 									id={`thumbnail-evidence-${info.id}`}
 									key={info.id}
-									className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${info.id === evidenceId
+									className={`group w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] relative ${info.id === evidenceId
 										? "border-forumBlue-normal"
 										: "border-transparent hover:border-forumBlue-normal/50"
 										}`}
@@ -237,6 +238,13 @@ const EvidenceThumbailList = ({
 											/>
 										</div>
 									</div>
+									{onClickDelete && <button className="absolute right-[-8px] top-[-8px] cursor-pointer hidden group-hover:block"
+										onClick={(e) => {
+											e.stopPropagation();
+											onClickDelete?.(info);
+										}}>
+										<CloseCircleOutlined size={15} className="text-forumBlue-normal bg-white" />
+									</button>}
 								</div>
 							);
 						})}
