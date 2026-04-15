@@ -394,7 +394,7 @@ export default function TakeoffListPage() {
 			const takeoffBasicData = takeoffResponse.data;
 			const projectFiles = takeoffBasicData?.project_files || [];
 			const firstFileId = projectFiles?.[0]?.id || -1;
-			const templateId = takeoffBasicData?.take_off_result?.template_id;
+			const templateId = takeoffBasicData?.take_off_result?.template_id || 1;
 
 			// Step 2: Fetch template fields
 			const fields = await fetchDynamicFields(templateId, []);

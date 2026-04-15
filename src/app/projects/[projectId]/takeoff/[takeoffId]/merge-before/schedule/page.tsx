@@ -70,6 +70,7 @@ export default function SchedulePage() {
         if (projectFiles.length > 0) {
           setSelectedFileId(projectFiles[0].id);
         }
+        resolveColumnNames(response.data?.take_off_result?.template_id || 1);
       }
     } catch (error) {
       console.error("Error fetching takeoff data:", error);
@@ -132,7 +133,6 @@ export default function SchedulePage() {
 
   useEffect(() => {
     fetchTakeoffData();
-    resolveColumnNames(1);
   }, []);
 
   useEffect(() => {
@@ -223,7 +223,7 @@ export default function SchedulePage() {
   };
 
   const resolveColumnNames = useCallback(
-    async (templateId: number = 1, forceRefresh: boolean = false) => {
+    async (templateId: number, forceRefresh: boolean = false) => {
       try {
         const result = await getTemplateById(templateId);
         if (result.status === "success" && result.data) {
