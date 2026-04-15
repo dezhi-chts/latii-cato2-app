@@ -8,7 +8,7 @@ import {
 	ZoomInOutlined,
 	ZoomOutOutlined,
 } from "@ant-design/icons";
-import { Button, Empty, Modal, Select, Slider, Tooltip } from "antd";
+import { Button, Empty, Modal, Select, Slider, Spin, Tooltip } from "antd";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,6 +18,7 @@ import Image from "next/image";
 import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
 import { getEvidenceByFileId } from "@/services/evidenceService";
 import { useParams } from "next/navigation";
+import { ZoomControls } from "../../components/pdf/Pdf-Controls";
 
 interface EvidenceSidebarProps {
 	selectedItem?: TakeoffItemRecord | null;
@@ -65,15 +66,16 @@ function PageThumbnailCard({
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [zoomScale, setZoomScale] = useState(1);
 
-	const minScale = 0.5;
-	const maxScale = 3;
+	const ZOOM_MIN = 0.5;
+	const ZOOM_MAX = 3;
 
 	const renderPreviewLayer = (
 		shouldCaptureMetrics = false,
 		forcePercentLayout = false,
+		evidenceBorderWidth = 1.5,
 	) => {
 		return (
-			<div className="relative w-full">
+			<div className={`py-3 relative w-full`}>
 				<img
 					src={entry.imageUrl}
 					alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
@@ -128,7 +130,7 @@ function PageThumbnailCard({
 					return (
 						<div
 							key={evidence?.id}
-							className={`absolute border-[1.5px] border-red-500`}
+							className={`absolute border-[${evidenceBorderWidth}px] border-red-500`}
 							style={{
 								left:
 									forcePercentLayout || !(canUseDisplayScale && scaleX > 0)
@@ -154,17 +156,24 @@ function PageThumbnailCard({
 		);
 	};
 
+	const handleZoomChange = (value: number) => {
+		const clampedValue = Math.max(ZOOM_MIN, Math.min(value, ZOOM_MAX));
+		setZoomScale(clampedValue);
+	};
+
+
 	return (
 		<div
 			ref={(element) => {
 				containerRef.current = element;
 			}}
+			className="border border-primaryN30 rounded-lg"
 		>
-			<div className="mb-3 flex items-center justify-between">
-				<span className="max-w-[230px] truncate text-xxs text-grey-normal">
+			<div className="mx-2 my-4 flex items-center justify-between">
+				<span className="max-w-[300px] truncate text-xs text-grey-normal">
 					{entry.file?.file_name || "Unnamed file"}
 				</span>
-				<span className="text-xs text-grey-normal">{entry.pageNumber}</span>
+				<span className="text-xs text-grey-normal">{'Page ' + entry.pageNumber}</span>
 			</div>
 
 			<div
@@ -205,41 +214,16 @@ function PageThumbnailCard({
 				footer={null}
 				width={'80vw'}
 				destroyOnClose
-				title={<div>{entry.file?.file_name || "Unnamed file"} · Page {entry.pageNumber}</div>}
+				title={<div className="text-forumBlue-normal">{entry.file?.file_name || "Unnamed file"}</div>}
 			>
 				<div className="flex h-[75vh] min-h-[520px] flex-col">
-					<div className="mb-3 flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<Button
-								size="small"
-								icon={<ZoomOutOutlined />}
-								onClick={() => {
-									setZoomScale((prev) => Math.max(minScale, Number((prev - 0.1).toFixed(2))));
-								}}
-							/>
-							<div className="w-[220px]">
-								<Slider
-									min={minScale}
-									max={maxScale}
-									step={0.1}
-									value={zoomScale}
-									onChange={(value) => setZoomScale(Number(value))}
-									tooltip={{ formatter: (value) => `${Math.round(Number(value || 1) * 100)}%` }}
-								/>
-							</div>
-							<Button
-								size="small"
-								icon={<ZoomInOutlined />}
-								onClick={() => {
-									setZoomScale((prev) => Math.min(maxScale, Number((prev + 0.1).toFixed(2))));
-								}}
-							/>
-							<span className="w-[60px] text-right text-sm text-forumBlue-normal">
-								{Math.round(zoomScale * 100)}%
-							</span>
-						</div>
+					<div className="mb-3 flex items-center justify-center">
+						<ZoomControls
+							zoom={zoomScale}
+							handleZoomChange={handleZoomChange}
+						/>
+						<span className="ml-6 text-xs text-grey-normal">{'Page ' + entry.pageNumber}</span>
 					</div>
-
 					<div className="min-h-0 flex-1 overflow-auto rounded-lg border border-primaryN30 bg-primaryN20 p-4">
 						<div
 							className="relative rounded-lg bg-white"
@@ -249,7 +233,7 @@ function PageThumbnailCard({
 							}}
 						>
 							{entry.imageUrl ? (
-								renderPreviewLayer(false, true)
+								renderPreviewLayer(false, true, 2)
 							) : (
 								<div className="absolute inset-0 flex items-center justify-center bg-white">
 									<Empty
@@ -277,6 +261,7 @@ export default function EvidenceSidebar({
 	const projectId = useParams().projectId;
 	const [evidences, setEvidences] = useState<any[]>([]);
 	const [pageData, setPageData] = useState<PageThumbnailEntry[]>([]);
+	const [loadingEvidences, setLoadingEvidences] = useState(false);
 	const [pageImageMetricsMap, setPageImageMetricsMap] = useState<
 		Record<
 			string,
@@ -292,7 +277,11 @@ export default function EvidenceSidebar({
 	>({});
 
 	useEffect(() => {
-		if (!selectedItem) return;
+		if (!selectedItem) {
+			setLoadingEvidences(false);
+			setEvidences([]);
+			return;
+		}
 		fetchEvidences();
 	}, [selectedItem]);
 
@@ -396,10 +385,12 @@ export default function EvidenceSidebar({
 	const fetchEvidences = async () => {
 		const ids = parseResultItemIds(selectedItem);
 		if (ids.length === 0) {
+			setLoadingEvidences(false);
 			setEvidences([]);
 			return;
 		}
 
+		setLoadingEvidences(true);
 		try {
 			const response = await getTakeOffEvidenceUrlsByIds(ids.join(","));
 			if (response.status !== "success") {
@@ -416,6 +407,7 @@ export default function EvidenceSidebar({
 
 			setEvidences(uniqueEvidences);
 		} finally {
+			setLoadingEvidences(false);
 		}
 
 		// const response = await getEvidenceByFileId(projectId as string, files[0]?.id as number);
@@ -466,24 +458,56 @@ export default function EvidenceSidebar({
 
 
 	return (
-		<div className="flex h-full w-[470px] flex-col border-l border-primaryN30 pl-5">
+		<div className="flex h-full w-[480px] flex-col border-l border-primaryN30 pl-5">
+			{/* <div className="mt-3 rounded-xl border border-forumBlue-normal/20 bg-gradient-to-br from-[#F8FBFF] to-white px-4 py-3 shadow-sm">
+				<div className="flex items-start gap-2">
+					<div className="mt-[2px] h-2 w-2 rounded-full bg-forumBlue-normal" />
+					<div className="min-w-0">
+						<div className="text-sm font-semibold tracking-[0.01em] text-forumBlue-normal">
+							Evidence Source Panel
+						</div>
+						<div className="mt-0.5 text-xxs uppercase tracking-[0.08em] text-forumBlue-normal/70">
+							Trace & Verify
+						</div>
+					</div>
+				</div>
+				<div className="mt-2 text-xs leading-5 text-grey-normal">
+					Review the source pages for the selected item. Each thumbnail overlays all related evidence boxes so you can quickly validate location and context.
+				</div>
+			</div> */}
 			<div className="my-2">
 				<span className="text-sm text-forumBlue-normal">Label：</span>
 				<span className="ml-1 text-sm text-grey-normal">{selectedLabel}</span>
+				{!selectedItem && (
+					<div className="mt-2 rounded-lg border border-dashed border-primaryN40 bg-[#FCFDFF] px-3 py-2.5">
+						<div className="text-xs font-medium text-forumBlue-normal">
+							No item selected
+						</div>
+						<div className="mt-1 text-xxs leading-5 text-grey-normal">
+							Select an item from the table to view its source pages and evidence boxes here.
+						</div>
+					</div>
+				)}
 			</div>
 			<div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1">
-				<div className="flex flex-col gap-6 pb-6">
-					{pageData.map((entry) => {
-						return (
-							<PageThumbnailCard
-								key={entry.key}
-								entry={entry}
-								imageMetrics={pageImageMetricsMap[entry.key]}
-								onImageRendered={handleImageRendered}
-							/>
-						);
-					})}
-				</div>
+				{loadingEvidences ? (
+					<div className="flex h-full min-h-[220px] items-center justify-center">
+						<Spin />
+					</div>
+				) : (
+					<div className="flex flex-col gap-6 pb-6">
+						{pageData.map((entry) => {
+							return (
+								<PageThumbnailCard
+									key={entry.key}
+									entry={entry}
+									imageMetrics={pageImageMetricsMap[entry.key]}
+									onImageRendered={handleImageRendered}
+								/>
+							);
+						})}
+					</div>
+				)}
 			</div>
 		</div>
 	);

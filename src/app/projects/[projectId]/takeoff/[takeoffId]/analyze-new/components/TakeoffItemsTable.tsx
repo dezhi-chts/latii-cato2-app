@@ -800,7 +800,7 @@ export default function TakeoffItemsTable({
 						dataSource={displayedItems}
 						// 暂时取消分页，后续需求可能恢复。
 						pagination={false}
-						scroll={{ x: "max-content", y: "calc(100vh - 400px)" }}
+						scroll={{ x: "max-content", y: "calc(100vh - 300px)" }}
 						onRow={(record) => ({
 							onClick: () => {
 								if (selectedRowKeyRef.current === record.id) {
