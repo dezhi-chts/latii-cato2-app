@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Spin, Modal, Popover } from "antd";
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, notification, Spin, Modal, Popover, Select } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -39,12 +39,20 @@ import {
 } from "@/services/takeOffService";
 
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
+import { getTemplates } from "@/services/templateService";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
 
 interface ExtendedProjectFile extends ProjectFileRecord {
   operation_type?: string;
+}
+
+interface PromptTemplateOption {
+  id: number;
+  name: string;
+  description?: string;
+  is_default?: boolean;
 }
 
 export default function FloorPlanPage() {
@@ -70,8 +78,15 @@ export default function FloorPlanPage() {
   const [thumbnailData, setThumbnailData] = useState<any[]>([]);
   const [scheduleList, setScheduleList] = useState<any[]>([]);
   const [itemBoxList, setItemBoxList] = useState<EvidenceType[]>([]);
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplateOption[]>(
+    [],
+  );
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
+
+  const promptHintText =
+    "Customize the fields Cato uses to read your PDF. Create specialized templates to accurately capture data for different takeoff types (e.g., steel vs. aluminum).";
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
@@ -103,6 +118,44 @@ export default function FloorPlanPage() {
       setFullLoading(false);
     }
   }, [takeOffId]);
+
+  const fetchPromptTemplates = useCallback(async () => {
+    const response = await getTemplates();
+    if (response.status !== "success") {
+      notification.error({
+        message: "Error",
+        description: "Failed to load prompt templates.",
+      });
+      return;
+    }
+
+    const list = Array.isArray(response.data?.items)
+      ? response.data.items
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
+    const normalizedList: PromptTemplateOption[] = list
+      .map((template: any) => ({
+        id: Number(template?.id || 0),
+        name: String(template?.name || ""),
+        description: String(template?.description || ""),
+        is_default: Boolean(template?.is_default),
+      }))
+      .filter((template: PromptTemplateOption) => template.id > 0 && template.name);
+
+    const hasStandard = normalizedList.some((template) => template.id === 1);
+    const mergedList: PromptTemplateOption[] = hasStandard
+      ? normalizedList
+      : [{ id: 1, name: "standard", description: "", is_default: true }, ...normalizedList];
+
+    setPromptTemplates(mergedList);
+
+    const defaultTemplate =
+      mergedList.find((template) => template.is_default) || mergedList[0];
+    if (defaultTemplate?.id) {
+      setSelectedTemplateId(defaultTemplate.id);
+    }
+  }, []);
 
   const fetchFloorPlanAndElevation = useCallback(async () => {
     if (!selectedFileId) return;
@@ -193,7 +246,8 @@ export default function FloorPlanPage() {
 
   useEffect(() => {
     fetchTakeoffData();
-  }, []);
+    fetchPromptTemplates();
+  }, [fetchTakeoffData, fetchPromptTemplates]);
 
   useEffect(() => {
     if (selectedFileId) {
@@ -383,7 +437,7 @@ export default function FloorPlanPage() {
     [evidenceType, floorPlanData, elevationData],
   );
 
-  const handleNext = useCallback(() => {
+  const handleNext = () => {
     let findLabelEmpty = (data: any) => {
       return data.find((item: any) => {
         try {
@@ -408,7 +462,7 @@ export default function FloorPlanPage() {
       return;
     }
     handleAnaylize();
-  }, [evidenceType, floorPlanData, elevationData]);
+  };
 
   const formatAnalyzeErrorMessage = useCallback((error: unknown) => {
     if (!error) return "Failed to analyze the file.";
@@ -446,7 +500,15 @@ export default function FloorPlanPage() {
     }
   };
 
-  const handleAnaylize = async () => {
+  const handleAnaylize = useCallback(async () => {
+    if (!selectedTemplateId) {
+      notification.error({
+        message: "Error",
+        description: "Please select a reading prompt before analysis.",
+      });
+      return;
+    }
+
     setBuildLoading(true);
     // Close existing SSE connection if any
     if (eventSourceRef.current) {
@@ -454,7 +516,7 @@ export default function FloorPlanPage() {
       eventSourceRef.current = null;
     }
 
-    const sseConnection = AnalyzeItemBySourceTypeSSE(takeOffId as string, 1, {
+    const sseConnection = AnalyzeItemBySourceTypeSSE(takeOffId as string, selectedTemplateId, {
       onConnected: () => {
         console.log("[SSE] Connected to analyze service");
       },
@@ -481,7 +543,7 @@ export default function FloorPlanPage() {
     });
 
     eventSourceRef.current = sseConnection;
-  };
+  }, [selectedTemplateId, takeOffId, projectId, router, formatAnalyzeErrorMessage]);
 
   const handleBack = () => {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
@@ -517,6 +579,57 @@ export default function FloorPlanPage() {
           ))}
         </div>
         <div className="flex flex-row items-end gap-2">
+          <div className="mr-3 flex items-center gap-2">
+            <span className="text-sm text-forumBlue-normal">Reading Prompt</span>
+            <Popover
+              placement="bottomLeft"
+              title={null}
+              content={
+                <div className="w-[360px] rounded-2xl p-2">
+                  <div className="text-sm text-grey-dark">
+                    Reading Prompt
+                  </div>
+                  <div className="mt-1 text-xs leading-[1.4] text-grey-normal">
+                    {promptHintText}
+                  </div>
+                </div>
+              }
+              trigger="hover"
+            >
+              <Image
+                src="/assets/icons/info-forum-blue.svg"
+                alt="prompt hint"
+                className="cursor-pointer"
+                width={14}
+                height={14}
+              />
+            </Popover>
+            <Select
+              className="w-[200px]"
+              value={selectedTemplateId}
+              onChange={(value: number | string) => {
+                console.log("value", value);
+                setSelectedTemplateId(Number(value));
+              }}
+              options={promptTemplates.map((template) => ({
+                label: template.name,
+                value: template.id,
+              }))}
+              dropdownRender={(menu: ReactNode) => (
+                <div>
+                  {menu}
+                  <div
+                    className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm text-forumBlue-normal hover:bg-primaryN20"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => router.push("/knowledge-base-cato")}
+                  >
+                    <span>Edit Prompts</span>
+                    <span className="text-[18px] leading-none">+</span>
+                  </div>
+                </div>
+              )}
+            />
+          </div>
           <Popover
             placement="rightBottom"
             title={null}

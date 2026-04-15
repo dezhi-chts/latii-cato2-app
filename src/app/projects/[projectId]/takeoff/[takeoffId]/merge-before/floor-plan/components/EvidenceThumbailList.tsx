@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { allPageTypes, PageType, GroupType } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import { col } from "framer-motion/m";
+import { Tooltip } from "antd";
 const LazyImage = ({
 	src,
 	alt,
@@ -62,6 +63,38 @@ const LazyImage = ({
 				loading="lazy"
 			/>
 		</div>
+	);
+};
+
+const PageTextWithTooltip = ({ text }: { text: string | number }) => {
+	const textRef = useRef<HTMLSpanElement>(null);
+	const [isOverflow, setIsOverflow] = useState(false);
+
+	useEffect(() => {
+		const element = textRef.current;
+		if (!element) return;
+		setIsOverflow(element.scrollWidth > element.clientWidth);
+	}, [text]);
+
+	const content = (
+		<span ref={textRef} className="block truncate text-grey-normal text-sm">
+			{text}
+		</span>
+	);
+
+	if (!isOverflow) {
+		return content;
+	}
+
+	return (
+		<Tooltip
+			title={text}
+			placement="topLeft"
+			color="#717171"
+			className="text-grey-normal text-sm"
+		>
+			{content}
+		</Tooltip>
 	);
 };
 
@@ -139,6 +172,11 @@ const EvidenceThumbailList = ({
 			let pageArr = item.file_name?.split(".")[0];
 			return parseInt(pageArr) + 1;
 		}
+
+		if (item?.label_list instanceof Array) {
+			return item.label_list.join(",");
+		}
+
 		return index + 1;
 	};
 
@@ -173,10 +211,9 @@ const EvidenceThumbailList = ({
 					{data?.length > 0 &&
 						data.map((info, index) => {
 							let itemPageNum = getItemPage(info, index);
-							let {
-								color = allPageTypes[PageType.NotUsed].color,
-								icon = allPageTypes[PageType.NotUsed].icon,
-							} = pageTypeInfo(info);
+							const pageType = pageTypeInfo(info) as { color?: string; icon?: string };
+							const color = pageType?.color || allPageTypes[PageType.NotUsed].color;
+							const icon = pageType?.icon || allPageTypes[PageType.NotUsed].icon;
 							return (
 								<div
 									id={`thumbnail-evidence-${info.id}`}
@@ -192,9 +229,9 @@ const EvidenceThumbailList = ({
 								>
 									<div className="p-[10px]">
 										<div className="h-[30px] flex flex-row justify-between">
-											<p className="mb-3 text-xxs text-grey-normal">
-												{itemPageNum}
-											</p>
+											<div className="overflow-hidden">
+												<PageTextWithTooltip text={itemPageNum} />
+											</div>
 											{
 												showDownload && (
 													<div
