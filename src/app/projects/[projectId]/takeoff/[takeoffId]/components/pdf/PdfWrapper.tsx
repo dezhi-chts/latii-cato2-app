@@ -2210,11 +2210,10 @@ const PdfWrapper = forwardRef(
 
 			let crop = {
 				id: `group-${Date.now()}-${sections.length + 1}`,
-				shapeType: groupObj.shapeType,
+				shapeType: GroupShapeType.Rectangle,
 				type: groupObj.type,
 				completed: true,
 				polygons: newPolygons,
-
 				pdfPolygons: pdfPolygons,
 				bounds,
 			};
