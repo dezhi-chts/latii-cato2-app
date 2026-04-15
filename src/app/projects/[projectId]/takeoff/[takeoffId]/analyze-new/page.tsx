@@ -714,24 +714,18 @@ export default function TakeoffListPage() {
 					takeoffId={takeoffId}
 					onSearchChange={setSearchValue}
 					onToggleStatus={handleToggleStatus}
-					onSelectItem={(item) => setSelectedItemId(item?.id)}
+					onSelectItem={(item) => {
+						setSelectedItemId(item?.id);
+					}}
 					onOpenReferencePanel={handleOpenReferencePanel}
 					onOpenReconcile={handleOpenReconcile}
 					onRefreshItems={refreshItemsOnly}
 				/>
 
-				{/* <EvidenceSidebar
+				<EvidenceSidebar
+					selectedItem={selectedItem as any}
 					files={files}
-					selectedFileId={selectedFileId}
-					selectedItem={selectedItem as TakeoffItemRecord | null}
-					fileFilter={fileFilter}
-					showEvidenceBoxes={showEvidenceBoxes}
-					evidencesByFile={evidencesByFile}
-					onSelectFile={updateCurrentFileSelection}
-					onChangeFileFilter={setFileFilter}
-					onToggleEvidenceBoxes={() => setShowEvidenceBoxes((prev) => !prev)}
-					onOpenAddBoxModal={() => setShowAddBoxModal(true)}
-				/> */}
+				/>
 			</div>
 
 			<AddBoxModal

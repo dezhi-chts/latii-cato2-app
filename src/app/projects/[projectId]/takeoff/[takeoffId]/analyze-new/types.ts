@@ -61,6 +61,7 @@ export interface EvidenceRecord {
 	project_file_id: number;
 	project_file_page_number?: number;
 	polygon?: string | EvidencePoint[];
+	scale?: number;
 	page_width_pdf?: number;
 	page_height_pdf?: number;
 	view_box?: string | number[];
@@ -86,4 +87,6 @@ export interface EvidenceBoxBounds {
 	top: number;
 	width: number;
 	height: number;
+	source_width?: number;
+	source_height?: number;
 }

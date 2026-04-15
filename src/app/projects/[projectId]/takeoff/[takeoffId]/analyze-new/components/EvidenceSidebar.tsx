@@ -5,26 +5,23 @@ import {
 	EyeOutlined,
 	FileAddOutlined,
 	FullscreenOutlined,
+	ZoomInOutlined,
+	ZoomOutOutlined,
 } from "@ant-design/icons";
-import { Button, Empty, Select, Tooltip } from "antd";
+import { Button, Empty, Modal, Select, Slider, Tooltip } from "antd";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getEvidenceBounds, getEvidenceIds } from "../takeoffUtils";
 import { EvidenceRecord, ProjectFileRecord, TakeoffItemRecord } from "../types";
 import Image from "next/image";
+import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
+import { getEvidenceByFileId } from "@/services/evidenceService";
+import { useParams } from "next/navigation";
 
 interface EvidenceSidebarProps {
-	files: ProjectFileRecord[];
-	selectedFileId: number;
 	selectedItem?: TakeoffItemRecord | null;
-	fileFilter: string;
-	showEvidenceBoxes: boolean;
-	evidencesByFile: Record<number, EvidenceRecord[]>;
-	onSelectFile: (fileId: number) => void;
-	onChangeFileFilter: (value: string) => void;
-	onToggleEvidenceBoxes: () => void;
-	onOpenAddBoxModal: () => void;
+	files: ProjectFileRecord[];
 }
 
 interface PageThumbnailEntry {
@@ -38,164 +35,155 @@ interface PageThumbnailEntry {
 
 interface PageThumbnailCardProps {
 	entry: PageThumbnailEntry;
-	highlightedEvidenceIds: number[];
-	isTargetPage: boolean;
-	isSelectedFile: boolean;
-	showEvidenceBoxes: boolean;
-	forceLoad: boolean;
-	onClick: () => void;
-	onRegisterRef: (key: string, element: HTMLDivElement | null) => void;
-	onImageReady: (key: string) => void;
+	imageMetrics?: {
+		naturalWidth: number;
+		naturalHeight: number;
+		displayWidth: number;
+		displayHeight: number;
+		scaleX: number;
+		scaleY: number;
+	};
+	onImageRendered: (
+		entryKey: string,
+		metrics: {
+			naturalWidth: number;
+			naturalHeight: number;
+			displayWidth: number;
+			displayHeight: number;
+			scaleX: number;
+			scaleY: number;
+		},
+	) => void;
 }
 
 function PageThumbnailCard({
 	entry,
-	highlightedEvidenceIds,
-	isTargetPage,
-	isSelectedFile,
-	showEvidenceBoxes,
-	forceLoad,
-	onClick,
-	onRegisterRef,
-	onImageReady,
+	imageMetrics,
+	onImageRendered,
 }: PageThumbnailCardProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const imageRef = useRef<HTMLImageElement | null>(null);
-	const [isVisible, setIsVisible] = useState(false);
+	const [previewOpen, setPreviewOpen] = useState(false);
+	const [zoomScale, setZoomScale] = useState(1);
 
-	useEffect(() => {
-		const element = containerRef.current;
-		if (!element) {
-			return;
-		}
+	const minScale = 0.5;
+	const maxScale = 3;
 
-		const observer = new IntersectionObserver(
-			(entries) => {
-				entries.forEach((observerEntry) => {
-					if (observerEntry.isIntersecting) {
-						setIsVisible(true);
+	const renderPreviewLayer = (
+		shouldCaptureMetrics = false,
+		forcePercentLayout = false,
+	) => {
+		return (
+			<div className="relative w-full">
+				<img
+					src={entry.imageUrl}
+					alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
+					className="block h-auto w-full"
+					loading="lazy"
+					onLoad={(event) => {
+						if (!shouldCaptureMetrics) {
+							return;
+						}
+						const imageElement = event.currentTarget;
+						const naturalWidth = Number(imageElement.naturalWidth || 0);
+						const naturalHeight = Number(imageElement.naturalHeight || 0);
+						const displayWidth = Number(imageElement.clientWidth || 0);
+						const displayHeight = Number(imageElement.clientHeight || 0);
+						if (!naturalWidth || !naturalHeight || !displayWidth || !displayHeight) {
+							return;
+						}
+						onImageRendered(entry.key, {
+							naturalWidth,
+							naturalHeight,
+							displayWidth,
+							displayHeight,
+							scaleX: displayWidth / naturalWidth,
+							scaleY: displayHeight / naturalHeight,
+						});
+					}}
+				/>
+				{entry.pageEvidences.map((evidence) => {
+					const bounds = getEvidenceBounds(evidence);
+					if (!bounds) {
+						return null;
 					}
-				});
-			},
-			{
-				rootMargin: "400px 0px",
-				threshold: 0.01,
-			},
+					const sourceWidth = Number(bounds.source_width || evidence?.page_width_pdf || 0);
+					const sourceHeight = Number(bounds.source_height || evidence?.page_height_pdf || 0);
+					if (!sourceWidth || !sourceHeight) {
+						return null;
+					}
+					const leftPercent = (bounds.left / sourceWidth) * 100;
+					const topPercent = (bounds.top / sourceHeight) * 100;
+					const widthPercent = (bounds.width / sourceWidth) * 100;
+					const heightPercent = (bounds.height / sourceHeight) * 100;
+					const canUseDisplayScale =
+						Boolean(imageMetrics?.displayWidth) &&
+						Boolean(imageMetrics?.displayHeight);
+					const scaleX = canUseDisplayScale
+						? Number(imageMetrics?.displayWidth || 0) / sourceWidth
+						: 0;
+					const scaleY = canUseDisplayScale
+						? Number(imageMetrics?.displayHeight || 0) / sourceHeight
+						: 0;
+
+					return (
+						<div
+							key={evidence?.id}
+							className={`absolute border-[1.5px] border-red-500`}
+							style={{
+								left:
+									forcePercentLayout || !(canUseDisplayScale && scaleX > 0)
+										? `${leftPercent}%`
+										: `${bounds.left * scaleX}px`,
+								top:
+									forcePercentLayout || !(canUseDisplayScale && scaleY > 0)
+										? `${topPercent}%`
+										: `${bounds.top * scaleY}px`,
+								width:
+									forcePercentLayout || !(canUseDisplayScale && scaleX > 0)
+										? `${widthPercent}%`
+										: `${bounds.width * scaleX}px`,
+								height:
+									forcePercentLayout || !(canUseDisplayScale && scaleY > 0)
+										? `${heightPercent}%`
+										: `${bounds.height * scaleY}px`,
+							}}
+						/>
+					);
+				})}
+			</div>
 		);
-
-		observer.observe(element);
-
-		return () => {
-			observer.disconnect();
-		};
-	}, []);
-
-	useEffect(() => {
-		if (forceLoad) {
-			setIsVisible(true);
-		}
-	}, [forceLoad]);
-
-	const sortedEvidences = useMemo(() => {
-		return [...entry.pageEvidences].sort((firstEvidence, secondEvidence) => {
-			const firstHighlighted = highlightedEvidenceIds.includes(
-				firstEvidence?.id,
-			);
-			const secondHighlighted = highlightedEvidenceIds.includes(
-				secondEvidence?.id,
-			);
-
-			if (firstHighlighted === secondHighlighted) {
-				return 0;
-			}
-
-			return firstHighlighted ? 1 : -1;
-		});
-	}, [entry.pageEvidences, highlightedEvidenceIds]);
-
-	const shouldRenderImage = isVisible || forceLoad;
-
-	useEffect(() => {
-		if (!shouldRenderImage || !entry.imageUrl || !imageRef.current?.complete) {
-			return;
-		}
-
-		onImageReady(entry.key);
-	}, [entry.imageUrl, entry.key, onImageReady, shouldRenderImage]);
+	};
 
 	return (
 		<div
 			ref={(element) => {
 				containerRef.current = element;
-				onRegisterRef(entry.key, element);
 			}}
-			className={`cursor-pointer rounded-xl border bg-primaryN20 p-4 transition-all ${
-				isTargetPage
-					? "border-forumBlue-normal shadow-sm ring-2 ring-forumBlue-normal/20"
-					: isSelectedFile
-						? "border-forumBlue-normal/40"
-						: "border-transparent"
-			}`}
-			onClick={onClick}
 		>
 			<div className="mb-3 flex items-center justify-between">
-				<span className="text-xs text-grey-normal">{entry.pageNumber}</span>
 				<span className="max-w-[230px] truncate text-xxs text-grey-normal">
 					{entry.file?.file_name || "Unnamed file"}
 				</span>
+				<span className="text-xs text-grey-normal">{entry.pageNumber}</span>
 			</div>
 
 			<div
 				className="relative overflow-hidden rounded-lg bg-white"
-				style={{ aspectRatio: `${entry.aspectRatio}` }}
 			>
+				<Button
+					type="text"
+					size="small"
+					icon={<FullscreenOutlined />}
+					className="!absolute right-2 top-2 z-10 !rounded-md !bg-black/40 !text-white hover:!bg-black/60 hover:!text-white"
+					onClick={(event) => {
+						event.stopPropagation();
+						setPreviewOpen(true);
+						setZoomScale(1);
+					}}
+				/>
 				{entry.imageUrl ? (
 					<>
-						{shouldRenderImage ? (
-							<img
-								ref={imageRef}
-								src={entry.imageUrl}
-								alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
-								className="absolute inset-0 h-full w-full object-contain"
-								loading="lazy"
-								onLoad={() => onImageReady(entry.key)}
-							/>
-						) : (
-							<div className="absolute inset-0 animate-pulse bg-primaryN30" />
-						)}
-						{shouldRenderImage &&
-							showEvidenceBoxes &&
-							sortedEvidences.map((evidence) => {
-								const bounds = getEvidenceBounds(evidence);
-								if (!bounds) {
-									return null;
-								}
-
-								const isHighlighted = highlightedEvidenceIds.includes(
-									evidence?.id,
-								);
-
-								return (
-									<div
-										key={evidence?.id}
-										className={`absolute ${
-											isHighlighted
-												? "border-2 border-red-normal bg-red-normal/10"
-												: "border border-forumBlue-normal bg-[#427CCE]/20"
-										}`}
-										style={{
-											left: `${bounds.left}%`,
-											top: `${bounds.top}%`,
-											width: `${bounds.width}%`,
-											height: `${bounds.height}%`,
-										}}
-									>
-										{/* <span className="absolute -left-[1px] -top-[18px] rounded-sm bg-forumBlue-normal px-1 py-[1px] text-[10px] leading-none text-white">
-											{evidenceIndex + 1}
-										</span> */}
-									</div>
-								);
-							})}
+						{renderPreviewLayer(true)}
 					</>
 				) : (
 					<div className="absolute inset-0 flex items-center justify-center bg-white">
@@ -210,261 +198,288 @@ function PageThumbnailCard({
 					</div>
 				)}
 			</div>
+
+			<Modal
+				open={previewOpen}
+				onCancel={() => setPreviewOpen(false)}
+				footer={null}
+				width={'80vw'}
+				destroyOnClose
+				title={<div>{entry.file?.file_name || "Unnamed file"} · Page {entry.pageNumber}</div>}
+			>
+				<div className="flex h-[75vh] min-h-[520px] flex-col">
+					<div className="mb-3 flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<Button
+								size="small"
+								icon={<ZoomOutOutlined />}
+								onClick={() => {
+									setZoomScale((prev) => Math.max(minScale, Number((prev - 0.1).toFixed(2))));
+								}}
+							/>
+							<div className="w-[220px]">
+								<Slider
+									min={minScale}
+									max={maxScale}
+									step={0.1}
+									value={zoomScale}
+									onChange={(value) => setZoomScale(Number(value))}
+									tooltip={{ formatter: (value) => `${Math.round(Number(value || 1) * 100)}%` }}
+								/>
+							</div>
+							<Button
+								size="small"
+								icon={<ZoomInOutlined />}
+								onClick={() => {
+									setZoomScale((prev) => Math.min(maxScale, Number((prev + 0.1).toFixed(2))));
+								}}
+							/>
+							<span className="w-[60px] text-right text-sm text-forumBlue-normal">
+								{Math.round(zoomScale * 100)}%
+							</span>
+						</div>
+					</div>
+
+					<div className="min-h-0 flex-1 overflow-auto rounded-lg border border-primaryN30 bg-primaryN20 p-4">
+						<div
+							className="relative rounded-lg bg-white"
+							style={{
+								width: `${zoomScale * 100}%`,
+								minWidth: "420px",
+							}}
+						>
+							{entry.imageUrl ? (
+								renderPreviewLayer(false, true)
+							) : (
+								<div className="absolute inset-0 flex items-center justify-center bg-white">
+									<Empty
+										image={Empty.PRESENTED_IMAGE_SIMPLE}
+										description={
+											<span className="text-xs text-grey-normal">
+												No preview image
+											</span>
+										}
+									/>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</Modal>
 		</div>
 	);
 }
 
 export default function EvidenceSidebar({
-	files,
-	selectedFileId,
 	selectedItem,
-	fileFilter,
-	showEvidenceBoxes,
-	evidencesByFile,
-	onSelectFile,
-	onChangeFileFilter,
-	onToggleEvidenceBoxes,
-	onOpenAddBoxModal,
+	files
 }: EvidenceSidebarProps) {
-	const selectedEvidenceIds = getEvidenceIds(selectedItem);
-	const pageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-	const lastScrolledItemIdRef = useRef<number | null>(null);
-	const lastAutoSyncedItemIdRef = useRef<number | null>(null);
-	const [activePageKey, setActivePageKey] = useState<string | null>(null);
-	const [targetImageReadyKey, setTargetImageReadyKey] = useState<string | null>(
-		null,
-	);
+	const projectId = useParams().projectId;
+	const [evidences, setEvidences] = useState<any[]>([]);
+	const [pageData, setPageData] = useState<PageThumbnailEntry[]>([]);
+	const [pageImageMetricsMap, setPageImageMetricsMap] = useState<
+		Record<
+			string,
+			{
+				naturalWidth: number;
+				naturalHeight: number;
+				displayWidth: number;
+				displayHeight: number;
+				scaleX: number;
+				scaleY: number;
+			}
+		>
+	>({});
 
 	useEffect(() => {
-		if (!selectedItem?.id) {
-			lastAutoSyncedItemIdRef.current = null;
-			lastScrolledItemIdRef.current = null;
-			setActivePageKey(null);
-			setTargetImageReadyKey(null);
-			return;
+		if (!selectedItem) return;
+		fetchEvidences();
+	}, [selectedItem]);
+
+	const parseResultItemIds = (item: any): string[] => {
+		if (Array.isArray(item?.take_off_result_item_id_list)) {
+			return item.take_off_result_item_id_list
+				.map((id: any) => String(id))
+				.filter(Boolean);
 		}
 
-		if (lastAutoSyncedItemIdRef.current === selectedItem.id) {
-			return;
+		const text = item?.take_off_result_item_ids;
+		if (typeof text === "string" && text.trim()) {
+			const matches = text.match(/\d+/g) || [];
+			return matches.map((id) => String(id));
 		}
 
-		const selectedItemFileId = String(selectedItem?.project_file_id || "");
-		if (fileFilter !== "all" && fileFilter !== selectedItemFileId) {
-			onChangeFileFilter(selectedItemFileId);
+		return [];
+	};
+
+	const pageEntries = (() => {
+		if (!evidences.length) {
+			setPageData([]);
 		}
+		const groupedMap = new Map<string, PageThumbnailEntry>();
 
-		lastAutoSyncedItemIdRef.current = selectedItem.id;
-	}, [fileFilter, onChangeFileFilter, selectedItem]);
-
-	const visibleFiles = files.filter((file) => {
-		if (fileFilter === "all") {
-			return true;
-		}
-
-		return String(file?.id) === fileFilter;
-	});
-
-	const pageEntries = useMemo<PageThumbnailEntry[]>(() => {
-		return visibleFiles.flatMap((file) => {
+		evidences.forEach((evid) => {
+			const fileId = Number(evid?.project_file_id || 0);
+			const pageNumber = Number(evid?.project_file_page_number || 1);
+			const file = files.find((f) => Number(f?.id) === fileId);
 			const imagePages = file?.parse_detail?.image_page_infos || [];
-			const fileEvidences = evidencesByFile?.[file?.id] || [];
-			const fallbackEvidence =
-				fileEvidences.find((evidence) => {
-					return (
-						Number(evidence?.page_width_pdf || 0) > 0 &&
-						Number(evidence?.page_height_pdf || 0) > 0
-					);
-				}) || null;
+			const imageUrl =
+				imagePages.find((pageInfo, pageIndex) => {
+					return Number(pageIndex + 1) === pageNumber;
+				})?.s3_url || "";
+			const groupKey = `${fileId}-${pageNumber}-${imageUrl || "no-image"}`;
+			const existing = groupedMap.get(groupKey);
 
-			return imagePages.map((pageInfo, pageIndex) => {
-				const pageNumber = pageIndex + 1;
-				const pageEvidences = fileEvidences.filter((evidence) => {
-					return (evidence?.project_file_page_number || 1) === pageNumber;
-				});
-				const ratioEvidence =
-					pageEvidences.find((evidence) => {
-						return (
-							Number(evidence?.page_width_pdf || 0) > 0 &&
-							Number(evidence?.page_height_pdf || 0) > 0
-						);
-					}) || fallbackEvidence;
-				const pageWidth = Number(ratioEvidence?.page_width_pdf || 0);
-				const pageHeight = Number(ratioEvidence?.page_height_pdf || 0);
-				const aspectRatio =
-					pageWidth > 0 && pageHeight > 0 ? pageWidth / pageHeight : 0.75;
+			if (existing) {
+				existing.pageEvidences.push(evid);
+				return;
+			}
 
-				return {
-					key: `${file?.id}-${pageNumber}`,
-					file,
-					pageNumber,
-					imageUrl: pageInfo?.s3_url || "",
-					pageEvidences,
-					aspectRatio,
-				};
+			const pageMetrics = pageImageMetricsMap[groupKey];
+			const aspectRatio =
+				pageMetrics && pageMetrics.naturalWidth > 0 && pageMetrics.naturalHeight > 0
+					? pageMetrics.naturalWidth / pageMetrics.naturalHeight
+					: 1;
+
+			groupedMap.set(groupKey, {
+				key: groupKey,
+				file: file as ProjectFileRecord,
+				pageNumber,
+				imageUrl,
+				pageEvidences: [evid],
+				aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1,
 			});
 		});
-	}, [evidencesByFile, visibleFiles]);
 
-	const targetPageKey = useMemo(() => {
-		if (!selectedItem || !selectedEvidenceIds.length) {
-			return null;
-		}
-
-		const currentFileEvidences =
-			evidencesByFile?.[selectedItem?.project_file_id] || [];
-		const targetEvidence = currentFileEvidences.find((evidence) => {
-			return selectedEvidenceIds.includes(evidence?.id);
+		const list = Array.from(groupedMap.values()).sort((first, second) => {
+			const firstFileId = Number(first?.file?.id || 0);
+			const secondFileId = Number(second?.file?.id || 0);
+			if (firstFileId !== secondFileId) {
+				return firstFileId - secondFileId;
+			}
+			return Number(first.pageNumber || 0) - Number(second.pageNumber || 0);
 		});
 
-		if (!targetEvidence) {
-			return null;
-		}
+		setPageData(list);
+	});
 
-		return `${targetEvidence.project_file_id}-${targetEvidence.project_file_page_number || 1}`;
-	}, [evidencesByFile, selectedEvidenceIds, selectedItem]);
+	// const pageEntries = (() => {
+	// 	if (!evidences.length) {
+	// 		setPageData([]);
+	// 	}
 
-	useEffect(() => {
-		setTargetImageReadyKey(null);
-	}, [targetPageKey]);
+	// 	const file = files[0];
+	// 	const imagePages = file?.parse_detail?.image_page_infos || [];
+	// 	let list: any = [];
+	// 	for (let i = 0; i < imagePages.length; i++) {
+	// 		const pageInfo = imagePages[i];
+	// 		let pageNumber = i + 1;
+	// 		let evides = evidences.filter((evid) => evid?.project_file_page_number === pageNumber);
+	// 		const pageKey = `${file?.id}-${pageNumber}`;
+	// 		const pageMetrics = pageImageMetricsMap[pageKey];
+	// 		const aspectRatio =
+	// 			pageMetrics && pageMetrics.naturalWidth > 0 && pageMetrics.naturalHeight > 0
+	// 				? pageMetrics.naturalWidth / pageMetrics.naturalHeight
+	// 				: 1;
+	// 		list.push({
+	// 			key: pageKey,
+	// 			file,
+	// 			pageNumber,
+	// 			imageUrl: pageInfo?.s3_url || "",
+	// 			pageEvidences: evides,
+	// 			aspectRatio: Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1,
+	// 		});
+	// 	}
+	// 	setPageData(list);
+	// });
 
-	const scrollToPageKey = (
-		pageKey: string,
-		behavior: ScrollBehavior = "smooth",
-	) => {
-		const targetElement = pageRefs.current[pageKey];
-		if (!targetElement) {
+	const fetchEvidences = async () => {
+		const ids = parseResultItemIds(selectedItem);
+		if (ids.length === 0) {
+			setEvidences([]);
 			return;
 		}
 
-		targetElement.scrollIntoView({
-			behavior,
-			block: "center",
-		});
+		try {
+			const response = await getTakeOffEvidenceUrlsByIds(ids.join(","));
+			if (response.status !== "success") {
+				setEvidences([]);
+				return;
+			}
+
+			const payload = response.data?.data ?? response.data ?? {};
+			const next = Object.values(payload || {}) as any[] || [];
+			// 	去重next中id重复的evidence id
+			let uniqueEvidences = next.filter((evid, index, self) => {
+				return index === self.findIndex((t) => t.id === evid.id);
+			});
+
+			setEvidences(uniqueEvidences);
+		} finally {
+		}
+
+		// const response = await getEvidenceByFileId(projectId as string, files[0]?.id as number);
+		// if (response.status !== "success") {
+		// 	setEvidences([]);
+		// 	return;
+		// }
+		// setEvidences(response.data || []);
 	};
 
 	useEffect(() => {
-		if (!selectedItem?.id || !targetPageKey) {
-			return;
-		}
+		pageEntries();
+	}, [evidences, pageImageMetricsMap]);
 
-		if (
-			lastScrolledItemIdRef.current === selectedItem.id &&
-			activePageKey === targetPageKey
-		) {
-			return;
-		}
+	const handleImageRendered = (
+		entryKey: string,
+		metrics: {
+			naturalWidth: number;
+			naturalHeight: number;
+			displayWidth: number;
+			displayHeight: number;
+			scaleX: number;
+			scaleY: number;
+		},
+	) => {
+		setPageImageMetricsMap((prev) => {
+			const current = prev[entryKey];
+			if (
+				current &&
+				Math.abs(current.naturalWidth - metrics.naturalWidth) < 0.5 &&
+				Math.abs(current.naturalHeight - metrics.naturalHeight) < 0.5 &&
+				Math.abs(current.displayWidth - metrics.displayWidth) < 0.5 &&
+				Math.abs(current.displayHeight - metrics.displayHeight) < 0.5
+			) {
+				return prev;
+			}
+			return {
+				...prev,
+				[entryKey]: metrics,
+			};
+		});
+	};
 
-		const scrollToTarget = () => {
-			scrollToPageKey(targetPageKey);
-			setActivePageKey(targetPageKey);
-		};
+	const selectedLabel =
+		selectedItem && typeof selectedItem.result === "object"
+			? String((selectedItem.result as Record<string, unknown>)?.Label || "")
+			: "";
 
-		const timer = window.setTimeout(scrollToTarget, 50);
-
-		return () => {
-			window.clearTimeout(timer);
-		};
-	}, [activePageKey, selectedItem, targetPageKey]);
-
-	useEffect(() => {
-		if (
-			!selectedItem?.id ||
-			!targetPageKey ||
-			targetImageReadyKey !== targetPageKey
-		) {
-			return;
-		}
-
-		const timer = window.setTimeout(() => {
-			scrollToPageKey(targetPageKey);
-			setActivePageKey(targetPageKey);
-			lastScrolledItemIdRef.current = selectedItem.id;
-		}, 80);
-
-		return () => {
-			window.clearTimeout(timer);
-		};
-	}, [selectedItem, targetImageReadyKey, targetPageKey]);
 
 	return (
 		<div className="flex h-full w-[470px] flex-col border-l border-primaryN30 pl-5">
-			<div className="flex items-center justify-between gap-3 pt-10">
-				<div className="flex items-center gap-3">
-					<Select
-						value={fileFilter}
-						onChange={onChangeFileFilter}
-						className="w-[205px] [&_.ant-select-selector]:!h-[32px] [&_.ant-select-selector]:!rounded-md [&_.ant-select-selector]:!border-primaryN30 [&_.ant-select-selection-item]:!text-xs [&_.ant-select-selection-item]:!leading-[30px]"
-						options={[
-							{ label: "All Files", value: "all" },
-							...files.map((file, index) => ({
-								label: file?.file_name || `File ${index + 1}`,
-								value: String(file?.id),
-							})),
-						]}
-					/>
-					{/* <Button className="!h-[32px] !rounded-md !border-primaryN30 !px-3 !text-xs !text-grey-dark">
-						100%
-					</Button> */}
-				</div>
-
-				<div className="flex items-center gap-2">
-					<Tooltip
-						title={showEvidenceBoxes ? "Hide label boxes" : "Show label boxes"}
-					>
-						<Button
-							className="!h-[32px] !w-[32px] !rounded-md !border-primaryN30 !px-0 !text-grey-dark"
-							icon={
-								showEvidenceBoxes ? <EyeInvisibleOutlined /> : <EyeOutlined />
-							}
-							onClick={onToggleEvidenceBoxes}
-						/>
-					</Tooltip>
-					{/* <Tooltip title="Open selected preview">
-						<Button
-							className="!h-[32px] !w-[32px] !rounded-md !border-primaryN30 !px-0 !text-grey-dark"
-							icon={<FullscreenOutlined />}
-						/>
-					</Tooltip> */}
-					<Tooltip title="Add box">
-						<div
-							className="w-[30px] !h-[24px] text-xxs text-forumBlue-dark-active bg-forumBlue-light-active rounded-md flex flex-row justify-center items-center gap-1 cursor-pointer"
-							onClick={onOpenAddBoxModal}
-						>
-							<Image
-								src="/assets/icons/add-box.svg"
-								alt="add box"
-								width={8}
-								height={8}
-							></Image>
-						</div>
-					</Tooltip>
-				</div>
+			<div className="my-2">
+				<span className="text-sm text-forumBlue-normal">Label：</span>
+				<span className="ml-1 text-sm text-grey-normal">{selectedLabel}</span>
 			</div>
-
 			<div className="mt-6 min-h-0 flex-1 overflow-y-auto pr-1">
 				<div className="flex flex-col gap-6 pb-6">
-					{pageEntries.map((entry) => {
+					{pageData.map((entry) => {
 						return (
 							<PageThumbnailCard
 								key={entry.key}
 								entry={entry}
-								highlightedEvidenceIds={selectedEvidenceIds}
-								isTargetPage={entry.key === activePageKey}
-								isSelectedFile={entry.file?.id === selectedFileId}
-								showEvidenceBoxes={showEvidenceBoxes}
-								forceLoad={entry.key === targetPageKey}
-								onClick={() => {
-									onSelectFile(entry.file?.id);
-									setActivePageKey(entry.key);
-								}}
-								onRegisterRef={(key, element) => {
-									pageRefs.current[key] = element;
-								}}
-								onImageReady={(key) => {
-									if (key === targetPageKey) {
-										setTargetImageReadyKey(key);
-									}
-								}}
+								imageMetrics={pageImageMetricsMap[entry.key]}
+								onImageRendered={handleImageRendered}
 							/>
 						);
 					})}

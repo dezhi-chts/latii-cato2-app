@@ -117,10 +117,17 @@ export default function TakeoffItemsTable({
 	const [copyLoading, setCopyLoading] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [collapsedGroupMap, setCollapsedGroupMap] = useState<Record<string, boolean>>({});
+	const selectedRowKeyRef = useRef<number | null>(null);
 
 	useEffect(() => {
 		setTableData(items);
 	}, [items]);
+
+	useEffect(() => {
+		const nextSelectedId = selectedItemId ?? null;
+		setSelectedRowKey(nextSelectedId);
+		selectedRowKeyRef.current = nextSelectedId;
+	}, [selectedItemId]);
 
 	const normalizeLabel = (value: unknown) => formatCellValue(value).trim().toLowerCase();
 	const getLabelKey = (item: TakeoffItemRecord) =>
@@ -269,9 +276,22 @@ export default function TakeoffItemsTable({
 	const rowSelection: TableProps<TakeoffItemRecord>["rowSelection"] = {
 		type: "radio",
 		selectedRowKeys: selectedRowKey ? [selectedRowKey] : [],
-		onChange: (selectedKeys) => {
-			const key = selectedKeys?.[0] as number | undefined;
-			setSelectedRowKey(key ?? null);
+		onChange: (_selectedKeys, selectedRows) => {
+			const row = selectedRows?.[0];
+			if (!row) {
+				setSelectedRowKey(null);
+				selectedRowKeyRef.current = null;
+				return;
+			}
+
+			const nextId = row.id;
+			if (selectedRowKeyRef.current === nextId) {
+				return;
+			}
+
+			selectedRowKeyRef.current = nextId;
+			setSelectedRowKey(nextId);
+			onSelectItem(row);
 		},
 		columnWidth: 42,
 	};
@@ -782,7 +802,14 @@ export default function TakeoffItemsTable({
 						pagination={false}
 						scroll={{ x: "max-content", y: "calc(100vh - 400px)" }}
 						onRow={(record) => ({
-							onClick: () => onSelectItem(record),
+							onClick: () => {
+								if (selectedRowKeyRef.current === record.id) {
+									return;
+								}
+								selectedRowKeyRef.current = record.id;
+								setSelectedRowKey(record.id);
+								onSelectItem(record);
+							},
 						})}
 						rowClassName={(record) => {
 							const row = record as DisplayRow;

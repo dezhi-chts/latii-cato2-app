@@ -358,89 +358,51 @@ const parseViewBox = (viewBox?: string | number[]) => {
 	}
 };
 
-const applyViewportTransform = (
-	point: EvidencePoint,
-	viewBox: number[],
-	scale: number,
-	rotation: number,
-) => {
-	const normalizedRotation = ((rotation % 360) + 360) % 360;
-	const centerX = (viewBox[2] + viewBox[0]) / 2;
-	const centerY = (viewBox[3] + viewBox[1]) / 2;
-
-	let rotateA = 1;
-	let rotateB = 0;
-	let rotateC = 0;
-	let rotateD = -1;
-
-	switch (normalizedRotation) {
-		case 90:
-			rotateA = 0;
-			rotateB = 1;
-			rotateC = 1;
-			rotateD = 0;
-			break;
-		case 180:
-			rotateA = -1;
-			rotateB = 0;
-			rotateC = 0;
-			rotateD = 1;
-			break;
-		case 270:
-			rotateA = 0;
-			rotateB = -1;
-			rotateC = -1;
-			rotateD = 0;
-			break;
-		default:
-			break;
-	}
-
-	const offsetCanvasX =
-		rotateA === 0
-			? Math.abs(centerY - viewBox[1]) * scale
-			: Math.abs(centerX - viewBox[0]) * scale;
-	const offsetCanvasY =
-		rotateA === 0
-			? Math.abs(centerX - viewBox[0]) * scale
-			: Math.abs(centerY - viewBox[1]) * scale;
-
-	const transformA = rotateA * scale;
-	const transformB = rotateB * scale;
-	const transformC = rotateC * scale;
-	const transformD = rotateD * scale;
-	const transformE =
-		offsetCanvasX - transformA * centerX - transformC * centerY;
-	const transformF =
-		offsetCanvasY - transformB * centerX - transformD * centerY;
-
-	return {
-		x: transformA * point.x + transformC * point.y + transformE,
-		y: transformB * point.x + transformD * point.y + transformF,
-	};
-};
-
-const getViewportScale = (
-	viewBox: number[],
+const getPdfjsViewportDimensions = (
+	viewBox: number[] | null,
 	pageWidth: number,
 	pageHeight: number,
 	rotation: number,
 ) => {
 	const normalizedRotation = ((rotation % 360) + 360) % 360;
-	const baseWidth = Math.abs(Number(viewBox[2] || 0) - Number(viewBox[0] || 0));
-	const baseHeight = Math.abs(
-		Number(viewBox[3] || 0) - Number(viewBox[1] || 0),
-	);
+	const baseWidth = viewBox
+		? Math.abs(Number(viewBox[2] || 0) - Number(viewBox[0] || 0))
+		: pageWidth;
+	const baseHeight = viewBox
+		? Math.abs(Number(viewBox[3] || 0) - Number(viewBox[1] || 0))
+		: pageHeight;
 
 	if (!baseWidth || !baseHeight) {
-		return 1;
+		return { width: pageWidth, height: pageHeight };
 	}
 
 	if (normalizedRotation === 90 || normalizedRotation === 270) {
-		return pageWidth / baseHeight || pageHeight / baseWidth || 1;
+		return { width: baseHeight, height: baseWidth };
 	}
 
-	return pageWidth / baseWidth || pageHeight / baseHeight || 1;
+	return { width: baseWidth, height: baseHeight };
+};
+
+const pdfjsToImageCoords = (
+	x: number,
+	y: number,
+	pageWidth: number,
+	pageHeight: number,
+	rotation: number,
+) => {
+	const normalizedRotation = ((rotation % 360) + 360) % 360;
+	switch (normalizedRotation) {
+		case 0:
+			return { x: x, y: pageHeight - y };
+		case 90:
+			return { x: y, y: x };
+		case 180:
+			return { x: pageWidth - x, y: y };
+		case 270:
+			return { x: pageWidth - y, y: pageHeight - x };
+		default:
+			return { x, y };
+	}
 };
 
 export const getEvidenceBounds = (
@@ -451,16 +413,18 @@ export const getEvidenceBounds = (
 	const pageHeight = Number(evidence?.page_height_pdf || 0);
 	const viewBox = parseViewBox(evidence?.view_box);
 	const rotationAngle = Number(evidence?.rotation_angle || 0);
-	const viewportScale =
-		viewBox && viewBox.length >= 4
-			? getViewportScale(viewBox, pageWidth, pageHeight, rotationAngle)
-			: 1;
+	const viewport = getPdfjsViewportDimensions(
+		viewBox,
+		pageWidth,
+		pageHeight,
+		rotationAngle,
+	);
 
 	if (!polygon.length || !pageWidth || !pageHeight) {
 		return null;
 	}
 
-	const viewportPoints = polygon.map((point) => {
+	const imagePoints = polygon.map((point) => {
 		const normalizedPoint = {
 			x: Number(point?.x || 0),
 			y: Number(point?.y || 0),
@@ -477,16 +441,17 @@ export const getEvidenceBounds = (
 				}
 			: normalizedPoint;
 
-		return applyViewportTransform(
-			adjustedPoint,
-			viewBox,
-			viewportScale,
+		return pdfjsToImageCoords(
+			adjustedPoint.x,
+			adjustedPoint.y,
+			viewport.width,
+			viewport.height,
 			rotationAngle,
 		);
 	});
 
-	const xValues = viewportPoints.map((point) => point?.x || 0);
-	const yValues = viewportPoints.map((point) => point?.y || 0);
+	const xValues = imagePoints.map((point) => point?.x || 0);
+	const yValues = imagePoints.map((point) => point?.y || 0);
 	const left = Math.min(...xValues);
 	const top = Math.min(...yValues);
 	const right = Math.max(...xValues);
@@ -494,10 +459,12 @@ export const getEvidenceBounds = (
 
 	return {
 		id: evidence?.id || 0,
-		left: Math.max(0, (left / pageWidth) * 100),
-		top: Math.max(0, (top / pageHeight) * 100),
-		width: Math.max(0, ((right - left) / pageWidth) * 100),
-		height: Math.max(0, ((bottom - top) / pageHeight) * 100),
+		left: Math.max(0, left),
+		top: Math.max(0, top),
+		width: Math.max(0, right - left),
+		height: Math.max(0, bottom - top),
+		source_width: viewport.width,
+		source_height: viewport.height,
 	};
 };
 
