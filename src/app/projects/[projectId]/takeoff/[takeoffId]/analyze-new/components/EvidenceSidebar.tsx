@@ -65,15 +65,25 @@ function PageThumbnailCard({
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [zoomScale, setZoomScale] = useState(1);
+	const [thumbnailImageLoaded, setThumbnailImageLoaded] = useState(false);
+	const [modalImageLoaded, setModalImageLoaded] = useState(false);
 
 	const ZOOM_MIN = 0.5;
 	const ZOOM_MAX = 3;
 
+	useEffect(() => {
+		setThumbnailImageLoaded(false);
+		setModalImageLoaded(false);
+	}, [entry.imageUrl]);
+
 	const renderPreviewLayer = (
+		mode: "thumbnail" | "modal",
 		shouldCaptureMetrics = false,
-		forcePercentLayout = false,
 		evidenceBorderWidth = 1.5,
 	) => {
+		const shouldRenderBoxes =
+			mode === "thumbnail" ? thumbnailImageLoaded : modalImageLoaded;
+
 		return (
 			<div className={`py-3 relative w-full`}>
 				<img
@@ -82,6 +92,11 @@ function PageThumbnailCard({
 					className="block h-auto w-full"
 					loading="lazy"
 					onLoad={(event) => {
+						if (mode === "thumbnail") {
+							setThumbnailImageLoaded(true);
+						} else {
+							setModalImageLoaded(true);
+						}
 						if (!shouldCaptureMetrics) {
 							return;
 						}
@@ -103,55 +118,37 @@ function PageThumbnailCard({
 						});
 					}}
 				/>
-				{entry.pageEvidences.map((evidence) => {
-					const bounds = getEvidenceBounds(evidence);
-					if (!bounds) {
-						return null;
-					}
-					const sourceWidth = Number(bounds.source_width || evidence?.page_width_pdf || 0);
-					const sourceHeight = Number(bounds.source_height || evidence?.page_height_pdf || 0);
-					if (!sourceWidth || !sourceHeight) {
-						return null;
-					}
-					const leftPercent = (bounds.left / sourceWidth) * 100;
-					const topPercent = (bounds.top / sourceHeight) * 100;
-					const widthPercent = (bounds.width / sourceWidth) * 100;
-					const heightPercent = (bounds.height / sourceHeight) * 100;
-					const canUseDisplayScale =
-						Boolean(imageMetrics?.displayWidth) &&
-						Boolean(imageMetrics?.displayHeight);
-					const scaleX = canUseDisplayScale
-						? Number(imageMetrics?.displayWidth || 0) / sourceWidth
-						: 0;
-					const scaleY = canUseDisplayScale
-						? Number(imageMetrics?.displayHeight || 0) / sourceHeight
-						: 0;
+				{shouldRenderBoxes &&
+					entry.pageEvidences.map((evidence) => {
+						const bounds = getEvidenceBounds(evidence);
+						if (!bounds) {
+							return null;
+						}
+						const sourceWidth = Number(bounds.source_width || evidence?.page_width_pdf || 0);
+						const sourceHeight = Number(bounds.source_height || evidence?.page_height_pdf || 0);
+						if (!sourceWidth || !sourceHeight) {
+							return null;
+						}
+						const leftPercent = (bounds.left / sourceWidth) * 100;
+						const topPercent = (bounds.top / sourceHeight) * 100;
+						const widthPercent = (bounds.width / sourceWidth) * 100;
+						const heightPercent = (bounds.height / sourceHeight) * 100;
 
-					return (
-						<div
-							key={evidence?.id}
-							className={`absolute border-[${evidenceBorderWidth}px] border-red-500`}
-							style={{
-								left:
-									forcePercentLayout || !(canUseDisplayScale && scaleX > 0)
-										? `${leftPercent}%`
-										: `${bounds.left * scaleX}px`,
-								top:
-									forcePercentLayout || !(canUseDisplayScale && scaleY > 0)
-										? `${topPercent}%`
-										: `${bounds.top * scaleY}px`,
-								width:
-									forcePercentLayout || !(canUseDisplayScale && scaleX > 0)
-										? `${widthPercent}%`
-										: `${bounds.width * scaleX}px`,
-								height:
-									forcePercentLayout || !(canUseDisplayScale && scaleY > 0)
-										? `${heightPercent}%`
-										: `${bounds.height * scaleY}px`,
-							}}
-						/>
-					);
-				})}
+						return (
+							<div
+								key={evidence?.id}
+								className="absolute border-red-500"
+								style={{
+									borderStyle: "solid",
+									borderWidth: `${evidenceBorderWidth}px`,
+									left: `${leftPercent}%`,
+									top: `${topPercent}%`,
+									width: `${widthPercent}%`,
+									height: `${heightPercent}%`,
+								}}
+							/>
+						);
+					})}
 			</div>
 		);
 	};
@@ -192,7 +189,7 @@ function PageThumbnailCard({
 				/>
 				{entry.imageUrl ? (
 					<>
-						{renderPreviewLayer(true)}
+						{renderPreviewLayer("thumbnail", true)}
 					</>
 				) : (
 					<div className="absolute inset-0 flex items-center justify-center bg-white">
@@ -233,7 +230,7 @@ function PageThumbnailCard({
 							}}
 						>
 							{entry.imageUrl ? (
-								renderPreviewLayer(false, true, 2)
+								renderPreviewLayer("modal", false, 2)
 							) : (
 								<div className="absolute inset-0 flex items-center justify-center bg-white">
 									<Empty
