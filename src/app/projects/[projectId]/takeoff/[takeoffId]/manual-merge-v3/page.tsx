@@ -432,8 +432,8 @@ export default function ManualMergeV2Page() {
     setEvidenceByResultItemId(nextMap);
   }, []);
 
-  const fetchColumns = useCallback(async () => {
-    const result = await getTemplateById(1);
+  const fetchColumns = useCallback(async (templateId: number) => {
+    const result = await getTemplateById(templateId);
     if (result.status === "success" && result.data) {
       const fieldNames = (result.data.fields || [])
         .map((field: any) => field.name || field.field_name)
@@ -605,6 +605,7 @@ export default function ManualMergeV2Page() {
         return;
       }
       setFileId(String(firstFileId));
+      fetchColumns(takeoffRes.data?.take_off_result?.template_id || 1);
 
       await fetchLabelsAndMaybeLoadData(String(firstFileId));
     } finally {
@@ -613,7 +614,6 @@ export default function ManualMergeV2Page() {
   }, [fetchLabelsAndMaybeLoadData, takeoffId]);
 
   useEffect(() => {
-    fetchColumns();
     initPage();
   }, []);
 
