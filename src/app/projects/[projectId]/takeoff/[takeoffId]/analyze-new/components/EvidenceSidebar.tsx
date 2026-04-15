@@ -63,6 +63,8 @@ function PageThumbnailCard({
 	onImageRendered,
 }: PageThumbnailCardProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	const thumbnailImageRef = useRef<HTMLImageElement | null>(null);
+	const modalImageRef = useRef<HTMLImageElement | null>(null);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [zoomScale, setZoomScale] = useState(1);
 	const [thumbnailImageLoaded, setThumbnailImageLoaded] = useState(false);
@@ -76,6 +78,57 @@ function PageThumbnailCard({
 		setModalImageLoaded(false);
 	}, [entry.imageUrl]);
 
+	const syncImageReadyState = (
+		imageElement: HTMLImageElement,
+		mode: "thumbnail" | "modal",
+		shouldCaptureMetrics: boolean,
+	) => {
+		if (mode === "thumbnail") {
+			setThumbnailImageLoaded(true);
+		} else {
+			setModalImageLoaded(true);
+		}
+
+		if (!shouldCaptureMetrics) {
+			return;
+		}
+
+		const naturalWidth = Number(imageElement.naturalWidth || 0);
+		const naturalHeight = Number(imageElement.naturalHeight || 0);
+		const displayWidth = Number(imageElement.clientWidth || 0);
+		const displayHeight = Number(imageElement.clientHeight || 0);
+		if (!naturalWidth || !naturalHeight || !displayWidth || !displayHeight) {
+			return;
+		}
+
+		onImageRendered(entry.key, {
+			naturalWidth,
+			naturalHeight,
+			displayWidth,
+			displayHeight,
+			scaleX: displayWidth / naturalWidth,
+			scaleY: displayHeight / naturalHeight,
+		});
+	};
+
+	useEffect(() => {
+		const rafId = window.requestAnimationFrame(() => {
+			const thumbnailImage = thumbnailImageRef.current;
+			if (thumbnailImage?.complete && thumbnailImage.naturalWidth > 0) {
+				syncImageReadyState(thumbnailImage, "thumbnail", true);
+			}
+
+			const modalImage = modalImageRef.current;
+			if (modalImage?.complete && modalImage.naturalWidth > 0) {
+				syncImageReadyState(modalImage, "modal", false);
+			}
+		});
+
+		return () => {
+			window.cancelAnimationFrame(rafId);
+		};
+	}, [entry.imageUrl, previewOpen]);
+
 	const renderPreviewLayer = (
 		mode: "thumbnail" | "modal",
 		shouldCaptureMetrics = false,
@@ -87,35 +140,19 @@ function PageThumbnailCard({
 		return (
 			<div className={`py-3 relative w-full`}>
 				<img
+					ref={(element) => {
+						if (mode === "thumbnail") {
+							thumbnailImageRef.current = element;
+						} else {
+							modalImageRef.current = element;
+						}
+					}}
 					src={entry.imageUrl}
 					alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
 					className="block h-auto w-full"
 					loading="lazy"
 					onLoad={(event) => {
-						if (mode === "thumbnail") {
-							setThumbnailImageLoaded(true);
-						} else {
-							setModalImageLoaded(true);
-						}
-						if (!shouldCaptureMetrics) {
-							return;
-						}
-						const imageElement = event.currentTarget;
-						const naturalWidth = Number(imageElement.naturalWidth || 0);
-						const naturalHeight = Number(imageElement.naturalHeight || 0);
-						const displayWidth = Number(imageElement.clientWidth || 0);
-						const displayHeight = Number(imageElement.clientHeight || 0);
-						if (!naturalWidth || !naturalHeight || !displayWidth || !displayHeight) {
-							return;
-						}
-						onImageRendered(entry.key, {
-							naturalWidth,
-							naturalHeight,
-							displayWidth,
-							displayHeight,
-							scaleX: displayWidth / naturalWidth,
-							scaleY: displayHeight / naturalHeight,
-						});
+						syncImageReadyState(event.currentTarget, mode, shouldCaptureMetrics);
 					}}
 				/>
 				{shouldRenderBoxes &&
