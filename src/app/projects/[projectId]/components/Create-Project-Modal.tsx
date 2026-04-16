@@ -60,7 +60,6 @@ const CreateProjectModal = ({
     quoteFiles: UploadFile[];
   }) => {
     console.log("######### handleUpload", data);
-    return;
     //打开Create-Project-Takeoff-Modal弹窗
     onHandleUpload?.(data);
   };
