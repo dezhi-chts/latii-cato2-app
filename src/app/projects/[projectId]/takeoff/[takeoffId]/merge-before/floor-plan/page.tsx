@@ -400,6 +400,7 @@ export default function FloorPlanPage() {
           : elevationData.length;
 
       let itemInfo = { ...confirmItem.current };
+      let groupId = itemInfo.groupId;
       if (itemInfo.groupId) {
         delete itemInfo.groupId;
       }
@@ -425,7 +426,7 @@ export default function FloorPlanPage() {
         // 关闭弹窗
         setShowLabelModal(false);
         // 清除裁剪区域
-        pdfWrapperRef.current?.clearCropSections?.();
+        pdfWrapperRef.current?.removeCropSectionByIds?.([groupId]);
         // 刷新数据
         getItemsByPageEvidences(pageEvidenceId);
       } else {

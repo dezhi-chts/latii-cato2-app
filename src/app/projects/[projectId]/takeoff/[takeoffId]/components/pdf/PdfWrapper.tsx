@@ -124,7 +124,7 @@ const getResizeCursorStyle = (pointType: string) => {
 const showReadBtnGroupTypes = [GroupType.OCR];
 
 // 以下的框类型显示 确认按钮
-const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+const showDrawingIndexGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 
 // 以下的框类型显示 数字按钮
 const showNumBtnGroupTypes: GroupType[] = [
@@ -148,6 +148,9 @@ const showSelectGroupTypes = [
 	GroupType.Table,
 	GroupType.KeyNotes,
 ];
+
+// 以下的框类型显示 确认按钮
+const showConfirmBtnGroupTypes = [...showDrawingIndexGroupTypes, ...showSelectGroupTypes];
 
 const itemBoxTypes = [
 	itemBoxType.FloorPlanItem,
@@ -283,6 +286,7 @@ const PdfWrapper = forwardRef(
 				addingRect,
 				rotatePDF,
 				clearCropSections,
+				removeCropSectionByIds,
 				handleBatchSubmit,
 				handleBatchDelete,
 				checkAndHandleUnsavedCrops,
@@ -525,7 +529,7 @@ const PdfWrapper = forwardRef(
 							setFullLoading(false);
 						}
 						if (res.status === "success") {
-							setCropSections(() => []);
+							removeCropSectionByIds(filteredCropSections.map((item) => item.id));
 							if (showAlert) {
 								notification.success({
 									message: "Success",
@@ -614,7 +618,7 @@ const PdfWrapper = forwardRef(
 							</p>
 						),
 						okText: "Save",
-						cancelText: "Cancel",
+						cancelText: "Skip",
 						okButtonProps: {
 							loading: false,
 						},
@@ -625,7 +629,7 @@ const PdfWrapper = forwardRef(
 								.catch(() => resolve(false));
 						},
 						onCancel() {
-							resolve(false);
+							resolve(true);
 						},
 					});
 				});
@@ -891,6 +895,10 @@ const PdfWrapper = forwardRef(
 			setCropMode(null);
 
 			centerIndexRef.current = 0;
+		};
+
+		const removeCropSectionByIds = (ids: string[]) => {
+			setCropSections((prev) => prev.filter((item) => !ids.includes(item.id)));
 		};
 
 		const rotatePDF = useCallback(async () => {
@@ -2712,8 +2720,12 @@ const PdfWrapper = forwardRef(
 											key={item.id}
 											className={`absolute`}
 											style={{
+												position: "absolute",
 												left: minX,
 												top: minY,
+												width: width,
+												height: height,
+												pointerEvents: "none",
 											}}
 										>
 											{showNumBtn && (
@@ -2731,10 +2743,10 @@ const PdfWrapper = forwardRef(
 												/>
 											)}
 											<div
-												className="absolute flex flex-row items-center"
+												className="absolute flex flex-row items-center pointer-events-auto"
 												style={{
-													left: showSelectGroup ? width - 68 : width - 22,
-													top: 4,
+													right: 2,
+													top: 2,
 												}}
 											>
 												<div className="flex items-center gap-1">
@@ -2784,7 +2796,7 @@ const PdfWrapper = forwardRef(
 											{
 												/*showCopyBtnGroupTypes.includes(type)*/ showCopyBtn && (
 													<div
-														className="transition-all"
+														className="transition-all pointer-events-auto"
 														style={{
 															position: "absolute",
 															left: width / 2 - 50 + "px",
@@ -2909,14 +2921,11 @@ const PdfWrapper = forwardRef(
 											}
 											{showAddBtnOnBox &&
 												<div
-													className="transition-all"
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														position: "absolute",
-														left:
-															maxX > stageWidth - 30
-																? width - 30 + "px"
-																: maxX - minX + 6 + "px",
-														top: height / 2 - 10 + "px",
+														right: -26,
+														top: "50%",
+														transform: "translateY(-50%)",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -2935,14 +2944,11 @@ const PdfWrapper = forwardRef(
 												</div>}
 											{
 												showAddBtnOnBox && <div
-													className="transition-all"
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														position: "absolute",
-														left: width / 2 - 10 + "px",
-														top:
-															maxY > stageHeight - 10
-																? height - 30 + "px"
-																: height + 6 + "px",
+														left: "50%",
+														bottom: -26,
+														transform: "translateX(-50%)",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -3000,7 +3006,7 @@ const PdfWrapper = forwardRef(
 										pdfOperationType === FileOperationType.ArchitectureDrawing
 									) {
 										// ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
-										showSelectGroup = true;
+										//	showSelectGroup = true;
 										color =
 											allPageTypes[group.type as keyof typeof allPageTypes]
 												?.color ?? colorList["forumBlue-normal"];
@@ -3013,19 +3019,17 @@ const PdfWrapper = forwardRef(
 												position: "absolute",
 												left: minX,
 												top: minY,
+												width: width,
+												height: height,
+												pointerEvents: "none",
 											}}
 										>
+											{/* 右上角按钮组 */}
 											<div
-												className="absolute flex flex-row items-center gap-1"
+												className="absolute flex flex-row items-center gap-1 pointer-events-auto"
 												style={{
-													left: showReadBtnGroupTypes.includes(group.type)
-														? width - 110
-														: (showConfirmBtnGroupTypes.includes(group.type) || showItemConfirmBtnTypes.includes(group.type))
-															? width - 90
-															: showSelectGroup
-																? width - 68
-																: width - 22,
-													top: 4,
+													right: 2,
+													top: 2,
 												}}
 											>
 												{showSelectGroup && (
@@ -3060,27 +3064,20 @@ const PdfWrapper = forwardRef(
 													</div>
 												)}
 
-												{showConfirmBtnGroupTypes.includes(group.type) && (
+												{[...showConfirmBtnGroupTypes, ...showItemConfirmBtnTypes].includes(group.type) && (
 													<div
 														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
 														onClick={() => {
-															evidencSubmit(group.id);
-														}}
-													>
-														Confirm
-													</div>
-												)}
-
-												{showItemConfirmBtnTypes.includes(group.type) && (
-													<div
-														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
-														onClick={() => {
-															let revertCropSectionsData = getRevertCropSectionsData();
-															if (!revertCropSectionsData) return;
-															let findItem = revertCropSectionsData.find(
-																(item: any) => item.groupId === group.id,
-															);
-															onItemEvidenceConfirm?.(findItem);
+															if (showConfirmBtnGroupTypes.includes(group.type)) {
+																evidencSubmit(group.id);
+															} else if (showItemConfirmBtnTypes.includes(group.type)) {
+																let revertCropSectionsData = getRevertCropSectionsData();
+																if (!revertCropSectionsData) return;
+																let findItem = revertCropSectionsData.find(
+																	(item: any) => item.groupId === group.id,
+																);
+																onItemEvidenceConfirm?.(findItem);
+															}
 														}}
 													>
 														Confirm
@@ -3088,7 +3085,7 @@ const PdfWrapper = forwardRef(
 												)}
 
 												<div
-													className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md"
+													className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md pointer-events-auto"
 													onClick={() => {
 														deleteCrop(group.id);
 													}}
@@ -3103,59 +3100,49 @@ const PdfWrapper = forwardRef(
 												</div>
 											</div>
 
-											{showAddBtnOnBox && <div
-												className="transition-all"
-												style={{
-													position: "absolute",
-													left:
-														maxX > stageWidth - 30
-															? width - 30 + "px"
-															: maxX - minX + 6 + "px",
-													top: height / 2 - 10 + "px",
-													display:
-														selectedShapeId === group.id ? "block" : "none",
-												}}
-											>
+											{/* 右侧复制按钮 */}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
 												<div
-													className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														backgroundColor: color,
-													}}
-													onClick={() => {
-														copyGroupShape('group', group, "right");
-													}}
-												>
-													<span className="">+</span>
-												</div>
-											</div>
-											}
-											{showAddBtnOnBox &&
-												<div
-													className="transition-all"
-													style={{
-														position: "absolute",
-														left: width / 2 - 10 + "px",
-														top:
-															maxY > stageHeight - 10
-																? height - 30 + "px"
-																: height + 6 + "px",
-														display:
-															selectedShapeId === group.id ? "block" : "none",
+														right: -26,
+														top: "50%",
+														transform: "translateY(-50%)",
 													}}
 												>
 													<div
-														className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
-														style={{
-															backgroundColor: color,
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
+														onClick={() => {
+															copyGroupShape('group', group, "right");
 														}}
+													>
+														<span>+</span>
+													</div>
+												</div>
+											)}
+
+											{/* 底部复制按钮 */}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
+												<div
+													className="absolute flex justify-center pointer-events-auto transition-all"
+													style={{
+														left: "50%",
+														bottom: -26,
+														transform: "translateX(-50%)",
+													}}
+												>
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
 														onClick={() => {
 															copyGroupShape('group', group, "bottom");
 														}}
 													>
-														<span className="inline-block">+</span>
+														<span>+</span>
 													</div>
 												</div>
-											}
+											)}
 										</div>
 									);
 								})}
@@ -3269,7 +3256,7 @@ const ShapeWrapper = ({
 			...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
 		].join(" ") + "Z";
 
-	if (type === "evidence") {
+	if (type === "evidence" || type === "crop") {
 		let evidType = shape.type ?? "";
 		if (
 			showSelectGroupTypes.includes(evidType as any) &&
