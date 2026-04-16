@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { allPageTypes, PageType, GroupType } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
-import { CloseCircleOutlined } from "@ant-design/icons";
+import { CloseCircleOutlined, VerticalAlignBottomOutlined } from "@ant-design/icons";
 import { col } from "framer-motion/m";
 import { Tooltip } from "antd";
 const LazyImage = ({
@@ -228,7 +228,7 @@ const EvidenceThumbailList = ({
 									onClick={() => onClickEvidenceId(info.id)}
 								>
 									<div className="p-[10px]">
-										<div className="h-[30px] flex flex-row justify-between">
+										<div className="h-[30px] flex flex-row justify-between group">
 											<div className="overflow-hidden">
 												<PageTextWithTooltip text={itemPageNum} />
 											</div>
@@ -246,11 +246,9 @@ const EvidenceThumbailList = ({
 																document.body.removeChild(link);
 															}
 														}}
-														className="cursor-pointer"
+														className="pl-1 pr-2 mt-[-8px] flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
 													>
-														<p className="text-xs text-forumBlue-normal underline">
-															download
-														</p>
+														<VerticalAlignBottomOutlined className="text-forumBlue-normal" />
 													</div>
 												)
 											}

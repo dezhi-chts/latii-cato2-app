@@ -223,8 +223,7 @@ export default function LabelTable({
 			okText: "Delete",
 			onOk: async () => {
 				const prevRows = rows;
-				const nextRows = rows.filter((row) => row.id !== record.id);
-				setRows(nextRows);
+
 				setFullLoading(true);
 				const response = await evidenceBatchDelete([rowId]);
 				setFullLoading(false);
@@ -234,11 +233,12 @@ export default function LabelTable({
 						message: "Success",
 						description: `${title} item deleted.`,
 					});
+					const nextRows = rows.filter((row) => row.id !== record.id);
+					setRows(nextRows);
 					onDeleteSuccess?.(rowId);
 					return;
 				}
 
-				setRows(prevRows);
 				notification.error({
 					message: "Error",
 					description: "Failed to delete item. The table has been restored.",

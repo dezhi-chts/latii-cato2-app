@@ -9,6 +9,7 @@ import {
   ZoomControls,
   SelectPagesControls,
   AddRectBoxControls,
+  ClearAllControls
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import {
   getEvidenceBySubTextEvidenceIds,
@@ -551,6 +552,13 @@ export default function FloorPlanPage() {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };
 
+  const handleClearAllCrop = () => {
+    if (!pdfWrapperRef.current) return;
+
+    // 调用删除接口
+    pdfWrapperRef?.current?.handleBatchDelete(false);
+  };
+
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
@@ -687,7 +695,7 @@ export default function FloorPlanPage() {
           className={`min-w-0 flex-1 flex flex-col overflow-hidden ${showThumbnail ? "pl-0" : "pl-6"}`}
         >
           {/* PDF Controls Bar */}
-          <div className="flex h-12 shrink-0 items-center justify-between">
+          <div className="px-2 flex h-12 shrink-0 items-center justify-between">
             <div className="flex flex-row items-center gap-2">
               <button
                 type="button"
@@ -705,6 +713,7 @@ export default function FloorPlanPage() {
                 text="Add Box"
                 handleAddRectBox={handleAddBox}
               />
+              <ClearAllControls handleClearAll={handleClearAllCrop} />
             </div>
             <ZoomControls zoom={zoom} handleZoomChange={handleZoomChange} />
           </div>
