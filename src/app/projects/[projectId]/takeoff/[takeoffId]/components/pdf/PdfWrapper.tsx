@@ -460,7 +460,7 @@ const PdfWrapper = forwardRef(
 			});
 		};
 
-		const handleBatchDelete = async () => {
+		const handleBatchDelete = async (isDeleteParentEvidence = true) => {
 			if (pageEvidence.length === 0) {
 				message.warning("No evidence to delete.");
 				return;
@@ -474,7 +474,12 @@ const PdfWrapper = forwardRef(
 					loading: false,
 				},
 				onOk: async () => {
-					let deleteIds = pageEvidence.map((item) => item.id);
+					let evidenceList = [...pageEvidence];
+					if (!isDeleteParentEvidence) {
+						// 不删除父证据，只删除子证据
+						evidenceList = evidenceList.filter((item) => !item.isParentEvidence);
+					}
+					let deleteIds = evidenceList.map((item) => item.id);
 					batchDelete(deleteIds);
 					// 如果当前有未保存的裁剪区域，则一并删除
 					setCropSections([]);
