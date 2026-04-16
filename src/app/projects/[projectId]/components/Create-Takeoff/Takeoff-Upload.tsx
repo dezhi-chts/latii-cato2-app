@@ -76,6 +76,10 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
     setFiles(newFiles);
   };
 
+  const onChangeFiles = (fileList: UploadFile[]) => {
+    setFiles(fileList);
+  };
+
   return (
     <div className="w-full flex justify-center gap-4 rounded border border-dashed border-primaryN50 px-2 h-[140px] items-center">
       {files.map((file: UploadFile) => (
@@ -94,7 +98,17 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
             accept=".pdf"
             fileList={files}
             maxCount={maxFileLimit}
-            onChange={({ fileList }) => setFiles(fileList)}
+            beforeUpload={(file) => {
+              const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+              if (!isPDF) {
+                message.error("Please upload PDF files only.");
+                return Upload.LIST_IGNORE;
+              }
+              return true;
+            }}
+            onChange={({ fileList }) => {
+              onChangeFiles?.(fileList);
+            }}
             showUploadList={false}
           >
             <p className={`${files.length === 0 ? "text-forumBlue-normal" : "text-grey-light-strong"} underline cursor-pointer hover:opacity-80 active:opacity-60`}>
@@ -104,8 +118,8 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
           {
             files.length === 0 && (
               <p className="text-grey-light-strong text-center">
-                Up to 2 files. Only the PDF format is accepted. Maximum weight of
-                00MG
+                <span>Up to 2 files. Only the PDF format is accepted.</span>
+                {/* <span>Maximum weight of 00MG</span> */}
               </p>
             )
           }

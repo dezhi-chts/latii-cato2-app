@@ -434,6 +434,7 @@ const IdentIndex = forwardRef<IdentIndexRef, {
               onDeleteEvidence={handleDeleteEvidence}
               onUpdateEvidence={handleUpdateEvidence}
               onCropSectionsCount={handleCropsCount}
+              onChangeZoom={handleZoomChange}
             ></PdfWrapper>
           </div>
         </div>

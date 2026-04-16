@@ -38,7 +38,7 @@ const EditableSubText = ({ value, color, onChange }: EditableSubTextProps) => {
   };
 
   return (
-    <div className="pl-[2px] inline-block relative">
+    <div className="pl-[2px] inline-block relative pointer-events-auto">
       {/* 隐藏的 span 用于测量文本宽度 */}
       <span
         ref={spanRef}

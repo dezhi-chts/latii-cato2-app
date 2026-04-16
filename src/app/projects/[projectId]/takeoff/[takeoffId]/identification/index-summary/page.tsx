@@ -419,6 +419,7 @@ const IdentSummary = () => {
               allEvidence={fileEvidence}
               onTotalPages={setTotalPage}
               onCropSectionsCount={handleCropsCount}
+              onChangeZoom={debouncedZoomChange}
             ></PdfWrapper>
           </div>
         </div>

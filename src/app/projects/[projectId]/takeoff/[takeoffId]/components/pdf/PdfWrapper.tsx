@@ -124,7 +124,7 @@ const getResizeCursorStyle = (pointType: string) => {
 const showReadBtnGroupTypes = [GroupType.OCR];
 
 // 以下的框类型显示 确认按钮
-const showConfirmBtnGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
+const showDrawingIndexGroupTypes = [GroupType.DrawingIndex, GroupType.TitleInfo];
 
 // 以下的框类型显示 数字按钮
 const showNumBtnGroupTypes: GroupType[] = [
@@ -148,6 +148,9 @@ const showSelectGroupTypes = [
 	GroupType.Table,
 	GroupType.KeyNotes,
 ];
+
+// 以下的框类型显示 确认按钮
+const showConfirmBtnGroupTypes = [...showDrawingIndexGroupTypes, ...showSelectGroupTypes];
 
 const itemBoxTypes = [
 	itemBoxType.FloorPlanItem,
@@ -184,6 +187,7 @@ const PdfWrapper = forwardRef(
 			onSuccessOCRText,
 			onItemEvidenceConfirm,
 			onChangeSelectedEvidence,
+			onChangeZoom,
 		}: PdfWrapperProps,
 		ref: any,
 	) => {
@@ -192,10 +196,14 @@ const PdfWrapper = forwardRef(
 		const MAX_CANVAS_SIZE = 8192;
 
 		const pdfCanvas = useRef<HTMLCanvasElement>(null);
+		const pdfContentRef = useRef<HTMLDivElement>(null);
 		const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 		const renderTaskRef = useRef<any>(null);
 		const loadingTaskRef = useRef<any>(null);
 		//  const pdfPageText = useRef<TextContent>({} as TextContent);
+		const MIN_SCALE = 0.5;
+		const MAX_SCALE = 3;
+		const WHEEL_ZOOM_STEP = 0.1;
 
 		const scrollRef = useRef<HTMLDivElement>(null);
 		const [isDragging, setIsDragging] = useState(false);
@@ -213,6 +221,14 @@ const PdfWrapper = forwardRef(
 
 		const [stageWidth, setStageWidth] = useState(0);
 		const [stageHeight, setStageHeight] = useState(0);
+		const zoomModifierPressedRef = useRef(false);
+		const zoomAnchorRef = useRef<{
+			pdfX: number;
+			pdfY: number;
+			mouseX: number;
+			mouseY: number;
+			targetScale: number;
+		} | null>(null);
 
 		const [showEvidence, setShowEvidence] = useState<boolean>(true);
 
@@ -271,6 +287,7 @@ const PdfWrapper = forwardRef(
 				addingRect,
 				rotatePDF,
 				clearCropSections,
+				removeCropSectionByIds,
 				handleBatchSubmit,
 				handleBatchDelete,
 				checkAndHandleUnsavedCrops,
@@ -306,6 +323,27 @@ const PdfWrapper = forwardRef(
 					console.error("Failed to get canvas context");
 				}
 			}
+		}, []);
+
+		useEffect(() => {
+			const handleKeyDown = (event: KeyboardEvent) => {
+				zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+			};
+			const handleKeyUp = (event: KeyboardEvent) => {
+				zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+			};
+			const handleWindowBlur = () => {
+				zoomModifierPressedRef.current = false;
+			};
+
+			window.addEventListener("keydown", handleKeyDown);
+			window.addEventListener("keyup", handleKeyUp);
+			window.addEventListener("blur", handleWindowBlur);
+			return () => {
+				window.removeEventListener("keydown", handleKeyDown);
+				window.removeEventListener("keyup", handleKeyUp);
+				window.removeEventListener("blur", handleWindowBlur);
+			};
 		}, []);
 
 		// 加载PDF文档
@@ -513,7 +551,7 @@ const PdfWrapper = forwardRef(
 							setFullLoading(false);
 						}
 						if (res.status === "success") {
-							setCropSections(() => []);
+							removeCropSectionByIds(filteredCropSections.map((item) => item.id));
 							if (showAlert) {
 								notification.success({
 									message: "Success",
@@ -602,7 +640,7 @@ const PdfWrapper = forwardRef(
 							</p>
 						),
 						okText: "Save",
-						cancelText: "Cancel",
+						cancelText: "Skip",
 						okButtonProps: {
 							loading: false,
 						},
@@ -613,7 +651,7 @@ const PdfWrapper = forwardRef(
 								.catch(() => resolve(false));
 						},
 						onCancel() {
-							resolve(false);
+							resolve(true);
 						},
 					});
 				});
@@ -879,6 +917,10 @@ const PdfWrapper = forwardRef(
 			setCropMode(null);
 
 			centerIndexRef.current = 0;
+		};
+
+		const removeCropSectionByIds = (ids: string[]) => {
+			setCropSections((prev) => prev.filter((item) => !ids.includes(item.id)));
 		};
 
 		const rotatePDF = useCallback(async () => {
@@ -2018,6 +2060,115 @@ const PdfWrapper = forwardRef(
 			setIsDragging(false);
 		};
 
+		const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+			const modifierActive = zoomModifierPressedRef.current;
+			if (!modifierActive || (!e.ctrlKey && !e.metaKey)) return;
+			const container = scrollRef.current;
+			const contentEl = pdfContentRef.current;
+			const viewport = currentViewportRef.current;
+			if (!container || !contentEl || !viewport) return;
+			if (e.nativeEvent.cancelable) {
+				e.preventDefault();
+			}
+			e.stopPropagation();
+			const containerRect = container.getBoundingClientRect();
+			const contentRect = contentEl.getBoundingClientRect();
+			const mouseX = e.clientX - containerRect.left;
+			const mouseY = e.clientY - containerRect.top;
+
+			const direction = e.deltaY < 0 ? 1 : -1;
+			const prevScale = Number(scale.toFixed(2));
+			const next = Math.min(
+				MAX_SCALE,
+				Math.max(MIN_SCALE, scale + direction * WHEEL_ZOOM_STEP),
+			);
+			const nextScale = Number(next.toFixed(2));
+			onUpdateSafeZoom?.(nextScale);
+			if (nextScale === prevScale) {
+				return;
+			}
+
+			const viewX = e.clientX - contentRect.left;
+			const viewY = e.clientY - contentRect.top;
+			const [pdfX, pdfY] = viewport.convertToPdfPoint(viewX, viewY);
+			zoomAnchorRef.current = {
+				pdfX,
+				pdfY,
+				mouseX,
+				mouseY,
+				targetScale: nextScale,
+			};
+
+			setShowEvidence(false);
+			setScale(nextScale);
+			onChangeZoom?.(nextScale);
+		};
+
+		useEffect(() => {
+			const anchor = zoomAnchorRef.current;
+			const container = scrollRef.current;
+			const contentEl = pdfContentRef.current;
+			const viewport = currentViewportRef.current;
+			if (!anchor || !container || !contentEl || !viewport || isRendering) return;
+			if (Math.abs((viewport.scale ?? 0) - anchor.targetScale) > 0.001) return;
+
+			requestAnimationFrame(() => {
+				const latestContainer = scrollRef.current;
+				const latestContent = pdfContentRef.current;
+				const latestViewport = currentViewportRef.current;
+				const latestAnchor = zoomAnchorRef.current;
+				if (
+					!latestContainer ||
+					!latestContent ||
+					!latestViewport ||
+					!latestAnchor
+				) {
+					return;
+				}
+				if (
+					Math.abs((latestViewport.scale ?? 0) - latestAnchor.targetScale) >
+					0.001
+				) {
+					return;
+				}
+
+				const [nextViewX, nextViewY] = latestViewport.convertToViewportPoint(
+					latestAnchor.pdfX,
+					latestAnchor.pdfY,
+				);
+				if (!Number.isFinite(nextViewX) || !Number.isFinite(nextViewY)) {
+					zoomAnchorRef.current = null;
+					return;
+				}
+
+				const latestContainerRect = latestContainer.getBoundingClientRect();
+				const latestContentRect = latestContent.getBoundingClientRect();
+				const currentScreenX =
+					latestContentRect.left - latestContainerRect.left + nextViewX;
+				const currentScreenY =
+					latestContentRect.top - latestContainerRect.top + nextViewY;
+				let targetLeft =
+					latestContainer.scrollLeft + (currentScreenX - latestAnchor.mouseX);
+				let targetTop =
+					latestContainer.scrollTop + (currentScreenY - latestAnchor.mouseY);
+
+				const maxLeft = Math.max(
+					0,
+					latestContainer.scrollWidth - latestContainer.clientWidth,
+				);
+				const maxTop = Math.max(
+					0,
+					latestContainer.scrollHeight - latestContainer.clientHeight,
+				);
+				targetLeft = Math.max(0, Math.min(targetLeft, maxLeft));
+				targetTop = Math.max(0, Math.min(targetTop, maxTop));
+
+				latestContainer.scrollLeft = Math.round(targetLeft);
+				latestContainer.scrollTop = Math.round(targetTop);
+				zoomAnchorRef.current = null;
+			});
+		}, [scale, stageWidth, stageHeight, isRendering]);
+
 		const cleanupPreviousPDF = () => {
 			if (pdfDoc.current) {
 				pdfDoc.current.destroy();
@@ -2332,17 +2483,25 @@ const PdfWrapper = forwardRef(
 						<div
 							ref={scrollRef}
 							className="flex-1 min-h-0 overflow-auto"
+							onWheel={handleWheelZoom}
 							style={
 								operationMode === "edit"
 									? {
 										display: "grid",
 										alignItems: "center",
 										justifyItems: "center",
+										cursor:
+											cropMode === null
+												? isDragging
+													? "grabbing"
+													: "grab"
+												: "default",
 									}
 									: {}
 							}
 						>
 							<div
+								ref={pdfContentRef}
 								className="border border-x-primaryN30"
 								style={{
 									position: "relative",
@@ -2366,6 +2525,12 @@ const PdfWrapper = forwardRef(
 										top: 0,
 										left: 0,
 										touchAction: "inherit",
+										cursor:
+											cropMode === null
+												? isDragging
+													? "grabbing"
+													: "grab"
+												: "default",
 									}}
 									onClick={(e) => {
 										if (e.target === e.target.getStage()) {
@@ -2580,8 +2745,12 @@ const PdfWrapper = forwardRef(
 											key={item.id}
 											className={`absolute`}
 											style={{
+												position: "absolute",
 												left: minX,
 												top: minY,
+												width: width,
+												height: height,
+												pointerEvents: "none",
 											}}
 										>
 											{showNumBtn && (
@@ -2599,10 +2768,10 @@ const PdfWrapper = forwardRef(
 												/>
 											)}
 											<div
-												className="absolute flex flex-row items-center"
+												className="absolute flex flex-row items-center pointer-events-auto"
 												style={{
-													left: showSelectGroup ? width - 68 : width - 22,
-													top: 4,
+													right: 2,
+													top: 2,
 												}}
 											>
 												<div className="flex items-center gap-1">
@@ -2652,7 +2821,7 @@ const PdfWrapper = forwardRef(
 											{
 												/*showCopyBtnGroupTypes.includes(type)*/ showCopyBtn && (
 													<div
-														className="transition-all"
+														className="transition-all pointer-events-auto"
 														style={{
 															position: "absolute",
 															left: width / 2 - 50 + "px",
@@ -2777,14 +2946,11 @@ const PdfWrapper = forwardRef(
 											}
 											{showAddBtnOnBox &&
 												<div
-													className="transition-all"
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														position: "absolute",
-														left:
-															maxX > stageWidth - 30
-																? width - 30 + "px"
-																: maxX - minX + 6 + "px",
-														top: height / 2 - 10 + "px",
+														right: -26,
+														top: "50%",
+														transform: "translateY(-50%)",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -2803,14 +2969,11 @@ const PdfWrapper = forwardRef(
 												</div>}
 											{
 												showAddBtnOnBox && <div
-													className="transition-all"
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														position: "absolute",
-														left: width / 2 - 10 + "px",
-														top:
-															maxY > stageHeight - 10
-																? height - 30 + "px"
-																: height + 6 + "px",
+														left: "50%",
+														bottom: -26,
+														transform: "translateX(-50%)",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -2868,7 +3031,7 @@ const PdfWrapper = forwardRef(
 										pdfOperationType === FileOperationType.ArchitectureDrawing
 									) {
 										// ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
-										showSelectGroup = true;
+										//	showSelectGroup = true;
 										color =
 											allPageTypes[group.type as keyof typeof allPageTypes]
 												?.color ?? colorList["forumBlue-normal"];
@@ -2881,19 +3044,17 @@ const PdfWrapper = forwardRef(
 												position: "absolute",
 												left: minX,
 												top: minY,
+												width: width,
+												height: height,
+												pointerEvents: "none",
 											}}
 										>
+											{/* 右上角按钮组 */}
 											<div
-												className="absolute flex flex-row items-center gap-1"
+												className="absolute flex flex-row items-center gap-1 pointer-events-auto"
 												style={{
-													left: showReadBtnGroupTypes.includes(group.type)
-														? width - 110
-														: (showConfirmBtnGroupTypes.includes(group.type) || showItemConfirmBtnTypes.includes(group.type))
-															? width - 90
-															: showSelectGroup
-																? width - 68
-																: width - 22,
-													top: 4,
+													right: 2,
+													top: 2,
 												}}
 											>
 												{showSelectGroup && (
@@ -2928,27 +3089,20 @@ const PdfWrapper = forwardRef(
 													</div>
 												)}
 
-												{showConfirmBtnGroupTypes.includes(group.type) && (
+												{[...showConfirmBtnGroupTypes, ...showItemConfirmBtnTypes].includes(group.type) && (
 													<div
 														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
 														onClick={() => {
-															evidencSubmit(group.id);
-														}}
-													>
-														Confirm
-													</div>
-												)}
-
-												{showItemConfirmBtnTypes.includes(group.type) && (
-													<div
-														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
-														onClick={() => {
-															let revertCropSectionsData = getRevertCropSectionsData();
-															if (!revertCropSectionsData) return;
-															let findItem = revertCropSectionsData.find(
-																(item: any) => item.groupId === group.id,
-															);
-															onItemEvidenceConfirm?.(findItem);
+															if (showConfirmBtnGroupTypes.includes(group.type)) {
+																evidencSubmit(group.id);
+															} else if (showItemConfirmBtnTypes.includes(group.type)) {
+																let revertCropSectionsData = getRevertCropSectionsData();
+																if (!revertCropSectionsData) return;
+																let findItem = revertCropSectionsData.find(
+																	(item: any) => item.groupId === group.id,
+																);
+																onItemEvidenceConfirm?.(findItem);
+															}
 														}}
 													>
 														Confirm
@@ -2956,7 +3110,7 @@ const PdfWrapper = forwardRef(
 												)}
 
 												<div
-													className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md"
+													className="h-[20px] px-[2px] bg-white rounded-full cursor-pointer shadow-md pointer-events-auto"
 													onClick={() => {
 														deleteCrop(group.id);
 													}}
@@ -2971,59 +3125,49 @@ const PdfWrapper = forwardRef(
 												</div>
 											</div>
 
-											{showAddBtnOnBox && <div
-												className="transition-all"
-												style={{
-													position: "absolute",
-													left:
-														maxX > stageWidth - 30
-															? width - 30 + "px"
-															: maxX - minX + 6 + "px",
-													top: height / 2 - 10 + "px",
-													display:
-														selectedShapeId === group.id ? "block" : "none",
-												}}
-											>
+											{/* 右侧复制按钮 */}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
 												<div
-													className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
+													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														backgroundColor: color,
-													}}
-													onClick={() => {
-														copyGroupShape('group', group, "right");
-													}}
-												>
-													<span className="">+</span>
-												</div>
-											</div>
-											}
-											{showAddBtnOnBox &&
-												<div
-													className="transition-all"
-													style={{
-														position: "absolute",
-														left: width / 2 - 10 + "px",
-														top:
-															maxY > stageHeight - 10
-																? height - 30 + "px"
-																: height + 6 + "px",
-														display:
-															selectedShapeId === group.id ? "block" : "none",
+														right: -26,
+														top: "50%",
+														transform: "translateY(-50%)",
 													}}
 												>
 													<div
-														className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
-														style={{
-															backgroundColor: color,
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
+														onClick={() => {
+															copyGroupShape('group', group, "right");
 														}}
+													>
+														<span>+</span>
+													</div>
+												</div>
+											)}
+
+											{/* 底部复制按钮 */}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
+												<div
+													className="absolute flex justify-center pointer-events-auto transition-all"
+													style={{
+														left: "50%",
+														bottom: -26,
+														transform: "translateX(-50%)",
+													}}
+												>
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
 														onClick={() => {
 															copyGroupShape('group', group, "bottom");
 														}}
 													>
-														<span className="inline-block">+</span>
+														<span>+</span>
 													</div>
 												</div>
-											}
+											)}
 										</div>
 									);
 								})}
@@ -3137,7 +3281,7 @@ const ShapeWrapper = ({
 			...relativePolygons.slice(1).map((p) => `L ${p.x} ${p.y}`),
 		].join(" ") + "Z";
 
-	if (type === "evidence") {
+	if (type === "evidence" || type === "crop") {
 		let evidType = shape.type ?? "";
 		if (
 			showSelectGroupTypes.includes(evidType as any) &&
@@ -3195,6 +3339,7 @@ const ShapeWrapper = ({
 				stroke={color}
 				strokeWidth={shape?.isParentEvidence ? 3 : 1}
 				dash={shape?.isParentEvidence ? [10, 5] : undefined}
+				listening={!shape?.isParentEvidence}
 				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {

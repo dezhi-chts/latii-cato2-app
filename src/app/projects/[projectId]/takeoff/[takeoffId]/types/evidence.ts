@@ -331,6 +331,7 @@ export interface PdfWrapperProps {
   onSuccessOCRText?: (text: string) => void; // OCR识别成功后，通知父组件
   onItemEvidenceConfirm?: (evidenceInfo: any) => void; // 确认evidence item后，通知父组件
   onChangeSelectedEvidence?: (evidenceIds: number[]) => void; // 选中的evidence ids变化时，通知父组件
+  onChangeZoom?: (zoom: number) => void; // 缩放比例变化时，通知父组件
 }
 
 export interface PdfWrapperRefMethods {
@@ -339,6 +340,7 @@ export interface PdfWrapperRefMethods {
   addingRect: (rect: { type: string; isSaveEvidence?: boolean }) => void; //添加矩形框
   rotatePDF: () => void; //旋转PDF
   clearCropSections: () => void; //清除所有裁剪区域
+  removeCropSectionByIds: (ids: string[]) => void; //根据id删除裁剪区域
   handleBatchSubmit: () => void; //批量提交
   handleBatchDelete: () => void; //批量删除
   checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域

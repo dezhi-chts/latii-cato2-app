@@ -139,13 +139,13 @@ const ContentView = ({
         </div>
       </div>
       {!isEmptyContent ? (
-        <div className="w-[500px]">
+        <div className="w-[500px] h-[calc(100%-110px)]">
           <div className="w-full h-[28px] flex flex-row items-center bg-forumBlue-light text-xs text-forumBlue-normal rounded-tl-md rounded-tr-md">
             <div className="w-[100px] text-center">Page</div>
             <div className="flex-1 text-center">Index</div>
             <div className="w-[200px] text-center">Type</div>
           </div>
-          <div className="pr-2 flex-1 overflow-y-auto">
+          <div className="pr-2 flex-1 max-h-[calc(100%-20px)] overflow-y-auto">
             {filteredData?.map((item: any) => contentItem(item))}
           </div>
         </div>

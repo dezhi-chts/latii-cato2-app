@@ -362,6 +362,7 @@ export default function AddBoxModal({
 									onAppendEvidence={handleAppendEvidence}
 									onDeleteEvidence={handleDeleteEvidence}
 									onUpdateEvidence={handleUpdateEvidence}
+									onChangeZoom={handleZoomChange}
 								/>
 							</div>
 						</div>

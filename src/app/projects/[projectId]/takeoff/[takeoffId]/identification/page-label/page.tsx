@@ -572,7 +572,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 	const handleAddRectBox = (type: string) => {
 		if (pdfRef.current && pdfRef.current?.addingRect) {
-			pdfRef.current?.addingRect({ type, isSaveEvidence: true });
+			pdfRef.current?.addingRect({ type, isSaveEvidence: false });
 		}
 	};
 
@@ -1011,12 +1011,14 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 								zoom={zoom}
 								page={page}
 								allEvidence={fileEvidence}
+								showAddBtnOnBox={true}
 								onChangePage={setPage}
 								onTotalPages={setTotalPage}
 								onAppendEvidence={handleAppendEvidence}
 								onDeleteEvidence={handleDeleteEvidence}
 								onUpdateEvidence={handleUpdateEvidence}
 								onCropSectionsCount={handleCropsCount}
+								onChangeZoom={debouncedZoomChange}
 							></PdfWrapper>
 						</div>
 					</div>

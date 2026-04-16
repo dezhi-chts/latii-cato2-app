@@ -312,6 +312,7 @@ export default function ManualDrawModal({
 						onAppendEvidence={handleAppendEvidence}
 						onDeleteEvidence={handleDeleteEvidence}
 						onUpdateEvidence={handleUpdateEvidence}
+						onChangeZoom={handleZoomChange}
 					/>
 				</div>
 

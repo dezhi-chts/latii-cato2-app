@@ -239,7 +239,7 @@ export const FieldEditor = ({
               </div>
               <div>
                 <button
-                  className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+                  className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors ${disabelEdit ? 'bg-forumBlue-light-hover' : 'bg-grey-light'} text-forumBlue-dark-active`}
                   onClick={() => handleAddValue()}
                   disabled={disabelEdit}
                 >
@@ -286,6 +286,7 @@ export const FieldEditor = ({
                         className={`text-[10px] px-3 py-0.5 rounded-lg cursor-pointer ${formData?.config_json?.default_value === item ? "text-[#5856D7] bg-[#5856D733]" : "bg-grey-light-hover text-grey-light-strong"
                           }`}
                         onClick={(e) => {
+                          if (disabelEdit) return;
                           handleValuesDefault(item);
                         }}
                       >

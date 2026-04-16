@@ -60,6 +60,7 @@ const CreateProjectModal = ({
     quoteFiles: UploadFile[];
   }) => {
     console.log("######### handleUpload", data);
+    return;
     //打开Create-Project-Takeoff-Modal弹窗
     onHandleUpload?.(data);
   };
@@ -131,12 +132,12 @@ const CreateProjectModal = ({
         </p>
       }
       centered={true}
-      width={1250}
+      width={'auto'}
       footer={null}
       onCancel={closeModal}
     >
       <div className="p-2 h-[710px] flex flex-row justify-between font-nunito">
-        <div className="w-[400px] flex flex-col border border-grey-light-hover rounded-md overflow-hidden">
+        {/* <div className="w-[400px] flex flex-col border border-grey-light-hover rounded-md overflow-hidden">
           <div className="px-5 my-4 text-lg">Start from Blank Template</div>
           <div className="px-5 py-2 overflow-y-auto">
             <ProjectForm form={form} setForm={setForm} />
@@ -154,15 +155,15 @@ const CreateProjectModal = ({
               {loading ? "Creating..." : "Create"}
             </Button>
           </div>
-        </div>
-        <div className="px-5 w-[720px] flex flex-col border border-grey-light-hover rounded-md">
+        </div> */}
+        <div className="px-5 w-[740px] flex flex-col border border-grey-light-hover rounded-md">
           {/* <div className="my-4 text-lg">Start from Takeoff</div> */}
           <div className="flex flex-row justify-between">
             <div>
               <div className="pt-2 flex flex-row items-center">
                 <div className="flex flex-row gap-2">
                   <Image
-                    className="-ml-[24px]"
+                    className="-ml-[20px]"
                     src="/assets/icons/cato-quote.svg"
                     alt="takeoff icon"
                     width={170}
