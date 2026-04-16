@@ -42,7 +42,7 @@ export default function ImageList({
 							key={image.id}
 							className="relative aspect-square rounded-md overflow-hidden border border-primaryN30"
 						>
-							<div className="absolute top-0 left-0 px-2 py-1 bg-primaryN20 text-primaryN90 rounded-md z-30">
+							<div className="px-2 py-1 bg-primaryN20 text-primaryN90 rounded-md z-30">
 								{label}
 							</div>
 							<Image

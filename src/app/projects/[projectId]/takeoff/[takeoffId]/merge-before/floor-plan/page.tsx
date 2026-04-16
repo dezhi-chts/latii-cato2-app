@@ -422,6 +422,7 @@ export default function FloorPlanPage() {
       if (res.status === "success") {
         notification.success({
           message: "Confirm success",
+          duration: 1,
         });
         // 关闭弹窗
         setShowLabelModal(false);

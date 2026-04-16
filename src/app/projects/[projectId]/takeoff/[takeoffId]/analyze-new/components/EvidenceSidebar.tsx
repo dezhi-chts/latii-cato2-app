@@ -72,6 +72,7 @@ function PageThumbnailCard({
 		scrollLeft: 0,
 		scrollTop: 0,
 	});
+	const zoomModifierPressedRef = useRef(false);
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [zoomScale, setZoomScale] = useState(1);
 	const [isModalDragging, setIsModalDragging] = useState(false);
@@ -205,8 +206,11 @@ function PageThumbnailCard({
 	};
 
 	const handleModalWheelZoom = (event: React.WheelEvent<HTMLDivElement>) => {
-		if (!event.ctrlKey && !event.metaKey) return;
-		event.preventDefault();
+		const modifierActive = zoomModifierPressedRef.current;
+		if (!modifierActive || (!event.ctrlKey && !event.metaKey)) return;
+		if (event.nativeEvent.cancelable) {
+			event.preventDefault();
+		}
 		event.stopPropagation();
 		const direction = event.deltaY < 0 ? 1 : -1;
 		handleZoomChange(zoomScale + direction * WHEEL_ZOOM_STEP);
@@ -253,6 +257,29 @@ function PageThumbnailCard({
 		if (!previewOpen) {
 			setIsModalDragging(false);
 		}
+	}, [previewOpen]);
+
+	useEffect(() => {
+		if (!previewOpen) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+		};
+		const handleKeyUp = (event: KeyboardEvent) => {
+			zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+		};
+		const handleWindowBlur = () => {
+			zoomModifierPressedRef.current = false;
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		window.addEventListener("keyup", handleKeyUp);
+		window.addEventListener("blur", handleWindowBlur);
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+			window.removeEventListener("keyup", handleKeyUp);
+			window.removeEventListener("blur", handleWindowBlur);
+			zoomModifierPressedRef.current = false;
+		};
 	}, [previewOpen]);
 
 

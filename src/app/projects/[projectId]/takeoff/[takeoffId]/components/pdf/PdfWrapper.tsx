@@ -221,6 +221,7 @@ const PdfWrapper = forwardRef(
 
 		const [stageWidth, setStageWidth] = useState(0);
 		const [stageHeight, setStageHeight] = useState(0);
+		const zoomModifierPressedRef = useRef(false);
 		const zoomAnchorRef = useRef<{
 			pdfX: number;
 			pdfY: number;
@@ -322,6 +323,27 @@ const PdfWrapper = forwardRef(
 					console.error("Failed to get canvas context");
 				}
 			}
+		}, []);
+
+		useEffect(() => {
+			const handleKeyDown = (event: KeyboardEvent) => {
+				zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+			};
+			const handleKeyUp = (event: KeyboardEvent) => {
+				zoomModifierPressedRef.current = event.ctrlKey || event.metaKey;
+			};
+			const handleWindowBlur = () => {
+				zoomModifierPressedRef.current = false;
+			};
+
+			window.addEventListener("keydown", handleKeyDown);
+			window.addEventListener("keyup", handleKeyUp);
+			window.addEventListener("blur", handleWindowBlur);
+			return () => {
+				window.removeEventListener("keydown", handleKeyDown);
+				window.removeEventListener("keyup", handleKeyUp);
+				window.removeEventListener("blur", handleWindowBlur);
+			};
 		}, []);
 
 		// 加载PDF文档
@@ -2039,12 +2061,15 @@ const PdfWrapper = forwardRef(
 		};
 
 		const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
-			if (!e.ctrlKey && !e.metaKey) return;
+			const modifierActive = zoomModifierPressedRef.current;
+			if (!modifierActive || (!e.ctrlKey && !e.metaKey)) return;
 			const container = scrollRef.current;
 			const contentEl = pdfContentRef.current;
 			const viewport = currentViewportRef.current;
 			if (!container || !contentEl || !viewport) return;
-			e.preventDefault();
+			if (e.nativeEvent.cancelable) {
+				e.preventDefault();
+			}
 			e.stopPropagation();
 			const containerRect = container.getBoundingClientRect();
 			const contentRect = contentEl.getBoundingClientRect();
