@@ -63,15 +63,24 @@ function PageThumbnailCard({
 	onImageRendered,
 }: PageThumbnailCardProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
+	const modalScrollRef = useRef<HTMLDivElement | null>(null);
 	const thumbnailImageRef = useRef<HTMLImageElement | null>(null);
 	const modalImageRef = useRef<HTMLImageElement | null>(null);
+	const modalDragStartRef = useRef({
+		x: 0,
+		y: 0,
+		scrollLeft: 0,
+		scrollTop: 0,
+	});
 	const [previewOpen, setPreviewOpen] = useState(false);
 	const [zoomScale, setZoomScale] = useState(1);
+	const [isModalDragging, setIsModalDragging] = useState(false);
 	const [thumbnailImageLoaded, setThumbnailImageLoaded] = useState(false);
 	const [modalImageLoaded, setModalImageLoaded] = useState(false);
 
 	const ZOOM_MIN = 0.5;
 	const ZOOM_MAX = 3;
+	const WHEEL_ZOOM_STEP = 0.1;
 
 	useEffect(() => {
 		setThumbnailImageLoaded(false);
@@ -195,6 +204,57 @@ function PageThumbnailCard({
 		setZoomScale(clampedValue);
 	};
 
+	const handleModalWheelZoom = (event: React.WheelEvent<HTMLDivElement>) => {
+		if (!event.ctrlKey && !event.metaKey) return;
+		event.preventDefault();
+		event.stopPropagation();
+		const direction = event.deltaY < 0 ? 1 : -1;
+		handleZoomChange(zoomScale + direction * WHEEL_ZOOM_STEP);
+	};
+
+	const handleModalMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+		if (event.button !== 0 || !entry.imageUrl) return;
+		const container = modalScrollRef.current;
+		if (!container) return;
+		modalDragStartRef.current = {
+			x: event.clientX,
+			y: event.clientY,
+			scrollLeft: container.scrollLeft,
+			scrollTop: container.scrollTop,
+		};
+		setIsModalDragging(true);
+		event.preventDefault();
+	};
+
+	useEffect(() => {
+		if (!isModalDragging) return;
+		const handleMouseMove = (event: MouseEvent) => {
+			const container = modalScrollRef.current;
+			if (!container) return;
+			const dx = event.clientX - modalDragStartRef.current.x;
+			const dy = event.clientY - modalDragStartRef.current.y;
+			container.scrollLeft = modalDragStartRef.current.scrollLeft - dx;
+			container.scrollTop = modalDragStartRef.current.scrollTop - dy;
+		};
+
+		const handleMouseUp = () => {
+			setIsModalDragging(false);
+		};
+
+		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mouseup", handleMouseUp);
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isModalDragging]);
+
+	useEffect(() => {
+		if (!previewOpen) {
+			setIsModalDragging(false);
+		}
+	}, [previewOpen]);
+
 
 	return (
 		<div
@@ -244,7 +304,10 @@ function PageThumbnailCard({
 
 			<Modal
 				open={previewOpen}
-				onCancel={() => setPreviewOpen(false)}
+				onCancel={() => {
+					setPreviewOpen(false);
+					setIsModalDragging(false);
+				}}
 				footer={null}
 				width={'80vw'}
 				destroyOnClose
@@ -258,7 +321,20 @@ function PageThumbnailCard({
 						/>
 						<span className="ml-6 text-xs text-grey-normal">{'Page ' + entry.pageNumber}</span>
 					</div>
-					<div className="min-h-0 flex-1 overflow-auto rounded-lg border border-primaryN30 bg-primaryN20 p-4">
+					<div
+						ref={modalScrollRef}
+						className="min-h-0 flex-1 overflow-auto rounded-lg border border-primaryN30 bg-primaryN20 p-4"
+						onWheel={handleModalWheelZoom}
+						onMouseDown={handleModalMouseDown}
+						style={{
+							cursor: entry.imageUrl
+								? isModalDragging
+									? "grabbing"
+									: "grab"
+								: "default",
+							userSelect: isModalDragging ? "none" : "auto",
+						}}
+					>
 						<div
 							className="relative rounded-lg bg-white"
 							style={{
