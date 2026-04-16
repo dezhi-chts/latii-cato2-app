@@ -419,6 +419,7 @@ const CreateProjectTakeoffModal = ({
                 onTotalPages={setTotalPage}
                 onUpdateSafeZoom={handleSafeZoomChange}
                 onSuccessOCRText={handleOCRText}
+                onChangeZoom={debouncedZoomChange}
               />
             </div>
           </div>

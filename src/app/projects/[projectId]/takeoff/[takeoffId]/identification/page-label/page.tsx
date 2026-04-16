@@ -1017,6 +1017,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 								onDeleteEvidence={handleDeleteEvidence}
 								onUpdateEvidence={handleUpdateEvidence}
 								onCropSectionsCount={handleCropsCount}
+								onChangeZoom={debouncedZoomChange}
 							></PdfWrapper>
 						</div>
 					</div>

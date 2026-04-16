@@ -184,6 +184,7 @@ const PdfWrapper = forwardRef(
 			onSuccessOCRText,
 			onItemEvidenceConfirm,
 			onChangeSelectedEvidence,
+			onChangeZoom,
 		}: PdfWrapperProps,
 		ref: any,
 	) => {
@@ -192,10 +193,14 @@ const PdfWrapper = forwardRef(
 		const MAX_CANVAS_SIZE = 8192;
 
 		const pdfCanvas = useRef<HTMLCanvasElement>(null);
+		const pdfContentRef = useRef<HTMLDivElement>(null);
 		const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 		const renderTaskRef = useRef<any>(null);
 		const loadingTaskRef = useRef<any>(null);
 		//  const pdfPageText = useRef<TextContent>({} as TextContent);
+		const MIN_SCALE = 0.5;
+		const MAX_SCALE = 3;
+		const WHEEL_ZOOM_STEP = 0.1;
 
 		const scrollRef = useRef<HTMLDivElement>(null);
 		const [isDragging, setIsDragging] = useState(false);
@@ -213,6 +218,13 @@ const PdfWrapper = forwardRef(
 
 		const [stageWidth, setStageWidth] = useState(0);
 		const [stageHeight, setStageHeight] = useState(0);
+		const zoomAnchorRef = useRef<{
+			pdfX: number;
+			pdfY: number;
+			mouseX: number;
+			mouseY: number;
+			targetScale: number;
+		} | null>(null);
 
 		const [showEvidence, setShowEvidence] = useState<boolean>(true);
 
@@ -2018,6 +2030,112 @@ const PdfWrapper = forwardRef(
 			setIsDragging(false);
 		};
 
+		const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+			if (!e.ctrlKey && !e.metaKey) return;
+			const container = scrollRef.current;
+			const contentEl = pdfContentRef.current;
+			const viewport = currentViewportRef.current;
+			if (!container || !contentEl || !viewport) return;
+			e.preventDefault();
+			e.stopPropagation();
+			const containerRect = container.getBoundingClientRect();
+			const contentRect = contentEl.getBoundingClientRect();
+			const mouseX = e.clientX - containerRect.left;
+			const mouseY = e.clientY - containerRect.top;
+
+			const direction = e.deltaY < 0 ? 1 : -1;
+			const prevScale = Number(scale.toFixed(2));
+			const next = Math.min(
+				MAX_SCALE,
+				Math.max(MIN_SCALE, scale + direction * WHEEL_ZOOM_STEP),
+			);
+			const nextScale = Number(next.toFixed(2));
+			onUpdateSafeZoom?.(nextScale);
+			if (nextScale === prevScale) {
+				return;
+			}
+
+			const viewX = e.clientX - contentRect.left;
+			const viewY = e.clientY - contentRect.top;
+			const [pdfX, pdfY] = viewport.convertToPdfPoint(viewX, viewY);
+			zoomAnchorRef.current = {
+				pdfX,
+				pdfY,
+				mouseX,
+				mouseY,
+				targetScale: nextScale,
+			};
+
+			setShowEvidence(false);
+			setScale(nextScale);
+			onChangeZoom?.(nextScale);
+		};
+
+		useEffect(() => {
+			const anchor = zoomAnchorRef.current;
+			const container = scrollRef.current;
+			const contentEl = pdfContentRef.current;
+			const viewport = currentViewportRef.current;
+			if (!anchor || !container || !contentEl || !viewport || isRendering) return;
+			if (Math.abs((viewport.scale ?? 0) - anchor.targetScale) > 0.001) return;
+
+			requestAnimationFrame(() => {
+				const latestContainer = scrollRef.current;
+				const latestContent = pdfContentRef.current;
+				const latestViewport = currentViewportRef.current;
+				const latestAnchor = zoomAnchorRef.current;
+				if (
+					!latestContainer ||
+					!latestContent ||
+					!latestViewport ||
+					!latestAnchor
+				) {
+					return;
+				}
+				if (
+					Math.abs((latestViewport.scale ?? 0) - latestAnchor.targetScale) >
+					0.001
+				) {
+					return;
+				}
+
+				const [nextViewX, nextViewY] = latestViewport.convertToViewportPoint(
+					latestAnchor.pdfX,
+					latestAnchor.pdfY,
+				);
+				if (!Number.isFinite(nextViewX) || !Number.isFinite(nextViewY)) {
+					zoomAnchorRef.current = null;
+					return;
+				}
+
+				const latestContainerRect = latestContainer.getBoundingClientRect();
+				const latestContentRect = latestContent.getBoundingClientRect();
+				const currentScreenX =
+					latestContentRect.left - latestContainerRect.left + nextViewX;
+				const currentScreenY =
+					latestContentRect.top - latestContainerRect.top + nextViewY;
+				let targetLeft =
+					latestContainer.scrollLeft + (currentScreenX - latestAnchor.mouseX);
+				let targetTop =
+					latestContainer.scrollTop + (currentScreenY - latestAnchor.mouseY);
+
+				const maxLeft = Math.max(
+					0,
+					latestContainer.scrollWidth - latestContainer.clientWidth,
+				);
+				const maxTop = Math.max(
+					0,
+					latestContainer.scrollHeight - latestContainer.clientHeight,
+				);
+				targetLeft = Math.max(0, Math.min(targetLeft, maxLeft));
+				targetTop = Math.max(0, Math.min(targetTop, maxTop));
+
+				latestContainer.scrollLeft = Math.round(targetLeft);
+				latestContainer.scrollTop = Math.round(targetTop);
+				zoomAnchorRef.current = null;
+			});
+		}, [scale, stageWidth, stageHeight, isRendering]);
+
 		const cleanupPreviousPDF = () => {
 			if (pdfDoc.current) {
 				pdfDoc.current.destroy();
@@ -2332,17 +2450,25 @@ const PdfWrapper = forwardRef(
 						<div
 							ref={scrollRef}
 							className="flex-1 min-h-0 overflow-auto"
+							onWheel={handleWheelZoom}
 							style={
 								operationMode === "edit"
 									? {
 										display: "grid",
 										alignItems: "center",
 										justifyItems: "center",
+										cursor:
+											cropMode === null
+												? isDragging
+													? "grabbing"
+													: "grab"
+												: "default",
 									}
 									: {}
 							}
 						>
 							<div
+								ref={pdfContentRef}
 								className="border border-x-primaryN30"
 								style={{
 									position: "relative",
@@ -2366,6 +2492,12 @@ const PdfWrapper = forwardRef(
 										top: 0,
 										left: 0,
 										touchAction: "inherit",
+										cursor:
+											cropMode === null
+												? isDragging
+													? "grabbing"
+													: "grab"
+												: "default",
 									}}
 									onClick={(e) => {
 										if (e.target === e.target.getStage()) {
@@ -3195,6 +3327,7 @@ const ShapeWrapper = ({
 				stroke={color}
 				strokeWidth={shape?.isParentEvidence ? 3 : 1}
 				dash={shape?.isParentEvidence ? [10, 5] : undefined}
+				listening={!shape?.isParentEvidence}
 				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {

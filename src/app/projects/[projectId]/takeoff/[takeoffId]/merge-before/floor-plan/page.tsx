@@ -733,6 +733,7 @@ export default function FloorPlanPage() {
               onUpdateEvidence={handleUpdateEvidence}
               onItemEvidenceConfirm={handleItemEvidenceConfirm}
               onChangeSelectedEvidence={handleChangeSelectedEvidence}
+              onChangeZoom={handleZoomChange}
             />
           </div>
         </div>
