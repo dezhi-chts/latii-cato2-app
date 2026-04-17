@@ -148,7 +148,7 @@ export const ArchDrawingSummaryPageTypes = [
   allPageTypes[PageType.Schedule],
   allPageTypes[PageType.KeyNotes],
   allPageTypes[PageType.Mix],
-  allPageTypes[PageType.Unknown],
+  // allPageTypes[PageType.Unknown],
 ];
 
 // identification 所有标签类型

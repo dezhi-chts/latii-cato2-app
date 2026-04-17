@@ -33,14 +33,14 @@ const Header = () => {
         </div>
         <div className="text-sm text-grey-light-strong">Set the data you want to recollect from your projects, keep it organized.</div>
       </div>
-      <div>
+      {/* <div>
         <Button
           className="custom-default-btn !w-[150px]"
           onClick={handleOpenModal}
         >
           Request Prompt Help
         </Button>
-      </div>
+      </div> */}
 
       <RequestPromptHelpModal
         isOpen={showRequestModal}
