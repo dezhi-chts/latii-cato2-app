@@ -73,12 +73,12 @@ export interface EvidenceRecord {
 }
 
 export interface SummaryStats {
-	items: number;
-	products: number;
-	systems: number;
-	boxed_items: number;
-	window_items: number;
-	door_items: number;
+doors_quantity: number;
+system_quantity: number;
+take_off_id: number;
+total_units_quantity: number;
+unique_labels_quantity: number
+windows_quantity: number
 }
 
 export interface EvidenceBoxBounds {
