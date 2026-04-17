@@ -12,8 +12,8 @@ const selectOptions = [
     label: "All Pages",
   },
   {
-    value: "Used",
-    label: "Used Pages",
+    value: "Active",
+    label: "Active Pages",
   },
   {
     value: "Inactive",
@@ -116,7 +116,7 @@ const ContentView = ({
   const filteredData = useMemo(() => {
     if (contentData?.length === 0) return [];
     if (filterType === "All" || filterType === "") return contentData;
-    if (filterType === 'Used') {
+    if (filterType === 'Active') {
       return contentData.filter(
         (item: any) =>
           item.type !== "Unknown" && item.type !== "" && item.type !== null,
