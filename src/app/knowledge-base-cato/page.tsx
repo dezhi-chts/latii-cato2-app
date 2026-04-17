@@ -294,6 +294,10 @@ const Page = () => {
     setOpenCreateTemplateSignal((prev) => prev + 1);
   };
 
+  const handleConsumeCreateTemplateSignal = () => {
+    setOpenCreateTemplateSignal(0);
+  };
+
   const handleImportTemplateClick = () => {
     setIsImportModalOpen(true);
   };
@@ -452,6 +456,7 @@ const Page = () => {
             onUpdateTemplate={handleUpdateTemplate}
             onUpdateField={handleUpdateField}
             openCreateTemplateSignal={openCreateTemplateSignal}
+            onConsumeCreateTemplateSignal={handleConsumeCreateTemplateSignal}
             onDownloadTemplate={handleDownloadTemplate}
           />
         ) : (

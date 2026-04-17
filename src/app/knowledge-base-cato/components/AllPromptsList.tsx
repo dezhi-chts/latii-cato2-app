@@ -175,6 +175,8 @@ export const AllPromptsList = ({
     }
   };
 
+  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity'];
+
   return (
     <div className="w-[350px] h-full flex flex-col">
       {/* Header */}
@@ -260,13 +262,15 @@ export const AllPromptsList = ({
                     >
                       <Image src="/assets/icons/copy.svg" alt="plus icon" width={15} height={15} ></Image>
                     </button>
-                    <button
-                      className="p-1 rounded hover:bg-white/50 transition-colors"
-                      onClick={(e) => handleDeleteClick(e, field.id)}
-                      title="Delete"
-                    >
-                      <Image src="/assets/icons/delete-forum-blue.svg" alt="plus icon" width={15} height={15} ></Image>
-                    </button>
+                    {!disbaleFileName.includes(field.name) && (
+                      <button
+                        className="p-1 rounded hover:bg-white/50 transition-colors"
+                        onClick={(e) => handleDeleteClick(e, field.id)}
+                        title="Delete"
+                      >
+                        <Image src="/assets/icons/delete-forum-blue.svg" alt="plus icon" width={15} height={15} ></Image>
+                      </button>)
+                    }
                   </div>
                 </div>
               </div>

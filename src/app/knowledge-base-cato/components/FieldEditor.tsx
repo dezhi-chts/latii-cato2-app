@@ -171,6 +171,8 @@ export const FieldEditor = ({
     return formData?.config_json?.available_values || [];
   }, [formData]);
 
+  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity'];
+
   const disabelEdit = templateId === 1 || field?.name === 'Generations' || templateInfo?.is_edit === false;
 
   return (
@@ -190,7 +192,8 @@ export const FieldEditor = ({
                 }}
                 className="w-full h-[28px] border-primaryN30 rounded-md text-xs"
                 placeholder="Enter field name"
-                disabled={disabelEdit || formData?.name === 'Label' || formData?.name === 'Sub Label'}
+                disabled={disabelEdit
+                  || disbaleFileName.includes(formData?.name)}
               />
             </div>
           </div>

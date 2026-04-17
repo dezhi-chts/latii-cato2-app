@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Spin, Modal, Popover, Select } from "antd";
+import { Button, notification, Spin, Modal, Popover, Select, Tooltip } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -41,6 +41,7 @@ import {
 
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { getTemplates } from "@/services/templateService";
+import { useUser } from "@/context/UserContext";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
@@ -55,6 +56,42 @@ interface PromptTemplateOption {
   description?: string;
   is_default?: boolean;
 }
+
+const EllipsisTooltipText = ({ text }: { text: string }) => {
+  const textRef = useRef<HTMLSpanElement | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      const element = textRef.current;
+      if (!element) return;
+      setShowTooltip(element.scrollWidth > element.clientWidth);
+    };
+
+    checkOverflow();
+    window.addEventListener("resize", checkOverflow);
+
+    const observer = new ResizeObserver(() => {
+      checkOverflow();
+    });
+    if (textRef.current) {
+      observer.observe(textRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkOverflow);
+      observer.disconnect();
+    };
+  }, [text]);
+
+  return (
+    <Tooltip title={showTooltip ? text : null} placement="topLeft">
+      <span ref={textRef} className="block max-w-full truncate">
+        {text}
+      </span>
+    </Tooltip>
+  );
+};
 
 export default function FloorPlanPage() {
   const router = useRouter();
@@ -85,6 +122,7 @@ export default function FloorPlanPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
+  const { username } = useUser();
 
   const promptHintText =
     "Customize the fields Cato uses to read your PDF. Create specialized templates to accurately capture data for different takeoff types (e.g., steel vs. aluminum).";
@@ -130,33 +168,21 @@ export default function FloorPlanPage() {
       return;
     }
 
-    const list = Array.isArray(response.data?.items)
-      ? response.data.items
-      : Array.isArray(response.data)
-        ? response.data
-        : [];
-    const normalizedList: PromptTemplateOption[] = list
-      .map((template: any) => ({
-        id: Number(template?.id || 0),
-        name: String(template?.name || ""),
-        description: String(template?.description || ""),
-        is_default: Boolean(template?.is_default),
-      }))
-      .filter((template: PromptTemplateOption) => template.id > 0 && template.name);
+    const list = response.data?.items || [];
+    setPromptTemplates(list);
 
-    const hasStandard = normalizedList.some((template) => template.id === 1);
-    const mergedList: PromptTemplateOption[] = hasStandard
-      ? normalizedList
-      : [{ id: 1, name: "standard", description: "", is_default: true }, ...normalizedList];
-
-    setPromptTemplates(mergedList);
+    let myTemplates = list?.filter((template: any) => template.create_user === username);
 
     const defaultTemplate =
-      mergedList.find((template) => template.is_default) || mergedList[0];
+      myTemplates.find((template: any) => template.is_default);
     if (defaultTemplate?.id) {
       setSelectedTemplateId(defaultTemplate.id);
+    } else {
+      if (list.length > 0) {
+        setSelectedTemplateId(list[0].id);
+      }
     }
-  }, []);
+  }, [username]);
 
   const fetchFloorPlanAndElevation = useCallback(async () => {
     if (!selectedFileId) return;
@@ -622,7 +648,7 @@ export default function FloorPlanPage() {
                 setSelectedTemplateId(Number(value));
               }}
               options={promptTemplates.map((template) => ({
-                label: template.name,
+                label: <EllipsisTooltipText text={template.name} />,
                 value: template.id,
               }))}
               dropdownRender={(menu: ReactNode) => (
