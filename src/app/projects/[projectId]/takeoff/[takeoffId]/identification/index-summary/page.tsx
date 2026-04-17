@@ -373,6 +373,7 @@ const IdentSummary = () => {
             setContentData={setContentData}
             drawingTypeList={drawingTypeList}
             isEmptyContent={isEmptyContent}
+            currentPage={page}
             pdfTotalPages={totalPage}
             handlePageChange={handlePageChange}
           />

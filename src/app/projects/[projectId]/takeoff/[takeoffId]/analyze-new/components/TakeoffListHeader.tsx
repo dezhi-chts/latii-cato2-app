@@ -45,31 +45,6 @@ export default function TakeoffListHeader({
 		),
 	}));
 
-	const summaryTooltip = (
-		<div className="w-[400px] rounded-2xl bg-white text-ms text-grey-normal">
-			<p className="mb-2 font-semibold text-grey-normal">Summary Data</p>
-			<ul className="list-disc pl-6">
-				<li>
-					<span className="font-semibold text-grey-normal">Items:</span> The
-					total count of primary labels in your takeoff list (excludes sub-items
-					inside systems).
-				</li>
-				<li>
-					<span className="font-semibold text-grey-normal">Products:</span> The
-					overall quantity (the sum of quantities across all labels).
-				</li>
-				<li>
-					<span className="font-semibold text-grey-normal">Systems:</span> The
-					number of labels that are classified as systems.
-				</li>
-				<li>
-					<span className="font-semibold text-grey-normal">Boxed Items:</span>{" "}
-					Items specifically marked within the boxing takeoff section.
-				</li>
-			</ul>
-		</div>
-	);
-
 	return (
 		<div className="flex min-h-[118px] items-center justify-between border-b border-primaryN30 bg-white px-14">
 			<div className="flex items-center gap-6">
@@ -102,37 +77,36 @@ export default function TakeoffListHeader({
 					</div>
 					<Divider type="vertical" className="!h-7 !bg-primaryN30" />
 				</div>
-
 				<div className="flex items-center gap-10">
 					<div className="flex flex-col">
-						<span className="text-lg leading-5">
-							{summaryStats?.items ?? 0}
+						<span className="text-lg text-center">
+							{summaryStats?.unique_labels_quantity ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Items</span>
+						<span className="text-sm text-grey-normal">Unique Labels</span>
 					</div>
 					<div className="flex flex-col">
-						<span className="text-lg leading-5">
-							{summaryStats?.products ?? 0}
+						<span className="text-lg text-center">
+							{summaryStats?.doors_quantity ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Products</span>
+						<span className="text-sm text-grey-normal">Doors</span>
 					</div>
 					<div className="flex flex-col">
-						<span className="text-lg leading-5">
-							{summaryStats?.window_items ?? 0}
+						<span className="text-lg text-center">
+							{summaryStats?.windows_quantity ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Window Items</span>
+						<span className="text-sm text-grey-normal">Windows</span>
 					</div>
 					<div className="flex flex-col">
-						<span className="text-lg leading-5">
-							{summaryStats?.door_items ?? 0}
+						<span className="text-lg text-center">
+							{summaryStats?.system_quantity ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Door Items</span>
+						<span className="text-sm text-grey-normal">Systems</span>
 					</div>
 					<div className="flex flex-col">
-						<span className="text-lg leading-5">
-							{summaryStats?.boxed_items ?? 0}
+						<span className="text-lg text-center">
+							{summaryStats?.total_units_quantity ?? 0}
 						</span>
-						<span className="text-sm text-grey-normal">Boxed Items</span>
+						<span className="text-sm text-grey-normal">Total Units</span>
 					</div>
 				</div>
 			</div>
