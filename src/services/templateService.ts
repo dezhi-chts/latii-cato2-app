@@ -1,4 +1,4 @@
-import { http } from "@/lib/http";
+import request, { http } from "@/lib/http";
 import { Field } from "@/types/templates";
 
 export const getTemplates = async (page: number = 1, perPage: number = 100) => {
@@ -143,3 +143,61 @@ export const copyField = async (templateId: number, fieldId: string) => {
     return { data: null, status: "error" };
   }
 };
+
+/**
+ * 导入模版
+ * @param company_id 公司ID
+ * @param file 模版JSON文件
+ * @returns 导入结果
+ */
+export const importTemplate = async (company_id: number, file: File) => {
+  try {
+    const formData = new FormData();
+    formData.append("company_id", `${company_id}`);
+    formData.append("template_json_file", file);
+    const url = `/prompt-template/import-json`;
+    const response = await http.post(url, formData, undefined, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return { data: response as any, status: "success" };
+  } catch (error:any) {
+    console.error("Error importing template:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+}
+
+/**
+ * 下载模版JSON文件
+ * @param template_id 模版ID
+ * @returns 
+ */
+export const downloadTemplateJson = async (template_id: number) => {
+  try{
+    const url = `/prompt-template/${template_id}/download-json?template_id=${template_id}`;
+    const response = await request.get(url, { responseType: "blob" });
+    return { data: response as any, status: "success" };
+  } catch (error:any) {
+    console.error("Error downloading template JSON:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+}
+
+/**
+ * 更新模版字段索引
+ * @param template_id 模版ID
+ * @param field_id 字段ID
+ * @param field_index 字段索引
+ * @returns 
+ */
+export const updateFieldIndex = async (template_id: number, field_id: string, field_index: number)=>{
+  try{
+    const url = `/prompt-template/${template_id}/field_index/${field_id}/${field_index}`;
+    const response = await request.put(url, { responseType: "blob" });
+    return { data: response as any, status: "success" };
+  } catch (error:any) {
+    console.error("Error updating field index:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+}

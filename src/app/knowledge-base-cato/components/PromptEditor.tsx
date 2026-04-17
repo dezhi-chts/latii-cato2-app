@@ -6,8 +6,9 @@ import { FieldEditorModal } from "./FieldEditorModal";
 
 import { FieldEditor } from "./FieldEditor";
 import { FieldEvent } from "../page";
-import { copyField, deleteField } from "@/services/templateService";
+import { copyField, deleteField, updateFieldIndex } from "@/services/templateService";
 import { message } from "antd";
+import { TemplateList } from "./TemplateList";
 
 // Field 数据类型
 interface PromptField {
@@ -18,21 +19,23 @@ interface PromptField {
 interface PromptEditorProps {
   templateId: number | null;
   setTemplateId: (id: number | null) => void;
+  templateList: any[];
   templateContent: any;
   setLoading: (loading: boolean) => void;
   subFieldName: string | null;
   onUpdateField: (eventName: FieldEvent, data: any) => void;
-  onRefreshTemplate?: () => void;
+  onRefreshTemplatePrompt?: () => void;
 }
 
 export const PromptEditor = ({
   templateId,
   setTemplateId,
+  templateList,
   templateContent,
   setLoading,
   subFieldName,
   onUpdateField,
-  onRefreshTemplate,
+  onRefreshTemplatePrompt,
 }: PromptEditorProps) => {
   const [fields, setFields] = useState<any[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string>('');
@@ -90,12 +93,12 @@ export const PromptEditor = ({
     const result = await copyField(templateId, fieldId);
     if (result.status === "success") {
       message.success("Field copied successfully");
-      onRefreshTemplate?.();
+      onRefreshTemplatePrompt?.();
     } else {
       message.error("Failed to copy field");
     }
     setLoading(false);
-  }, [templateId, setLoading, onRefreshTemplate]);
+  }, [templateId, setLoading, onRefreshTemplatePrompt]);
 
   // 删除 field
   const handleDeleteField = useCallback(async (fieldId: string) => {
@@ -109,32 +112,49 @@ export const PromptEditor = ({
       if (deletedField && deletedField.name === selectedFieldId) {
         setSelectedFieldId("");
       }
-      onRefreshTemplate?.();
+      onRefreshTemplatePrompt?.();
     } else {
       message.error("Failed to delete field");
     }
     setLoading(false);
-  }, [templateId, setLoading, onRefreshTemplate, fields, selectedFieldId]);
+  }, [templateId, setLoading, onRefreshTemplatePrompt, fields, selectedFieldId]);
+
+  // 更新 field 索引
+  const handleUpdateFieldIndex = useCallback(async (fieldId: string, index: number) => {
+    let res = await updateFieldIndex(templateId as number, fieldId, index);
+    if (res.status === "success") {
+      message.success("Field index updated successfully");
+      onRefreshTemplatePrompt?.();
+    } else {
+      message.error("Failed to update field index");
+    }
+  }, [templateId, onRefreshTemplatePrompt]);
 
   return (
     <div className="flex flex-row gap-20 h-full">
       {/* Left Sidebar - All Prompts List */}
-      <AllPromptsList
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-        onSelectField={handleSelectField}
-        onCreatePrompt={handleCreatePrompt}
-        onCopyField={handleCopyField}
-        onDeleteField={handleDeleteField}
-      />
+      <div>
+        <div className="pb-4 text-xs text-grey-normal">Template: {templateList?.find((item: any) => item.id === templateId)?.name}</div>
+        <AllPromptsList
+          fields={fields}
+          selectedFieldId={selectedFieldId}
+          onSelectField={handleSelectField}
+          onCreatePrompt={handleCreatePrompt}
+          onCopyField={handleCopyField}
+          onDeleteField={handleDeleteField}
+          onUpdateFieldIndex={handleUpdateFieldIndex}
+        />
+      </div>
 
       {/* Right Content - Field Display */}
       <div className="flex-1 overflow-y-auto border border-primaryN30 rounded-xl px-10 py-5">
-        {selectedFieldId !== 'Generations' && <FieldEditor
-          templateId={templateId as number}
-          field={editingField as any}
-          onUpdateField={handleFieldUpdate}
-        />}
+        {selectedFieldId &&
+          <FieldEditor
+            templateId={templateId as number}
+            templateInfo={templateList?.find((item: any) => item.id === templateId)}
+            field={editingField as any}
+            onUpdateField={handleFieldUpdate}
+          />}
       </div>
 
       {/* Field Editor Modal */}
@@ -143,6 +163,7 @@ export const PromptEditor = ({
         onClose={handleCloseModal}
         field={editingField}
         templateId={templateId as number}
+        templateInfo={templateList?.find((item: any) => item.id === templateId)}
         onUpdateField={handleFieldUpdate}
       />
     </div>

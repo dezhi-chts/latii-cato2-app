@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ConfigProvider, notification, Modal, message } from "antd";
+import { Button, ConfigProvider, notification, Modal, message } from "antd";
+import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import Header from "./components/Header";
 import { TemplateViewer } from "./components/TemplateViewer";
 import { PromptEditor } from "./components/PromptEditor";
@@ -14,8 +15,11 @@ import {
   copyTemplate,
   updateField,
   createField,
+  importTemplate,
+  downloadTemplateJson,
 } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
+import { useUser } from "@/context/UserContext";
 
 const { confirm } = Modal;
 
@@ -60,9 +64,13 @@ const Page = () => {
   // 当前选中FieldID
   const subFieldId = useRef<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [openCreateTemplateSignal, setOpenCreateTemplateSignal] = useState(0);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   // 公司ID - 可以从用户信息或其他地方获取，这里暂时硬编码为1
-  const companyId = 1;
+  const { company_id, username } = useUser();
+  const userInfo = useUser();
+  const companyId = company_id || 0;
 
   useEffect(() => {
     fetchTemplates();
@@ -75,6 +83,17 @@ const Page = () => {
     }
   }, [templateId]);
 
+  useEffect(() => {
+    if (username !== 'Guest' && templateList.length > 0) {
+      let firstTemplate = templateList.find((template: any) => template.create_user === username && template.id !== 1);
+      if (firstTemplate) {
+        setTemplateId(firstTemplate.id);
+      } else if (templateList.length > 0) {
+        setTemplateId(templateList[0].id);
+      }
+    }
+  }, [username, templateList]);
+
 
   // 获取模版列表
   const fetchTemplates = async () => {
@@ -82,10 +101,9 @@ const Page = () => {
     const response = await getTemplates();
     if (response.status === "success") {
       let list = response.data?.items || [];
-      let fixed = { id: 1, name: "Standard Prompt" };
-      list.unshift(fixed);
-      setTemplateId(fixed.id);
+      // 将list中的标准模版放在第一位
       setTemplateList(list);
+      // 找到默认模版ID，设置为当前选中模版ID，如果没找到默认模版，设置为第一个模版
     } else {
       notification.error({
         message: "Error",
@@ -169,6 +187,10 @@ const Page = () => {
     // 发送请求
     const response = await copyTemplate(templateId, companyId, name);
     if (response.status === "success") {
+      notification.success({
+        message: "Success",
+        description: "Copy template successfully",
+      });
       fetchTemplates();
     } else {
       notification.error({
@@ -198,6 +220,11 @@ const Page = () => {
     // 同步当前默认状态到服务端
     const response = await setTemplateDefault(templateId, companyId);
     if (response.status === "success") {
+      // 设置默认模版成功
+      notification.success({
+        message: "Success",
+        description: "Set default template successfully",
+      });
     } else {
       notification.error({
         message: "Error",
@@ -210,8 +237,16 @@ const Page = () => {
   const sendUpdateField = async (templateId: number, fieldId: string, fieldData: any) => {
     // 同步当前默认状态到服务端
     console.log('########## sendUpdateField', templateId, fieldId, fieldData);
+    setLoading(true);
     const response = await updateField(templateId, fieldId, fieldData);
+    setLoading(false);
     if (response.status === "success") {
+      notification.success({
+        message: "Success",
+        description: "Updated successfully",
+      });
+      // 刷新数据
+      fetchTemplateContent(templateId);
     } else {
       notification.error({
         message: "Error",
@@ -239,17 +274,83 @@ const Page = () => {
     if (eventName === FieldEvent.Create) {
       fetchTemplateContent(data.template_id);
     } else if (eventName === FieldEvent.Update) {
-      setTemplateContent((prev: any) => ({
-        ...prev,
-        fields: prev.fields.map((field: any) => {
-          return field.id === data.field_id ? {
-            ...field,
-            ...data.fieldData,
-          } : field;
-        }),
-      }));
+      // setTemplateContent((prev: any) => ({
+      //   ...prev,
+      //   fields: prev.fields.map((field: any) => {
+      //     return field.id === data.field_id ? {
+      //       ...field,
+      //       ...data.fieldData,
+      //     } : field;
+      //   }),
+      // }));
       sendUpdateField(data.template_id, data.field_id, data.fieldData);
     }
+  };
+
+  const handleOpenCreateTemplate = () => {
+    setOpenCreateTemplateSignal((prev) => prev + 1);
+  };
+
+  const handleImportTemplateClick = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportTemplateFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const isJsonType = file.type === "application/json";
+    const isJsonExtension = file.name.toLowerCase().endsWith(".json");
+    if (!isJsonType && !isJsonExtension) {
+      message.error("Please upload a JSON file");
+      return;
+    }
+
+    setLoading(true);
+    const response = await importTemplate(companyId, file);
+    if (response.status === "success") {
+      message.success("Template imported successfully");
+      await fetchTemplates();
+    } else {
+      notification.error({
+        message: "Error",
+        description: response?.data?.detail || "Failed to import template",
+      });
+    }
+    setLoading(false);
+  };
+
+  const handleDownloadTemplate = async (targetTemplateId: number, name: string) => {
+    if (!targetTemplateId) return;
+
+    setLoading(true);
+    const response = await downloadTemplateJson(targetTemplateId);
+    if (response.status === "success") {
+      const fileContent = response.data;
+      const blob =
+        fileContent instanceof Blob
+          ? fileContent
+          : new Blob([JSON.stringify(fileContent, null, 2)], {
+            type: "application/json",
+          });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${name || "template"}-${targetTemplateId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } else {
+      notification.error({
+        message: "Error",
+        description: response?.data?.detail || "Failed to download template",
+      });
+    }
+    setLoading(false);
   };
 
   return (
@@ -264,10 +365,12 @@ const Page = () => {
         {mainTabList.map((tab: MainTab) => (
           <div key={tab} className={`w-[140px] h-[30px] flex items-center justify-center text-xs rounded-md cursor-pointer ${tab === activeMainTab ? 'font-bold text-grey-dark bg-forumBlue-light' : 'text-grey-light-strong'}`}
             onClick={() => {
-              if (templateId === 1 && tab === MainTab.PromptLibrary) {
-                // 默认模版禁止切换到 PromptLibrary，因为 PromptLibrary 是用户自定义的模版
-                message.error('Standard template is not allowed to switch to PromptLibrary');
-                return;
+              if (tab === MainTab.PromptLibrary) {
+                if (templateId === 1 || templateList?.find((item: any) => item.id === templateId)?.is_edit === false) {
+                  // 标准模版和非用户模版禁止切换到 PromptLibrary，因为 PromptLibrary 是用户自定义的模版
+                  message.error('You do not have the permission to switch to the PromptLibrary.');
+                  return;
+                }
               }
               setActiveMainTab(tab)
             }}
@@ -276,6 +379,34 @@ const Page = () => {
           </div>
         ))}
       </div>
+
+      {activeMainTab === MainTab.YourTemplates && (
+        <div className="px-14 pb-2 w-full">
+          <div className="flex items-center gap-2">
+            <Button
+              className="custom-primary-btn !w-[130px]"
+              onClick={handleImportTemplateClick}
+            >
+              <UploadOutlined className="text-xs" />
+              <span className="">Import Template</span>
+            </Button>
+            <Button
+              className="custom-primary-btn !w-[90px]"
+              onClick={handleOpenCreateTemplate}
+            >
+              <PlusOutlined className="text-xs" />
+              <span className="">Template</span>
+            </Button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportTemplateFileChange}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="px-14 pb-10 flex-1 overflow-hidden">
         {/* Tab 内容切换 */}
@@ -289,16 +420,19 @@ const Page = () => {
             onChangeMainTab={setActiveMainTab}
             onUpdateTemplate={handleUpdateTemplate}
             onUpdateField={handleUpdateField}
+            openCreateTemplateSignal={openCreateTemplateSignal}
+            onDownloadTemplate={handleDownloadTemplate}
           />
         ) : (
           <PromptEditor
             templateId={templateId}
             setTemplateId={setTemplateId}
+            templateList={templateList}
             templateContent={templateContent}
             subFieldName={subFieldId.current}
             setLoading={setLoading}
             onUpdateField={handleUpdateField}
-            onRefreshTemplate={() => templateId && fetchTemplateContent(templateId)}
+            onRefreshTemplatePrompt={() => templateId && fetchTemplateContent(templateId)}
           />
         )}
       </div>

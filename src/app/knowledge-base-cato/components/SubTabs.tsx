@@ -20,6 +20,7 @@ interface SubTab {
 
 interface SubTabsProps {
   templateId: number;
+  templateInfo: any;
   tabs: SubTab[];
   activeTab: string;
   onTabChange: (key: string) => void;
@@ -28,6 +29,7 @@ interface SubTabsProps {
 
 export const SubTabs = ({
   templateId,
+  templateInfo,
   tabs,
   activeTab,
   onTabChange,
@@ -259,10 +261,7 @@ export const SubTabs = ({
   ];
   // 可滚动的其他Tab
   const otherTabs = tabs.filter((tab: SubTab) => tab.name !== "Generations" && tab.name !== "Label" && tab.name !== "Sub Label");
-  const scrollableTabs = [
-    ...fixedTabs,
-    ...otherTabs
-  ];
+  const scrollableTabs = [...tabs];
 
   const disabelEdit = templateId === 1;
 
@@ -367,6 +366,7 @@ export const SubTabs = ({
         isOpen={isModalOpen}
         field={{}}
         templateId={templateId as number}
+        templateInfo={templateInfo}
         onClose={() => setIsModalOpen(false)}
       />
     </div>

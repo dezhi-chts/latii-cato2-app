@@ -644,8 +644,8 @@ export default function FloorPlanPage() {
             placement="rightBottom"
             title={null}
             content={
-              <div className="py-1 w-[240px] flex flex-col">
-                Please make sure all labels are not empty.
+              <div className="py-1 w-[240px] flex flex-col text-grey-normal">
+                The templates created by others can only be viewed and no other operations can be performed on them.
               </div>
             }
             trigger="hover"
