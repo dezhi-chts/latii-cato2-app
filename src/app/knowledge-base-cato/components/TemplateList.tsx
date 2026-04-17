@@ -167,25 +167,25 @@ export const TemplateList = ({
     }
   };
 
-  const myTemplates = useMemo(()=>{
+  const myTemplates = useMemo(() => {
     if (username === 'Guest' || templates.length === 0) {
       return [];
     }
     return templates.filter((template) => template.create_user === username && template.id !== 1);
-  },[templates, username]) 
-  const otherTemplates = useMemo(()=>{
+  }, [templates, username])
+  const otherTemplates = useMemo(() => {
     if (username === 'Guest' || templates.length === 0) {
       return [];
     }
     return templates.filter((template) => template.create_user !== username && template.id !== 1);
-  },[templates, username]) 
+  }, [templates, username])
 
-  const standardTemplate = useMemo(()=>{
+  const standardTemplate = useMemo(() => {
     if (templates.length === 0) {
       return null;
     }
     return templates.find((template) => template.id === 1);
-  },[templates,username]) 
+  }, [templates, username])
 
   const renderTemplateItem = (template: Template) => {
     const isMyTemplate = template.create_user === username;
@@ -248,24 +248,24 @@ export const TemplateList = ({
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Default 标签 - 只显示当前设置的 default */}
           {
-            canDefault && 
-              <div
+            canDefault &&
+            <div
               className={`flex items-center gap-1 transition-opacity ${selectedTemplateId === template.id || template.is_default
                 ? "opacity-100"
                 : "opacity-0 group-hover:opacity-100"
                 }`}
             >
-                <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
-                  ? "bg-white text-forumBlue-normal"
-                  : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTemplateDefault(template.id);
-                  }}
-                >
-                  Default
-                </span>
+              <span className={`text-xxs px-2 rounded-lg bg-grey-light-hover ${selectedTemplateId === template.id && template.is_default
+                ? "bg-white text-forumBlue-normal"
+                : template.is_default ? "text-forumBlue-normal" : " text-grey-normal"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTemplateDefault(template.id);
+                }}
+              >
+                Default
+              </span>
             </div>
           }
           {/* 复制/删除/下载按钮 */}
@@ -343,16 +343,16 @@ export const TemplateList = ({
 
       <div className="flex-1 flex flex-col gap-2">
         {standardTemplate && (
-          <div className="text-xs text-grey-normal px-1 pt-1">Standard Template</div>
+          <div className="text-xs text-forumBlue-normal pt-1">Standard Template</div>
         )}
         {standardTemplate && renderTemplateItem(standardTemplate)}
         {myTemplates.length > 0 && (
-          <div className="text-xs text-grey-normal px-1 pt-1">My Templates</div>
+          <div className="text-xs text-forumBlue-normal pt-1">My Templates</div>
         )}
         {myTemplates.map(renderTemplateItem)}
 
         {otherTemplates.length > 0 && (
-          <div className="text-xs text-grey-normal px-1 pt-3">Others' Templates</div>
+          <div className="text-xs text-forumBlue-normal pt-3">Others' Templates</div>
         )}
         {otherTemplates.map(renderTemplateItem)}
       </div>
