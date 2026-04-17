@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, ConfigProvider, notification, Modal, message } from "antd";
+import { Button, ConfigProvider, notification, Modal, Upload, message } from "antd";
 import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import type { UploadFile, UploadProps } from "antd";
 import Header from "./components/Header";
 import { TemplateViewer } from "./components/TemplateViewer";
 import { PromptEditor } from "./components/PromptEditor";
@@ -22,6 +23,7 @@ import LoadingScreen from "@/components/loading-screen";
 import { useUser } from "@/context/UserContext";
 
 const { confirm } = Modal;
+const { Dragger } = Upload;
 
 // 主 Tab 类型
 export enum MainTab {
@@ -65,7 +67,8 @@ const Page = () => {
   const subFieldId = useRef<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [openCreateTemplateSignal, setOpenCreateTemplateSignal] = useState(0);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
 
   // 公司ID - 可以从用户信息或其他地方获取，这里暂时硬编码为1
   const { company_id, username } = useUser();
@@ -292,28 +295,63 @@ const Page = () => {
   };
 
   const handleImportTemplateClick = () => {
-    importInputRef.current?.click();
+    setIsImportModalOpen(true);
   };
 
-  const handleImportTemplateFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
+  const isJsonFile = (file: File) => {
     const isJsonType = file.type === "application/json";
     const isJsonExtension = file.name.toLowerCase().endsWith(".json");
-    if (!isJsonType && !isJsonExtension) {
+    return isJsonType || isJsonExtension;
+  };
+
+  const uploadProps: UploadProps = {
+    accept: ".json,application/json",
+    maxCount: 1,
+    fileList: importFileList,
+    beforeUpload: (file) => {
+      if (!isJsonFile(file)) {
+        message.error("Please upload a JSON file");
+        return Upload.LIST_IGNORE;
+      }
+      setImportFileList([
+        {
+          uid: file.uid,
+          name: file.name,
+          status: "done",
+          originFileObj: file,
+        },
+      ]);
+      return false;
+    },
+    onRemove: () => {
+      setImportFileList([]);
+    },
+  };
+
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+    setImportFileList([]);
+  };
+
+  const handleConfirmImportTemplate = async () => {
+    const uploadFile = importFileList[0];
+    const file =
+      (uploadFile?.originFileObj as File | undefined) ||
+      (uploadFile as unknown as File | undefined);
+    if (!file) {
       message.error("Please upload a JSON file");
       return;
     }
-
+    if (!isJsonFile(file)) {
+      message.error("Please upload a JSON file");
+      return;
+    }
     setLoading(true);
     const response = await importTemplate(companyId, file);
     if (response.status === "success") {
       message.success("Template imported successfully");
       await fetchTemplates();
+      handleCloseImportModal();
     } else {
       notification.error({
         message: "Error",
@@ -397,13 +435,6 @@ const Page = () => {
               <PlusOutlined className="text-xs" />
               <span className="">Template</span>
             </Button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={handleImportTemplateFileChange}
-            />
           </div>
         </div>
       )}
@@ -436,6 +467,32 @@ const Page = () => {
           />
         )}
       </div>
+      <Modal
+        open={isImportModalOpen}
+        title="Import Template"
+        onCancel={handleCloseImportModal}
+        footer={null}
+        centered
+      >
+        <div className="py-2">
+          <p className="text-xs text-grey-normal mb-3">
+            Upload a template JSON file to import it into your template library.
+          </p>
+          <Dragger {...uploadProps} className="!bg-white">
+            <p className="ant-upload-drag-icon">
+              <UploadOutlined />
+            </p>
+            <p className="ant-upload-text text-sm">Click or drag JSON file to this area to upload</p>
+            <p className="ant-upload-hint">Only one JSON file is allowed.</p>
+          </Dragger>
+          <div className="flex justify-end gap-2 mt-6">
+            <Button onClick={handleCloseImportModal}>Cancel</Button>
+            <Button type="primary" onClick={handleConfirmImportTemplate} loading={loading}>
+              Confirm
+            </Button>
+          </div>
+        </div>
+      </Modal>
       {loading && <LoadingScreen isLoading={loading} />}
     </div>
   );
