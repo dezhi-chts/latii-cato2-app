@@ -24,6 +24,7 @@ interface TemplateListProps {
   onSelectTemplate: (id: number) => void;
   onUpdateTemplate?: (eventName: TemplateEvent, data: any) => void;
   openCreateTemplateSignal: number;
+  onConsumeCreateTemplateSignal?: () => void;
   onDownloadTemplate: (templateId: number, name: string) => void;
 }
 
@@ -82,6 +83,7 @@ export const TemplateList = ({
   onSelectTemplate,
   onUpdateTemplate,
   openCreateTemplateSignal,
+  onConsumeCreateTemplateSignal,
   onDownloadTemplate,
 }: TemplateListProps) => {
   const { username } = useUser();
@@ -97,8 +99,9 @@ export const TemplateList = ({
   useEffect(() => {
     if (openCreateTemplateSignal > 0) {
       setIsNewTemplateModalOpen(true);
+      onConsumeCreateTemplateSignal?.();
     }
-  }, [openCreateTemplateSignal]);
+  }, [openCreateTemplateSignal, onConsumeCreateTemplateSignal]);
 
   const handleOpenNewTemplateModal = () => {
     setIsNewTemplateModalOpen(true);

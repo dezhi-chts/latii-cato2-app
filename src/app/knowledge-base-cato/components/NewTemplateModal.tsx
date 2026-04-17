@@ -180,7 +180,12 @@ export const NewTemplateModal = ({
                 checked={selectedFieldIds.includes(field.id)}
                 onChange={(e) => handleFieldToggle(field.id, e.target.checked)}
                 className="custom-checkbox text-xs text-grey-normal"
-                disabled={field.name === 'Label' || field.name === 'Sub Label'}
+                disabled={
+                  field.name === 'Label' ||
+                  field.name === 'Sub Label' ||
+                  field.name === 'Product' ||
+                  field.name === 'Quantity'
+                }
               >
                 <span className="text-sm">{field.name}</span>
               </Checkbox>

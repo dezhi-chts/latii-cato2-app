@@ -24,6 +24,7 @@ interface TemplateViewerProps {
   onUpdateTemplate: (eventName: TemplateEvent, data: any) => void;
   onUpdateField: (eventName: FieldEvent, data: any) => void;
   openCreateTemplateSignal: number;
+  onConsumeCreateTemplateSignal: () => void;
   onDownloadTemplate: (templateId: number, name: string) => void;
 }
 export const TemplateViewer = ({
@@ -36,6 +37,7 @@ export const TemplateViewer = ({
   onUpdateTemplate,
   onUpdateField,
   openCreateTemplateSignal,
+  onConsumeCreateTemplateSignal,
   onDownloadTemplate,
 }: TemplateViewerProps) => {
   const [activeSubTab, setActiveSubTab] = useState<string>('');
@@ -94,6 +96,7 @@ export const TemplateViewer = ({
           onSelectTemplate={setTemplateId}
           onUpdateTemplate={onUpdateTemplate}
           openCreateTemplateSignal={openCreateTemplateSignal}
+          onConsumeCreateTemplateSignal={onConsumeCreateTemplateSignal}
           onDownloadTemplate={onDownloadTemplate}
         />
       </div>
