@@ -1,7 +1,7 @@
 import request, { http } from "@/lib/http";
 import { Field } from "@/types/templates";
 
-export const getTemplates = async (page: number = 1, perPage: number = 100) => {
+export const getTemplates = async (page: number = 1, perPage: number = 1000) => {
   try {
     const url = `/prompt-template/list?page=${page}&per_page=${perPage}`;
     const response = await http.get(url);
