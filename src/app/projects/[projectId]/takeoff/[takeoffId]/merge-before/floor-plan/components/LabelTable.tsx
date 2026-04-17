@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, Radio, Table, notification, Modal } from "antd";
+import { Button, Input, Radio, Table, Modal } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { evidenceBatchDelete, evidenceBatchUpdate } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";
 import Image from "next/image";
+import { notify } from "@/utils/notify";
 const { confirm } = Modal;
 
 interface LabelItem {
@@ -143,8 +144,8 @@ export default function LabelTable({
 		// 只有 Label 需要校验是否为空，Sub Label 可以为空
 		if (field === "label" && !trimmedValue) {
 			handleCancelEdit();
-			notification.warning({
-				message: "Warning",
+			notify.warning({
+				title: "Warning",
 				description: "Label cannot be empty.",
 			});
 			return;
@@ -193,16 +194,16 @@ export default function LabelTable({
 		submittingCellKeyRef.current = null;
 		if (response.status === "success") {
 			onUpdateItem?.(updatedItem);
-			notification.success({
-				message: "Success",
+			notify.success({
+				title: "Success",
 				description: `${title} ${field === "label" ? "Label" : "Sub Label"} updated.`,
 			});
 			return;
 		}
 
 		setRows(prevRows);
-		notification.error({
-			message: "Error",
+		notify.error({
+			title: "Error",
 			description: "Failed to update label info. The table has been restored.",
 		});
 	};
@@ -210,8 +211,8 @@ export default function LabelTable({
 	const handleDeleteRow = async (record: LabelItem) => {
 		const rowId = Number(record.id);
 		if (!Number.isFinite(rowId)) {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Invalid evidence id, unable to delete.",
 			});
 			return;
@@ -229,8 +230,8 @@ export default function LabelTable({
 				setFullLoading(false);
 
 				if (response.status === "success") {
-					notification.success({
-						message: "Success",
+					notify.success({
+						title: "Success",
 						description: `${title} item deleted.`,
 					});
 					const nextRows = rows.filter((row) => row.id !== record.id);
@@ -239,8 +240,8 @@ export default function LabelTable({
 					return;
 				}
 
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "Failed to delete item. The table has been restored.",
 				});
 			},

@@ -1,5 +1,6 @@
 import { useState, ReactNode } from "react";
-import { Modal, Input, Button, message } from "antd";
+import { Modal, Input, Button } from "antd";
+import { notify } from "@/utils/notify";
 
 interface LabelConfirmModalProps {
   open: boolean;
@@ -22,7 +23,7 @@ const LabelConfirmModal = ({
   const handleSubmit = () => {
     // 检验表单数据
     if (formData.Label.trim() === "") {
-      message.error("Please input label");
+      notify.toastError("Please input label");
       return;
     }
     onSubmit(formData);

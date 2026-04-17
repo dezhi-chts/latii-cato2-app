@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Spin, Modal, Popover, Select, Tooltip } from "antd";
+import { Button, Spin, Modal, Popover, Select, Tooltip } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -42,6 +42,7 @@ import {
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { getTemplates } from "@/services/templateService";
 import { useUser } from "@/context/UserContext";
+import { notify } from "@/utils/notify";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
@@ -149,8 +150,8 @@ export default function FloorPlanPage() {
       }
     } catch (error) {
       console.error("Error fetching takeoff data:", error);
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load takeoff data.",
       });
     } finally {
@@ -161,8 +162,8 @@ export default function FloorPlanPage() {
   const fetchPromptTemplates = useCallback(async () => {
     const response = await getTemplates();
     if (response.status !== "success") {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load prompt templates.",
       });
       return;
@@ -202,8 +203,8 @@ export default function FloorPlanPage() {
         setPageElevationId(data[0].id);
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load floor plan and elevation data.",
       });
     }
@@ -217,8 +218,8 @@ export default function FloorPlanPage() {
     if (response.status === "success" && response.data) {
       setScheduleList(response.data || []);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load schedule evidence data.",
       });
     }
@@ -261,8 +262,8 @@ export default function FloorPlanPage() {
           }
           setItemBoxList(list);
         } else {
-          notification.error({
-            message: "Error",
+          notify.error({
+            title: "Error",
             description: "Failed to load evidence data.",
           });
         }
@@ -447,8 +448,8 @@ export default function FloorPlanPage() {
       let res = await evidenceBatchSubmit(data);
       setFullLoading(false);
       if (res.status === "success") {
-        notification.success({
-          message: "Confirm success",
+        notify.success({
+          title: "Confirm success",
           duration: 1,
         });
         // 关闭弹窗
@@ -458,8 +459,8 @@ export default function FloorPlanPage() {
         // 刷新数据
         getItemsByPageEvidences(pageEvidenceId);
       } else {
-        notification.error({
-          message: res?.data?.detail || "Confirm failed",
+        notify.error({
+          title: res?.data?.detail || "Confirm failed",
         });
       }
     },
@@ -479,14 +480,14 @@ export default function FloorPlanPage() {
       });
     };
     if (evidenceType === PageType.FloorPlan && floorPlanData?.length > 0 && findLabelEmpty(floorPlanData)) {
-      notification.error({
-        message: "Please fill in all the labels.",
+      notify.error({
+        title: "Please fill in all the labels.",
       });
       return;
     }
     if (evidenceType === PageType.Elevation && elevationData?.length > 0 && findLabelEmpty(elevationData)) {
-      notification.error({
-        message: "Please fill in all the labels.",
+      notify.error({
+        title: "Please fill in all the labels.",
       });
       return;
     }
@@ -531,8 +532,8 @@ export default function FloorPlanPage() {
 
   const handleAnaylize = useCallback(async () => {
     if (!selectedTemplateId) {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Please select a reading prompt before analysis.",
       });
       return;
@@ -564,8 +565,8 @@ export default function FloorPlanPage() {
         setBuildLoading(false);
         eventSourceRef.current = null;
         const formattedError = formatAnalyzeErrorMessage(error);
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: formattedError,
         });
       },
