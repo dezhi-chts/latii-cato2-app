@@ -9,6 +9,7 @@ interface FieldEditorModalProps {
   onClose: () => void;
   field?: any;
   templateId: number;
+  templateInfo: any;
   onUpdateField?: (eventName: FieldEvent, data: any) => void;
 }
 
@@ -17,6 +18,7 @@ export const FieldEditorModal = ({
   onClose,
   field,
   templateId,
+  templateInfo,
   onUpdateField,
 }: FieldEditorModalProps) => {
   return (
@@ -34,6 +36,7 @@ export const FieldEditorModal = ({
         <div className="flex-1 pt-10">
           <FieldEditor
             templateId={templateId}
+            templateInfo={templateInfo}
             field={field}
             mode={'create'}
             onClose={onClose}
