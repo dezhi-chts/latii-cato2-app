@@ -244,7 +244,7 @@ const Home = () => {
               />
             </div>
             <div className="flex gap-4">
-              <div className="p-1 rounded-md border border-primaryN30">
+              {/* <div className="p-1 rounded-md border border-primaryN30">
                 <Image
                   src="/assets/icons/edit.svg"
                   alt="Edit button"
@@ -253,7 +253,7 @@ const Home = () => {
                   onClick={() => setShowColumnView(true)}
                   className="cursor-pointer"
                 />
-              </div>
+              </div> */}
 
               <Button
                 backgroundColor="forumBlue-normal"
