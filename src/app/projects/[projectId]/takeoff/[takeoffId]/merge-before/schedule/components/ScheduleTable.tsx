@@ -1,13 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Input, Modal, Table, Tooltip, notification } from "antd";
+import { Button, Checkbox, Input, Modal, Table, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
 	getDisplayValueByField,
 	parseItemResult as parseItemResultUtil,
 } from "../../../analyze-new/takeoffUtils";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { notify } from "@/utils/notify";
+
+
 export interface ScheduleFileRow {
 	id: number;
 	key: string;
@@ -42,6 +46,7 @@ interface ScheduleTableProps {
 		newValue: string,
 	) => Promise<boolean>;
 	onDeleteItem: (itemId: number) => Promise<boolean>;
+	onOpenCreateItemModal: () => void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -106,6 +111,7 @@ export default function ScheduleTable({
 	tableLoading,
 	onUpdateField,
 	onDeleteItem,
+	onOpenCreateItemModal
 }: ScheduleTableProps) {
 	const [editingCell, setEditingCell] = useState<{
 		id: number;
@@ -113,6 +119,8 @@ export default function ScheduleTable({
 	} | null>(null);
 	const [editingValue, setEditingValue] = useState("");
 	const submittingCellKeyRef = useRef<string | null>(null);
+	const [batchSelectedIds, setBatchSelectedIds] = useState<number[]>([]);
+
 
 	const startEdit = (record: any, fieldName: string) => {
 		setEditingCell({ id: Number(record.id), field: fieldName });
@@ -183,6 +191,49 @@ export default function ScheduleTable({
 		});
 	};
 
+	const handleToggleBatchSelected = (rowId: number, checked: boolean) => {
+		setBatchSelectedIds((prev) => {
+			if (checked) {
+				if (prev.includes(rowId)) return prev;
+				return [...prev, rowId];
+			}
+			return prev.filter((id) => id !== rowId);
+		});
+	};
+
+	const handleOpenBatchEdit = () => {
+		if (!batchSelectedIds.length) {
+			notify.warning({
+				title: "Warning",
+				description: "Please select items to process.",
+			});
+			return;
+		}
+		notify.warning({
+			title: "Warning",
+			description: "Function development is in progress. Please wait.",
+		});
+	};
+
+	const handleBatchDelete = () => {
+		if (!batchSelectedIds.length) {
+			notify.warning({
+				title: "Warning",
+				description: "Please select items to process.",
+			});
+			return;
+		}
+		notify.warning({
+			title: "Warning",
+			description: "Function development is in progress. Please wait.",
+		});
+		return;
+		const selectedLabels = sections
+			.filter((row) => batchSelectedIds.includes(Number(row.id)))
+			.map((row) => row.label)
+			.filter(Boolean);
+	};
+
 	const tableColumns: ColumnsType<any> = (() => {
 		const dataColumns = columns.map((fieldName) => {
 			const isLabelColumn = fieldName === "Label";
@@ -237,6 +288,24 @@ export default function ScheduleTable({
 			};
 		});
 
+		const checkedColumn = {
+			title: "",
+			key: "checkbox",
+			width: 36,
+			align: "center",
+			render: (_: unknown, record: any) => {
+				const rowId = Number(record.id);
+				return (
+					<Checkbox
+						checked={batchSelectedIds.includes(rowId)}
+						onChange={(event) =>
+							handleToggleBatchSelected(rowId, event.target.checked)
+						}
+					/>
+				);
+			}
+		};
+
 		const actionColumn: ColumnsType<any>[number] = {
 			title: <div className="text-center text-xs text-grey-normal">Action</div>,
 			key: "action",
@@ -258,11 +327,43 @@ export default function ScheduleTable({
 			),
 		};
 
-		return [...dataColumns, actionColumn];
+		return [checkedColumn, ...dataColumns, actionColumn];
 	})();
 
 	return (
 		<div className="flex-1">
+			<div className="mb-3 flex items-center justify-between">
+				<div className="text-xs text-grey-normal">{sections.length} items</div>
+				<div className="flex items-center gap-2">
+					<Tooltip title="Edit Labels">
+						<div
+							className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+							onClick={() => {
+								handleOpenBatchEdit();
+							}}
+						>
+							<EditOutlined className="text-[12px]" />
+						</div>
+					</Tooltip>
+					<Tooltip title="Delete Labels">
+						<div
+							className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+							onClick={() => {
+								handleBatchDelete();
+							}}
+						>
+							<DeleteOutlined className="text-[12px]" />
+						</div>
+					</Tooltip>
+					<Button
+						className="custom-primary-btn !w-[60px] !text-xs"
+						onClick={() => onOpenCreateItemModal?.()}
+					>
+						+ Item
+					</Button>
+				</div>
+
+			</div>
 			<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
 				<Table<any>
 					rowKey={(record) => record.id}

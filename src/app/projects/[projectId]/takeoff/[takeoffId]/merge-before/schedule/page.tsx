@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Image, Popover, Modal } from "antd";
+import { Button, notification, Image, Popover, Modal, Tooltip, Checkbox } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -557,21 +557,13 @@ export default function SchedulePage() {
         </div>
         {/** right view */}
         <div className="h-full w-[50%] shrink-0 border-l border-primaryN30 bg-white p-4 overflow-hidden">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="text-xs text-grey-normal">{itemBoxList.length} items</div>
-            <Button
-              className="custom-primary-btn !w-[60px] !text-xs"
-              onClick={handleOpenCreateItemModal}
-            >
-              + Item
-            </Button>
-          </div>
           <ScheduleTable
             columns={columns}
             sections={itemBoxList}
             tableLoading={tableLoading}
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
+            onOpenCreateItemModal={handleOpenCreateItemModal}
           />
         </div>
       </div>
