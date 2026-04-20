@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, Radio, Table, Modal } from "antd";
+import { Button, Checkbox, Input, Modal, Radio, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { evidenceBatchDelete, evidenceBatchUpdate } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";
 import Image from "next/image";
 import { notify } from "@/utils/notify";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 const { confirm } = Modal;
 
 interface LabelItem {
@@ -25,6 +26,11 @@ interface LabelTableProps {
 	onSelect: (item: LabelItem) => void;
 	onUpdateItem?: (item: Record<string, any>) => void;
 	onDeleteSuccess?: (deletedId: number) => void;
+	onBatchEditRequest?: (evidenceIds: number[]) => void;
+	onBatchDeleteRequest?: (params: {
+		evidenceIds: number[];
+		labels: string[];
+	}) => void;
 	setShowScheduleModal: (visible: boolean) => void;
 }
 
@@ -35,9 +41,12 @@ export default function LabelTable({
 	onSelect,
 	onUpdateItem,
 	onDeleteSuccess,
+	onBatchEditRequest,
+	onBatchDeleteRequest,
 	setShowScheduleModal,
 }: LabelTableProps) {
 	const [rows, setRows] = useState<LabelItem[]>([]);
+	const [batchSelectedIds, setBatchSelectedIds] = useState<number[]>([]);
 	const [editingCell, setEditingCell] = useState<{
 		id: string | number;
 		field: "label" | "subLabel";
@@ -104,6 +113,15 @@ export default function LabelTable({
 
 		setRows(nextRows);
 	}, [data]);
+
+	useEffect(() => {
+		setBatchSelectedIds((prev) => {
+			const validIds = new Set(
+				rows.map((row) => Number(row.id)).filter((id) => Number.isFinite(id)),
+			);
+			return prev.filter((id) => validIds.has(id));
+		});
+	}, [rows]);
 
 	// 当选中行变化时，滚动到可视区域
 	useEffect(() => {
@@ -248,13 +266,69 @@ export default function LabelTable({
 		});
 	}
 
+	const handleToggleBatchSelected = (rowId: number, checked: boolean) => {
+		setBatchSelectedIds((prev) => {
+			if (checked) {
+				if (prev.includes(rowId)) return prev;
+				return [...prev, rowId];
+			}
+			return prev.filter((id) => id !== rowId);
+		});
+	};
+
+	const handleBatchDelete = () => {
+		if (!batchSelectedIds.length) {
+			notify.warning({
+				title: "Warning",
+				description: "Please select items to process.",
+			});
+			return;
+		}
+		const selectedLabels = rows
+			.filter((row) => batchSelectedIds.includes(Number(row.id)))
+			.map((row) => row.label)
+			.filter(Boolean);
+		onBatchDeleteRequest?.({
+			evidenceIds: batchSelectedIds,
+			labels: selectedLabels,
+		});
+	};
+
+	const handleOpenBatchEdit = () => {
+		if (!batchSelectedIds.length) {
+			notify.warning({
+				title: "Warning",
+				description: "Please select items to process.",
+			});
+			return;
+		}
+		onBatchEditRequest?.(batchSelectedIds);
+	};
+
 
 	const columns: ColumnsType<LabelItem> = useMemo(
 		() => [
 			{
 				title: "",
+				key: "checkbox",
+				width: 36,
+				align: "center",
+				render: (_: unknown, record: LabelItem) => {
+					const rowId = Number(record.id);
+					return (
+						<Checkbox
+							checked={batchSelectedIds.includes(rowId)}
+							onChange={(event) =>
+								handleToggleBatchSelected(rowId, event.target.checked)
+							}
+						/>
+					);
+				},
+			},
+			{
+				title: "",
 				key: "radio",
-				width: 40,
+				width: 30,
 				align: "center",
 				render: (_: unknown, record: LabelItem) => (
 					<span
@@ -269,7 +343,7 @@ export default function LabelTable({
 				),
 			},
 			{
-				title: "Label",
+				title: <div className="text-xs text-grey-normal">Label</div>,
 				key: "label",
 				dataIndex: "label",
 				width: 100,
@@ -300,7 +374,7 @@ export default function LabelTable({
 					),
 			},
 			{
-				title: "Sub Label",
+				title: <div className="text-xs text-grey-normal">Sub Label</div>,
 				key: "subLabel",
 				dataIndex: "subLabel",
 				align: "center",
@@ -332,7 +406,7 @@ export default function LabelTable({
 			{
 				title: "",
 				key: "action",
-				width: 40,
+				width: 30,
 				align: "center",
 				render: (_: string, record: LabelItem) => (
 					<Button
@@ -341,22 +415,56 @@ export default function LabelTable({
 						className="px-0"
 						onClick={() => handleDeleteRow(record)}
 					>
-						<Image alt="Delete" src='/assets/icons/delete.svg' width={15} height={15} />
+						<Image alt="Delete" src='/assets/icons/delete.svg' width={16} height={16} />
 					</Button>
 				),
 			},
 		],
-		[editingCell, editingValue, onSelect, onDeleteSuccess, rows, savingCell, selectedId, title],
+		[
+			batchSelectedIds,
+			editingCell,
+			editingValue,
+			onSelect,
+			onDeleteSuccess,
+			rows,
+			savingCell,
+			selectedId,
+			title,
+		],
 	);
 
 	return (
 		<div className="mb-2">
 			<div className="mb-2 text-sm font-medium text-forumBlue-normal flex justify-between items-center">
 				<div>
-					<span className="mr-2">{title}</span>
+					{/* <span className="mr-2">{title}</span> */}
 					<span className="text-xs text-grey-dark">{rows.length} items</span>
 				</div>
-				<div className="underline cursor-pointer" onClick={() => setShowScheduleModal(true)}>Schedule Images</div>
+				<div className="flex items-center gap-3">
+					<div className="flex items-center gap-2">
+						<Tooltip title="Edit Labels">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									handleOpenBatchEdit();
+								}}
+							>
+								<EditOutlined className="text-[12px]" />
+							</div>
+						</Tooltip>
+						<Tooltip title="Delete Labels">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									handleBatchDelete();
+								}}
+							>
+								<DeleteOutlined className="text-[12px]" />
+							</div>
+						</Tooltip>
+					</div>
+					<div className="underline cursor-pointer" onClick={() => setShowScheduleModal(true)}>Schedule Images</div>
+				</div>
 			</div>
 			<div ref={tableRef} className="overflow-auto">
 				<Table

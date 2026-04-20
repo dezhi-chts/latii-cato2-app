@@ -29,6 +29,7 @@ import {
 } from "../../analyze-new/takeoffUtils";
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import CreateItemModal from "./components/CreateItemModal";
+import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 const { confirm } = Modal;
 export default function SchedulePage() {
   const router = useRouter();
@@ -550,7 +551,7 @@ export default function SchedulePage() {
           {/* Images */}
           <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center">
             {
-              imageUrl && <Image src={imageUrl} alt="Schedule Evidence" preview={false} />
+              imageUrl && <ImagePreviewWithExpand src={imageUrl} alt="Schedule Evidence" />
             }
           </div>
         </div>

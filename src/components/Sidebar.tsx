@@ -164,9 +164,8 @@ export default function Sidebar() {
   return (
     <div>
       <div
-        className={`sidebar-container border-r border-primaryN30 shadow-md pt-9 ${
-          loadingExpansion ? "w-[340px] px-9" : "w-16"
-        } 
+        className={`sidebar-container border-r border-primaryN30 shadow-md pt-9 ${loadingExpansion ? "w-[340px] px-9" : "w-16"
+          } 
       ${!expanded.sidebar && "cursor-pointer"}
       top-0 z-[999] fixed flex h-screen flex-col justify-between  bg-white p-3 text-black transition-all linear duration-700 font-nunito`}
         ref={sidebarRef}
@@ -204,9 +203,8 @@ export default function Sidebar() {
             </button>
           </div>
           <button
-            className={`${
-              expanded.sidebar ? "px-3.5" : " w-7 h-7 self-center"
-            } h-7 bg-forumBlue-light text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
+            className={`${expanded.sidebar ? "px-3.5" : " w-7 h-7 self-center"
+              } h-7 bg-forumBlue-light text-forumBlue-dark-hover hover:bg-forumBlue-normal hover:text-white text-sm transition-all duration-300 rounded-lg flex items-center justify-center gap-2.5`}
             onClick={(e) => {
               e.stopPropagation();
               setShowModal((prev) => ({ ...prev, createProject: true }));
@@ -233,9 +231,8 @@ export default function Sidebar() {
           >
             <Link href="/home">
               <div
-                className={`flex gap-3 rounded-xl ${
-                  showInitialStyles ? "" : " justify-start"
-                } h-8 w-10 items-center pl-2.5 cursor-pointer`}
+                className={`flex gap-3 rounded-xl ${showInitialStyles ? "" : " justify-start"
+                  } h-8 w-10 items-center pl-2.5 cursor-pointer`}
               >
                 <Tooltip
                   title={expanded.sidebar ? "" : "Home"}
@@ -298,9 +295,8 @@ export default function Sidebar() {
                 >
                   <Link href="/brand-editor">
                     <div
-                      className={`flex gap-3 ${
-                        showInitialStyles ? "" : "justify-start"
-                      } h-8 min-w-10 items-center cursor-pointer`}
+                      className={`flex gap-3 ${showInitialStyles ? "" : "justify-start"
+                        } h-8 min-w-10 items-center cursor-pointer`}
                     >
                       <Image
                         src={`/assets/icons/navbar/your-company${`${firstSegment}` === "brand-editor" ? "-selected" : ""}.svg`}
@@ -317,7 +313,7 @@ export default function Sidebar() {
                   </Link>
                 </div>
               )}
-              <div
+              {/* <div
                 onClick={(e) => {
                   e.stopPropagation();
                   if (expanded.sidebar) toggleExpand("sidebar");
@@ -342,7 +338,7 @@ export default function Sidebar() {
                     </p>
                   </div>
                 </Link>
-              </div>
+              </div> */}
 
               {/* For now, Lucius Knowledge Base has been removed from the sidebar. Don't delete the code below, it's just commented out. */}
               {/* <Link href="/knowledge-base-lucius">
@@ -373,9 +369,8 @@ export default function Sidebar() {
               >
                 <Link href="/knowledge-base-cato">
                   <div
-                    className={`flex gap-2 rounded-xl ${
-                      showInitialStyles ? "" : " justify-start"
-                    } h-8 w-10 items-center pl-1 cursor-pointer`}
+                    className={`flex gap-2 rounded-xl ${showInitialStyles ? "" : " justify-start"
+                      } h-8 w-10 items-center pl-1 cursor-pointer`}
                   >
                     <Image
                       src={`/assets/icons/navbar/cato-knowledge-base${`${firstSegment}` === "knowledge-base-cato" ? "-selected" : ""}.svg`}
@@ -420,9 +415,8 @@ export default function Sidebar() {
             <span> {expanded.sidebar ? "Support" : ""} </span>
           </div> */}
           <div
-            className={`flex items-center cursor-pointer hover:underline w-fit relative ${
-              expanded.sidebar && "gap-2"
-            }`}
+            className={`flex items-center cursor-pointer hover:underline w-fit relative ${expanded.sidebar && "gap-2"
+              }`}
             onClick={() => {
               setTimeout(() => {
                 setShowModal((prev) => ({ ...prev, settings: !prev.settings }));

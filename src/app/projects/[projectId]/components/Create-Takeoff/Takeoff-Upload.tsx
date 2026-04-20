@@ -69,7 +69,7 @@ export const UploadFileList = ({
 };
 
 export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
-  const maxFileLimit = 2;
+  const maxFileLimit = 1; //2;
 
   const handleRemove = (uid: string) => {
     const newFiles = files.filter((file: UploadFile) => file.uid !== uid);
@@ -118,7 +118,7 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
           {
             files.length === 0 && (
               <p className="text-grey-light-strong text-center">
-                <span>Up to 2 files. Only the PDF format is accepted.</span>
+                <span>Up to 1 files. Only the PDF format is accepted.</span>
                 {/* <span>Maximum weight of 00MG</span> */}
               </p>
             )
@@ -213,7 +213,7 @@ export const QuoteUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="h-full p-4 border border-grey-light-hover rounded-lg">
+    <div className="h-full p-4 border border-grey-light-hover rounded-lg relative">
       {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
@@ -232,6 +232,9 @@ export const QuoteUpload = ({
           }}
         />
       )}
+      <div className="absolute bottom-0 left-0 right-0 w-full h-full bg-[rgb(255,255,255,0.6)] rounded-lg z-99">
+
+      </div>
     </div>
   );
 };
