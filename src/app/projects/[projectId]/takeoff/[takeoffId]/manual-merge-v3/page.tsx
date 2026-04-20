@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Empty, Image, Input, Modal, Segmented, Spin, Table, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircleFilled, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { DownOutlined, UpOutlined, CheckCircleFilled, DeleteOutlined } from "@ant-design/icons";
 
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
@@ -32,6 +32,7 @@ interface LabelOption {
   label: string;
   count?: number;
   isMerged?: boolean;
+  isAutoMerged?: boolean;
   idList?: number[];
 }
 
@@ -271,7 +272,7 @@ const extractEvidenceEntries = (
   }));
 };
 
-const collectSourceRows = (payload: any, source: SourceKey): any[] => {
+const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boolean): any[] => {
   if (!Array.isArray(payload)) return [];
 
   const sourceNode = payload.find((node: any) => {
@@ -280,6 +281,13 @@ const collectSourceRows = (payload: any, source: SourceKey): any[] => {
       (alias) => nodeType === normalizeKey(alias),
     );
   });
+
+  if (source === 'schedule') {
+    if (isLabelMerged) {
+      return Array.isArray(sourceNode?.merged_list) ? sourceNode.merged_list : [];
+    }
+    return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
+  }
 
   return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
@@ -307,6 +315,8 @@ export default function ManualMergeV2Page() {
   const [scheduleChanges, setScheduleChanges] = useState<Record<string, any>>({});
   const [originalScheduleLabelById, setOriginalScheduleLabelById] = useState<Record<string, string>>({});
   const [collapsedSystemLabelMap, setCollapsedSystemLabelMap] = useState<Record<string, boolean>>({});
+  const [collapsedAutoMergedLabels, setCollapsedAutoMergedLabels] = useState(false);
+  const [collapsedConflictLabels, setCollapsedConflictLabels] = useState(false);
 
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -320,7 +330,17 @@ export default function ManualMergeV2Page() {
     () => labels.find((item) => item.label === selectedLabel) || null,
     [labels, selectedLabel],
   );
-  const isSelectedLabelMerged = Boolean(selectedLabelMeta?.isMerged);
+  const isSelectedLabelMerged = Boolean(
+    selectedLabelMeta?.isAutoMerged ?? selectedLabelMeta?.isMerged,
+  );
+  const autoMergedLabels = useMemo(
+    () => labels.filter((item) => Boolean(item.isAutoMerged ?? item.isMerged)),
+    [labels],
+  );
+  const conflictLabels = useMemo(
+    () => labels.filter((item) => !Boolean(item.isAutoMerged ?? item.isMerged)),
+    [labels],
+  );
 
   const scheduleEvidenceUrls = useMemo(
     () =>
@@ -470,9 +490,12 @@ export default function ManualMergeV2Page() {
       }
 
       const payload = response.data?.data ?? response.data ?? [];
-      const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule"));
-      const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan"));
-      const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation"));
+
+      const isLabelMerged = labels.find((item) => item.label === label)?.isMerged;
+
+      const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
+      const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
+      const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation", isLabelMerged));
 
       const nextCollapsedMap: Record<string, boolean> = {};
       const labelCountMap = new Map<string, number>();
@@ -511,7 +534,7 @@ export default function ManualMergeV2Page() {
     } finally {
       setLoading(false);
     }
-  }, [fetchEvidenceUrlsByRows, fileId, takeoffId]);
+  }, [fetchEvidenceUrlsByRows, fileId, takeoffId, labels]);
 
   const fetchLabelsAndMaybeLoadData = useCallback(
     async (
@@ -543,6 +566,7 @@ export default function ManualMergeV2Page() {
             label,
             count: Number(item?.count || item?.total || 0) || undefined,
             isMerged: Boolean(item?.is_merged),
+            isAutoMerged: Boolean(item?.is_auto_merged),
             idList: Array.isArray(item?.id_list) ? item.id_list : [],
           };
         })
@@ -566,10 +590,12 @@ export default function ManualMergeV2Page() {
       if (autoSwitchFromMergedCurrent && hasPreferredLabel) {
         const currentIndex = nextLabels.findIndex((item) => item.label === preferredLabel);
         const currentItem = currentIndex >= 0 ? nextLabels[currentIndex] : null;
-        if (currentItem?.isMerged) {
+        if (Boolean(currentItem?.isAutoMerged ?? currentItem?.isMerged)) {
           const nextUnmerged =
-            nextLabels.slice(Math.max(currentIndex + 1, 0)).find((item) => !item.isMerged) ||
-            nextLabels.find((item) => !item.isMerged);
+            nextLabels
+              .slice(Math.max(currentIndex + 1, 0))
+              .find((item) => !Boolean(item.isAutoMerged ?? item.isMerged)) ||
+            nextLabels.find((item) => !Boolean(item.isAutoMerged ?? item.isMerged));
           if (nextUnmerged?.label) {
             nextSelectedLabel = nextUnmerged.label;
           }
@@ -785,6 +811,7 @@ export default function ManualMergeV2Page() {
   }, [takeoffId]);
 
   const renderTable = (
+    title: string,
     rows: any[],
     editable: boolean,
     withEvidenceAction: boolean,
@@ -800,6 +827,8 @@ export default function ManualMergeV2Page() {
       render: (_: unknown, record: any) => {
         const value = getDisplayValueByField(record?.result || {}, fieldName);
         const isEditing = editable && editingCell?.id === String(record.id) && editingCell?.field === fieldName;
+        let conflicting_fields = record?.conflicting_fields || [];
+        let isConflicting = conflicting_fields.includes(fieldName) && title === 'Final Items';
         if (isEditing) {
           return (
             <Input
@@ -820,8 +849,8 @@ export default function ManualMergeV2Page() {
         }
         return (
           <div
-            className={`mx-auto w-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
-              }`}
+            className={`mx-auto w-full h-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
+              } ${isConflicting ? 'bg-[#FFFF00]' : ''} `}
             onClick={() => {
               if (editable && !isSelectedLabelMerged) startEdit(record, fieldName);
             }}
@@ -866,7 +895,8 @@ export default function ManualMergeV2Page() {
       align: "center",
       fixed: "right",
       render: (_: unknown, record: any) =>
-        withEvidenceAction ? (
+      (
+        <div>
           <Button
             type="link"
             size="small"
@@ -891,7 +921,26 @@ export default function ManualMergeV2Page() {
               preview={false}
             />
           </Button>
-        ) : null,
+          {
+            title === 'Final Items' && (
+              <Button
+                type="link"
+                size="small"
+                onClick={() => {
+                }}
+              >
+                <Image
+                  src="/assets/icons/delete.svg"
+                  alt=""
+                  width={15}
+                  height={15}
+                  preview={false}
+                />
+              </Button>
+            )
+          }
+        </div>
+      ),
     };
 
     return (
@@ -944,7 +993,7 @@ export default function ManualMergeV2Page() {
         </div>
       </div>
       <div className={stretch ? "min-h-0 flex-1" : ""}>
-        {renderTable(rows, editable, withEvidenceAction, scrollY)}
+        {renderTable(title, rows, editable, withEvidenceAction, scrollY)}
       </div>
     </div>
   );
@@ -1009,35 +1058,99 @@ export default function ManualMergeV2Page() {
         <div className="w-[220px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
-            <span className="text-xs text-grey-normal">{labels.length}</span>
+            <span className="text-xs text-grey-normal">{labels.length} Labels</span>
           </div>
-          <div className="space-y-2 overflow-auto max-h-[calc(100vh-200px)]">
-            {labels.map((item) => {
-              const active = item.label === selectedLabel;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => handleSwitchLabel(item.label)}
-                  className={`w-full rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
-                    }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-1 text-left">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-                        {item.isMerged ? (
-                          <CheckCircleFilled className="text-green-normal" />
-                        ) : null}
-                      </span>
-                      <span className="truncate">{item.label}</span>
-                    </span>
-                    {typeof item.count === "number" ? (
-                      <span className="text-grey-normal">{item.count}</span>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            })}
+          <div className="space-y-3 overflow-auto max-h-[calc(100vh-200px)]">
+            <div>
+              <button
+                type="button"
+                className="pr-2 mb-2 flex w-full items-center justify-between text-left"
+                onClick={() => setCollapsedAutoMergedLabels((prev) => !prev)}
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-forumBlue-normal">
+                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-green-500" />
+                  <span>Auto Merged ({autoMergedLabels.length})</span>
+                </span>
+                {collapsedAutoMergedLabels ? (
+                  <DownOutlined className="text-[10px] text-grey-normal" />
+                ) : (
+                  <UpOutlined className="text-[10px] text-grey-normal" />
+                )}
+              </button>
+              {!collapsedAutoMergedLabels && (
+                <div className="space-y-2">
+                  {autoMergedLabels.map((item) => {
+                    const active = item.label === selectedLabel;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => handleSwitchLabel(item.label)}
+                        className={`w-full flex items-center rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
+                          }`}
+                      >
+                        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                          {item.isMerged ? (
+                            <CheckCircleFilled className="text-green-normal mr-1" />
+                          ) : null}
+                        </span>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center text-left">
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <button
+                type="button"
+                className="pr-2 mb-2 flex w-full items-center justify-between text-left"
+                onClick={() => setCollapsedConflictLabels((prev) => !prev)}
+              >
+                <span className="flex items-center gap-2 text-xs font-medium text-forumBlue-normal">
+                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFFF00]" />
+                  <span>Conflict ({conflictLabels.length})</span>
+                </span>
+                {collapsedConflictLabels ? (
+                  <DownOutlined className="text-[10px] text-grey-normal" />
+                ) : (
+                  <UpOutlined className="text-[10px] text-grey-normal" />
+                )}
+              </button>
+              {!collapsedConflictLabels && (
+                <div className="space-y-2">
+                  {conflictLabels.map((item) => {
+                    const active = item.label === selectedLabel;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => handleSwitchLabel(item.label)}
+                        className={`w-full flex items-center rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
+                          }`}
+                      >
+                        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                          {item.isMerged ? (
+                            <CheckCircleFilled className="text-green-normal mr-1" />
+                          ) : null}
+                        </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center text-left">
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

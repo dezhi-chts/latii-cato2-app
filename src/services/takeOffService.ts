@@ -499,6 +499,22 @@ export const checkFileSourceMergeResultsAndCreateSingleFileResults = async (
 }
 
 /**
+ * 更新单文件合并结果
+ * @param data 
+ * @returns 
+ */
+export const updateSingleFileMergeResultsByIdList = async (data:any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/update_single_file_merge_results_by_id_list`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error updating single file merge results by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
  * 自动创建多个文件的合并结果
  * @param take_off_id 
  * @returns 
