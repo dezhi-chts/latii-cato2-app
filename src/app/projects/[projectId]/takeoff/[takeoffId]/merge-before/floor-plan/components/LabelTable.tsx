@@ -236,34 +236,54 @@ export default function LabelTable({
 			return;
 		}
 
-		confirm({
-			title: "Delete Item",
-			content: `Are you sure you want to delete this item: ${record.label}`,
-			okText: "Delete",
-			onOk: async () => {
-				const prevRows = rows;
+		setFullLoading(true);
+		const response = await evidenceBatchDelete([rowId]);
+		setFullLoading(false);
 
-				setFullLoading(true);
-				const response = await evidenceBatchDelete([rowId]);
-				setFullLoading(false);
+		if (response.status === "success") {
+			notify.success({
+				title: "Success",
+				description: `${title} item deleted.`,
+			});
+			const nextRows = rows.filter((row) => row.id !== record.id);
+			setRows(nextRows);
+			onDeleteSuccess?.(rowId);
+			return;
+		}
 
-				if (response.status === "success") {
-					notify.success({
-						title: "Success",
-						description: `${title} item deleted.`,
-					});
-					const nextRows = rows.filter((row) => row.id !== record.id);
-					setRows(nextRows);
-					onDeleteSuccess?.(rowId);
-					return;
-				}
-
-				notify.error({
-					title: "Error",
-					description: "Failed to delete item. The table has been restored.",
-				});
-			},
+		notify.error({
+			title: "Error",
+			description: "Failed to delete item. The table has been restored.",
 		});
+
+		// confirm({
+		// 	title: "Delete Item",
+		// 	content: `Are you sure you want to delete this item: ${record.label}`,
+		// 	okText: "Delete",
+		// 	onOk: async () => {
+		// 		const prevRows = rows;
+
+		// 		setFullLoading(true);
+		// 		const response = await evidenceBatchDelete([rowId]);
+		// 		setFullLoading(false);
+
+		// 		if (response.status === "success") {
+		// 			notify.success({
+		// 				title: "Success",
+		// 				description: `${title} item deleted.`,
+		// 			});
+		// 			const nextRows = rows.filter((row) => row.id !== record.id);
+		// 			setRows(nextRows);
+		// 			onDeleteSuccess?.(rowId);
+		// 			return;
+		// 		}
+
+		// 		notify.error({
+		// 			title: "Error",
+		// 			description: "Failed to delete item. The table has been restored.",
+		// 		});
+		// 	},
+		// });
 	}
 
 	const handleToggleBatchSelected = (rowId: number, checked: boolean) => {

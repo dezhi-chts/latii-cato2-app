@@ -77,7 +77,7 @@ const PageTextWithTooltip = ({ text }: { text: string | number }) => {
 	}, [text]);
 
 	const content = (
-		<span ref={textRef} className="block truncate text-grey-normal text-sm">
+		<span ref={textRef} className="block truncate text-grey-normal text-xs">
 			{text}
 		</span>
 	);
@@ -91,7 +91,7 @@ const PageTextWithTooltip = ({ text }: { text: string | number }) => {
 			title={text}
 			placement="topLeft"
 			color="#717171"
-			className="text-grey-normal text-sm"
+			className="text-grey-normal text-xs"
 		>
 			{content}
 		</Tooltip>
