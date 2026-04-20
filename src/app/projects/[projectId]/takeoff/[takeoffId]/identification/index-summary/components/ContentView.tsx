@@ -156,11 +156,11 @@ const ContentView = ({
               {checked ? <span className="ml-[2px] text-white font-sans">✓</span> : ""}
             </div>
           </div>
-          <div className="flex-1 flex flex-row" onClick={() => handleMatchPage(item)}>
+          <div className="flex-1 flex flex-row items-center" onClick={() => handleMatchPage(item)}>
             <div className={`mx-1 w-[40px] text-center text-xs cursor-pointer`}>
               <span>{item.page_number ?? ""}</span>
             </div>
-            <div className={`flex-1 text-xs cursor-pointer text-center`}>
+            <div className={`w-[80px] text-center text-xs cursor-pointer`}>
               <span className="">{item.index ?? ""}</span>
             </div>
             <div
@@ -171,24 +171,22 @@ const ContentView = ({
           </div>
 
           <div className="w-[180px] flex items-center justify-center">
-            <div>
-              <Select
-                className="w-[160px] h-[28px] text-xs"
-                placeholder="Floor Plan,etc."
-                value={!item.type ? null : item.type}
-                onFocus={(e) => e.stopPropagation()}
-                onChange={(value) => {
-                  handleChangeType(item, item.type, value)
-                }}
-                disabled={!checked}
-              >
-                {drawingTypeList.map((item: any, index: number) => (
-                  <Select.Option key={item.type + "_" + index} value={item.type}>
-                    {item.type}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
+            <Select
+              className="w-[160px] h-[28px] text-xs"
+              placeholder="Floor Plan,etc."
+              value={!item.type ? null : item.type}
+              onFocus={(e) => e.stopPropagation()}
+              onChange={(value) => {
+                handleChangeType(item, item.type, value)
+              }}
+              disabled={!checked}
+            >
+              {drawingTypeList.map((item: any, index: number) => (
+                <Select.Option key={item.type + "_" + index} value={item.type}>
+                  {item.type}
+                </Select.Option>
+              ))}
+            </Select>
           </div>
         </div>
       </div>
@@ -223,7 +221,7 @@ const ContentView = ({
           <div className="px-[2px] w-full h-[28px] flex flex-row items-center bg-forumBlue-light text-xs text-forumBlue-normal rounded-tl-md rounded-tr-md">
             <div className="w-[34px] text-center"></div>
             <div className="w-[40px] text-center">Page</div>
-            <div className="flex-1 text-center">Index</div>
+            <div className="w-[90px] text-center">Index</div>
             <div className="flex-1 text-center">Title</div>
             <div className="w-[180px] text-center">Type</div>
           </div>

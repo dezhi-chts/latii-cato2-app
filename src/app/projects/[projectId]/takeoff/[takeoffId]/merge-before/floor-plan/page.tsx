@@ -27,10 +27,11 @@ import {
 import Image from "next/image";
 import LabelTable from "./components/LabelTable";
 import ImageList from "./components/ImageList";
+import BatchEditEvidenceModal from "./components/BatchEditEvidenceModal";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import EvidenceThumbailList from "./components/EvidenceThumbailList";
 import LabelConfirmModal from "./components/LabelConfirmModal";
-import { evidenceBatchSubmit } from "@/services/evidenceService";
+import { evidenceBatchDelete, evidenceBatchSubmit } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import {
@@ -43,6 +44,8 @@ import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { getTemplates } from "@/services/templateService";
 import { useUser } from "@/context/UserContext";
 import { notify } from "@/utils/notify";
+import { div } from "framer-motion/m";
+const { confirm } = Modal;
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
@@ -122,6 +125,8 @@ export default function FloorPlanPage() {
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
+  const [areaEditModalOpen, setAreaEditModalOpen] = useState(false);
+  const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
   const { username } = useUser();
 
@@ -232,16 +237,10 @@ export default function FloorPlanPage() {
     return selectedFile?.parse_detail?.uploaded_file_url || "";
   }, [selectedFile]);
 
-  const floorPlanData = useMemo<any[]>(() => {
-    return (itemBoxList || []).filter(
-      (item: any) => item?.type === "Floor Plan Item",
-    );
-  }, [itemBoxList]);
-
-  const elevationData = useMemo<any[]>(() => {
-    return (itemBoxList || []).filter(
-      (item: any) => item?.type === "Elevation Item",
-    );
+  const labelTableData = useMemo<any[]>(() => {
+    return (itemBoxList || []).filter((item: any) => {
+      return item?.type === "Floor Plan Item" || item?.type === "Elevation Item";
+    });
   }, [itemBoxList]);
 
   const getItemsByPageEvidences = useCallback(
@@ -375,11 +374,7 @@ export default function FloorPlanPage() {
     setSelectedFileId(id);
   };
 
-  const handleSelectFloorPlan = (item: { id: string | number }) => {
-    setSelectedEvidenceIds([item.id]);
-  };
-
-  const handleSelectElevation = (item: { id: string | number }) => {
+  const handleSelectLabelItem = (item: { id: string | number }) => {
     setSelectedEvidenceIds([item.id]);
   };
 
@@ -422,10 +417,7 @@ export default function FloorPlanPage() {
         },
       };
 
-      let count =
-        evidenceType === PageType.FloorPlan
-          ? floorPlanData.length
-          : elevationData.length;
+      let count = labelTableData.length;
 
       let itemInfo = { ...confirmItem.current };
       let groupId = itemInfo.groupId;
@@ -464,7 +456,7 @@ export default function FloorPlanPage() {
         });
       }
     },
-    [evidenceType, floorPlanData, elevationData],
+    [evidenceType, labelTableData],
   );
 
   const handleNext = () => {
@@ -479,13 +471,11 @@ export default function FloorPlanPage() {
         }
       });
     };
-    if (evidenceType === PageType.FloorPlan && floorPlanData?.length > 0 && findLabelEmpty(floorPlanData)) {
-      notify.error({
-        title: "Please fill in all the labels.",
-      });
-      return;
-    }
-    if (evidenceType === PageType.Elevation && elevationData?.length > 0 && findLabelEmpty(elevationData)) {
+    if (
+      (evidenceType === PageType.FloorPlan || evidenceType === PageType.Elevation) &&
+      labelTableData?.length > 0 &&
+      findLabelEmpty(labelTableData)
+    ) {
       notify.error({
         title: "Please fill in all the labels.",
       });
@@ -585,6 +575,67 @@ export default function FloorPlanPage() {
     // 调用删除接口
     pdfWrapperRef?.current?.handleBatchDelete(false);
   };
+
+  const handleCancelAreaEditModal = useCallback(() => {
+    setAreaEditModalOpen(false);
+    setAreaEditEvidenceIds([]);
+  }, []);
+
+  const handleAreaEditSuccess = useCallback(async () => {
+    handleCancelAreaEditModal();
+    pdfWrapperRef.current?.clearAreaSelection?.();
+    await getItemsByPageEvidences(pageEvidenceId);
+  }, [getItemsByPageEvidences, handleCancelAreaEditModal, pageEvidenceId]);
+
+  const getLabelsByEvidenceIds = useCallback((evidenceIds: number[]) => {
+    return itemBoxList
+      .filter((item: any) => evidenceIds.includes(item.id))
+      .map((item: any) => {
+        try {
+          return JSON.parse(item.ocr_text)?.result?.Label;
+        } catch (error) {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  }, [itemBoxList]);
+
+  const handleOpenBatchEditByIds = useCallback((evidenceIds: number[]) => {
+    setAreaEditEvidenceIds(evidenceIds);
+    setAreaEditModalOpen(true);
+  }, []);
+
+  const handleDeleteByEvidenceIds = useCallback((evidenceIds: number[]) => {
+    const labels = getLabelsByEvidenceIds(evidenceIds);
+    confirm({
+      title: <div>Are you sure you want to delete labels:<br /> {labels.join(', ') + "?"} </div>,
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        let res = await evidenceBatchDelete(evidenceIds);
+        if (res?.status === 'success') {
+          notify.success({
+            title: "Success",
+            description: "Labels deleted successfully.",
+          });
+          pdfWrapperRef.current?.clearAreaSelection();
+          getItemsByPageEvidences(pageEvidenceId);
+        } else {
+          notify.error({
+            title: res?.data?.detail || "Failed to delete labels.",
+          });
+        }
+      },
+    });
+  }, [getItemsByPageEvidences, getLabelsByEvidenceIds, pageEvidenceId]);
+
+  const handleAreaSelectionAction = useCallback(({ action, evidenceIds }: { action: 'edit' | 'delete', evidenceIds: number[] }) => {
+    if (action === 'edit') {
+      handleOpenBatchEditByIds(evidenceIds);
+    } else if (action === 'delete') {
+      handleDeleteByEvidenceIds(evidenceIds);
+    }
+  }, [handleDeleteByEvidenceIds, handleOpenBatchEditByIds]);
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
@@ -765,6 +816,7 @@ export default function FloorPlanPage() {
               }
               evidenceDraggable={true}
               showAddBtnOnBox={true}
+              enableAreaSelection={true}
               onChangePage={handlePageChange}
               onTotalPages={handleTotalPages}
               onDeleteEvidence={handleDeleteEvidence}
@@ -772,38 +824,27 @@ export default function FloorPlanPage() {
               onItemEvidenceConfirm={handleItemEvidenceConfirm}
               onChangeSelectedEvidence={handleChangeSelectedEvidence}
               onChangeZoom={handleZoomChange}
+              onAreaSelectionAction={handleAreaSelectionAction}
             />
           </div>
         </div>
         {/** right view */}
-        <div className="h-full w-[320px] shrink-0 border-l border-primaryN30 bg-white p-4 overflow-hidden">
-          {evidenceType === PageType.FloorPlan && (
-            <div className="w-[300px]">
-              <LabelTable
-                title="Floor Plan"
-                data={floorPlanData}
-                selectedId={selectedEvidenceIds?.[0] || ""}
-                setShowScheduleModal={setShowScheduleModal}
-                onSelect={handleSelectFloorPlan}
-                onUpdateItem={handleUpdateItemByLabelTable}
-                onDeleteSuccess={handleDeleteItemByLabelTable}
-              />
-            </div>
-          )}
-
-          {evidenceType === PageType.Elevation && (
-            <div className="w-[300px]">
-              <LabelTable
-                title="Elevation"
-                data={elevationData}
-                selectedId={selectedEvidenceIds?.[0] || ""}
-                setShowScheduleModal={setShowScheduleModal}
-                onSelect={handleSelectElevation}
-                onUpdateItem={handleUpdateItemByLabelTable}
-                onDeleteSuccess={handleDeleteItemByLabelTable}
-              />
-            </div>
-          )}
+        <div className="h-full w-[350px] shrink-0 border-l border-primaryN30 bg-white p-4 overflow-hidden">
+          <div className="w-[300px]">
+            <LabelTable
+              title="Labels"
+              data={labelTableData}
+              selectedId={selectedEvidenceIds?.[0] || ""}
+              setShowScheduleModal={setShowScheduleModal}
+              onSelect={handleSelectLabelItem}
+              onUpdateItem={handleUpdateItemByLabelTable}
+              onDeleteSuccess={handleDeleteItemByLabelTable}
+              onBatchEditRequest={handleOpenBatchEditByIds}
+              onBatchDeleteRequest={({ evidenceIds }) => {
+                handleDeleteByEvidenceIds(evidenceIds);
+              }}
+            />
+          </div>
         </div>
       </div>
       {showLabelModal && (
@@ -824,10 +865,17 @@ export default function FloorPlanPage() {
           footer={null}
         >
           <div className="h-[80vh] flex flex-col overflow-hidden">
-            <ImageList imagesData={scheduleList} showPreview={false} />
+            <ImageList imagesData={scheduleList} />
           </div>
         </Modal>
       )}
+      <BatchEditEvidenceModal
+        open={areaEditModalOpen}
+        evidenceIds={areaEditEvidenceIds}
+        evidences={itemBoxList as any[]}
+        onCancel={handleCancelAreaEditModal}
+        onSuccess={handleAreaEditSuccess}
+      />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildLoading && (
         <BuildingBackground step={"page-merge"} durationSeconds={20 * 60} />

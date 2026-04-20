@@ -332,6 +332,11 @@ export interface PdfWrapperProps {
   onItemEvidenceConfirm?: (evidenceInfo: any) => void; // 确认evidence item后，通知父组件
   onChangeSelectedEvidence?: (evidenceIds: number[]) => void; // 选中的evidence ids变化时，通知父组件
   onChangeZoom?: (zoom: number) => void; // 缩放比例变化时，通知父组件
+  enableAreaSelection?: boolean; // 是否启用鼠标拖拽区域选择
+  onAreaSelectionAction?: (params: {
+    action: "edit" | "delete";
+    evidenceIds: number[];
+  }) => void; // 区域框选上的操作回调
 }
 
 export interface PdfWrapperRefMethods {
@@ -345,4 +350,5 @@ export interface PdfWrapperRefMethods {
   handleBatchDelete: () => void; //批量删除
   checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域
   getRevertCropSectionsData: () => any[]; // 获取转换成API body结构的裁剪区域数据
+  clearAreaSelection: () => void; // 清理区域框选相关状态
 }

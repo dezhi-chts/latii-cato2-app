@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Image, Spin, Empty } from "antd";
-import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
+import ImagePreviewWithExpand from "../../../components/ImagePreviewWithExpand";
 
 interface EvidenceImage {
 	id: number;
@@ -40,17 +39,16 @@ export default function ImageList({
 						}
 						return <div
 							key={image.id}
-							className="relative aspect-square rounded-md overflow-hidden border border-primaryN30"
+							className="relative flex aspect-square flex-col overflow-hidden rounded-md border border-primaryN30 bg-white"
 						>
-							<div className="px-2 py-1 bg-primaryN20 text-primaryN90 rounded-md z-30">
+							<div className="z-30 rounded-md bg-primaryN20 px-2 py-1 text-primaryN90">
 								{label}
 							</div>
-							<Image
-								src={image.evidence_url || ""}
-								alt={"Evidence"}
-								className="object-contain"
-								preview={showPreview}
-							/>
+							<div className="min-h-0 flex-1 p-2">
+								<ImagePreviewWithExpand
+									src={image.evidence_url || ""}
+								/>
+							</div>
 						</div>
 					})}
 				</div>

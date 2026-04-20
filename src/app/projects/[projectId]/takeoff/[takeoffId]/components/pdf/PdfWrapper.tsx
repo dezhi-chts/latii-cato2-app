@@ -8,7 +8,7 @@ import React, {
 	useImperativeHandle,
 	useMemo,
 } from "react";
-import { Stage, Layer, Group, Path, Circle } from "react-konva";
+import { Stage, Layer, Group, Path, Circle, Rect } from "react-konva";
 import {
 	Form,
 	Modal,
@@ -29,6 +29,8 @@ import {
 	PicCenterOutlined,
 	ClearOutlined,
 	CloseOutlined,
+	EditOutlined,
+	DeleteOutlined,
 } from "@ant-design/icons";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -188,6 +190,8 @@ const PdfWrapper = forwardRef(
 			onItemEvidenceConfirm,
 			onChangeSelectedEvidence,
 			onChangeZoom,
+			enableAreaSelection = false,
+			onAreaSelectionAction,
 		}: PdfWrapperProps,
 		ref: any,
 	) => {
@@ -204,11 +208,22 @@ const PdfWrapper = forwardRef(
 		const MIN_SCALE = 0.5;
 		const MAX_SCALE = 3;
 		const WHEEL_ZOOM_STEP = 0.1;
+		const AREA_SELECT_MIN_SIZE = 10;
 
 		const scrollRef = useRef<HTMLDivElement>(null);
 		const [isDragging, setIsDragging] = useState(false);
 		const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 		const [scrollStart, setScrollStart] = useState({ left: 0, top: 0 });
+		// 区域框选专用状态，避免与原有拖拽/绘制逻辑混用
+		const [isAreaSelectMode, setIsAreaSelectMode] = useState(false);
+		const [isAreaSelecting, setIsAreaSelecting] = useState(false);
+		const [areaSelectStart, setAreaSelectStart] = useState<Point | null>(null);
+		const [areaSelectRect, setAreaSelectRect] = useState<Bounds | null>(null);
+		const [savedAreaSelectPdfRect, setSavedAreaSelectPdfRect] =
+			useState<Bounds | null>(null);
+		const [showSavedAreaSelectRect, setShowSavedAreaSelectRect] =
+			useState<boolean>(false);
+		const suppressStageClickRef = useRef(false);
 
 		const pdfDoc = useRef<any>(null);
 		const currentViewportRef = useRef<ViewPort | null>(null);
@@ -279,6 +294,23 @@ const PdfWrapper = forwardRef(
 			stageY: 0,
 		});
 
+		const clearAreaSelection = () => {
+			setSavedAreaSelectPdfRect(null);
+			setAreaSelectRect(null);
+			setAreaSelectStart(null);
+			setIsAreaSelecting(false);
+			setIsAreaSelectMode(false);
+			setShowSavedAreaSelectRect(false);
+			onChangeSelectedEvidence?.([]);
+			setSelectedShapeId(null);
+		};
+
+		useEffect(() => {
+			if (!enableAreaSelection) {
+				clearAreaSelection();
+			}
+		}, [enableAreaSelection]);
+
 		useImperativeHandle(
 			ref,
 			(): PdfWrapperRefMethods => ({
@@ -292,6 +324,7 @@ const PdfWrapper = forwardRef(
 				handleBatchDelete,
 				checkAndHandleUnsavedCrops,
 				getRevertCropSectionsData,
+				clearAreaSelection,
 			}),
 		);
 
@@ -1048,6 +1081,42 @@ const PdfWrapper = forwardRef(
 			}
 		};
 
+		const convertViewportBoundsToPdfBounds = (bounds: Bounds): Bounds | null => {
+			const viewport = currentViewportRef.current;
+			if (!viewport) {
+				return null;
+			}
+			const corners = [
+				{ x: bounds.minX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.maxY },
+				{ x: bounds.minX, y: bounds.maxY },
+			];
+			const pdfPoints = corners.map((point) => {
+				const [x, y] = viewport.convertToPdfPoint(point.x, point.y);
+				return { x, y };
+			});
+			return getZoneBounds(pdfPoints);
+		};
+
+		const convertPdfBoundsToViewportBounds = (bounds: Bounds): Bounds | null => {
+			const viewport = currentViewportRef.current;
+			if (!viewport) {
+				return null;
+			}
+			const corners = [
+				{ x: bounds.minX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.minY },
+				{ x: bounds.maxX, y: bounds.maxY },
+				{ x: bounds.minX, y: bounds.maxY },
+			];
+			const viewportPoints = corners.map((point) => {
+				const [x, y] = viewport.convertToViewportPoint(point.x, point.y);
+				return { x, y };
+			});
+			return getZoneBounds(viewportPoints);
+		};
+
 		const stageMouseDown = (e: any) => {
 			e.evt.preventDefault();
 
@@ -1060,12 +1129,39 @@ const PdfWrapper = forwardRef(
 				return;
 			}
 
+			const stage = e.target.getStage();
+			const isStageTarget = e.target === stage;
+			const pointer = stage?.getPointerPosition() || { x: 0, y: 0 };
+
+			// Shift + 左键进入区域框选模式，不影响原有拖动画布与绘制逻辑
+			if (
+				enableAreaSelection &&
+				operationMode === "edit" &&
+				cropMode === null &&
+				isStageTarget &&
+				(e.evt.shiftKey || isAreaSelectMode)
+			) {
+				setIsAreaSelectMode(true);
+				setIsAreaSelecting(true);
+				setAreaSelectStart(pointer);
+				setSavedAreaSelectPdfRect(null);
+				setShowSavedAreaSelectRect(false);
+				setAreaSelectRect({
+					minX: pointer.x,
+					minY: pointer.y,
+					maxX: pointer.x,
+					maxY: pointer.y,
+					width: 0,
+					height: 0,
+				});
+				return;
+			}
+
 			if (cropMode === null && e.target.getClassName() === "Stage") {
 				handleMouseDown(e.evt);
 				return;
 			}
 
-			const stage = e.target.getStage();
 			const pos = stage.getPointerPosition() || { x: 0, y: 0 };
 
 			if (cropMode === "polygon") return;
@@ -1117,6 +1213,24 @@ const PdfWrapper = forwardRef(
 				e.target.getClassName() === "Circle" ||
 				(e.target.getClassName() === "Path" && cropMode === null)
 			) {
+				return;
+			}
+
+			if (isAreaSelecting && areaSelectStart) {
+				const stage = e.target.getStage();
+				const pos = stage?.getPointerPosition() || areaSelectStart;
+				const left = Math.min(areaSelectStart.x, pos.x);
+				const top = Math.min(areaSelectStart.y, pos.y);
+				const right = Math.max(areaSelectStart.x, pos.x);
+				const bottom = Math.max(areaSelectStart.y, pos.y);
+				setAreaSelectRect({
+					minX: left,
+					minY: top,
+					maxX: right,
+					maxY: bottom,
+					width: right - left,
+					height: bottom - top,
+				});
 				return;
 			}
 
@@ -1174,6 +1288,87 @@ const PdfWrapper = forwardRef(
 			e.evt.preventDefault();
 
 			if (e.evt.button !== 0) return;
+
+			if (isAreaSelecting) {
+				const finalRect = areaSelectRect;
+				setIsAreaSelecting(false);
+				setIsAreaSelectMode(false);
+				setAreaSelectStart(null);
+				setAreaSelectRect(null);
+
+				// 防止紧接着触发 stage onClick 时清空选中态
+				suppressStageClickRef.current = true;
+
+				if (
+					!finalRect ||
+					finalRect.width < AREA_SELECT_MIN_SIZE ||
+					finalRect.height < AREA_SELECT_MIN_SIZE
+				) {
+					setSavedAreaSelectPdfRect(null);
+					setShowSavedAreaSelectRect(false);
+					onChangeSelectedEvidence?.([]);
+					setSelectedShapeId(null);
+					return;
+				}
+				const pdfRect = convertViewportBoundsToPdfBounds(finalRect);
+				setSavedAreaSelectPdfRect(pdfRect);
+				setShowSavedAreaSelectRect(Boolean(pdfRect));
+
+				const intersects = (a: Bounds, b: Bounds) => {
+					return !(
+						a.maxX < b.minX ||
+						a.minX > b.maxX ||
+						a.maxY < b.minY ||
+						a.minY > b.maxY
+					);
+				};
+
+				const toBounds = (shape: any): Bounds | null => {
+					if (
+						shape?.bounds &&
+						typeof shape.bounds.minX === "number" &&
+						typeof shape.bounds.minY === "number" &&
+						typeof shape.bounds.width === "number" &&
+						typeof shape.bounds.height === "number"
+					) {
+						return {
+							minX: shape.bounds.minX,
+							minY: shape.bounds.minY,
+							maxX: shape.bounds.minX + shape.bounds.width,
+							maxY: shape.bounds.minY + shape.bounds.height,
+							width: shape.bounds.width,
+							height: shape.bounds.height,
+						};
+					}
+					if (Array.isArray(shape?.polygons) && shape.polygons.length > 0) {
+						const polygonBounds = getZoneBounds(shape.polygons);
+						return {
+							minX: polygonBounds.minX,
+							minY: polygonBounds.minY,
+							maxX: polygonBounds.maxX,
+							maxY: polygonBounds.maxY,
+							width: polygonBounds.width,
+							height: polygonBounds.height,
+						};
+					}
+					return null;
+				};
+
+				const selectedIds = pageEvidence
+					.filter((shape) => {
+						const bounds = toBounds(shape);
+						return bounds ? intersects(finalRect, bounds) : false;
+					})
+					.map((shape) => shape.id);
+
+				onChangeSelectedEvidence?.(selectedIds);
+				if (selectedIds.length === 1) {
+					setSelectedShapeId(selectedIds[0]);
+				} else {
+					setSelectedShapeId(null);
+				}
+				return;
+			}
 
 			if (cropMode === null && e.target.getClassName() === "Stage") {
 				handleMouseUp();
@@ -2481,6 +2676,114 @@ const PdfWrapper = forwardRef(
 			return evid;
 		}, [pageEvidence, selectedEvidenceIds, draggingShapeId]);
 
+		const savedAreaSelectRect = useMemo(() => {
+			if (!savedAreaSelectPdfRect || !showSavedAreaSelectRect) {
+				return null;
+			}
+			return convertPdfBoundsToViewportBounds(savedAreaSelectPdfRect);
+		}, [
+			savedAreaSelectPdfRect,
+			showSavedAreaSelectRect,
+			pageNum,
+			scale,
+			rotate,
+			stageWidth,
+			stageHeight,
+		]);
+
+		const visibleAreaSelectRect = enableAreaSelection
+			? areaSelectRect || savedAreaSelectRect
+			: null;
+
+		const getEvidenceIdsByAreaRect = useCallback(
+			(targetRect: Bounds | null) => {
+				if (!targetRect) {
+					return [];
+				}
+				const intersects = (a: Bounds, b: Bounds) => {
+					return !(
+						a.maxX < b.minX ||
+						a.minX > b.maxX ||
+						a.maxY < b.minY ||
+						a.minY > b.maxY
+					);
+				};
+				const toViewportBounds = (shape: any): Bounds | null => {
+					if (
+						Array.isArray(shape?.viewportPolygons) &&
+						shape.viewportPolygons.length > 0
+					) {
+						const box = getZoneBounds(shape.viewportPolygons);
+						return {
+							minX: box.minX,
+							minY: box.minY,
+							maxX: box.maxX,
+							maxY: box.maxY,
+							width: box.width,
+							height: box.height,
+						};
+					}
+					if (
+						shape?.bounds &&
+						typeof shape.bounds.minX === "number" &&
+						typeof shape.bounds.minY === "number" &&
+						typeof shape.bounds.width === "number" &&
+						typeof shape.bounds.height === "number"
+					) {
+						return {
+							minX: shape.bounds.minX,
+							minY: shape.bounds.minY,
+							maxX: shape.bounds.minX + shape.bounds.width,
+							maxY: shape.bounds.minY + shape.bounds.height,
+							width: shape.bounds.width,
+							height: shape.bounds.height,
+						};
+					}
+					if (Array.isArray(shape?.polygons) && shape.polygons.length > 0) {
+						const box = getZoneBounds(shape.polygons);
+						return {
+							minX: box.minX,
+							minY: box.minY,
+							maxX: box.maxX,
+							maxY: box.maxY,
+							width: box.width,
+							height: box.height,
+						};
+					}
+					return null;
+				};
+				return pageEvidence
+					.filter((shape) => {
+						if (shape.isParentEvidence) return false;
+						const shapeBounds = toViewportBounds(shape);
+						return shapeBounds ? intersects(targetRect, shapeBounds) : false;
+					})
+					.map((shape) => shape.id);
+			},
+			[pageEvidence],
+		);
+
+		const handleAreaSelectionOperation = useCallback(
+			(action: "edit" | "delete") => {
+				const currentRect = savedAreaSelectRect || areaSelectRect;
+				const evidenceIds = getEvidenceIdsByAreaRect(currentRect);
+				onAreaSelectionAction?.({
+					action,
+					evidenceIds,
+				});
+				if (action === "edit") {
+					setIsAreaSelectMode(true);
+					setShowSavedAreaSelectRect(false);
+				}
+			},
+			[
+				areaSelectRect,
+				getEvidenceIdsByAreaRect,
+				onAreaSelectionAction,
+				savedAreaSelectRect,
+			],
+		);
+
 		return (
 			<div className="w-full h-full flex relative">
 				<div className="flex-1 flex flex-col overflow-hidden">
@@ -2531,13 +2834,20 @@ const PdfWrapper = forwardRef(
 										left: 0,
 										touchAction: "inherit",
 										cursor:
-											cropMode === null
-												? isDragging
-													? "grabbing"
-													: "grab"
-												: "default",
+											enableAreaSelection &&
+												(isAreaSelectMode || isAreaSelecting)
+												? "crosshair"
+												: cropMode === null
+													? isDragging
+														? "grabbing"
+														: "grab"
+													: "default",
 									}}
 									onClick={(e) => {
+										if (suppressStageClickRef.current) {
+											suppressStageClickRef.current = false;
+											return;
+										}
 										if (e.target === e.target.getStage()) {
 											setSelectedShapeId(null);
 											// 当点击画布时，让所有输入框失去焦点
@@ -2557,6 +2867,19 @@ const PdfWrapper = forwardRef(
 									onMouseUp={stageMouseUp}
 								>
 									<Layer>
+										{visibleAreaSelectRect && (
+											<Rect
+												x={visibleAreaSelectRect.minX}
+												y={visibleAreaSelectRect.minY}
+												width={visibleAreaSelectRect.width}
+												height={visibleAreaSelectRect.height}
+												fill="rgba(2, 169, 96, 0.15)"
+												stroke="#02A960"
+												strokeWidth={1}
+												dash={[4, 4]}
+												listening={false}
+											/>
+										)}
 										{pageEvidence.map((evid) => {
 											return (
 												<ShapeWrapper
@@ -2687,6 +3010,60 @@ const PdfWrapper = forwardRef(
 										})}
 									</Layer>
 								</Stage>
+
+								{enableAreaSelection &&
+									savedAreaSelectRect &&
+									!isAreaSelecting && (
+										<div
+											className="absolute"
+											style={{
+												left: savedAreaSelectRect.minX,
+												top: savedAreaSelectRect.minY,
+												width: savedAreaSelectRect.width,
+												height: savedAreaSelectRect.height,
+												pointerEvents: "none",
+											}}
+										>
+											<div
+												className="absolute flex items-center gap-1 pointer-events-auto"
+												style={{
+													right: 2,
+													top: 2,
+												}}
+											>
+												<Tooltip title="Edit Labels">
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+														onClick={() => {
+															handleAreaSelectionOperation("edit");
+														}}
+													>
+														<EditOutlined className="text-[12px]" />
+													</div>
+												</Tooltip>
+												<Tooltip title="Delete Labels">
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+														onClick={() => {
+															handleAreaSelectionOperation("delete");
+														}}
+													>
+														<DeleteOutlined className="text-[12px]" />
+													</div>
+												</Tooltip>
+												<Tooltip title="Close Box">
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+														onClick={() => {
+															clearAreaSelection();
+														}}
+													>
+														<CloseOutlined className="text-[12px]" />
+													</div>
+												</Tooltip>
+											</div>
+										</div>
+									)}
 
 								{/** 处理Evidence按钮的相关显示  */}
 								{pageEvidence.map((item: any, index: number) => {

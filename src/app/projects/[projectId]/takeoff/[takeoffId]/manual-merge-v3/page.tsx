@@ -21,6 +21,7 @@ import {
   parseItemResult as parseItemResultUtil,
 } from "../analyze-new/takeoffUtils";
 import BuildingBackground from "../identification/components/BuildingBackground";
+import ImagePreviewWithExpand from "../components/ImagePreviewWithExpand";
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -962,12 +963,13 @@ export default function ManualMergeV2Page() {
                 <div className="absolute left-1 top-1 rounded-md z-10 flex h-5 w-5 items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
                   {index + 1}
                 </div>
-                <Image
+                {/* <Image
                   src={url}
                   alt={`${title} Evidence`}
                   className="w-full rounded-md border border-primaryN30"
                   preview={false}
-                />
+                /> */}
+                {<ImagePreviewWithExpand src={url} alt={`${title} Evidence`} />}
               </div>
             ))}
           </div>
@@ -1127,21 +1129,15 @@ export default function ManualMergeV2Page() {
 
       <Modal
         open={previewOpen}
-        title="Evidence Preview"
+        title={<span className="text-lg text-forumBlue-normal font-sans">Evidence Preview</span>}
         footer={null}
-        width={900}
+        width={1000}
         onCancel={() => setPreviewOpen(false)}
       >
         {previewUrls.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {previewUrls.map((url) => (
-              <Image
-                key={url}
-                src={url}
-                alt="Evidence Preview"
-                className="w-full rounded-md border border-primaryN30"
-                preview={false}
-              />
+              <ImagePreviewWithExpand key={url} src={url} alt="Evidence Preview" />
             ))}
           </div>
         ) : (
