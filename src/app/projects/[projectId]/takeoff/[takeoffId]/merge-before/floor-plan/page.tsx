@@ -615,7 +615,7 @@ export default function FloorPlanPage() {
 
   const handleCancelAreaEditModal = useCallback(() => {
     setAreaEditModalOpen(false);
-    setAreaEditEvidenceIds([]);
+    //setAreaEditEvidenceIds([]);
   }, []);
 
   const handleAreaEditSuccess = useCallback(async () => {

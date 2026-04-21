@@ -84,6 +84,7 @@ export default function BatchEditEvidenceModal({
       }
       return {
         ...item,
+        id: item?.id,
         ocr_text: JSON.stringify({
           ...parsed,
           result: nextResult,

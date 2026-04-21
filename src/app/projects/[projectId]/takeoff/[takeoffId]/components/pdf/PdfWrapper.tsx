@@ -2633,9 +2633,28 @@ const PdfWrapper = forwardRef(
 						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
 					const offsetY =
 						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
+					const hasValidViewBox = Array.isArray(viewBox) && viewBox.length >= 4;
+					const minX = hasValidViewBox ? Number(viewBox[0]) : Number.NEGATIVE_INFINITY;
+					const minY = hasValidViewBox ? Number(viewBox[1]) : Number.NEGATIVE_INFINITY;
+					const maxX = hasValidViewBox ? Number(viewBox[2]) : Number.POSITIVE_INFINITY;
+					const maxY = hasValidViewBox ? Number(viewBox[3]) : Number.POSITIVE_INFINITY;
+					const pointsOutOfViewBox = Array.isArray(pdfPolygons)
+						? pdfPolygons.some((p: any) => {
+							const x = Number(p?.x);
+							const y = Number(p?.y);
+							return (
+								Number.isFinite(x) &&
+								Number.isFinite(y) &&
+								(x < minX || x > maxX || y < minY || y > maxY)
+							);
+						})
+						: false;
+					// Some "manual" evidences are still saved in absolute page coords.
+					// If points exceed viewBox, shift by viewBox offset as a fallback.
+					const shouldApplyViewBoxOffset = !item.is_manual || pointsOutOfViewBox;
 
-					pdfPolygons = pdfPolygons.map((p) => {
-						if (!item.is_manual) {
+					pdfPolygons = pdfPolygons.map((p: any) => {
+						if (shouldApplyViewBoxOffset) {
 							return {
 								x: p.x + offsetX,
 								y: p.y + offsetY,
@@ -2773,7 +2792,7 @@ const PdfWrapper = forwardRef(
 				});
 				if (action === "edit") {
 					setIsAreaSelectMode(true);
-					setShowSavedAreaSelectRect(false);
+					//	setShowSavedAreaSelectRect(false);
 				}
 			},
 			[
