@@ -582,6 +582,38 @@ export const deleteTakeOffResultItemByEvidenceId = async (evidence_id: string | 
   }
 }
 
+/**
+ * 删除未合并的label的item
+ * @param result_id 
+ * @returns 
+ */
+export const deleteFileSourceMergeResultById = async (result_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_file_source_merge_result_by_id?result_id=${result_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除已合并label的item
+ * @param result_id 
+ * @returns 
+ */
+export const deleteSingleFileMergeResultById = async (result_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_single_file_merge_result_by_id?result_id=${result_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
 

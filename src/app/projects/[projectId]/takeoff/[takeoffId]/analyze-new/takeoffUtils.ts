@@ -144,6 +144,46 @@ export const getNestedValue = (
 };
 
 /**
+ * Set value by field name, supporting dot notation path.
+ * e.g., setResultValueByField(result, "Glass.Layer", "layer_1")
+ * => { ..., Glass: { ..., Layer: "layer_1" } }
+ */
+export const setResultValueByField = (
+	result: Record<string, unknown>,
+	fieldName: string,
+	value: unknown,
+): Record<string, unknown> => {
+	const nextResult: Record<string, unknown> = { ...(result || {}) };
+	const pathParts = fieldName
+		.split(".")
+		.map((part) => part.trim())
+		.filter(Boolean);
+
+	if (pathParts.length <= 1) {
+		nextResult[fieldName] = value;
+		return nextResult;
+	}
+
+	// Prefer nested structure for dot notation fields.
+	delete nextResult[fieldName];
+
+	let currentLevel = nextResult;
+	for (let index = 0; index < pathParts.length - 1; index += 1) {
+		const key = pathParts[index];
+		const existingNode = currentLevel[key];
+		const nextNode =
+			existingNode && typeof existingNode === "object" && !Array.isArray(existingNode)
+				? { ...(existingNode as Record<string, unknown>) }
+				: {};
+		currentLevel[key] = nextNode;
+		currentLevel = nextNode;
+	}
+
+	currentLevel[pathParts[pathParts.length - 1]] = value;
+	return nextResult;
+};
+
+/**
  * Normalize field name to standard format
  */
 export const normalizeFieldName = (fieldName: string) => {
