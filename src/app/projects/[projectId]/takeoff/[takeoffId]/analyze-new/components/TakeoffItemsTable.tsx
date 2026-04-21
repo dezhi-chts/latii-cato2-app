@@ -38,6 +38,7 @@ import {
 	getEvidenceIds,
 	getResultValue,
 	parseItemResult,
+	setResultValueByField,
 } from "../takeoffUtils";
 import { TakeoffItemRecord, TemplateField } from "../types";
 
@@ -500,10 +501,11 @@ export default function TakeoffItemsTable({
 								}
 
 								const originalResult = currentItem.result;
-								const nextResultObject = {
-									...parseItemResult(currentItem.result),
-									[fieldName]: normalizedNextValue,
-								};
+								const nextResultObject = setResultValueByField(
+									parseItemResult(currentItem.result),
+									fieldName,
+									normalizedNextValue,
+								);
 
 								// Optimistically update UI
 								setTableData((prev) => {

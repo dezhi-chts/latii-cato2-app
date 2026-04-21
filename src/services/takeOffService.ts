@@ -499,6 +499,22 @@ export const checkFileSourceMergeResultsAndCreateSingleFileResults = async (
 }
 
 /**
+ * 更新单文件合并结果
+ * @param data 
+ * @returns 
+ */
+export const updateSingleFileMergeResultsByIdList = async (data:any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/update_single_file_merge_results_by_id_list`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error updating single file merge results by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
  * 自动创建多个文件的合并结果
  * @param take_off_id 
  * @returns 
@@ -562,6 +578,87 @@ export const deleteTakeOffResultItemByEvidenceId = async (evidence_id: string | 
     return { data: response as any, status: "success" };
   }catch(error: any){
     console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除未合并的label的item
+ * @param result_id 
+ * @returns 
+ */
+export const deleteFileSourceMergeResultById = async (result_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_file_source_merge_result_by_id?result_id=${result_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除已合并label的item
+ * @param result_id 
+ * @returns 
+ */
+export const deleteSingleFileMergeResultById = async (result_id: string | number) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_single_file_merge_result_by_id?result_id=${result_id}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 更新未合并的label的item数据
+ * @param data 
+ * @returns 
+ */
+export const updateFileSourceMergeResultsByIdList = async (data:any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/update_file_source_merge_results_by_id_list`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error updating file source merge results by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除未合并的label中的evidence
+ * @param evidence_ids 
+ * @returns 
+ */
+export const deleteFileSourceMergeResultsByEvidenceIds = async (evidence_ids:string)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_file_source_merge_results_by_evidence_ids?evidence_ids=${evidence_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error deleting file source merge results by evidence ids:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 更新evidence的label
+ * @param evidence_ids 
+ * @param label 
+ * @returns 
+ */
+export const updateSingleFileMergeResultsLabelByEvidenceIds = async (evidence_ids:string, label:string)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/update_file_source_merge_result_label_by_evidence_ids?evidence_ids=${evidence_ids}&label=${label}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error updating file source merge result label by evidence ids:", error);
     return { data: error?.response?.data, status: "error" };
   }
 }

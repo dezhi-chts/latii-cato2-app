@@ -1,27 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button, Empty, Image, Input, Modal, Segmented, Spin, Table, Tooltip, notification } from "antd";
+import { Button, Image, Input, Modal, Segmented, Spin, Table, Tooltip, notification } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircleFilled, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { DownOutlined, UpOutlined, DeleteOutlined } from "@ant-design/icons";
 
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
   autoCreateMultipleFilesMergeResultByTakeOffId,
+  deleteFileSourceMergeResultById,
+  deleteSingleFileMergeResultById,
   getFileSourceMergeResultsByLabel,
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
   getTakeOffEvidenceUrlsByIds,
+  updateFileSourceMergeResultsByIdList,
+  updateSingleFileMergeResultsByIdList,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
   getDisplayValueByField,
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
+  setResultValueByField,
 } from "../analyze-new/takeoffUtils";
 import BuildingBackground from "../identification/components/BuildingBackground";
-import ImagePreviewWithExpand from "../components/ImagePreviewWithExpand";
+import FileHeader from "./components/FileHeader";
+import LabelSidebar from "./components/LabelSidebar";
+import EvidencePreviewModal from "./components/EvidencePreviewModal";
+import TableSection from "./components/TableSection";
+import EvidenceSection from "./components/EvidenceSection";
+import SplitItemsModal from "./components/SplitItemsModal";
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -32,6 +42,7 @@ interface LabelOption {
   label: string;
   count?: number;
   isMerged?: boolean;
+  isAutoMerged?: boolean;
   idList?: number[];
 }
 
@@ -43,6 +54,12 @@ interface FinalItemRow extends Record<string, any> {
 interface EvidenceInfo {
   evidenceId: string;
   url: string;
+}
+
+interface ClassifiedEvidenceUrls {
+  schedule: Array<{ id: string; url: string }>;
+  floorPlan: Array<{ id: string; url: string }>;
+  elevation: Array<{ id: string; url: string }>;
 }
 
 const SOURCE_ALIAS: Record<SourceKey, string[]> = {
@@ -57,6 +74,71 @@ const normalizeKey = (value: string) =>
 const toArray = (value: any): any[] => (Array.isArray(value) ? value : []);
 const normalizeLabelKey = (value: string) => value.trim().toLowerCase();
 const isEmptyDisplayValue = (value: string) => value === "-" || value.trim() === "";
+const emptyClassifiedEvidenceUrls: ClassifiedEvidenceUrls = {
+  schedule: [],
+  floorPlan: [],
+  elevation: [],
+};
+
+const getEvidenceUrlFromItem = (evidence: any): string => {
+  if (typeof evidence?.evidence_url === "string" && evidence.evidence_url) return evidence.evidence_url;
+  if (typeof evidence?.url === "string" && evidence.url) return evidence.url;
+  if (typeof evidence?.s3_url === "string" && evidence.s3_url) return evidence.s3_url;
+  return "";
+};
+
+const getRawEvidenceId = (evidence: any): string => {
+  const rawId = evidence?.evidence_id ?? evidence?.evidenceId ?? evidence?.id;
+  if (rawId !== null && rawId !== undefined && String(rawId).trim()) {
+    return String(rawId);
+  }
+  return "";
+};
+
+const getEvidenceUniqueId = (evidence: any, fallbackUrl: string): string => {
+  const id = getRawEvidenceId(evidence);
+  if (id) {
+    return id;
+  }
+  return fallbackUrl;
+};
+
+const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
+  const scheduleList: Array<{ id: string; url: string }> = [];
+  const floorPlanList: Array<{ id: string; url: string }> = [];
+  const elevationList: Array<{ id: string; url: string }> = [];
+  const seenEvidenceIds = new Set<string>();
+
+  const normalizeType = (value: unknown) => String(value || "").trim().toLowerCase();
+
+  evidences.forEach((evidence) => {
+    const url = getEvidenceUrlFromItem(evidence);
+    if (!url) return;
+    const uniqueId = getEvidenceUniqueId(evidence, url);
+    if (seenEvidenceIds.has(uniqueId)) return;
+    seenEvidenceIds.add(uniqueId);
+    const evidenceId = getRawEvidenceId(evidence) || uniqueId;
+
+    const evidenceType = normalizeType(evidence?.evidence_type ?? evidence?.type);
+    if (evidenceType === "window door unit" || evidenceType === "table") {
+      scheduleList.push({ id: evidenceId, url });
+      return;
+    }
+    if (evidenceType === "floor plan item") {
+      floorPlanList.push({ id: evidenceId, url });
+      return;
+    }
+    if (evidenceType === "elevation item") {
+      elevationList.push({ id: evidenceId, url });
+    }
+  });
+
+  return {
+    schedule: scheduleList,
+    floorPlan: floorPlanList,
+    elevation: elevationList,
+  };
+};
 
 const ensureLabelFieldsFirst = (fields: string[]) => {
   const hasLabel = fields.includes("Label");
@@ -271,7 +353,7 @@ const extractEvidenceEntries = (
   }));
 };
 
-const collectSourceRows = (payload: any, source: SourceKey): any[] => {
+const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boolean): any[] => {
   if (!Array.isArray(payload)) return [];
 
   const sourceNode = payload.find((node: any) => {
@@ -280,6 +362,13 @@ const collectSourceRows = (payload: any, source: SourceKey): any[] => {
       (alias) => nodeType === normalizeKey(alias),
     );
   });
+
+  if (source === 'schedule') {
+    if (isLabelMerged) {
+      return Array.isArray(sourceNode?.merged_list) ? sourceNode.merged_list : [];
+    }
+    return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
+  }
 
   return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
@@ -307,6 +396,8 @@ export default function ManualMergeV2Page() {
   const [scheduleChanges, setScheduleChanges] = useState<Record<string, any>>({});
   const [originalScheduleLabelById, setOriginalScheduleLabelById] = useState<Record<string, string>>({});
   const [collapsedSystemLabelMap, setCollapsedSystemLabelMap] = useState<Record<string, boolean>>({});
+  const [collapsedAutoMergedLabels, setCollapsedAutoMergedLabels] = useState(false);
+  const [collapsedConflictLabels, setCollapsedConflictLabels] = useState(false);
 
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -314,6 +405,11 @@ export default function ManualMergeV2Page() {
   const [evidenceByResultItemId, setEvidenceByResultItemId] = useState<
     Record<string, EvidenceInfo>
   >({});
+  const [classifiedEvidenceUrls, setClassifiedEvidenceUrls] = useState<ClassifiedEvidenceUrls>(
+    emptyClassifiedEvidenceUrls,
+  );
+  const [splitModalOpen, setSplitModalOpen] = useState(false);
+  const [splitSubmitting, setSplitSubmitting] = useState(false);
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
   const selectedLabelMeta = useMemo(
@@ -321,40 +417,19 @@ export default function ManualMergeV2Page() {
     [labels, selectedLabel],
   );
   const isSelectedLabelMerged = Boolean(selectedLabelMeta?.isMerged);
+  const autoMergedLabels = useMemo(
+    () => labels.filter((item) => Boolean(item.isAutoMerged)),
+    [labels],
+  );
+  const conflictLabels = useMemo(
+    () => labels.filter((item) => !Boolean(item.isAutoMerged)),
+    [labels],
+  );
+  const allLabelNames = useMemo(() => labels.map((item) => item.label), [labels]);
 
-  const scheduleEvidenceUrls = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          scheduleRows
-            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
-            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
-        ).values(),
-      ),
-    [evidenceByResultItemId, scheduleRows],
-  );
-  const floorPlanEvidenceUrls = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          floorPlanRows
-            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
-            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
-        ).values(),
-      ),
-    [evidenceByResultItemId, floorPlanRows],
-  );
-  const elevationEvidenceUrls = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          elevationRows
-            .flatMap((item) => extractEvidenceEntries(item, evidenceByResultItemId))
-            .map((entry) => [entry.evidenceId || entry.url, entry.url]),
-        ).values(),
-      ),
-    [evidenceByResultItemId, elevationRows],
-  );
+  const scheduleEvidences = classifiedEvidenceUrls.schedule;
+  const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
+  const elevationEvidences = classifiedEvidenceUrls.elevation;
 
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
     if (scheduleRows.length === 0) return [];
@@ -407,30 +482,70 @@ export default function ManualMergeV2Page() {
     return result;
   }, [collapsedSystemLabelMap, scheduleRows]);
 
+  const splitTableColumns = useMemo<ColumnsType<any>>(
+    () =>
+      columns.map((fieldName) => ({
+        title: <div className="text-center text-xs text-grey-normal">{fieldName}</div>,
+        key: `split-${fieldName}`,
+        dataIndex: fieldName,
+        width: fieldName === "Label" || fieldName === "Sub Label" ? 120 : 130,
+        align: "center" as const,
+        render: (_: unknown, record: any) => {
+          const value = getDisplayValueByField(record?.result || {}, fieldName);
+          return (
+            <div className="mx-auto w-full max-w-[280px] overflow-hidden text-xs">
+              <TruncatedTextCell value={value || "-"} />
+            </div>
+          );
+        },
+      })),
+    [columns],
+  );
+
   const fetchEvidenceUrlsByRows = useCallback(async (rows: any[]) => {
     const ids = Array.from(new Set(rows.flatMap((item) => getTakeOffResultItemIds(item))));
     if (ids.length === 0) {
       setEvidenceByResultItemId({});
+      setClassifiedEvidenceUrls(emptyClassifiedEvidenceUrls);
       return;
     }
 
     const response = await getTakeOffEvidenceUrlsByIds(ids.join(","));
     if (response.status !== "success") {
       setEvidenceByResultItemId({});
+      setClassifiedEvidenceUrls(emptyClassifiedEvidenceUrls);
       return;
     }
 
     const payload = response.data?.data ?? response.data ?? {};
     const nextMap: Record<string, EvidenceInfo> = {};
-    Object.entries(payload).forEach(([resultItemId, evidence]: [string, any]) => {
-      if (typeof evidence?.evidence_url === "string" && evidence.evidence_url) {
-        nextMap[resultItemId] = {
-          evidenceId: getEvidenceId(evidence, resultItemId),
-          url: evidence.evidence_url,
-        };
+    const allEvidences: any[] = [];
+
+    const collectEvidence = (candidate: any, fallbackResultItemId?: string) => {
+      if (!candidate) return;
+      if (Array.isArray(candidate)) {
+        candidate.forEach((item) => collectEvidence(item, fallbackResultItemId));
+        return;
       }
-    });
+      allEvidences.push(candidate);
+      const nextUrl = getEvidenceUrlFromItem(candidate);
+      if (!nextUrl || !fallbackResultItemId) return;
+      nextMap[fallbackResultItemId] = {
+        evidenceId: getEvidenceId(candidate, fallbackResultItemId),
+        url: nextUrl,
+      };
+    };
+
+    if (Array.isArray(payload)) {
+      payload.forEach((item) => collectEvidence(item));
+    } else if (payload && typeof payload === "object") {
+      Object.entries(payload).forEach(([resultItemId, evidence]: [string, any]) => {
+        collectEvidence(evidence, resultItemId);
+      });
+    }
+
     setEvidenceByResultItemId(nextMap);
+    setClassifiedEvidenceUrls(classifyEvidenceUrls(allEvidences));
   }, []);
 
   const fetchColumns = useCallback(async (templateId: number) => {
@@ -470,9 +585,13 @@ export default function ManualMergeV2Page() {
       }
 
       const payload = response.data?.data ?? response.data ?? [];
-      const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule"));
-      const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan"));
-      const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation"));
+
+      const labelMeta = labels.find((item) => item.label === label);
+      const isLabelMerged = Boolean(labelMeta?.isMerged);
+
+      const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
+      const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
+      const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation", isLabelMerged));
 
       const nextCollapsedMap: Record<string, boolean> = {};
       const labelCountMap = new Map<string, number>();
@@ -511,7 +630,7 @@ export default function ManualMergeV2Page() {
     } finally {
       setLoading(false);
     }
-  }, [fetchEvidenceUrlsByRows, fileId, takeoffId]);
+  }, [fetchEvidenceUrlsByRows, fileId, takeoffId, labels]);
 
   const fetchLabelsAndMaybeLoadData = useCallback(
     async (
@@ -543,6 +662,7 @@ export default function ManualMergeV2Page() {
             label,
             count: Number(item?.count || item?.total || 0) || undefined,
             isMerged: Boolean(item?.is_merged),
+            isAutoMerged: Boolean(item?.is_auto_merged),
             idList: Array.isArray(item?.id_list) ? item.id_list : [],
           };
         })
@@ -566,10 +686,12 @@ export default function ManualMergeV2Page() {
       if (autoSwitchFromMergedCurrent && hasPreferredLabel) {
         const currentIndex = nextLabels.findIndex((item) => item.label === preferredLabel);
         const currentItem = currentIndex >= 0 ? nextLabels[currentIndex] : null;
-        if (currentItem?.isMerged) {
+        if (Boolean(currentItem?.isMerged)) {
           const nextUnmerged =
-            nextLabels.slice(Math.max(currentIndex + 1, 0)).find((item) => !item.isMerged) ||
-            nextLabels.find((item) => !item.isMerged);
+            nextLabels
+              .slice(Math.max(currentIndex + 1, 0))
+              .find((item) => !Boolean(item.isMerged)) ||
+            nextLabels.find((item) => !Boolean(item.isMerged));
           if (nextUnmerged?.label) {
             nextSelectedLabel = nextUnmerged.label;
           }
@@ -707,7 +829,6 @@ export default function ManualMergeV2Page() {
   );
 
   const commitEdit = async (record: any, fieldName: string) => {
-    if (isSelectedLabelMerged) return;
     const id = String(record.id);
     const oldDisplay = getDisplayValueByField(record?.result || {}, fieldName);
     const oldValue = oldDisplay === "-" ? "" : oldDisplay;
@@ -721,10 +842,11 @@ export default function ManualMergeV2Page() {
       if (String(row.id) !== id) return row;
       const nextRow = {
         ...row,
-        result: {
-          ...parseItemResultUtil(row?.result as any),
-          [fieldName]: newValue,
-        },
+        result: setResultValueByField(
+          parseItemResultUtil(row?.result as any),
+          fieldName,
+          newValue,
+        ),
       };
       return nextRow;
     });
@@ -738,6 +860,47 @@ export default function ManualMergeV2Page() {
     }
     setScheduleRows(nextScheduleRows);
   };
+
+  const handleSaveChangesForMergedLabel = useCallback(async () => {
+    const changedItems = Object.values(scheduleChanges)
+      .map((item: any) => {
+        const id = item?.id !== null && item?.id !== undefined ? String(item.id) : "";
+        if (!id) return null;
+        return {
+          id,
+          result: parseItemResultUtil(item?.result as any),
+        };
+      })
+      .filter(Boolean) as Array<{ id: string; result: Record<string, any> }>;
+
+    if (changedItems.length === 0) {
+      notification.info({
+        message: "No Changes",
+        description: "No modified items to save.",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await updateSingleFileMergeResultsByIdList(changedItems);
+      if (response.status === "success") {
+        notification.success({
+          message: "Success",
+          description: `Saved ${changedItems.length} modified items.`,
+        });
+        setScheduleChanges({});
+        await fetchLabelData(selectedLabel);
+        return;
+      }
+      notification.error({
+        message: "Error",
+        description: response?.data?.detail || "Failed to save modified items.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }, [fetchLabelData, scheduleChanges, selectedLabel]);
 
   const normalizeScheduleRowsForSubmit = useCallback(
     (rows: any[]) =>
@@ -784,7 +947,109 @@ export default function ManualMergeV2Page() {
     }
   }, [takeoffId]);
 
+  const handleDeleteFinalItem = useCallback(
+    (record: any) => {
+      const itemId = record?.id;
+      if (itemId === null || itemId === undefined || itemId === "") {
+        notification.warning({
+          message: "Invalid Item",
+          description: "Unable to delete item because id is missing.",
+        });
+        return;
+      }
+
+      confirm({
+        title: "Delete Item",
+        content: "Are you sure you want to delete this item?",
+        okText: "Delete",
+        cancelText: "Cancel",
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          setLoading(true);
+          try {
+            const response = isSelectedLabelMerged
+              ? await deleteSingleFileMergeResultById(itemId)
+              : await deleteFileSourceMergeResultById(itemId);
+
+            if (response.status !== "success") {
+              notification.error({
+                message: "Error",
+                description: response?.data?.detail || "Failed to delete item.",
+              });
+              return;
+            }
+
+            notification.success({
+              message: "Success",
+              description: "Item deleted successfully.",
+            });
+
+            await fetchLabelData(selectedLabel, fileId);
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+    },
+    [fetchLabelData, fileId, isSelectedLabelMerged, selectedLabel],
+  );
+
+  const refreshItemsAndEvidence = useCallback(async () => {
+    await fetchLabelData(selectedLabel, fileId);
+  }, [fetchLabelData, fileId, selectedLabel]);
+
+  const openSplitModal = useCallback(() => {
+    setSplitModalOpen(true);
+  }, []);
+
+  const closeSplitModal = useCallback(() => {
+    setSplitModalOpen(false);
+  }, []);
+
+  const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
+    const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
+    const payload = scheduleRows
+      .filter((row) => selectedIdSet.has(String(row.id)))
+      .map((row) => ({
+        id: row.id,
+        result: {
+          ...parseItemResultUtil(row?.result as any),
+          Label: targetLabel,
+        },
+      }));
+
+    if (payload.length === 0) {
+      notification.warning({
+        message: "No Valid Items",
+        description: "Selected items are invalid, please reselect.",
+      });
+      return;
+    }
+
+    setSplitSubmitting(true);
+    try {
+      const response = await updateFileSourceMergeResultsByIdList(payload);
+      if (response.status !== "success") {
+        notification.error({
+          message: "Error",
+          description: response?.data?.detail || "Failed to split items.",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Success",
+        description: `Split ${payload.length} items successfully.`,
+      });
+      closeSplitModal();
+      await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
+    } finally {
+      setSplitSubmitting(false);
+    }
+  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, scheduleRows, selectedLabel]);
+
   const renderTable = (
+    title: string,
     rows: any[],
     editable: boolean,
     withEvidenceAction: boolean,
@@ -800,6 +1065,8 @@ export default function ManualMergeV2Page() {
       render: (_: unknown, record: any) => {
         const value = getDisplayValueByField(record?.result || {}, fieldName);
         const isEditing = editable && editingCell?.id === String(record.id) && editingCell?.field === fieldName;
+        let conflicting_fields = record?.conflicting_fields || [];
+        let isConflicting = conflicting_fields.includes(fieldName) && title === 'Final Items';
         if (isEditing) {
           return (
             <Input
@@ -820,10 +1087,10 @@ export default function ManualMergeV2Page() {
         }
         return (
           <div
-            className={`mx-auto w-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
-              }`}
+            className={`mx-auto w-full h-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
+              } ${isConflicting ? 'bg-[#FFFF00]' : ''} `}
             onClick={() => {
-              if (editable && !isSelectedLabelMerged) startEdit(record, fieldName);
+              if (editable) startEdit(record, fieldName);
             }}
           >
             {fieldName === "Label" && record?.__isSystemRoot && record?.__systemGroupKey ? (
@@ -866,7 +1133,8 @@ export default function ManualMergeV2Page() {
       align: "center",
       fixed: "right",
       render: (_: unknown, record: any) =>
-        withEvidenceAction ? (
+      (
+        <div>
           <Button
             type="link"
             size="small"
@@ -891,7 +1159,25 @@ export default function ManualMergeV2Page() {
               preview={false}
             />
           </Button>
-        ) : null,
+          {
+            title === 'Final Items' && (
+              <Button
+                type="link"
+                size="small"
+                onClick={() => handleDeleteFinalItem(record)}
+              >
+                <Image
+                  src="/assets/icons/delete.svg"
+                  alt=""
+                  width={15}
+                  height={15}
+                  preview={false}
+                />
+              </Button>
+            )
+          }
+        </div>
+      ),
     };
 
     return (
@@ -913,152 +1199,54 @@ export default function ManualMergeV2Page() {
     );
   };
 
-  interface RenderTableSectionParams {
-    title: string;
-    rows: any[];
-    editable: boolean;
-    withEvidenceAction: boolean;
-    extra?: React.ReactNode;
-    scrollY?: string;
-    stretch?: boolean;
-  }
-
-  const renderTableSection = ({
-    title,
-    rows,
-    editable,
-    withEvidenceAction,
-    extra,
-    scrollY = "calc((100vh - 130px)/2 - 96px)",
-    stretch = true,
-  }: RenderTableSectionParams) => (
-    <div
-      className={`flex min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3 ${stretch ? "h-full" : ""
-        }`}
-    >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-          <span className="text-xs text-grey-normal">{rows.length} items</span>
-          {extra}
-        </div>
-      </div>
-      <div className={stretch ? "min-h-0 flex-1" : ""}>
-        {renderTable(rows, editable, withEvidenceAction, scrollY)}
-      </div>
-    </div>
-  );
-
-  const renderEvidenceSection = (title: string, evidenceUrls: string[]) => (
-    <div className="flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-        <span className="text-xs text-grey-normal">{evidenceUrls.length} images</span>
-      </div>
-      {evidenceUrls.length > 0 ? (
-        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          <div className="grid grid-cols-2 gap-3">
-            {evidenceUrls.map((url, index) => (
-              <div key={`${url}-${index}`} className="relative">
-                <div className="absolute left-1 top-1 rounded-md z-10 flex h-5 w-5 items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
-                  {index + 1}
-                </div>
-                {/* <Image
-                  src={url}
-                  alt={`${title} Evidence`}
-                  className="w-full rounded-md border border-primaryN30"
-                  preview={false}
-                /> */}
-                {<ImagePreviewWithExpand src={url} alt={`${title} Evidence`} />}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 items-center justify-center">
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
-      <header className="flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10">
-        <div className="flex items-center gap-3">
-          {files.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className={`flex h-[50px] min-w-[140px] flex-col items-start justify-center rounded-lg px-4 text-left transition-all ${String(file.id) === fileId ? "bg-primaryN30" : "border border-primaryN30"
-                }`}
-              onClick={() => handleSwitchFile(String(file.id))}
-            >
-              <span className="max-w-[180px] truncate text-sm text-grey-dark">
-                {file.file_name || `File ${file.id}`}
-              </span>
-            </button>
-          ))}
-        </div>
-        <Button type="primary" className="custom-primary-btn !w-[150px]" onClick={handleCreateMergeResult}>
-          Create Merge Result
-        </Button>
-      </header>
+      <FileHeader
+        files={files}
+        fileId={fileId}
+        onSwitchFile={handleSwitchFile}
+        onCreateMergeResult={handleCreateMergeResult}
+      />
 
       <div className="flex flex-1 gap-4 p-4 overflow-y-hidden">
-        <div className="w-[220px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
-            <span className="text-xs text-grey-normal">{labels.length}</span>
-          </div>
-          <div className="space-y-2 overflow-auto max-h-[calc(100vh-200px)]">
-            {labels.map((item) => {
-              const active = item.label === selectedLabel;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => handleSwitchLabel(item.label)}
-                  className={`w-full rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
-                    }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="flex min-w-0 items-center gap-1 text-left">
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-                        {item.isMerged ? (
-                          <CheckCircleFilled className="text-green-normal" />
-                        ) : null}
-                      </span>
-                      <span className="truncate">{item.label}</span>
-                    </span>
-                    {typeof item.count === "number" ? (
-                      <span className="text-grey-normal">{item.count}</span>
-                    ) : null}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <LabelSidebar
+          labels={labels}
+          autoMergedLabels={autoMergedLabels}
+          conflictLabels={conflictLabels}
+          selectedLabel={selectedLabel}
+          collapsedAutoMergedLabels={collapsedAutoMergedLabels}
+          collapsedConflictLabels={collapsedConflictLabels}
+          onToggleAutoMergedLabels={() => setCollapsedAutoMergedLabels((prev) => !prev)}
+          onToggleConflictLabels={() => setCollapsedConflictLabels((prev) => !prev)}
+          onSwitchLabel={handleSwitchLabel}
+        />
 
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="flex h-full min-h-0 flex-col gap-4">
             <div className="h-[calc((100vh - 130px)/2)] min-h-0 overflow-hidden">
-              {renderTableSection({
-                title: "Final Items",
-                rows: finalItemsRows,
-                editable: !isSelectedLabelMerged,
-                withEvidenceAction: true,
-                extra: !isSelectedLabelMerged ? (
-                  <Button
-                    className="ml-4 custom-primary-btn"
-                    loading={submitting}
-                    onClick={handleSubmitChanges}
-                  >
-                    Merge Complete
-                  </Button>
-                ) : null,
-              })}
+              <TableSection
+                title="Final Items"
+                rows={finalItemsRows}
+                editable={true}
+                withEvidenceAction={true}
+                extra={(
+                  <div className="ml-4 flex items-center gap-2">
+                    <Button
+                      className={`custom-primary-btn ${isSelectedLabelMerged ? '!w-[60px]' : ''}`}
+                      loading={submitting}
+                      onClick={isSelectedLabelMerged ? handleSaveChangesForMergedLabel : handleSubmitChanges}
+                    >
+                      {isSelectedLabelMerged ? "Save" : "Merge Complete"}
+                    </Button>
+                    {!isSelectedLabelMerged && (
+                      <Button className="custom-primary-btn !w-[60px]" onClick={openSplitModal}>
+                        Split
+                      </Button>
+                    )}
+                  </div>
+                )}
+                renderTable={renderTable}
+              />
             </div>
 
             <div className="flex-1 min-h-0 rounded-xl border border-primaryN30 bg-white p-3">
@@ -1079,46 +1267,67 @@ export default function ManualMergeV2Page() {
                 <div className="h-[calc(100%-40px)] min-h-0 overflow-y-auto pr-1">
                   <div className="flex flex-col gap-3">
                     <div className="shrink-0">
-                      {renderTableSection({
-                        title: "Schedule",
-                        rows: scheduleRows,
-                        editable: false,
-                        withEvidenceAction: true,
-                        extra: null,
-                        scrollY: undefined,
-                        stretch: false,
-                      })}
+                      <TableSection
+                        title="Schedule"
+                        rows={scheduleRows}
+                        editable={false}
+                        withEvidenceAction={true}
+                        extra={null}
+                        scrollY={undefined}
+                        stretch={false}
+                        renderTable={renderTable}
+                      />
                     </div>
                     <div className="shrink-0">
-                      {renderTableSection({
-                        title: "Floor Plan",
-                        rows: floorPlanRows,
-                        editable: false,
-                        withEvidenceAction: true,
-                        extra: null,
-                        scrollY: undefined,
-                        stretch: false,
-                      })}
+                      <TableSection
+                        title="Floor Plan"
+                        rows={floorPlanRows}
+                        editable={false}
+                        withEvidenceAction={true}
+                        extra={null}
+                        scrollY={undefined}
+                        stretch={false}
+                        renderTable={renderTable}
+                      />
                     </div>
                     <div className="shrink-0">
-                      {renderTableSection({
-                        title: "Elevation",
-                        rows: elevationRows,
-                        editable: false,
-                        withEvidenceAction: true,
-                        extra: null,
-                        scrollY: undefined,
-                        stretch: false,
-                      })}
+                      <TableSection
+                        title="Elevation"
+                        rows={elevationRows}
+                        editable={false}
+                        withEvidenceAction={true}
+                        extra={null}
+                        scrollY={undefined}
+                        stretch={false}
+                        renderTable={renderTable}
+                      />
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="h-[calc(100%-40px)] min-h-0">
                   <div className="grid h-full min-h-0 grid-cols-3 gap-3">
-                    {renderEvidenceSection("Schedule", scheduleEvidenceUrls)}
-                    {renderEvidenceSection("Floor Plan", floorPlanEvidenceUrls)}
-                    {renderEvidenceSection("Elevation", elevationEvidenceUrls)}
+                    <EvidenceSection
+                      title="Schedule"
+                      evidences={scheduleEvidences}
+                      currentLabel={selectedLabel}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
+                    />
+                    <EvidenceSection
+                      title="Floor Plan"
+                      evidences={floorPlanEvidences}
+                      currentLabel={selectedLabel}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
+                    />
+                    <EvidenceSection
+                      title="Elevation"
+                      evidences={elevationEvidences}
+                      currentLabel={selectedLabel}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
+                    />
                   </div>
                 </div>
               )}
@@ -1127,23 +1336,22 @@ export default function ManualMergeV2Page() {
         </div>
       </div>
 
-      <Modal
+      <EvidencePreviewModal
         open={previewOpen}
-        title={<span className="text-lg text-forumBlue-normal font-sans">Evidence Preview</span>}
-        footer={null}
-        width={1000}
+        previewUrls={previewUrls}
         onCancel={() => setPreviewOpen(false)}
-      >
-        {previewUrls.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
-            {previewUrls.map((url) => (
-              <ImagePreviewWithExpand key={url} src={url} alt="Evidence Preview" />
-            ))}
-          </div>
-        ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
-        )}
-      </Modal>
+      />
+
+      <SplitItemsModal
+        open={splitModalOpen}
+        loading={splitSubmitting}
+        rows={finalItemsRows}
+        columns={splitTableColumns}
+        currentLabel={selectedLabel}
+        allLabels={allLabelNames}
+        onCancel={closeSplitModal}
+        onSave={handleSubmitSplit}
+      />
 
       {loading && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40">
