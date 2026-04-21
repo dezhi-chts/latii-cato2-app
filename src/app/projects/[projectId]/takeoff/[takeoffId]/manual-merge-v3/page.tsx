@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Button, Image, Input, Modal, Segmented, Spin, Table, Tooltip, notification } from "antd";
+import { Button, Image, Input, Modal, Segmented, Spin, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams, useRouter } from "next/navigation";
 import { DownOutlined, UpOutlined, DeleteOutlined } from "@ant-design/icons";
@@ -32,6 +32,7 @@ import EvidencePreviewModal from "./components/EvidencePreviewModal";
 import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
+import { notify } from "@/utils/notify";
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -577,8 +578,8 @@ export default function ManualMergeV2Page() {
     try {
       const response = await getFileSourceMergeResultsByLabel(takeoffId, resolvedFileId, label);
       if (response.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Failed to load merge rows by label.",
         });
         return;
@@ -641,8 +642,8 @@ export default function ManualMergeV2Page() {
       if (!takeoffId || !resolvedFileId) return;
       const labelsRes = await getGroupedLabelsByFileAndTakeOff(takeoffId, resolvedFileId);
       if (labelsRes.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Failed to load grouped labels.",
         });
         return;
@@ -711,8 +712,8 @@ export default function ManualMergeV2Page() {
     try {
       const takeoffRes = await getTakeOffById(takeoffId);
       if (takeoffRes.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Failed to load takeoff data.",
         });
         return;
@@ -721,8 +722,8 @@ export default function ManualMergeV2Page() {
       const firstFileId = takeoffRes.data?.project_files?.[0]?.id;
       setFiles(takeoffRes.data?.project_files || []);
       if (!firstFileId) {
-        notification.warning({
-          message: "Warning",
+        notify.warning({
+          title: "Warning",
           description: "No file found for current takeoff.",
         });
         return;
@@ -790,8 +791,8 @@ export default function ManualMergeV2Page() {
           .filter(Boolean),
       ) as string[];
       if (allItemIds.length === 0) {
-        notification.warning({
-          message: "No Items",
+        notify.warning({
+          title: "No Items",
           description: "No items found to submit.",
         });
         return false;
@@ -807,8 +808,8 @@ export default function ManualMergeV2Page() {
       setLoading(false);
       if (response.status === "success") {
         if (!options?.silentSuccess) {
-          notification.success({
-            message: "Success",
+          notify.success({
+            title: "Success",
             description:
               nextScheduleRows.length > 0
                 ? `Merged complete with ${nextScheduleRows.length} schedule rows.`
@@ -819,8 +820,8 @@ export default function ManualMergeV2Page() {
         await fetchLabelsAndMaybeLoadData(fileId, selectedLabel, true);
         return true;
       } else {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: response?.data?.detail || "Failed to submit modified Schedule rows.",
         });
       }
@@ -874,8 +875,8 @@ export default function ManualMergeV2Page() {
       .filter(Boolean) as Array<{ id: string; result: Record<string, any> }>;
 
     if (changedItems.length === 0) {
-      notification.info({
-        message: "No Changes",
+      notify.info({
+        title: "No Changes",
         description: "No modified items to save.",
       });
       return;
@@ -885,16 +886,16 @@ export default function ManualMergeV2Page() {
     try {
       const response = await updateSingleFileMergeResultsByIdList(changedItems);
       if (response.status === "success") {
-        notification.success({
-          message: "Success",
+        notify.success({
+          title: "Success",
           description: `Saved ${changedItems.length} modified items.`,
         });
         setScheduleChanges({});
         await fetchLabelData(selectedLabel);
         return;
       }
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: response?.data?.detail || "Failed to save modified items.",
       });
     } finally {
@@ -938,8 +939,8 @@ export default function ManualMergeV2Page() {
         router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
         return;
       }
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: response.data?.detail || "Failed to create merge result.",
       });
     } finally {
@@ -951,8 +952,8 @@ export default function ManualMergeV2Page() {
     (record: any) => {
       const itemId = record?.id;
       if (itemId === null || itemId === undefined || itemId === "") {
-        notification.warning({
-          message: "Invalid Item",
+        notify.warning({
+          title: "Invalid Item",
           description: "Unable to delete item because id is missing.",
         });
         return;
@@ -972,15 +973,15 @@ export default function ManualMergeV2Page() {
               : await deleteFileSourceMergeResultById(itemId);
 
             if (response.status !== "success") {
-              notification.error({
-                message: "Error",
+              notify.error({
+                title: "Error",
                 description: response?.data?.detail || "Failed to delete item.",
               });
               return;
             }
 
-            notification.success({
-              message: "Success",
+            notify.success({
+              title: "Success",
               description: "Item deleted successfully.",
             });
 
@@ -1019,8 +1020,8 @@ export default function ManualMergeV2Page() {
       }));
 
     if (payload.length === 0) {
-      notification.warning({
-        message: "No Valid Items",
+      notify.warning({
+        title: "No Valid Items",
         description: "Selected items are invalid, please reselect.",
       });
       return;
@@ -1030,15 +1031,15 @@ export default function ManualMergeV2Page() {
     try {
       const response = await updateFileSourceMergeResultsByIdList(payload);
       if (response.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: response?.data?.detail || "Failed to split items.",
         });
         return;
       }
 
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: `Split ${payload.length} items successfully.`,
       });
       closeSplitModal();
@@ -1141,8 +1142,8 @@ export default function ManualMergeV2Page() {
             onClick={() => {
               const urls = extractEvidenceUrls(record, evidenceByResultItemId);
               if (urls.length === 0) {
-                notification.info({
-                  message: "No Evidence",
+                notify.info({
+                  title: "No Evidence",
                   description: "No evidence image found for this row.",
                 });
                 return;

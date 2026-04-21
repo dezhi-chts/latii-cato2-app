@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, notification, Image, Popover, Modal, Tooltip, Checkbox } from "antd";
+import { Button, Image, Popover, Modal, Tooltip, Checkbox } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -30,6 +30,7 @@ import {
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import CreateItemModal from "./components/CreateItemModal";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
+import { notify } from "@/utils/notify";
 const { confirm } = Modal;
 export default function SchedulePage() {
   const router = useRouter();
@@ -76,8 +77,8 @@ export default function SchedulePage() {
       }
     } catch (error) {
       console.error("Error fetching takeoff data:", error);
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load takeoff data.",
       });
     } finally {
@@ -103,8 +104,8 @@ export default function SchedulePage() {
         setImageUrl(nextEvidence?.evidence_url || "");
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to load schedule evidence data.",
       });
     }
@@ -124,8 +125,8 @@ export default function SchedulePage() {
         } else {
           setItemBoxList([]);
           setItemBoxEvidenceId(id);
-          notification.error({
-            message: "Error",
+          notify.error({
+            title: "Error",
             description: "Failed to load evidence data.",
           });
         }
@@ -290,8 +291,8 @@ export default function SchedulePage() {
       if (!itemId) return false;
       if (oldValue === newValue) return true;
       if (fieldName === "Label" && !String(newValue || "").trim()) {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Label cannot be empty.",
         });
         return false;
@@ -304,8 +305,8 @@ export default function SchedulePage() {
         updatedItem?.result || {},
       );
       if (updateRes.status === "success") {
-        notification.success({
-          message: "Success",
+        notify.success({
+          title: "Success",
           description: `${fieldName} updated successfully.`,
         });
         return true;
@@ -324,8 +325,8 @@ export default function SchedulePage() {
           };
         }),
       );
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to update item. Changes have been reverted.",
       });
       return false;
@@ -385,15 +386,15 @@ export default function SchedulePage() {
 
       const deleteRes = await deleteTakeOffResultItemById(itemId.toString());
       if (deleteRes.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Failed to delete item.",
         });
         return false;
       }
 
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Item deleted successfully.",
       });
       await getItemsByPageEvidences(pageEvidenceId);
@@ -413,8 +414,8 @@ export default function SchedulePage() {
         onOk: async () => {
           let res = await deleteTakeOffResultItemByEvidenceId(evidenceInfo.id);
           if (res.status === "success") {
-            notification.success({
-              message: "Success",
+            notify.success({
+              title: "Success",
               description: "Evidence deleted successfully.",
             });
             // 刷新take off result items
@@ -422,8 +423,8 @@ export default function SchedulePage() {
               fetchScheduleEvidenceList(selectedFileId);
             }
           } else {
-            notification.error({
-              message: "Error",
+            notify.error({
+              title: "Error",
               description: "Failed to delete evidence.",
             });
           }
@@ -468,15 +469,15 @@ export default function SchedulePage() {
     let res = await reconcileTakeOffResultItemsByTakeOffAndFile(takeOffId as string, selectedFileId as any)
     setBuildingLoading(false);
     if (res.status === "success") {
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Take off result items reconciled successfully.",
       });
       // 跳转到下一个take off result items
       router.push(`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: res?.data?.detail || "Failed to reconcile take off result items.",
       });
     }
@@ -484,8 +485,8 @@ export default function SchedulePage() {
 
   const handleNext = () => {
     if (hasEmptyLabelInTable) {
-      notification.warning({
-        message: "Label Required",
+      notify.warning({
+        title: "Label Required",
         description: "Please make sure all labels are not empty before clicking Next.",
       });
       return;
@@ -599,9 +600,13 @@ export default function SchedulePage() {
             columns={columns}
             sections={itemBoxList}
             tableLoading={tableLoading}
+            takeOffId={String(takeOffId || "")}
+            selectedFileId={selectedFileId}
+            pageEvidenceId={pageEvidenceId}
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
             onOpenCreateItemModal={handleOpenCreateItemModal}
+            onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
           />
         </div>
       </div>

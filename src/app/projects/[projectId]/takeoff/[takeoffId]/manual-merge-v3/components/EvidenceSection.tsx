@@ -1,7 +1,7 @@
 "use client";
 
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
-import { Button, Empty, Modal, Select, Spin, notification } from "antd";
+import { Button, Empty, Modal, Select, Spin } from "antd";
 import { useMemo, useState } from "react";
 
 import {
@@ -9,6 +9,8 @@ import {
   updateSingleFileMergeResultsLabelByEvidenceIds,
 } from "@/services/takeOffService";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
+import { notify } from "@/utils/notify";
+
 
 interface EvidenceSectionProps {
   title: string;
@@ -73,14 +75,14 @@ export default function EvidenceSection({
         try {
           const response = await deleteFileSourceMergeResultsByEvidenceIds(evidenceId);
           if (response.status !== "success") {
-            notification.error({
-              message: "Error",
+            notify.error({
+              title: "Error",
               description: response?.data?.detail || "Failed to delete evidence.",
             });
             return;
           }
-          notification.success({
-            message: "Success",
+          notify.success({
+            title: "Success",
             description: "Evidence deleted successfully.",
           });
           await onRefreshItemsAndEvidence();
@@ -102,8 +104,8 @@ export default function EvidenceSection({
 
   const handleConfirmEdit = async () => {
     if (!targetLabel) {
-      notification.warning({
-        message: "Label Required",
+      notify.warning({
+        title: "Label Required",
         description: "Please select a target label.",
       });
       return;
@@ -113,14 +115,14 @@ export default function EvidenceSection({
     try {
       const response = await updateSingleFileMergeResultsLabelByEvidenceIds(editingEvidenceId, targetLabel);
       if (response.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: response?.data?.detail || "Failed to update evidence label.",
         });
         return;
       }
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Evidence label updated successfully.",
       });
       setIsEditModalOpen(false);
