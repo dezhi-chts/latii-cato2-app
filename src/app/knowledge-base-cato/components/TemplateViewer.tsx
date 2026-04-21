@@ -8,6 +8,9 @@ import { EditOutlined } from "@ant-design/icons";
 
 import { FieldEvent, MainTab, TemplateEvent } from "@/app/knowledge-base-cato/page";
 import { FieldEditor } from "./FieldEditor";
+import { Popover } from "antd";
+import Image from "next/image";
+
 
 const GENERATIONS = 'Generations';
 
@@ -20,6 +23,9 @@ interface TemplateViewerProps {
   onChangeSubTab: (name: string) => void;
   onUpdateTemplate: (eventName: TemplateEvent, data: any) => void;
   onUpdateField: (eventName: FieldEvent, data: any) => void;
+  openCreateTemplateSignal: number;
+  onConsumeCreateTemplateSignal: () => void;
+  onDownloadTemplate: (templateId: number, name: string) => void;
 }
 export const TemplateViewer = ({
   templateList,
@@ -30,18 +36,32 @@ export const TemplateViewer = ({
   onChangeSubTab,
   onUpdateTemplate,
   onUpdateField,
+  openCreateTemplateSignal,
+  onConsumeCreateTemplateSignal,
+  onDownloadTemplate,
 }: TemplateViewerProps) => {
-  const [activeSubTab, setActiveSubTab] = useState<string>(GENERATIONS);
+  const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeFieldContent, setActiveFieldContent] = useState<any>({});
 
-  useEffect(() => {
-    // 模版切换的时候，重新设置子标签
-    setActiveSubTab(GENERATIONS);
-  }, [templateId]);
-
   const subTabs = useMemo(() => {
-    return templateContent?.fields || [];
-  }, [templateContent]);
+    let fields = templateContent?.fields || [];
+    if (fields.length > 0) {
+      let findActiveSub = fields.find((item: any) => item.name === activeSubTab);
+      if (activeSubTab === '' || !findActiveSub) {
+        setActiveSubTab(fields[0]?.name || '');
+      } else if (findActiveSub) {
+        setActiveSubTab(findActiveSub.name);
+      } else {
+        setActiveSubTab(fields[0]?.name || '');
+      }
+    }
+    return fields;
+  }, [templateContent, activeSubTab]);
+
+  useEffect(()=>{
+    // 模版更改的时候需要清空当前activeSubTab
+    setActiveSubTab('');
+  },[templateId])
 
   useEffect(() => {
     if (activeSubTab === GENERATIONS) {
@@ -69,18 +89,45 @@ export const TemplateViewer = ({
   return (
     <div className="flex flex-row gap-20 h-full">
       {/* Template List */}
-      <TemplateList
-        templates={templateList}
-        selectedTemplateId={templateId}
-        onSelectTemplate={setTemplateId}
-        onUpdateTemplate={onUpdateTemplate}
-      />
+      <div className="h-full">
+        <TemplateList
+          templates={templateList}
+          selectedTemplateId={templateId}
+          onSelectTemplate={setTemplateId}
+          onUpdateTemplate={onUpdateTemplate}
+          openCreateTemplateSignal={openCreateTemplateSignal}
+          onConsumeCreateTemplateSignal={onConsumeCreateTemplateSignal}
+          onDownloadTemplate={onDownloadTemplate}
+        />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Sub Tabs */}
+        <div className="flex items-center gap-2 text-xs text-grey-normal">
+          <Popover
+            placement="rightBottom"
+            title={null}
+            content={
+              <div className="py-1 w-[240px] flex flex-col">
+
+              </div>
+            }
+            trigger="hover"
+          >
+            <Image
+              src="/assets/icons/info-forum-blue.svg"
+              alt="info circle icon"
+              className="cursor-pointer"
+              width={14}
+              height={14}
+            ></Image>
+          </Popover>
+          <span>Template creator: {templateContent?.create_user || ''}</span>
+        </div>
         <SubTabs
           templateId={templateId as number}
+          templateInfo={templateList.find((item: any) => item.id === templateId)}
           tabs={subTabs}
           activeTab={activeSubTab}
           onTabChange={setActiveSubTab}
@@ -103,6 +150,7 @@ export const TemplateViewer = ({
           )} */}
           <FieldEditor
             templateId={templateId as number}
+            templateInfo={templateList.find((item: any) => item.id === templateId)}
             field={activeFieldContent}
             onUpdateField={handleFieldUpdate}
           />

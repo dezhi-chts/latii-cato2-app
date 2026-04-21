@@ -191,7 +191,7 @@ const IdentSummary = () => {
     setFullLoading(false);
 
     if (res.status === "success") {
-      let drawingData = res?.data?.drawings ?? [];
+      let drawingData = res?.data?.pages ?? [];
       setContentData(drawingData);
 
       if (drawingData.length > 0) {
@@ -278,6 +278,16 @@ const IdentSummary = () => {
   };
 
   const handleNext = async (buttonInfo: { text: string }) => {
+    // 需要确认所有页面类型已确认，否则不允许跳转
+    let isAllPageTypeConfirmed = contentData.every((item: any) => item.type !== "" && item.type !== null && item.type !== undefined);
+
+    if (!isAllPageTypeConfirmed) {
+      notification.error({
+        message: "Error",
+        description: "Please confirm all page types first",
+      });
+      return;
+    }
     // 在summary页面的时候，点击Next Step跳转到label页面
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };
@@ -356,13 +366,14 @@ const IdentSummary = () => {
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"
-          style={{ width: "500px" }}
         >
           <ContentView
+            fileId={selectedFileId}
             contentData={contentData}
             setContentData={setContentData}
             drawingTypeList={drawingTypeList}
             isEmptyContent={isEmptyContent}
+            currentPage={page}
             pdfTotalPages={totalPage}
             handlePageChange={handlePageChange}
           />
@@ -409,6 +420,7 @@ const IdentSummary = () => {
               allEvidence={fileEvidence}
               onTotalPages={setTotalPage}
               onCropSectionsCount={handleCropsCount}
+              onChangeZoom={debouncedZoomChange}
             ></PdfWrapper>
           </div>
         </div>

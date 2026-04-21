@@ -1,20 +1,31 @@
 "use client";
 
-import { notification, Spin } from "antd";
+import { Modal, notification, Spin } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getEvidenceByFileId } from "@/services/evidenceService";
 import { changeCheckedItem } from "@/services/projectService";
-import { getTakeOffsDetails } from "@/services/takeOffService";
-import { getFieldsByTemplateId } from "@/services/templateService";
+import {
+	downloadTakeOffResult,
+	getTakeOffById,
+	getTakeOffSummaryStats,
+	resetTakeOff,
+	getAllTakeOffResultItemsByTakeOffId
+} from "@/services/takeOffService";
+import { getTemplateById } from "@/services/templateService";
 
 import AddBoxModal from "./components/AddBoxModal";
 import EvidenceSidebar from "./components/EvidenceSidebar";
-import ItemReferenceModal from "./components/ItemReferenceModal";
 import TakeoffListHeader from "./components/TakeoffListHeader";
 import TakeoffItemsTable from "./components/TakeoffItemsTable";
-import { getFallbackDynamicFields, getSummaryStats } from "./takeoffUtils";
+import TakeoffReferenceByTypeModal from "./components/TakeoffReferenceByTypeModal";
+import {
+	getFallbackDynamicFields,
+	getDisplayValueByField,
+	getSummaryStats,
+	parseItemResult,
+} from "./takeoffUtils";
 import {
 	EvidenceRecord,
 	ProjectFileRecord,
@@ -23,6 +34,173 @@ import {
 	TemplateField,
 } from "./types";
 import { FileOperationType } from "../types/evidence";
+import LoadingScreen from "@/components/loading-screen";
+
+interface ParsedTakeoffItem {
+	id: number | string;
+	key: string;
+	result: Record<string, string>;
+	originalResult?: any;
+	isMerged: boolean;
+	groupLabel?: string;
+	groupSubLabel?: string;
+	mergedFromRows?: any[];
+	take_off_result_item_id_list?: number[];
+	single_file_merge_result_id_list?: number[];
+	[key: string]: any;
+}
+
+const parseTakeoffMergeResult = (
+	sourceData: any,
+	preferredFields: string[],
+): ParsedTakeoffItem[] => {
+	const parseIdList = (item: any, listKey: string, textKey: string): number[] => {
+		if (Array.isArray(item?.[listKey])) {
+			return item[listKey]
+				.map((value: any) => Number(value))
+				.filter((value: number) => Number.isFinite(value));
+		}
+		const textValue = item?.[textKey];
+		if (typeof textValue !== "string" || !textValue.trim()) {
+			return [];
+		}
+		const matches = textValue.match(/\d+/g) || [];
+		return matches
+			.map((value) => Number(value))
+			.filter((value) => Number.isFinite(value));
+	};
+
+	const toParsedItem = (
+		item: any,
+		index: number,
+		fallbackMerged: boolean,
+	): ParsedTakeoffItem => {
+		const rawResult = parseItemResult(item?.result);
+		const displayResult = preferredFields.reduce(
+			(acc: Record<string, string>, fieldName: string) => {
+				acc[fieldName] = getDisplayValueByField(rawResult, fieldName);
+				return acc;
+			},
+			{},
+		);
+
+		return {
+			...item,
+			id: item?.id ?? `item-${index}`,
+			key: `item-${item?.id ?? index}`,
+			result: displayResult,
+			originalResult: rawResult,
+			isMerged:
+				typeof item?.is_merged === "boolean"
+					? item.is_merged
+					: fallbackMerged,
+			take_off_result_item_id_list: parseIdList(
+				item,
+				"take_off_result_item_id_list",
+				"take_off_result_item_ids",
+			),
+			single_file_merge_result_id_list: parseIdList(
+				item,
+				"single_file_merge_result_id_list",
+				"single_file_merge_result_ids",
+			),
+			file_source_merge_result_id_list: parseIdList(
+				item,
+				"file_source_merge_result_id_list",
+				"file_source_merge_result_ids",
+			),
+			mergedFromRows: item?.mergedFromRows || [item],
+		};
+	};
+
+	// New API shape: single item object or item array
+	if (Array.isArray(sourceData)) {
+		return sourceData.map((item, index) =>
+			toParsedItem(item, index, Boolean(item?.is_merged)),
+		);
+	}
+	if (
+		sourceData &&
+		typeof sourceData === "object" &&
+		typeof sourceData?.id !== "undefined" &&
+		sourceData?.result
+	) {
+		return [toParsedItem(sourceData, 0, Boolean(sourceData?.is_merged))];
+	}
+
+	const inMergeResult =
+		sourceData?.in_multiple_files_merge_result ||
+		sourceData?.in_single_file_merge_result ||
+		sourceData?.in_file_source_merge_result ||
+		[];
+	const notInMergeResult =
+		sourceData?.not_in_multiple_files_merge_result ||
+		sourceData?.not_in_single_file_merge_result ||
+		sourceData?.not_in_file_source_merge_result ||
+		[];
+
+	const items: ParsedTakeoffItem[] = [];
+
+	// Process merged items
+	inMergeResult.forEach((group: any, groupIndex: number) => {
+		const groupLabel = group?.Label || "";
+		const groupSubLabel = group?.["Sub Label"] || "";
+		const listItems = Array.isArray(group?.list)
+			? group.list
+			: Array.isArray(group?.List)
+				? group.List
+				: [];
+
+		if (listItems.length > 0) {
+			listItems.forEach((item: any, itemIndex: number) => {
+				items.push({
+					...toParsedItem(item, itemIndex, true),
+					groupLabel,
+					groupSubLabel,
+					mergedFromRows: item?.mergedFromRows || listItems,
+				});
+			});
+		} else {
+			items.push({
+				...toParsedItem(group, groupIndex, true),
+				groupLabel,
+				groupSubLabel,
+				mergedFromRows: group?.mergedFromRows || [group],
+			});
+		}
+	});
+
+	// Process unmerged items
+	notInMergeResult.forEach((group: any, groupIndex: number) => {
+		const groupLabel = group?.Label || "";
+		const groupSubLabel = group?.["Sub Label"] || "";
+		const listItems = Array.isArray(group?.list)
+			? group.list
+			: Array.isArray(group?.List)
+				? group.List
+				: [];
+
+		if (listItems.length > 0) {
+			listItems.forEach((item: any, itemIndex: number) => {
+				items.push({
+					...toParsedItem(item, itemIndex, false),
+					groupLabel,
+					groupSubLabel,
+					mergedFromRows: item?.mergedFromRows || listItems,
+				});
+			});
+		} else {
+			items.push({
+				...toParsedItem(group, groupIndex, false),
+				groupLabel,
+				groupSubLabel,
+				mergedFromRows: group?.mergedFromRows || [group],
+			});
+		}
+	});
+
+	return items;
+};
 
 export default function TakeoffListPage() {
 	const router = useRouter();
@@ -33,9 +211,16 @@ export default function TakeoffListPage() {
 	const [loading, setLoading] = useState(true);
 	const [takeoffData, setTakeoffData] = useState<TakeoffDetailsData>();
 	const [dynamicFields, setDynamicFields] = useState<TemplateField[]>([]);
+	const [columnNames, setColumnNames] = useState<string[]>([
+		"Label",
+		"Sub Label",
+	]);
+	const [parsedItems, setParsedItems] = useState<ParsedTakeoffItem[]>([]);
 	const [selectedFileId, setSelectedFileId] = useState<number>(-1);
 	const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
-	const [referenceItemId, setReferenceItemId] = useState<number | null>(null);
+	const [referenceItem, setReferenceItem] = useState<ParsedTakeoffItem | null>(
+		null,
+	);
 	const [searchValue, setSearchValue] = useState("");
 	const [showEvidenceBoxes, setShowEvidenceBoxes] = useState(true);
 	const [fileFilter, setFileFilter] = useState("all");
@@ -44,27 +229,32 @@ export default function TakeoffListPage() {
 	const [evidencesByFile, setEvidencesByFile] = useState<
 		Record<number, EvidenceRecord[]>
 	>({});
+	const [summaryStats, setSummaryStats] = useState<any>({});
+	const [fullLoading, setFullLoading] = useState(false);
+	const [downloadLoading, setDownloadLoading] = useState(false);
 
 	const files = useMemo<ProjectFileRecord[]>(() => {
 		return takeoffData?.project_files || [];
 	}, [takeoffData?.project_files]);
 
 	const allItems = useMemo<TakeoffItemRecord[]>(() => {
-		const itemsByFile = takeoffData?.all_items || {};
-		return Object.values(itemsByFile).flat();
-	}, [takeoffData?.all_items]);
+		// Convert parsed items to TakeoffItemRecord format for compatibility
+		return parsedItems.map((item, index) => {
+			const { id, result, ...rest } = item;
+			return {
+				...rest,
+				sequence_number: index + 1,
+				project_file_id: 0,
+				is_checked: true,
+				id: typeof id === "number" ? id : index,
+				result: result,
+			};
+		}) as unknown as TakeoffItemRecord[];
+	}, [parsedItems]);
 
 	const selectedItem = useMemo(() => {
-		return allItems.find((item) => item?.id === selectedItemId) || null;
-	}, [allItems, selectedItemId]);
-
-	const referenceItem = useMemo(() => {
-		return allItems.find((item) => item?.id === referenceItemId) || null;
-	}, [allItems, referenceItemId]);
-
-	const summaryStats = useMemo(() => {
-		return getSummaryStats(takeoffData);
-	}, [takeoffData]);
+		return parsedItems.find((item) => item?.id === selectedItemId) || null;
+	}, [parsedItems, selectedItemId]);
 
 	const currentFile = useMemo(() => {
 		return files.find((file) => file?.id === selectedFileId);
@@ -88,16 +278,48 @@ export default function TakeoffListPage() {
 		async (templateId?: number, fallbackItems: TakeoffItemRecord[] = []) => {
 			if (!templateId) {
 				setDynamicFields(getFallbackDynamicFields(fallbackItems));
-				return;
+				return [];
 			}
 
-			const response = await getFieldsByTemplateId(String(templateId));
-			if (response.status === "success") {
-				const fields = response?.data || [];
+			const response = await getTemplateById(templateId);
+			if (response.status === "success" && response.data) {
+				const templateData = response.data;
+				// Extract field names from template, similar to manual-merge-new
+				const fields: string[] = [];
+
+				// Add Label and Sub Label first
+				fields.push("Label");
+				fields.push("Sub Label");
+
+				// Add other fields from template
+				if (templateData.fields && Array.isArray(templateData.fields)) {
+					templateData.fields.forEach((field: any) => {
+						const fieldName = field.name || field.field_name || field;
+						if (
+							fieldName &&
+							fieldName !== "Label" &&
+							fieldName !== "Sub Label"
+						) {
+							fields.push(fieldName);
+						}
+					});
+				}
+
+				// Convert to TemplateField format for compatibility
+				const templateFields: TemplateField[] = fields.map((name, index) => ({
+					id: index,
+					name,
+					field_name: name,
+					field_type: "text",
+				}));
+
 				setDynamicFields(
-					fields?.length ? fields : getFallbackDynamicFields(fallbackItems),
+					templateFields.length
+						? templateFields
+						: getFallbackDynamicFields(fallbackItems),
 				);
-				return;
+				setColumnNames(fields);
+				return fields;
 			}
 
 			setDynamicFields(getFallbackDynamicFields(fallbackItems));
@@ -105,6 +327,7 @@ export default function TakeoffListPage() {
 				message: "Error",
 				description: "Failed to get template fields",
 			});
+			return [];
 		},
 		[],
 	);
@@ -155,65 +378,121 @@ export default function TakeoffListPage() {
 
 	const fetchTakeoff = useCallback(async () => {
 		setLoading(true);
-		const response = await getTakeOffsDetails(takeoffId);
-		setLoading(false);
 
-		if (response.status !== "success") {
+		try {
+			// Step 1: Get takeoff basic info
+			const takeoffResponse = await getTakeOffById(takeoffId);
+			if (takeoffResponse.status !== "success" || !takeoffResponse.data) {
+				notification.error({
+					message: "Error",
+					description: "Failed to get takeoff details",
+				});
+				setLoading(false);
+				return;
+			}
+
+			const takeoffBasicData = takeoffResponse.data;
+			const projectFiles = takeoffBasicData?.project_files || [];
+			const firstFileId = projectFiles?.[0]?.id || -1;
+			const templateId = takeoffBasicData?.take_off_result?.template_id || 1;
+
+			// Step 2: Fetch template fields
+			const fields = await fetchDynamicFields(templateId, []);
+			// Use fetched fields or default fields (don't use columnNames state to avoid dependency loop)
+			const preferredFields =
+				fields.length > 0 ? fields : ["Label", "Sub Label"];
+
+			// Step 3: Get merged data from getAllTakeOffResultItemsByTakeOffId
+			const groupedResponse = await getAllTakeOffResultItemsByTakeOffId(takeoffId);
+
+			let items: ParsedTakeoffItem[] = [];
+			if (groupedResponse.status === "success" && groupedResponse.data) {
+				items = parseTakeoffMergeResult(groupedResponse.data, preferredFields);
+			}
+
+			// Build takeoff data structure for compatibility
+			const nextTakeoffData: TakeoffDetailsData = {
+				project_files: projectFiles,
+				take_off_result: takeoffBasicData?.take_off_result || {},
+				all_items: {},
+				reconcile_candidate_count: {},
+			};
+
+			setTakeoffData(nextTakeoffData);
+			setParsedItems(items);
+			setSelectedFileId(firstFileId);
+			setSearchValue("");
+			setShowEvidenceBoxes(true);
+			setSelectedItemId(null);
+			setReferenceItem(null);
+			setFileFilter("all");
+
+			// Fetch evidences
+			//await fetchAllFileEvidences(projectFiles);
+		} catch (error) {
+			console.error("Error fetching takeoff:", error);
 			notification.error({
 				message: "Error",
 				description: "Failed to get takeoff details",
 			});
-			return;
+		} finally {
+			setLoading(false);
 		}
-
-		const nextTakeoffData = response?.data || {};
-		const projectFiles = nextTakeoffData?.project_files || [];
-		const firstFileId = projectFiles?.[0]?.id || -1;
-		const flattenedItems = Object.values(
-			nextTakeoffData?.all_items || {},
-		).flat() as TakeoffItemRecord[];
-
-		setTakeoffData(nextTakeoffData);
-		setSelectedFileId(firstFileId);
-		setSearchValue("");
-		setShowEvidenceBoxes(true);
-		setSelectedItemId(null);
-		setReferenceItemId(null);
-		setFileFilter("all");
-
-		await Promise.all([
-			fetchDynamicFields(
-				nextTakeoffData?.take_off_result?.template_id,
-				flattenedItems,
-			),
-			fetchAllFileEvidences(projectFiles),
-		]);
 	}, [fetchAllFileEvidences, fetchDynamicFields, takeoffId]);
+
+	const getSummaryStats = useCallback(async () => {
+		try {
+			const summaryStats = await getTakeOffSummaryStats(takeoffId);
+			if (summaryStats.status === "success") {
+				setSummaryStats(summaryStats.data);
+			}
+		} catch (error) {
+			console.error("Error refreshing summary stats:", error);
+		}
+	}, [takeoffId]);
+
+	const refreshItemsOnly = useCallback(async () => {
+		try {
+			const groupedResponse = await getAllTakeOffResultItemsByTakeOffId(takeoffId);
+			if (groupedResponse.status === "success" && groupedResponse.data) {
+				const preferredFields =
+					columnNames.length > 0 ? columnNames : ["Label", "Sub Label"];
+				const items = parseTakeoffMergeResult(
+					groupedResponse.data,
+					preferredFields,
+				);
+				setParsedItems(items);
+			}
+		} catch (error) {
+			console.error("Error refreshing items:", error);
+		}
+	}, [takeoffId, columnNames]);
 
 	useEffect(() => {
 		fetchTakeoff();
-	}, [fetchTakeoff]);
+		getSummaryStats();
+	}, [takeoffId]);
 
 	useEffect(() => {
 		if (!selectedItemId) {
 			return;
 		}
 
-		if (!allItems.find((item) => item?.id === selectedItemId)) {
+		if (!parsedItems.find((item) => item?.id === selectedItemId)) {
 			setSelectedItemId(null);
 		}
-	}, [allItems, selectedItemId]);
+	}, [parsedItems, selectedItemId]);
 
 	useEffect(() => {
-		if (!referenceItemId) {
+		if (!referenceItem) {
 			return;
 		}
 
-		if (!allItems.find((item) => item?.id === referenceItemId)) {
-			setReferenceItemId(null);
+		if (!parsedItems.find((item) => item?.id === referenceItem.id)) {
+			setReferenceItem(null);
 			setShowReferenceModal(false);
 		}
-	}, [allItems, referenceItemId]);
+	}, [parsedItems, referenceItem]);
 
 	useEffect(() => {
 		if (dynamicFields.length) {
@@ -291,23 +570,76 @@ export default function TakeoffListPage() {
 	};
 
 	const handleResetTakeoff = () => {
-		const firstFileId = files?.[0]?.id || -1;
-		updateCurrentFileSelection(firstFileId);
-		setFileFilter("all");
-		setShowEvidenceBoxes(true);
+		Modal.confirm({
+			title: "Reset Takeoff",
+			content:
+				"Are you sure you want to reset this takeoff? This action cannot be undone.",
+			okText: "Reset",
+			okButtonProps: { danger: true },
+			cancelText: "Cancel",
+			onOk: async () => {
+				setFullLoading(true);
+				let fileIds = files.map((file) => file.id).join(",");
+				const response = await resetTakeOff(takeoffId, fileIds);
+				setFullLoading(false);
+				if (response.status === "success") {
+					notification.success({
+						message: "Success",
+						description: "Take off reset successfully",
+					});
+					router.push(
+						`/projects/${projectId}/takeoff/${takeoffId}/identification`,
+					);
+				} else {
+					notification.error({
+						message: "Error",
+						description: "Failed to reset take off",
+					});
+				}
+			},
+		});
 	};
 
-	const handleDownload = () => {
-		const fileUrl = currentFile?.parse_detail?.uploaded_file_url;
-		if (!fileUrl) {
-			notification.info({
-				message: "Info",
-				description: "No downloadable file found for the current selection",
-			});
-			return;
-		}
+	const handleDownload = async () => {
+		setDownloadLoading(true);
+		try {
+			const response: any = await downloadTakeOffResult(takeoffId);
 
-		window.open(fileUrl, "_blank", "noopener,noreferrer");
+			if (response.status === "success" && response.data) {
+				if (response.data) {
+					let fileName =
+						response.data["file_name"] || `take_off_${takeoffId}.zip`;
+					let fileUrl = response.data["download_url"] || "";
+					if (fileUrl) {
+						const link = document.createElement("a");
+						link.href = fileUrl;
+						link.download = fileName;
+						document.body.appendChild(link);
+						link.click();
+						document.body.removeChild(link);
+					} else {
+						notification.error({
+							message: "Error",
+							description: "No file url found",
+						});
+					}
+				}
+			} else {
+				notification.error({
+					message: "Error",
+					description:
+						response?.data?.detail || "Failed to download take off result",
+				});
+			}
+		} catch (error) {
+			console.error("Download error:", error);
+			notification.error({
+				message: "Error",
+				description: "Failed to download take off result",
+			});
+		} finally {
+			setDownloadLoading(false);
+		}
 	};
 
 	const handleOpenReconcile = () => {
@@ -326,7 +658,9 @@ export default function TakeoffListPage() {
 
 	const handleOpenReferencePanel = (item: TakeoffItemRecord) => {
 		setSelectedItemId(item?.id);
-		setReferenceItemId(item?.id);
+		// Find the parsed item to get full data including mergedFromRows
+		const parsedItem = parsedItems.find((p) => p.id === item?.id);
+		setReferenceItem(parsedItem || null);
 		setShowReferenceModal(true);
 	};
 
@@ -361,6 +695,7 @@ export default function TakeoffListPage() {
 				files={files}
 				selectedFileId={selectedFileId}
 				summaryStats={summaryStats}
+				downloadLoading={downloadLoading}
 				onSelectFile={updateCurrentFileSelection}
 				onResetTakeoff={handleResetTakeoff}
 				onDownload={handleDownload}
@@ -372,27 +707,24 @@ export default function TakeoffListPage() {
 					dynamicFields={dynamicFields}
 					loading={false}
 					searchValue={searchValue}
-					selectedItemId={selectedItem?.id || null}
+					selectedItemId={
+						typeof selectedItem?.id === "number" ? selectedItem.id : null
+					}
 					reconcileCount={reconcileCount}
+					takeoffId={takeoffId}
 					onSearchChange={setSearchValue}
 					onToggleStatus={handleToggleStatus}
-					onSelectItem={(item) => setSelectedItemId(item?.id)}
+					onSelectItem={(item) => {
+						setSelectedItemId(item?.id);
+					}}
 					onOpenReferencePanel={handleOpenReferencePanel}
 					onOpenReconcile={handleOpenReconcile}
-					onRefreshItems={fetchTakeoff}
+					onRefreshItems={refreshItemsOnly}
 				/>
 
 				<EvidenceSidebar
+					selectedItem={selectedItem as any}
 					files={files}
-					selectedFileId={selectedFileId}
-					selectedItem={selectedItem}
-					fileFilter={fileFilter}
-					showEvidenceBoxes={showEvidenceBoxes}
-					evidencesByFile={evidencesByFile}
-					onSelectFile={updateCurrentFileSelection}
-					onChangeFileFilter={setFileFilter}
-					onToggleEvidenceBoxes={() => setShowEvidenceBoxes((prev) => !prev)}
-					onOpenAddBoxModal={() => setShowAddBoxModal(true)}
 				/>
 			</div>
 
@@ -401,19 +733,20 @@ export default function TakeoffListPage() {
 				projectId={projectId}
 				files={files}
 				initialFileId={currentFile?.id}
-				selectedItem={selectedItem}
+				selectedItem={selectedItem as any}
 				evidencesByFile={evidencesByFile}
 				onChangeFileEvidences={handleChangeFileEvidences}
 				onClose={() => setShowAddBoxModal(false)}
 			/>
-			<ItemReferenceModal
+			<TakeoffReferenceByTypeModal
 				open={showReferenceModal}
 				item={referenceItem}
-				dynamicFields={dynamicFields}
-				files={files}
-				evidencesByFile={evidencesByFile}
-				onClose={() => setShowReferenceModal(false)}
+				onClose={() => {
+					setShowReferenceModal(false);
+					setReferenceItem(null);
+				}}
 			/>
+			{fullLoading && <LoadingScreen isLoading={fullLoading} />}
 		</div>
 	);
 }

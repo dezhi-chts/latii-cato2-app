@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Button,
 	Checkbox,
@@ -10,16 +17,33 @@ import {
 	notification,
 	Spin,
 	Table,
+	Tooltip,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 
 import {
-	reconcileConfirm,
-	reconcileKeepAllConfirm,
-} from "@/services/DrawingAiService";
+	manualMergeByFileSource,
+	manualMergeByFile,
+	manualMergeByTakeOff,
+} from "@/services/mergeService";
+import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
+import { getDisplayValueByField } from "../../analyze-new/takeoffUtils";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Valid source types for source-level merge API
+const VALID_SOURCE_TYPES = [
+	"Floor Plan",
+	"Elevation",
+	"Schedule",
+	"window_door_unit_list",
+] as const;
+
+const isValidSourceType = (sourceType?: string): boolean => {
+	if (!sourceType) return false;
+	return VALID_SOURCE_TYPES.includes(sourceType as any);
+};
 
 interface ConflictGroup {
 	groupKey: string;
@@ -29,176 +53,54 @@ interface ConflictGroup {
 	item_ids: number[];
 }
 
+interface MergeResult {
+	success: boolean;
+	mergedItemIds: number[];
+	sourceType?: string;
+	fileId?: number;
+}
+
 interface ManualMergeModalProps {
 	open: boolean;
 	pendingRows: any[];
-	onConfirm: (mergedResults: any[]) => void;
+	fileIds?: number[];
+	fileId?: number;
+	sourceType?: string;
+	templateFields?: string[];
+	onConfirm: (result: MergeResult) => void;
 	onCancel: () => void;
 }
 
-const MOCK_CONFLICT_DATA: Record<string, any[]> = {
-	"1.22_____": [
-		{
-			id: 11283,
-			evidence_id: 12554,
-			evidence_id_list: [12554],
-			result: JSON.stringify({
-				Label: "1.22",
-				Product: "Window",
-				"Product Type": "Direct Set / Picture / Fixed",
-				Operability: "None",
-				Width: 36,
-				Height: 64,
-				Width_mm: 914.4,
-				Height_mm: 2133.6,
-				Quantity: 1,
-				"Source Type": "Image",
-				"Sub Label": "",
-			}),
-			isMerged: false,
-			sourceType: "Image",
-			evidence_msg: {
-				id: 12554,
-				type: "Elevation",
-				s3_url:
-					"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/6b6af7cbd6064ac3b848d8d75eb2c78f_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12554.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=fa65cf353c9ec695877245220268ccd03758b32c78e41710d0fb80fe493b7b05",
-				project_file_page_number: 5,
-				project_file_id: 218,
-			},
-		},
-		{
-			id: 112832,
-			evidence_id: 12547,
-			evidence_id_list: [12547],
-			result: JSON.stringify({
-				Label: "1.22",
-				Product: "Window",
-				"Product Type": "Fixed Casement",
-				Operability: "None",
-				Width: 36,
-				Height: 84,
-				Width_mm: 816.0,
-				Height_mm: 1131.5,
-				Quantity: 1,
-				"Source Type": "Table",
-				"Sub Label": "",
-			}),
-			isMerged: false,
-			sourceType: "Table",
-			evidence_msg: {
-				id: 12547,
-				type: "Schedule",
-				s3_url:
-					"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/f2dbdf802bdb436d865ab311a07cecad_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12547.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=70c7a012c34b48ef6ea5189b245d72400aebc7657cd45d7462d74651f18f3b92",
-				project_file_page_number: 3,
-				project_file_id: 218,
-			},
-		},
-	],
-	// "1.00_____": [
-	// 	{
-	// 		id: 11284,
-	// 		evidence_id: 12554,
-	// 		evidence_id_list: [12554],
-	// 		result: JSON.stringify({
-	// 			Label: "1.00",
-	// 			Product: "Door",
-	// 			"Product Type": "Swing Single",
-	// 			Operability: "Outswing Open - Left Hinge",
-	// 			Quantity: 1,
-	// 			"Source Type": "Image",
-	// 			"Sub Label": "",
-	// 		}),
-	// 		evidence_msg: {
-	// 			id: 12554,
-	// 			type: "Elevation",
-	// 			s3_url:
-	// 				"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/6b6af7cbd6064ac3b848d8d75eb2c78f_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12554.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=fa65cf353c9ec695877245220268ccd03758b32c78e41710d0fb80fe493b7b05",
-	// 			project_file_page_number: 5,
-	// 		},
-	// 	},
-	// 	{
-	// 		id: 112842,
-	// 		evidence_id: 12556,
-	// 		evidence_id_list: [12556],
-	// 		result: JSON.stringify({
-	// 			Label: "1.00",
-	// 			Product: "Door",
-	// 			"Product Type": "Swing Single",
-	// 			Operability: "Inswing Open - Right Hinge",
-	// 			Quantity: 1,
-	// 			"Source Type": "Table",
-	// 			"Sub Label": "",
-	// 		}),
-	// 		evidence_msg: {
-	// 			id: 12556,
-	// 			type: "Schedule",
-	// 			s3_url:
-	// 				"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/f2dbdf802bdb436d865ab311a07cecad_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12547.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=70c7a012c34b48ef6ea5189b245d72400aebc7657cd45d7462d74651f18f3b92",
-	// 			project_file_page_number: 4,
-	// 		},
-	// 	},
-	// ],
-	// "1.18_____": [
-	// 	{
-	// 		id: 11288,
-	// 		evidence_id: 12547,
-	// 		evidence_id_list: [12547],
-	// 		result: JSON.stringify({
-	// 			Label: "1.18",
-	// 			Product: "Window",
-	// 			"Product Type": "Sliding Window",
-	// 			Operability: "XOX",
-	// 			Height: 36,
-	// 			Quantity: 1,
-	// 			Location: "BATH 3",
-	// 			"Source Type": "Image",
-	// 			"Sub Label": "",
-	// 		}),
-	// 		evidence_msg: {
-	// 			id: 12547,
-	// 			type: "Floor Plan",
-	// 			s3_url:
-	// 				"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/f2dbdf802bdb436d865ab311a07cecad_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12547.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=70c7a012c34b48ef6ea5189b245d72400aebc7657cd45d7462d74651f18f3b92",
-	// 			project_file_page_number: 3,
-	// 		},
-	// 	},
-	// 	{
-	// 		id: 112882,
-	// 		evidence_id: 12558,
-	// 		evidence_id_list: [12558],
-	// 		result: JSON.stringify({
-	// 			Label: "1.18",
-	// 			Product: "Window",
-	// 			"Product Type": "Sliding Window",
-	// 			Operability: "XO",
-	// 			Height: 42,
-	// 			Quantity: 2,
-	// 			Location: "BATH 3",
-	// 			"Source Type": "Table",
-	// 			"Sub Label": "",
-	// 		}),
-	// 		evidence_msg: {
-	// 			id: 12558,
-	// 			type: "Schedule",
-	// 			s3_url:
-	// 				"https://latii-cato2-dev.s3.amazonaws.com/s3_evidences/original/6b6af7cbd6064ac3b848d8d75eb2c78f_01KJH28XK8W2Z15E82FZ660FSF_custom-image-12554.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAX6MDEYMVG3YFH4IP%2F20260331%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260331T061116Z&X-Amz-Expires=172800&X-Amz-SignedHeaders=host&X-Amz-Signature=fa65cf353c9ec695877245220268ccd03758b32c78e41710d0fb80fe493b7b05",
-	// 			project_file_page_number: 2,
-	// 		},
-	// 	},
-	// ],
-};
+interface EvidenceData {
+	id: number;
+	evidence_url?: string;
+	s3_url?: string;
+	type?: string;
+	project_file_page_number?: number;
+	project_file_id?: number;
+	file_key?: string;
+}
 
-const safeParseResult = (result: unknown): Record<string, unknown> => {
-	if (!result) return {};
-	if (typeof result === "string") {
+// Evidence data map keyed by item id
+type EvidenceDataMap = Record<string, EvidenceData>;
+
+const safeParseResult = (
+	result: unknown,
+	originalResult?: unknown,
+): Record<string, unknown> => {
+	// Prefer originalResult if available (contains the raw API data)
+	const dataToUse = originalResult ?? result;
+
+	if (!dataToUse) return {};
+	if (typeof dataToUse === "string") {
 		try {
-			return JSON.parse(result);
+			return JSON.parse(dataToUse);
 		} catch {
 			return {};
 		}
 	}
-	if (typeof result === "object") return result as Record<string, unknown>;
+	if (typeof dataToUse === "object")
+		return dataToUse as Record<string, unknown>;
 	return {};
 };
 
@@ -208,43 +110,88 @@ const formatCellValue = (value: unknown): string => {
 	return String(value);
 };
 
+/**
+ * Collect merge IDs from items for different merge levels
+ * - For file-level merge: extracts take_off_result_item_ids and file_source_merge_result_ids
+ * - For takeoff-level merge: extracts single_file_merge_result_ids, take_off_result_item_ids, and file_source_merge_result_ids
+ */
+const collectMergeIdsFromItems = (
+	items: any[],
+): {
+	takeOffResultItemIds: number[];
+	fileSourceMergeResultIds: number[];
+	singleFileMergeResultIds: number[];
+} => {
+	const takeOffResultItemIds: number[] = [];
+	const fileSourceMergeResultIds: number[] = [];
+	const singleFileMergeResultIds: number[] = [];
+
+	items.forEach((item) => {
+		// Collect take_off_result_item_ids from take_off_result_item_id_list
+		if (Array.isArray(item.take_off_result_item_id_list)) {
+			takeOffResultItemIds.push(...item.take_off_result_item_id_list);
+		}
+
+		// Collect single_file_merge_result_ids (item's own id for takeoff-level merge)
+		if (item.id) {
+			singleFileMergeResultIds.push(item.id);
+		}
+
+		// Collect file_source_merge_result_ids from file_source_merge_result_id_list
+		if (Array.isArray(item.file_source_merge_result_id_list)) {
+			fileSourceMergeResultIds.push(...item.file_source_merge_result_id_list);
+		}
+		// Also check for single file_source_merge_result_id field
+		if (item.file_source_merge_result_id) {
+			fileSourceMergeResultIds.push(item.file_source_merge_result_id);
+		}
+		// Also check for file_source_merge_result_ids array
+		if (Array.isArray(item.file_source_merge_result_ids)) {
+			fileSourceMergeResultIds.push(...item.file_source_merge_result_ids);
+		}
+	});
+
+	return {
+		takeOffResultItemIds,
+		fileSourceMergeResultIds,
+		singleFileMergeResultIds,
+	};
+};
+
 const buildConflictGroups = (pendingRows: any[]): ConflictGroup[] => {
-	const mockKeys = Object.keys(MOCK_CONFLICT_DATA);
+	if (pendingRows.length === 0) return [];
 
-	if (pendingRows.length > 0) {
-		const grouped: Record<string, any[]> = {};
-		pendingRows.forEach((row) => {
-			const result = safeParseResult(row.result);
-			const label = String(result.Label || "");
-			const subLabel = String(result["Sub Label"] || "");
-			const key = `${label}_____${subLabel}`;
-			if (!grouped[key]) grouped[key] = [];
-			grouped[key].push(row);
-		});
+	// Group by groupLabel + groupSubLabel if available
+	const grouped: Record<string, any[]> = {};
 
-		const groups = Object.entries(grouped).map(([key, items]) => {
-			const firstResult = safeParseResult(items[0]?.result);
-			return {
-				groupKey: key,
-				label: String(firstResult.Label || ""),
-				subLabel: String(firstResult["Sub Label"] || ""),
-				items,
-				item_ids: items.map((i) => i.id),
-			};
-		});
+	pendingRows.forEach((row) => {
+		// Use groupLabel/groupSubLabel if available (from API response)
+		// Otherwise fall back to result.Label/Sub Label
+		const result = safeParseResult(row.result, row.originalResult);
+		const label = row.groupLabel ?? String(result.Label || "");
+		const subLabel = row.groupSubLabel ?? String(result["Sub Label"] || "");
+		const key = `${label}_____${subLabel}`;
+		if (!grouped[key]) grouped[key] = [];
+		grouped[key].push(row);
+	});
 
-		if (groups.some((g) => g.items.length > 1)) return groups;
-	}
+	return Object.entries(grouped).map(([key, items]) => {
+		// Get label from first item
+		const firstItem = items[0];
+		const firstResult = safeParseResult(
+			firstItem?.result,
+			firstItem?.originalResult,
+		);
+		const label = firstItem?.groupLabel ?? String(firstResult.Label || "");
+		const subLabel =
+			firstItem?.groupSubLabel ?? String(firstResult["Sub Label"] || "");
 
-	return mockKeys.map((key) => {
-		const items = MOCK_CONFLICT_DATA[key];
-		const firstResult = safeParseResult(items[0]?.result);
 		return {
 			groupKey: key,
-			label: String(firstResult.Label || ""),
-			subLabel: String(firstResult["Sub Label"] || ""),
+			label,
+			subLabel,
 			items,
-			item_ids: items.map((i: any) => i.id),
+			item_ids: items.map((i) => i.id),
 		};
 	});
 };
@@ -252,7 +199,7 @@ const buildConflictGroups = (pendingRows: any[]): ConflictGroup[] => {
 const getFieldsFromItems = (items: any[]): string[] => {
 	const fieldSet = new Set<string>();
 	items.forEach((item) => {
-		const result = safeParseResult(item.result);
+		const result = safeParseResult(item.result, item.originalResult);
 		Object.keys(result).forEach((k) => fieldSet.add(k));
 	});
 
@@ -283,19 +230,70 @@ const getFieldsFromItems = (items: any[]): string[] => {
 
 type MergeMode = "customize" | "keepAll";
 
+const getColumnWidth = (title: string): number => {
+	if (!title) return 100;
+	if (title.length >= 25) return 200;
+	if (title.length >= 15) return 150;
+	if (title.length >= 10) return 120;
+	return 100;
+};
+
+const MAX_CELL_WIDTH = 200;
+
+function TruncatedTextCell({ value }: { value: string }) {
+	const divRef = useRef<HTMLDivElement>(null);
+	const [isTruncated, setIsTruncated] = useState(false);
+
+	useLayoutEffect(() => {
+		const element = divRef.current;
+		if (element) {
+			setIsTruncated(element.scrollWidth > element.clientWidth);
+		}
+	}, [value]);
+
+	return (
+		<div ref={divRef} className="min-h-[20px] truncate">
+			{isTruncated ? (
+				<Tooltip
+					title={value}
+					placement="topLeft"
+					color="white"
+					styles={{
+						body: {
+							backgroundColor: "#ffffff",
+							color: "#333",
+							fontSize: "12px",
+							maxWidth: "300px",
+							wordBreak: "break-word",
+						},
+					}}
+				>
+					<span>{value}</span>
+				</Tooltip>
+			) : (
+				<span>{value}</span>
+			)}
+		</div>
+	);
+}
+
 interface TableItem {
 	id: number;
 	result: string;
+	originalResult?: string;
 	selectFields: string[];
 	evidence_selected: boolean;
 	evidence_id_list?: number[];
 	evidence_msg?: any;
+	groupLabel?: string;
+	groupSubLabel?: string;
 	[key: string]: any;
 }
 
 interface EvidenceItem {
 	id: number;
 	index: number;
+	itemIndex: number; // The index of the item this evidence belongs to (1-based for display)
 	item_id: number;
 	evidence_selected: boolean;
 	s3_url: string;
@@ -305,10 +303,15 @@ interface EvidenceItem {
 export default function ManualMergeModal({
 	open,
 	pendingRows,
+	fileIds,
+	fileId,
+	sourceType,
+	templateFields: propsTemplateFields,
 	onConfirm,
 	onCancel,
 }: ManualMergeModalProps) {
-	const takeOffId = Number(useParams().takeoffId);
+	const params = useParams();
+	const takeOffId = Number(params.takeoffId);
 
 	const [conflictGroups, setConflictGroups] = useState<ConflictGroup[]>([]);
 	const [activeGroupIndex, setActiveGroupIndex] = useState(0);
@@ -316,8 +319,42 @@ export default function ManualMergeModal({
 
 	const [tableData, setTableData] = useState<TableItem[]>([]);
 	const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
+	const [evidenceMap, setEvidenceMap] = useState<EvidenceDataMap>({});
+	const [loadingEvidences, setLoadingEvidences] = useState(false);
+
+	console.log("[ManualMergeModal] sourceType:", sourceType);
+
+	// Determine evidence fetch mode based on sourceType (computed, not state to avoid timing issues)
+	const evidenceFetchMode = useMemo(():
+		| "item_id"
+		| "take_off_result_item_id" => {
+		return isValidSourceType(sourceType)
+			? "item_id"
+			: "take_off_result_item_id";
+	}, [sourceType]);
 
 	const [confirming, setConfirming] = useState(false);
+	const [showKeepAllModal, setShowKeepAllModal] = useState(false);
+	const [keepAllItems, setKeepAllItems] = useState<any[]>([]);
+	const [keepAllSubmitting, setKeepAllSubmitting] = useState(false);
+
+	// Use template fields from props, ensure Label and Sub Label are first
+	const templateFields = useMemo(() => {
+		if (!propsTemplateFields || propsTemplateFields.length === 0) {
+			return [];
+		}
+		// Ensure Label and Sub Label are at the beginning
+		const hasLabel = propsTemplateFields.includes("Label");
+		const hasSubLabel = propsTemplateFields.includes("Sub Label");
+		const otherFields = propsTemplateFields.filter(
+			(f) => f !== "Label" && f !== "Sub Label",
+		);
+		const result: string[] = [];
+		if (hasLabel) result.push("Label");
+		if (hasSubLabel) result.push("Sub Label");
+		result.push(...otherFields);
+		return result;
+	}, [propsTemplateFields]);
 
 	useEffect(() => {
 		if (open) {
@@ -330,23 +367,191 @@ export default function ManualMergeModal({
 
 	const activeGroup = conflictGroups[activeGroupIndex] || null;
 
+	// Fetch evidences for current active group when it changes
+	useEffect(() => {
+		const fetchEvidencesForGroup = async () => {
+			if (!open || !activeGroup) return;
+
+			// Use the computed evidenceFetchMode to determine which field to use
+			const idsToFetch: number[] = [];
+
+			if (evidenceFetchMode === "item_id") {
+				// Source-level merge: use item.id directly
+				activeGroup.items.forEach((item) => {
+					if (item.id) {
+						idsToFetch.push(item.id);
+					}
+				});
+			} else {
+				// File-level or takeoff-level merge: use take_off_result_item_id_list
+				activeGroup.items.forEach((item) => {
+					if (Array.isArray(item.take_off_result_item_id_list)) {
+						idsToFetch.push(...item.take_off_result_item_id_list);
+					}
+				});
+			}
+
+			if (idsToFetch.length === 0) return;
+
+			setLoadingEvidences(true);
+			try {
+				// Join IDs with comma for the API call
+				const resultItemIds = idsToFetch.join(",");
+				const result = await getTakeOffEvidenceUrlsByIds(resultItemIds);
+
+				if (result.status === "success" && result.data) {
+					// The API returns a map with IDs as keys
+					setEvidenceMap(result.data as EvidenceDataMap);
+				}
+			} catch (error) {
+				console.error("[ManualMergeModal] Error fetching evidences:", error);
+			} finally {
+				setLoadingEvidences(false);
+			}
+		};
+
+		fetchEvidencesForGroup();
+	}, [open, activeGroup, evidenceFetchMode]);
+
+	// Use template fields if available, otherwise fallback to getFieldsFromItems
 	const fields = useMemo(() => {
+		if (templateFields.length > 0) {
+			return templateFields;
+		}
 		if (!activeGroup) return [];
 		return getFieldsFromItems(activeGroup.items);
-	}, [activeGroup]);
+	}, [activeGroup, templateFields]);
 
+	const generateTableData = useCallback((items: any[]) => {
+		const data: TableItem[] = items.map((item: any, index: number) => {
+			const result = safeParseResult(item.result, item.originalResult);
+			return {
+				...item,
+				selectFields: index === 0 ? Object.keys(result) : ["Label"],
+				evidence_selected: true,
+			};
+		});
+		setTableData(data);
+	}, []);
+
+	const generateEvidenceList = useCallback(
+		(items: any[]) => {
+			const evidences: EvidenceItem[] = [];
+			let evidenceIndex = 0;
+
+			items.forEach((item: any, itemIdx: number) => {
+				const itemIndex = itemIdx + 1; // 1-based index for display
+
+				// First try to get from evidence_msg (if available)
+				const msg = item.evidence_msg;
+				if (msg) {
+					const url =
+						typeof msg === "object" && !Array.isArray(msg)
+							? msg.evidence_url || msg.s3_url || ""
+							: Array.isArray(msg)
+								? msg[0]?.evidence_url || msg[0]?.s3_url || ""
+								: "";
+					if (url) {
+						evidences.push({
+							id: msg.id || item.evidence_id || evidenceIndex,
+							index: evidenceIndex++,
+							itemIndex,
+							item_id: item.id,
+							evidence_selected: true,
+							s3_url: url,
+							type: msg.type || "",
+						});
+						return;
+					}
+				}
+
+				// Try to find evidence from evidenceMap based on fetch mode
+				if (evidenceFetchMode === "item_id") {
+					// Source-level merge: match using item.id (one evidence per item)
+					const itemId = String(item.id);
+					const matchedEvidence = evidenceMap[itemId];
+					if (matchedEvidence) {
+						const imageUrl =
+							matchedEvidence.evidence_url || matchedEvidence.s3_url;
+						if (imageUrl) {
+							evidences.push({
+								id: matchedEvidence.id,
+								index: evidenceIndex++,
+								itemIndex,
+								item_id: item.id,
+								evidence_selected: true,
+								s3_url: imageUrl,
+								type: matchedEvidence.type || "",
+							});
+							return;
+						}
+					}
+				} else {
+					// File-level or takeoff-level merge: match using take_off_result_item_id_list
+					// One item may have multiple take_off_result_item_ids, each with its own evidence
+					const takeOffResultItemIds = item.take_off_result_item_id_list || [];
+					let foundAny = false;
+					for (const resultItemId of takeOffResultItemIds) {
+						const matchedEvidence = evidenceMap[String(resultItemId)];
+						if (matchedEvidence) {
+							const imageUrl =
+								matchedEvidence.evidence_url || matchedEvidence.s3_url;
+							if (imageUrl) {
+								evidences.push({
+									id: matchedEvidence.id,
+									index: evidenceIndex++,
+									itemIndex,
+									item_id: item.id,
+									evidence_selected: true,
+									s3_url: imageUrl,
+									type: matchedEvidence.type || "",
+								});
+								foundAny = true;
+							}
+						}
+					}
+					if (foundAny) {
+						return;
+					}
+				}
+
+				// Fallback: add item without evidence image
+				evidences.push({
+					id: item.evidence_id || evidenceIndex,
+					index: evidenceIndex++,
+					itemIndex,
+					item_id: item.id,
+					evidence_selected: true,
+					s3_url: "",
+					type: "",
+				});
+			});
+			setEvidenceList(evidences);
+		},
+		[evidenceMap, evidenceFetchMode],
+	);
+
+	// Generate table data when activeGroup changes
 	useEffect(() => {
 		if (!activeGroup) return;
 		generateTableData(activeGroup.items);
+	}, [activeGroup, generateTableData]);
+
+	// Generate evidence list when activeGroup or evidenceMap changes
+	// Wait for evidenceMap to be loaded before generating evidence list
+	useEffect(() => {
+		if (!activeGroup) return;
+		// Always generate evidence list - if evidenceMap is empty, items will use fallback (no image)
+		// This ensures the list is updated when evidenceMap is loaded
 		generateEvidenceList(activeGroup.items);
-	}, [activeGroup]);
+	}, [activeGroup, evidenceMap, generateEvidenceList]);
 
 	useEffect(() => {
 		if (!activeGroup) return;
 		if (mergeMode === "customize") {
 			setTableData((prev) =>
 				prev.map((item, idx) => {
-					const result = safeParseResult(item.result);
+					const result = safeParseResult(item.result, item.originalResult);
 					return {
 						...item,
 						selectFields: idx === 0 ? Object.keys(result) : ["Label"],
@@ -365,42 +570,6 @@ export default function ManualMergeModal({
 			);
 		}
 	}, [mergeMode]);
-
-	const generateTableData = (items: any[]) => {
-		const data: TableItem[] = items.map((item: any, index: number) => {
-			const result = safeParseResult(item.result);
-			return {
-				...item,
-				selectFields: index === 0 ? Object.keys(result) : ["Label"],
-				evidence_selected: true,
-			};
-		});
-		setTableData(data);
-	};
-
-	const generateEvidenceList = (items: any[]) => {
-		const evidences: EvidenceItem[] = [];
-		items.forEach((item: any, index: number) => {
-			const msg = item.evidence_msg;
-			if (msg) {
-				const url =
-					typeof msg === "object" && !Array.isArray(msg)
-						? msg.s3_url || ""
-						: Array.isArray(msg)
-							? msg[0]?.s3_url || ""
-							: "";
-				evidences.push({
-					id: msg.id || item.evidence_id || 0,
-					index,
-					item_id: item.id,
-					evidence_selected: true,
-					s3_url: url,
-					type: msg.type || "",
-				});
-			}
-		});
-		setEvidenceList(evidences);
-	};
 
 	const handleToggleField = useCallback(
 		(itemId: number, field: string) => {
@@ -446,104 +615,338 @@ export default function ManualMergeModal({
 		fields.forEach((field) => {
 			for (const item of tableData) {
 				if (item.selectFields.includes(field)) {
-					const result = safeParseResult(item.result);
+					const result = safeParseResult(item.result, item.originalResult);
 					merged[field] = formatCellValue(result[field]);
 					break;
 				}
 			}
 			if (!merged[field]) {
-				const result = safeParseResult(tableData[0]?.result);
+				const firstItem = tableData[0];
+				const result = safeParseResult(
+					firstItem?.result,
+					firstItem?.originalResult,
+				);
 				merged[field] = formatCellValue(result[field]);
 			}
 		});
 		return merged;
 	}, [tableData, fields, mergeMode]);
 
-	const handleConfirmGroup = useCallback(async () => {
+	// Handle Keep All button click - open new modal with all conflict items
+	const handleKeepAllClick = useCallback(() => {
 		if (!activeGroup || tableData.length === 0) return;
-		setConfirming(true);
 
-		try {
-			if (mergeMode === "customize") {
-				const item_fields = tableData.map((item, index) => {
-					let selectFields = [...item.selectFields];
-					if (index > 0) {
-						selectFields = selectFields.filter((f) => f !== "Label");
+		const copySuffixRegex = /^(.*)\s+copy(\d+)$/i;
+		const usedCopyIndexesByBase = new Map<string, Set<number>>();
+
+		// First pass: collect existing "copyN" suffixes so we can keep them.
+		tableData.forEach((item) => {
+			const result = safeParseResult(item.result, item.originalResult);
+			const label = formatCellValue(result.Label);
+			const matched = label.match(copySuffixRegex);
+			if (!matched) return;
+
+			const baseLabel = matched[1].trim();
+			const copyIndex = Number(matched[2]);
+			if (!baseLabel || Number.isNaN(copyIndex)) return;
+
+			if (!usedCopyIndexesByBase.has(baseLabel)) {
+				usedCopyIndexesByBase.set(baseLabel, new Set<number>());
+			}
+			usedCopyIndexesByBase.get(baseLabel)!.add(copyIndex);
+		});
+
+		const seenRawLabels = new Set<string>();
+		const itemsWithCopySuffix = tableData.map((item) => {
+			const result = safeParseResult(item.result, item.originalResult);
+			const originalLabel = formatCellValue(result.Label);
+			const matched = originalLabel.match(copySuffixRegex);
+
+			let newLabel = originalLabel;
+			if (!matched) {
+				// Keep existing label for first occurrence, only suffix duplicated raw labels.
+				const baseLabel = originalLabel.trim();
+				if (seenRawLabels.has(baseLabel)) {
+					const usedIndexes = usedCopyIndexesByBase.get(baseLabel) || new Set();
+					let nextCopyIndex = 1;
+					while (usedIndexes.has(nextCopyIndex)) {
+						nextCopyIndex += 1;
 					}
-					const findEvid = evidenceList.find((e) => e.item_id === item.id);
+					newLabel = `${baseLabel} copy${nextCopyIndex}`;
+					usedIndexes.add(nextCopyIndex);
+					usedCopyIndexesByBase.set(baseLabel, usedIndexes);
+				}
+				seenRawLabels.add(baseLabel);
+			}
+
+			return {
+				...item,
+				id: item.id,
+				originalResult: item.originalResult,
+				result: {
+					...result,
+					Label: newLabel,
+				},
+				modifiedLabel: newLabel,
+			};
+		});
+
+		setKeepAllItems(itemsWithCopySuffix);
+		setShowKeepAllModal(true);
+	}, [activeGroup, tableData]);
+
+	// Handle Keep All submit
+	const handleKeepAllSubmit = useCallback(async () => {
+		// fileId can be 0 for takeoff-level merge, so check for undefined/null specifically
+		if (fileId === undefined || fileId === null || keepAllItems.length === 0) {
+			notification.error({
+				message: "Error",
+				description: "Missing required parameters",
+			});
+			return;
+		}
+
+		setKeepAllSubmitting(true);
+		try {
+			let res;
+
+			if (isValidSourceType(sourceType)) {
+				// Source-level merge: use manualMergeByFileSource
+				const merge_list = keepAllItems.map((item) => ({
+					result: item.result,
+					take_off_result_item_ids: [item.id],
+				}));
+
+				res = await manualMergeByFileSource(
+					takeOffId,
+					fileId,
+					sourceType!,
+					merge_list,
+				);
+			} else if (fileId === 0) {
+				// Takeoff-level merge (multiple files): use manualMergeByTakeOff
+				const merge_list = keepAllItems.map((item) => {
+					const {
+						takeOffResultItemIds,
+						fileSourceMergeResultIds,
+						singleFileMergeResultIds,
+					} = collectMergeIdsFromItems([item]);
+
 					return {
-						item_id: item.id,
-						fields: selectFields,
-						evidence_selected: findEvid?.evidence_selected ?? false,
+						result: item.result,
+						single_file_merge_result_ids: singleFileMergeResultIds,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: fileSourceMergeResultIds,
 					};
 				});
 
-				const body = {
-					take_off_id: takeOffId,
-					item_fields,
-					merged_result: computedMergedResult || {},
-				};
-				const res = await reconcileConfirm(body);
-				if (res.status === "success") {
-					notification.success({
-						message: "Confirmed",
-						description: `Label "${activeGroup.label}" has been reconciled.`,
+				res = await manualMergeByTakeOff(takeOffId, merge_list);
+			} else {
+				// File-level merge (single file internal): use manualMergeByFile
+				const merge_list = keepAllItems.map((item) => {
+					const { takeOffResultItemIds, singleFileMergeResultIds } =
+						collectMergeIdsFromItems([item]);
+
+					return {
+						result: item.result,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: singleFileMergeResultIds,
+					};
+				});
+
+				res = await manualMergeByFile(takeOffId, fileId, merge_list);
+			}
+
+			if (res.status === "success") {
+				notification.success({
+					message: "Keep All Submitted",
+					description: `Successfully merged ${keepAllItems.length} items.`,
+				});
+				setShowKeepAllModal(false);
+
+				const mergedItemIds = keepAllItems.map((item) => item.id);
+
+				// Remove the current group from conflict groups
+				const remaining = conflictGroups.filter(
+					(g) => g.groupKey !== activeGroup?.groupKey,
+				);
+				setConflictGroups(remaining);
+
+				if (remaining.length === 0) {
+					// All groups merged, notify parent to refresh data and close modal
+					onConfirm({
+						success: true,
+						mergedItemIds,
+						sourceType,
+						fileId,
 					});
+					onCancel();
 				} else {
-					notification.success({
-						message: "Group Resolved",
-						description: `Label "${activeGroup.label}" has been merged locally.`,
+					const nextIndex = Math.min(activeGroupIndex, remaining.length - 1);
+					setActiveGroupIndex(nextIndex);
+					// Notify parent about partial merge success
+					onConfirm({
+						success: true,
+						mergedItemIds,
+						sourceType,
+						fileId,
 					});
 				}
 			} else {
-				const body = {
-					take_off_id: takeOffId,
-					item_ids: tableData.map((item) => item.id),
-				};
-				const res = await reconcileKeepAllConfirm(body);
-				if (res.status === "success") {
-					notification.success({
-						message: "Confirmed",
-						description: `Label "${activeGroup.label}" Keep All confirmed.`,
+				notification.error({
+					message: "Submission Failed",
+					description: "Failed to submit Keep All merge.",
+				});
+			}
+		} catch (error) {
+			console.error("[ManualMergeModal] Keep All submit error:", error);
+			notification.error({
+				message: "Error",
+				description: "An error occurred while submitting.",
+			});
+		} finally {
+			setKeepAllSubmitting(false);
+		}
+	}, [
+		fileId,
+		sourceType,
+		keepAllItems,
+		takeOffId,
+		conflictGroups,
+		activeGroup,
+		activeGroupIndex,
+		onConfirm,
+		onCancel,
+	]);
+
+	// Handle Customize submit
+	const handleCustomizeSubmit = useCallback(async () => {
+		// fileId can be 0 for takeoff-level merge, so check for undefined/null specifically
+		if (
+			fileId === undefined ||
+			fileId === null ||
+			!activeGroup ||
+			!computedMergedResult
+		) {
+			notification.error({
+				message: "Error",
+				description: "Missing required parameters",
+			});
+			return;
+		}
+
+		setConfirming(true);
+		try {
+			const mergedItemIds = tableData.map((item) => item.id);
+			let res;
+
+			if (isValidSourceType(sourceType)) {
+				// Source-level merge: use manualMergeByFileSource
+				const merge_list = [
+					{
+						result: computedMergedResult,
+						take_off_result_item_ids: mergedItemIds,
+					},
+				];
+
+				res = await manualMergeByFileSource(
+					takeOffId,
+					fileId,
+					sourceType!,
+					merge_list,
+				);
+			} else if (fileId === 0) {
+				// Takeoff-level merge (multiple files): use manualMergeByTakeOff
+				const {
+					takeOffResultItemIds,
+					fileSourceMergeResultIds,
+					singleFileMergeResultIds,
+				} = collectMergeIdsFromItems(tableData);
+
+				const merge_list = [
+					{
+						result: computedMergedResult,
+						single_file_merge_result_ids: singleFileMergeResultIds,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: fileSourceMergeResultIds,
+					},
+				];
+
+				res = await manualMergeByTakeOff(takeOffId, merge_list);
+			} else {
+				// File-level merge (single file internal): use manualMergeByFile
+				const { takeOffResultItemIds, singleFileMergeResultIds } =
+					collectMergeIdsFromItems(tableData);
+
+				const merge_list = [
+					{
+						result: computedMergedResult,
+						take_off_result_item_ids: takeOffResultItemIds,
+						file_source_merge_result_ids: singleFileMergeResultIds,
+					},
+				];
+
+				res = await manualMergeByFile(takeOffId, fileId, merge_list);
+			}
+
+			if (res.status === "success") {
+				notification.success({
+					message: "Merge Submitted",
+					description: `Successfully merged items for "${activeGroup.label}".`,
+				});
+
+				// Remove the current group from conflict groups
+				const remaining = conflictGroups.filter(
+					(g) => g.groupKey !== activeGroup.groupKey,
+				);
+				setConflictGroups(remaining);
+
+				if (remaining.length === 0) {
+					// All groups merged, notify parent to refresh data and close modal
+					onConfirm({
+						success: true,
+						mergedItemIds,
+						sourceType,
+						fileId,
 					});
+					onCancel();
 				} else {
-					notification.success({
-						message: "Group Resolved",
-						description: `Label "${activeGroup.label}" Keep All resolved locally.`,
+					const nextIndex = Math.min(activeGroupIndex, remaining.length - 1);
+					setActiveGroupIndex(nextIndex);
+					// Notify parent about partial merge success
+					onConfirm({
+						success: true,
+						mergedItemIds,
+						sourceType,
+						fileId,
 					});
 				}
+			} else {
+				notification.error({
+					message: "Submission Failed",
+					description: "Failed to submit merge.",
+				});
 			}
-		} catch {
-			notification.success({
-				message: "Group Resolved",
-				description: `Label "${activeGroup.label}" has been merged locally.`,
+		} catch (error) {
+			console.error("[ManualMergeModal] Customize submit error:", error);
+			notification.error({
+				message: "Error",
+				description: "An error occurred while submitting.",
 			});
 		} finally {
 			setConfirming(false);
 		}
-
-		const remaining = conflictGroups.filter(
-			(g) => g.groupKey !== activeGroup.groupKey,
-		);
-		setConflictGroups(remaining);
-
-		if (remaining.length === 0) {
-			onConfirm([]);
-			return;
-		}
-
-		const nextIndex = Math.min(activeGroupIndex, remaining.length - 1);
-		setActiveGroupIndex(nextIndex);
 	}, [
+		fileId,
+		sourceType,
 		activeGroup,
 		computedMergedResult,
-		mergeMode,
-		takeOffId,
 		tableData,
-		evidenceList,
+		takeOffId,
 		conflictGroups,
 		activeGroupIndex,
 		onConfirm,
+		onCancel,
 	]);
 
 	const mergedHeaders = useMemo(() => {
@@ -577,39 +980,44 @@ export default function ManualMergeModal({
 			),
 		};
 
-		const fieldCols: ColumnsType<any> = fields.map((field) => ({
-			title: (
-				<span className="whitespace-nowrap text-xs text-grey-normal">
-					{field}
-				</span>
-			),
-			key: field,
-			width: field.length > 15 ? 150 : 100,
-			align: "center" as const,
-			render: (_: unknown, record: any) => {
-				const result = safeParseResult(record.result);
-				const value = formatCellValue(result[field]);
-				const isSelected =
-					mergeMode === "customize" &&
-					(record.selectFields || []).includes(field);
-				const isLabel = field === "Label";
+		const fieldCols: ColumnsType<any> = fields.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					const result = safeParseResult(record.result, record.originalResult);
+					const value = getDisplayValueByField(result, field);
+					const isSelected =
+						mergeMode === "customize" &&
+						(record.selectFields || []).includes(field);
+					const isLabel = field === "Label";
 
-				return (
-					<div
-						className={`cursor-pointer rounded px-1.5 py-0.5 text-xs transition-all ${
-							isLabel
-								? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
-								: isSelected
-									? "border border-forumBlue-normal bg-[#EEF5FF]/50 text-grey-dark"
-									: "border border-transparent text-grey-normal hover:border-primaryN30 hover:bg-[#FCFCFD]"
-						}`}
-						onClick={() => handleToggleField(record.id, field)}
-					>
-						{value}
-					</div>
-				);
-			},
-		}));
+					return (
+						<div
+							className={`mx-auto w-full cursor-pointer overflow-hidden rounded px-1.5 py-0.5 text-xs transition-all ${
+								isLabel
+									? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
+									: isSelected
+										? "border border-forumBlue-normal bg-[#EEF5FF]/50 text-grey-dark"
+										: "border border-transparent text-grey-normal hover:border-primaryN30 hover:bg-[#FCFCFD]"
+							}`}
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+							onClick={() => handleToggleField(record.id, field)}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
 
 		return [indexCol, idCol, ...fieldCols];
 	}, [activeGroup, fields, mergeMode, handleToggleField]);
@@ -623,340 +1031,470 @@ export default function ManualMergeModal({
 			render: () => <Checkbox checked className="pointer-events-none" />,
 		};
 
-		const fieldCols: ColumnsType<any> = mergedHeaders.map((field) => ({
-			title: (
-				<span className="whitespace-nowrap text-xs text-grey-normal">
-					{field}
-				</span>
-			),
-			key: field,
-			width: field.length > 15 ? 150 : 100,
-			align: "center" as const,
-			render: (_: unknown, record: any) => {
-				const value = formatCellValue(record[field]);
-				return <span className="text-xs text-grey-dark">{value}</span>;
-			},
-		}));
+		const fieldCols: ColumnsType<any> = mergedHeaders.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					const value = getDisplayValueByField(record, field);
+					return (
+						<div
+							className="mx-auto w-full overflow-hidden text-xs text-grey-dark"
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
 
 		return [indexCol, ...fieldCols];
 	}, [mergedHeaders]);
 
+	const keepAllColumns = useMemo<ColumnsType<any>>(() => {
+		const indexCol: ColumnsType<any>[number] = {
+			title: <span className="text-xs text-grey-normal">#</span>,
+			key: "_index",
+			width: 50,
+			align: "center",
+			fixed: "left",
+			render: (_: unknown, __: unknown, index: number) => (
+				<span className="inline-flex h-5 w-5 items-center justify-center rounded bg-forumBlue-normal text-[10px] text-white">
+					{index + 1}
+				</span>
+			),
+		};
+
+		const idCol: ColumnsType<any>[number] = {
+			title: <span className="text-xs text-grey-normal">ID</span>,
+			key: "_id",
+			width: 60,
+			align: "center",
+			fixed: "left",
+			render: (_: unknown, record: any) => (
+				<span className="text-xs text-grey-normal">{record.id}</span>
+			),
+		};
+
+		const fieldCols: ColumnsType<any> = fields.map((field) => {
+			const columnWidth = getColumnWidth(field);
+			return {
+				title: (
+					<span className="whitespace-nowrap text-xs text-grey-normal">
+						{field}
+					</span>
+				),
+				key: field,
+				width: columnWidth,
+				minWidth: columnWidth,
+				ellipsis: true,
+				align: "center" as const,
+				render: (_: unknown, record: any) => {
+					// Keep All preview should show the latest modified label in `result`.
+					const result =
+						safeParseResult(record.result) ||
+						safeParseResult(record.originalResult);
+					const value = getDisplayValueByField(result, field);
+					const isLabel = field === "Label";
+
+					return (
+						<div
+							className={`mx-auto w-full overflow-hidden rounded px-1.5 py-0.5 text-xs ${
+								isLabel
+									? "bg-[#EEF5FF] font-medium text-forumBlue-normal"
+									: "text-grey-normal"
+							}`}
+							style={{ maxWidth: MAX_CELL_WIDTH }}
+						>
+							<TruncatedTextCell value={value} />
+						</div>
+					);
+				},
+			};
+		});
+
+		return [indexCol, idCol, ...fieldCols];
+	}, [fields]);
+
 	const totalCount = conflictGroups.length;
 
 	return (
-		<Modal
-			open={open}
-			title={null}
-			footer={null}
-			closable={true}
-			onCancel={onCancel}
-			width="92vw"
-			style={{ top: 24 }}
-			styles={{
-				body: {
-					padding: 0,
-					maxHeight: "calc(100vh - 60px)",
-					overflow: "hidden",
-				},
-			}}
-			maskClosable={true}
-		>
-			<div className="flex h-[calc(100vh-80px)] flex-col">
-				{/* Header */}
-				<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 px-6 py-3">
-					<div className="flex items-center gap-4">
-						<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EEF5FF]">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-								<path
-									d="M16 3H8C6.89543 3 6 3.89543 6 5V19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19V5C18 3.89543 17.1046 3 16 3Z"
-									stroke="#427CCE"
-									strokeWidth="1.5"
-								/>
-								<path
-									d="M9 7H15M9 11H15M9 15H12"
-									stroke="#427CCE"
-									strokeWidth="1.5"
-									strokeLinecap="round"
-								/>
-							</svg>
-						</div>
-						<div>
-							<div className="text-base font-medium text-grey-dark">
-								Manual Merge
+		<>
+			<Modal
+				open={open}
+				title={null}
+				footer={null}
+				closable={true}
+				onCancel={onCancel}
+				width="92vw"
+				style={{ top: 24 }}
+				styles={{
+					body: {
+						padding: 0,
+						maxHeight: "calc(100vh - 60px)",
+						overflow: "hidden",
+					},
+				}}
+				maskClosable={true}
+			>
+				<div className="flex h-[calc(100vh-80px)] flex-col">
+					{/* Header */}
+					<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 px-6 py-3">
+						<div className="flex items-center gap-4">
+							<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EEF5FF]">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+									<path
+										d="M16 3H8C6.89543 3 6 3.89543 6 5V19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19V5C18 3.89543 17.1046 3 16 3Z"
+										stroke="#427CCE"
+										strokeWidth="1.5"
+									/>
+									<path
+										d="M9 7H15M9 11H15M9 15H12"
+										stroke="#427CCE"
+										strokeWidth="1.5"
+										strokeLinecap="round"
+									/>
+								</svg>
 							</div>
-							<div className="mt-0.5 text-xs text-grey-normal">
-								Resolve conflicting items by selecting the preferred values for
-								each field
+							<div>
+								<div className="text-base font-medium text-grey-dark">
+									Manual Merge
+								</div>
+								<div className="mt-0.5 text-xs text-grey-normal">
+									Resolve conflicting items by selecting the preferred values
+									for each field
+								</div>
 							</div>
 						</div>
-					</div>
-					<div className="flex items-center gap-3">
-						<div className="flex items-center gap-2 rounded-full bg-[#F5F7FA] px-4 py-1.5">
-							<span className="text-xs text-grey-normal">Remaining</span>
-							<span className="text-xs font-medium text-forumBlue-normal">
-								{totalCount}
-							</span>
-						</div>
-						<Button
+						<div className="flex items-center gap-3">
+							<div className="flex items-center gap-2 rounded-full bg-[#F5F7FA] px-4 py-1.5">
+								<span className="text-xs text-grey-normal">Remaining</span>
+								<span className="text-xs font-medium text-forumBlue-normal">
+									{totalCount}
+								</span>
+							</div>
+							{/* <Button
 							className="custom-default-btn !h-8 !w-[90px]"
 							onClick={onCancel}
 						>
 							Cancel
+						</Button> */}
+						</div>
+					</div>
+
+					{/* Body */}
+					<div className="flex flex-1 overflow-hidden">
+						{/* Left panel */}
+						<div className="w-[200px] shrink-0 overflow-y-auto border-r border-primaryN30 bg-[#FCFCFD] p-4">
+							<div className="mb-4">
+								<div className="text-sm font-medium text-grey-dark">
+									Reconcile Panel
+								</div>
+								<div className="mt-1 text-xs text-grey-normal">
+									Handle {totalCount} duplicates
+								</div>
+							</div>
+
+							<div className="space-y-2">
+								{conflictGroups.map((group, index) => {
+									const isActive = index === activeGroupIndex;
+									return (
+										<button
+											key={group.groupKey}
+											type="button"
+											className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+												isActive
+													? "border border-forumBlue-normal bg-[#EEF5FF] shadow-[0_2px_8px_rgba(66,124,206,0.12)]"
+													: "border border-transparent hover:border-primaryN30 hover:bg-white"
+											}`}
+											onClick={() => {
+												setActiveGroupIndex(index);
+												setMergeMode("customize");
+												setShowKeepAllModal(false);
+											}}
+										>
+											<div
+												className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
+													isActive ? "bg-forumBlue-normal" : "bg-[#DCDCDC]"
+												}`}
+											>
+												<div className="h-[6px] w-[6px] rounded-full bg-white" />
+											</div>
+											<div className="min-w-0 flex-1 overflow-hidden">
+												<div
+													className={`truncate text-xs font-medium ${
+														isActive
+															? "text-forumBlue-normal"
+															: "text-grey-dark"
+													}`}
+												>
+													{group.label || "Unknown"}
+												</div>
+												<div
+													className="mt-0.5 truncate text-[10px] text-grey-normal"
+													title={`Items ${group.item_ids.join(", ")}`}
+												>
+													Items {group.item_ids.join(", ")}
+												</div>
+											</div>
+										</button>
+									);
+								})}
+							</div>
+						</div>
+
+						{/* Right panel */}
+						<div className="flex flex-1 flex-col overflow-hidden">
+							{activeGroup ? (
+								<>
+									{/* Toolbar */}
+									<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 px-5 py-2.5">
+										<div className="flex rounded-lg border border-primaryN30 bg-[#FCFCFD]">
+											<button
+												type="button"
+												className={`rounded-l-lg px-4 py-1.5 text-xs transition-colors ${
+													mergeMode === "customize"
+														? "bg-primaryN30 font-bold text-grey-normal"
+														: "bg-primaryN20 font-normal text-grey-normal"
+												}`}
+												onClick={() => setMergeMode("customize")}
+											>
+												Customize
+											</button>
+											<button
+												type="button"
+												className={`ml-px rounded-r-lg px-4 py-1.5 text-xs transition-colors ${
+													mergeMode === "keepAll"
+														? "bg-primaryN30 font-bold text-grey-normal"
+														: "bg-primaryN20 font-normal text-grey-normal"
+												}`}
+												onClick={() => setMergeMode("keepAll")}
+											>
+												Keep All
+											</button>
+										</div>
+									</div>
+
+									{/* Content area */}
+									<div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-4">
+										{/* Source items table - 50% height */}
+										<div className=" mb-4 shrink-0">
+											<div className="overflow-hidden">
+												<Table
+													rowKey={(record) => record.id || Math.random()}
+													columns={customizeColumns}
+													dataSource={tableData}
+													pagination={false}
+													scroll={{
+														x: "max-content",
+														y: "calc(30vh + 50px)",
+													}}
+													size="small"
+													className="max-h-[calc(30vh + 50px)] small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+												/>
+											</div>
+										</div>
+
+										{/* Evidence images - fill remaining height (between top table and bottom Final Item) */}
+										<div className="mb-4 min-h-0 flex-1 overflow-y-auto">
+											{evidenceList.length > 0 ? (
+												<div className="flex flex-row flex-wrap gap-4">
+													{evidenceList.map((item) => (
+														<div
+															key={`evidence-${item.index}-${item.id}`}
+															className="relative min-w-[30%] max-w-[32%] flex-1 overflow-hidden rounded-lg border border-primaryN30"
+														>
+															<div className="flex flex-row gap-3 p-3">
+																<div className="shrink-0">
+																	<span className="inline-block rounded bg-primaryN30 px-1.5 py-0.5 text-xs text-grey-normal">
+																		{item.itemIndex}
+																	</span>
+																</div>
+																<div className="flex-1 overflow-hidden">
+																	{item.s3_url ? (
+																		<Image
+																			src={item.s3_url}
+																			alt=""
+																			width="100%"
+																			height="auto"
+																			className="max-h-[180px] object-contain"
+																			preview={false}
+																		/>
+																	) : (
+																		<div className="flex h-[150px] items-center justify-center text-xs text-grey-normal">
+																			No evidence image
+																		</div>
+																	)}
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											) : null}
+										</div>
+
+										{/* Final Item / Merged Result - fixed 100px height */}
+										<div className="shrink-0 overflow-hidden rounded-[12px] bg-[#EEF5FF]/40 px-5 py-2">
+											<div className="mb-2 flex shrink-0 items-center justify-between">
+												<span className="text-sm font-medium text-forumBlue-normal">
+													{mergeMode === "customize"
+														? "Final Item"
+														: "Keep All Items"}
+												</span>
+												{mergeMode === "customize" ? (
+													<Button
+														className="custom-primary-btn !h-7 !w-[150px] !px-4 !text-xs"
+														loading={confirming}
+														onClick={handleCustomizeSubmit}
+													>
+														Submit Merge
+													</Button>
+												) : (
+													<Button
+														className="custom-primary-btn !h-7 !w-[150px] !px-4 !text-xs"
+														onClick={handleKeepAllClick}
+													>
+														Preview & Submit
+													</Button>
+												)}
+											</div>
+
+											{mergeMode === "customize" && computedMergedResult ? (
+												<div className="overflow-auto rounded-[8px] border border-primaryN30 bg-white">
+													<Table
+														rowKey={() => "live-preview"}
+														columns={mergedColumns}
+														dataSource={[computedMergedResult]}
+														pagination={false}
+														scroll={{
+															x: "max-content",
+														}}
+														size="small"
+														className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+													/>
+												</div>
+											) : mergeMode === "keepAll" && tableData.length > 0 ? (
+												<div className="flex h-[calc(100%-36px)] items-center justify-center text-xs text-grey-normal">
+													Click "Preview & Submit" to view all items with
+													modified labels
+												</div>
+											) : null}
+										</div>
+									</div>
+								</>
+							) : (
+								<div className="flex flex-1 items-center justify-center">
+									<Empty
+										description={
+											<span className="text-xs text-grey-normal">
+												No conflict groups available
+											</span>
+										}
+									/>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+
+				{confirming && (
+					<div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70">
+						<Spin size="large" />
+					</div>
+				)}
+			</Modal>
+
+			{/* Keep All Preview Modal */}
+			<Modal
+				open={showKeepAllModal}
+				onCancel={() => setShowKeepAllModal(false)}
+				footer={null}
+				width={"80vw"}
+				centered
+				destroyOnClose
+				className="[&_.ant-modal-content]:!p-0"
+			>
+				<div className="flex h-[70vh] flex-col">
+					{/* Header */}
+					<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 px-6 py-4">
+						<div className="flex items-center gap-3">
+							<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EEF5FF]">
+								<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+									<path
+										d="M16 3H8C6.89543 3 6 3.89543 6 5V19C6 20.1046 6.89543 21 8 21H16C17.1046 21 18 20.1046 18 19V5C18 3.89543 17.1046 3 16 3Z"
+										stroke="#427CCE"
+										strokeWidth="1.5"
+									/>
+									<path
+										d="M9 7H15M9 11H15M9 15H12"
+										stroke="#427CCE"
+										strokeWidth="1.5"
+										strokeLinecap="round"
+									/>
+								</svg>
+							</div>
+							<div>
+								<div className="text-base font-medium text-grey-dark">
+									Keep All Items Preview
+								</div>
+								<div className="mt-0.5 text-xs text-grey-normal">
+									Review items with modified labels before submitting
+								</div>
+							</div>
+						</div>
+					</div>
+
+					{/* Table */}
+					<div className="flex-1 overflow-hidden p-4">
+						<div className="h-full overflow-auto rounded-lg border border-primaryN30">
+							<Table
+								rowKey={(record) => record.id || Math.random()}
+								columns={keepAllColumns}
+								dataSource={keepAllItems}
+								pagination={false}
+								scroll={{
+									x: "max-content",
+									y: "calc(70vh - 200px)",
+								}}
+								size="small"
+								className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+							/>
+						</div>
+					</div>
+
+					{/* Footer */}
+					<div className="flex shrink-0 items-center justify-end gap-3 border-t border-primaryN30 px-6 py-4">
+						<Button
+							className="custom-default-btn !h-8"
+							onClick={() => setShowKeepAllModal(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							className="custom-primary-btn !h-8"
+							loading={keepAllSubmitting}
+							onClick={handleKeepAllSubmit}
+						>
+							Submit All Items
 						</Button>
 					</div>
 				</div>
 
-				{/* Body */}
-				<div className="flex flex-1 overflow-hidden">
-					{/* Left panel */}
-					<div className="w-[200px] shrink-0 overflow-y-auto border-r border-primaryN30 bg-[#FCFCFD] p-4">
-						<div className="mb-4">
-							<div className="text-sm font-medium text-grey-dark">
-								Reconcile Panel
-							</div>
-							<div className="mt-1 text-xs text-grey-normal">
-								Handle {totalCount} duplicates
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							{conflictGroups.map((group, index) => {
-								const isActive = index === activeGroupIndex;
-								return (
-									<button
-										key={group.groupKey}
-										type="button"
-										className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
-											isActive
-												? "border border-forumBlue-normal bg-[#EEF5FF] shadow-[0_2px_8px_rgba(66,124,206,0.12)]"
-												: "border border-transparent hover:border-primaryN30 hover:bg-white"
-										}`}
-										onClick={() => {
-											setActiveGroupIndex(index);
-										}}
-									>
-										<div
-											className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
-												isActive ? "bg-forumBlue-normal" : "bg-[#DCDCDC]"
-											}`}
-										>
-											<div className="h-[6px] w-[6px] rounded-full bg-white" />
-										</div>
-										<div className="min-w-0 flex-1">
-											<div
-												className={`truncate text-xs font-medium ${
-													isActive ? "text-forumBlue-normal" : "text-grey-dark"
-												}`}
-											>
-												{group.label || "Unknown"}
-											</div>
-											<div className="mt-0.5 text-[10px] text-grey-normal">
-												Items {group.item_ids.join(", ")}
-											</div>
-										</div>
-									</button>
-								);
-							})}
-						</div>
+				{keepAllSubmitting && (
+					<div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70">
+						<Spin size="large" />
 					</div>
-
-					{/* Right panel */}
-					<div className="flex flex-1 flex-col overflow-hidden">
-						{activeGroup ? (
-							<>
-								{/* Toolbar */}
-								<div className="flex shrink-0 items-center justify-between border-b border-primaryN30 px-5 py-2.5">
-									<div className="flex rounded-lg border border-primaryN30 bg-[#FCFCFD]">
-										<button
-											type="button"
-											className={`rounded-l-lg px-4 py-1.5 text-xs transition-colors ${
-												mergeMode === "customize"
-													? "bg-primaryN30 font-bold text-grey-normal"
-													: "bg-primaryN20 font-normal text-grey-normal"
-											}`}
-											onClick={() => setMergeMode("customize")}
-										>
-											Customize
-										</button>
-										<button
-											type="button"
-											className={`ml-px rounded-r-lg px-4 py-1.5 text-xs transition-colors ${
-												mergeMode === "keepAll"
-													? "bg-primaryN30 font-bold text-grey-normal"
-													: "bg-primaryN20 font-normal text-grey-normal"
-											}`}
-											onClick={() => setMergeMode("keepAll")}
-										>
-											Keep All
-										</button>
-									</div>
-								</div>
-
-								{/* Content area */}
-								<div className="flex-1 overflow-y-auto px-5 py-4">
-									{/* Source items table */}
-									<div className="mb-4">
-										<div className="overflow-hidden rounded-[12px] border border-primaryN30">
-											<Table
-												rowKey={(record) => record.id || Math.random()}
-												columns={customizeColumns}
-												dataSource={tableData}
-												pagination={false}
-												scroll={{
-													x: "max-content",
-												}}
-												size="small"
-												className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
-											/>
-										</div>
-									</div>
-
-									{/* Evidence images */}
-									{evidenceList.length > 0 && (
-										<div className="mb-4 flex flex-row flex-wrap gap-4">
-											{evidenceList.map((item, index) => (
-												<div
-													key={item.id}
-													className="relative min-w-[30%] max-w-[32%] flex-1 overflow-hidden rounded-lg border border-primaryN30"
-												>
-													<div className="flex flex-row gap-3 p-3">
-														<div className="shrink-0">
-															<span className="inline-block rounded bg-primaryN30 px-1.5 py-0.5 text-xs text-grey-normal">
-																{item.index + 1}
-															</span>
-														</div>
-														<div className="flex-1 overflow-hidden">
-															{item.s3_url ? (
-																<Image
-																	src={item.s3_url}
-																	alt=""
-																	width="100%"
-																	height="auto"
-																	className="max-h-[250px] object-contain"
-																	preview={false}
-																/>
-															) : (
-																<div className="flex h-[200px] items-center justify-center text-xs text-grey-normal">
-																	No evidence image
-																</div>
-															)}
-														</div>
-														<div className="shrink-0">
-															<div
-																className={`flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md border transition-colors ${
-																	item.evidence_selected
-																		? "border-forumBlue-normal bg-forumBlue-normal/10"
-																		: "border-transparent"
-																}`}
-																onClick={() => handleEvidenceChecked(index)}
-															>
-																<svg
-																	width="18"
-																	height="18"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																>
-																	<path
-																		d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"
-																		stroke={
-																			item.evidence_selected
-																				? "#427CCE"
-																				: "#999"
-																		}
-																		strokeWidth="1.5"
-																		strokeLinecap="round"
-																		strokeLinejoin="round"
-																	/>
-																	<path
-																		d="M14 2V8H20"
-																		stroke={
-																			item.evidence_selected
-																				? "#427CCE"
-																				: "#999"
-																		}
-																		strokeWidth="1.5"
-																		strokeLinecap="round"
-																		strokeLinejoin="round"
-																	/>
-																</svg>
-															</div>
-														</div>
-													</div>
-												</div>
-											))}
-										</div>
-									)}
-
-									{/* Final Item / Merged Result */}
-									<div className="rounded-[12px] bg-[#EEF5FF]/40 px-5 py-4">
-										<div className="mb-3 flex items-center justify-between">
-											<span className="text-sm font-medium text-forumBlue-normal">
-												Final Item
-											</span>
-											<Button
-												className="custom-primary-btn !h-7 !px-4 !w-[150px] !text-xs"
-												loading={confirming}
-												onClick={handleConfirmGroup}
-											>
-												Confirm Reconciliation
-											</Button>
-										</div>
-
-										{mergeMode === "customize" && computedMergedResult ? (
-											<div className="overflow-hidden rounded-[8px] border border-primaryN30 bg-white">
-												<Table
-													rowKey={() => "live-preview"}
-													columns={mergedColumns}
-													dataSource={[computedMergedResult]}
-													pagination={false}
-													scroll={{
-														x: "max-content",
-													}}
-													size="small"
-													className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
-												/>
-											</div>
-										) : mergeMode === "keepAll" && tableData.length > 0 ? (
-											<div className="overflow-hidden rounded-[8px] border border-primaryN30 bg-white">
-												<Table
-													rowKey={(record: any) => record?.id || Math.random()}
-													columns={mergedColumns}
-													dataSource={tableData.map((item) => ({
-														...safeParseResult(item.result),
-														original_item_id: item.id,
-													}))}
-													pagination={false}
-													scroll={{
-														x: "max-content",
-													}}
-													size="small"
-													className="small-font-table [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
-												/>
-											</div>
-										) : null}
-									</div>
-								</div>
-							</>
-						) : (
-							<div className="flex flex-1 items-center justify-center">
-								<Empty
-									description={
-										<span className="text-xs text-grey-normal">
-											No conflict groups available
-										</span>
-									}
-								/>
-							</div>
-						)}
-					</div>
-				</div>
-			</div>
-
-			{confirming && (
-				<div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/70">
-					<Spin size="large" />
-				</div>
-			)}
-		</Modal>
+				)}
+			</Modal>
+		</>
 	);
 }

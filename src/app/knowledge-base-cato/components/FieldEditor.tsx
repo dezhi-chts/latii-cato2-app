@@ -7,11 +7,8 @@ import { updateField, createField } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
 import { PlusOutlined } from "@ant-design/icons";
 import Image from "next/image";
-import dynamic from "next/dynamic";
 
 // 动态引入ReactQuill防止SSR错误
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css';
 import { FieldEvent } from "../page";
 
 const { confirm } = Modal;
@@ -30,6 +27,7 @@ interface FieldData {
 
 interface FieldEditorProps {
   templateId: number;
+  templateInfo: any;
   field: FieldData;
   mode?: "create" | "edit"; // 创建模式 或 编辑模式
   onClose?: () => void;
@@ -43,6 +41,7 @@ const typeOptions = [
 
 export const FieldEditor = ({
   templateId,
+  templateInfo,
   field,
   mode = "edit",
   onClose,
@@ -74,11 +73,6 @@ export const FieldEditor = ({
   const handleFieldChange = (key: keyof FieldData, value: any) => {
     let newFormData = { ...formData, [key]: value };
     setFormData(() => newFormData);
-
-    // 如果是创建新的prompt，则不能输入完成后，在onBlur事件中直接更新数据
-    if (mode === "create") return;
-    // 同步调用更新操作
-    onUpdateField?.(FieldEvent.Update, { template_id: templateId, field_id: field?.id || "", fieldData: newFormData });
   };
 
   const handleSubmit = useCallback(() => {
@@ -91,8 +85,24 @@ export const FieldEditor = ({
       message.error("Please fill in the required field: Type");
       return;
     }
-    handleCreateField();
-  }, [formData]);
+
+    if (mode === "create") {
+      handleCreateField();
+      return;
+    }
+
+    const targetFieldId = field?.id || formData?.id;
+    if (!targetFieldId) {
+      message.error("Failed to save field: missing field id");
+      return;
+    }
+
+    onUpdateField?.(FieldEvent.Update, {
+      template_id: templateId,
+      field_id: targetFieldId,
+      fieldData: formData,
+    });
+  }, [formData, mode, field?.id, templateId, onUpdateField]);
 
   const handleCreateField = async () => {
     setLoading(true);
@@ -125,15 +135,6 @@ export const FieldEditor = ({
     };
     handleFieldChange("config_json", configJSON);
   };
-
-  const handleValuesChange = (index: number, value: string) => {
-    let configJSON = {
-      ...formData?.config_json,
-      available_values: [...values],
-    };
-    configJSON.available_values[index] = value;
-    handleFieldChange("config_json", configJSON);
-  }
 
   const handleValuesDefault = (defaultValue: string) => {
     let configJSON = {
@@ -170,7 +171,9 @@ export const FieldEditor = ({
     return formData?.config_json?.available_values || [];
   }, [formData]);
 
-  const disabelEdit = templateId === 1 || field?.name === 'Generations';
+  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity'];
+
+  const disabelEdit = templateId === 1 || field?.name === 'Generations' || templateInfo?.is_edit === false;
 
   return (
     <div className="w-full h-full flex flex-col gap-6 overflow-hidden">
@@ -185,20 +188,12 @@ export const FieldEditor = ({
               <Input
                 value={formData?.name}
                 onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    name: e.target.value,
-                  })
-                }}
-                onBlur={(e) => {
-                  console.log('########## name change', e.target.value)
-                  if (e.target.value.trim().length > 0 && e.target.value !== field?.name) {
-                    handleFieldChange("name", e.target.value)
-                  }
+                  handleFieldChange("name", e.target.value);
                 }}
                 className="w-full h-[28px] border-primaryN30 rounded-md text-xs"
                 placeholder="Enter field name"
-                disabled={disabelEdit}
+                disabled={disabelEdit
+                  || disbaleFileName.includes(formData?.name)}
               />
             </div>
           </div>
@@ -239,7 +234,7 @@ export const FieldEditor = ({
               </div>
               <div>
                 <button
-                  className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors bg-forumBlue-light-hover text-forumBlue-dark-active`}
+                  className={`w-[80px] h-[26px] flex items-center justify-center rounded-lg text-xs transition-colors ${disabelEdit ? 'bg-forumBlue-light-hover' : 'bg-grey-light'} text-forumBlue-dark-active`}
                   onClick={() => handleAddValue()}
                   disabled={disabelEdit}
                 >
@@ -273,12 +268,6 @@ export const FieldEditor = ({
                           },
                         })
                       }}
-                      onBlur={(e) => {
-                        console.log('########## value change', e.target.value)
-                        if (e.target.value.trim().length === 0) return;
-                        if (e.target.value !== formData?.config_json?.available_values[index]) return;
-                        handleValuesChange(index, e.target.value)
-                      }}
                       disabled={disabelEdit}
                     />
                     <div className="flex items-center gap-2">
@@ -286,6 +275,7 @@ export const FieldEditor = ({
                         className={`text-[10px] px-3 py-0.5 rounded-lg cursor-pointer ${formData?.config_json?.default_value === item ? "text-[#5856D7] bg-[#5856D733]" : "bg-grey-light-hover text-grey-light-strong"
                           }`}
                         onClick={(e) => {
+                          if (disabelEdit) return;
                           handleValuesDefault(item);
                         }}
                       >
@@ -307,16 +297,7 @@ export const FieldEditor = ({
                 size="small"
                 value={formData?.notes || ""}
                 onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    notes: e.target.value,
-                  })
-                }}
-                onBlur={(e) => {
-                  console.log('########## notes change', e.target.value)
-                  if (e.target.value.trim().length === 0) return;
-                  if (e.target.value === formData?.notes) return;
-                  handleFieldChange("notes", e.target.value)
+                  handleFieldChange("notes", e.target.value);
                 }}
                 className="w-full border-primaryN30 rounded-md text-xs"
                 placeholder="Add team notes here..."
@@ -332,60 +313,14 @@ export const FieldEditor = ({
             <label className={`text-sm`}>Rules</label>
             <p className="text-xs text-grey-normal">Define what CATO should look for and the logic it should use to analyze your files.</p>
             <div className="mt-2 flex-1 flex flex-col gap-3">
-              {/* <ReactQuill
-                key={formData?.id}
-                theme="snow"
-                defaultValue={rulesString}
-                onChange={(value) => {
-                  // 第一次 onChange 是初始化触发，忽略
-                  if (!isQuillInitializedRef.current) {
-                    isQuillInitializedRef.current = true;
-                    return;
-                  }
-                  // 只有用户输入时才处理
-                  if (value?.trim().length > 0 && value !== rulesString) {
-                    console.log('######## rules user input ', value)
-                    setFormData({
-                      ...formData,
-                      config_json: {
-                        ...formData.config_json,
-                        extraction_rules: [value],
-                      },
-                    });
-                  }
-                }}
-                onBlur={(e) => {
-                  if (formData?.config_json?.extraction_rules?.[0] !== field?.config_json?.extraction_rules?.[0]) {
-                    handleFieldChange("config_json", {
-                      ...formData.config_json,
-                      extraction_rules: [formData?.config_json?.extraction_rules?.[0]],
-                    });
-                  }
-                }}
-                className="h-[calc(100%-50px)]"
-                readOnly={disabelEdit}
-              >
-              </ReactQuill> */}
               <Input.TextArea
                 size="small"
                 value={rulesString}
                 onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    config_json: {
-                      ...formData.config_json,
-                      extraction_rules: [e.target.value],
-                    },
+                  handleFieldChange("config_json", {
+                    ...formData.config_json,
+                    extraction_rules: [e.target.value],
                   });
-                }}
-                onBlur={(e) => {
-                  console.log('########## rules change', e.target.value)
-                  if (formData?.config_json?.extraction_rules?.[0] !== field?.config_json?.extraction_rules?.[0]) {
-                    handleFieldChange("config_json", {
-                      ...formData.config_json,
-                      extraction_rules: [formData?.config_json?.extraction_rules?.[0]],
-                    });
-                  }
                 }}
                 className="w-full border-primaryN30 rounded-md text-xs"
                 style={{ height: 'calc(100%)', }}
@@ -397,7 +332,7 @@ export const FieldEditor = ({
         </div>
       </div>
       {
-        mode === 'create' && (
+        mode === 'create' ? (
           <div className="mb-2 mr-10 flex justify-end gap-3">
             <Button
               className="custom-default-btn"
@@ -413,6 +348,19 @@ export const FieldEditor = ({
             >
               Add
             </Button>
+          </div>
+        ) : (
+          <div>
+            {!disabelEdit && (
+              <div className="flex justify-end gap-3">
+                <Button
+                  className="custom-primary-btn !w-[96px]"
+                  onClick={handleSubmit}
+                >
+                  Save
+                </Button>
+              </div>
+            )}
           </div>
         )
       }

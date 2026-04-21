@@ -118,6 +118,8 @@ export default function MergeFileCard({
 			sections[0]?.key ||
 			"",
 	);
+	const [currentPage, setCurrentPage] = useState(1);
+	const pageSize = 20;
 
 	useEffect(() => {
 		const nextActiveSection =
@@ -128,12 +130,23 @@ export default function MergeFileCard({
 		setActiveSectionKey(nextActiveSection?.key || "");
 	}, [activeSectionKey, sections]);
 
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [activeSectionKey]);
+
 	const activeSection = useMemo(() => {
 		return (
 			sections.find((section) => section.key === activeSectionKey) ||
 			sections[0]
 		);
 	}, [activeSectionKey, sections]);
+
+	const paginatedRows = useMemo(() => {
+		const rows = activeSection?.rows || [];
+		const startIndex = (currentPage - 1) * pageSize;
+		const endIndex = startIndex + pageSize;
+		return rows.slice(startIndex, endIndex);
+	}, [activeSection?.rows, currentPage, pageSize]);
 
 	const tableColumns = useMemo<ColumnsType<MergeFileRow>>(() => {
 		const dataColumns = columns.map((fieldName) => {
@@ -176,20 +189,13 @@ export default function MergeFileCard({
 			fixed: "right",
 			align: "center",
 			render: (_: unknown, record: MergeFileRow) => {
-				const evidenceCount =
-					record?.evidence_id_list?.length ||
-					(record?.evidence_msg?.s3_url ? 1 : 0);
-
 				return (
 					<button
 						type="button"
-						disabled={!evidenceCount}
-						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+						className="inline-flex h-6 items-center gap-1 px-2 text-[10px] transition-colors hover:opacity-70"
 						onClick={(event) => {
 							event.stopPropagation();
-							if (evidenceCount) {
-								onOpenReferenceModal(record as unknown as TakeoffItemRecord);
-							}
+							onOpenReferenceModal(record as unknown as TakeoffItemRecord);
 						}}
 					>
 						<Image
@@ -310,15 +316,24 @@ export default function MergeFileCard({
 				</div>
 			</div>
 
-			<div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-primaryN30 bg-white">
+			<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
 				<Table<MergeFileRow>
 					rowKey={(record) => record.id}
 					columns={tableColumns}
-					dataSource={activeSection?.rows || []}
-					pagination={false}
+					dataSource={paginatedRows}
+					pagination={{
+						current: currentPage,
+						pageSize: pageSize,
+						total: activeSection?.rows?.length || 0,
+						showSizeChanger: false,
+						showTotal: (total) => `Total ${total} items`,
+						onChange: (page) => setCurrentPage(page),
+						size: "small",
+						position: ["bottomRight"],
+					}}
 					scroll={{
 						x: "max-content",
-						//	y: "calc(100vh - 370px)",
+						y: "calc(100vh - 500px)",
 					}}
 					locale={{
 						emptyText: (
@@ -327,7 +342,7 @@ export default function MergeFileCard({
 							</div>
 						),
 					}}
-					className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal h-[calc(100vh-370px)]"
+					className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
 				/>
 			</div>
 		</div>

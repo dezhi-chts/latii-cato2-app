@@ -62,6 +62,14 @@ export enum GroupType {
   KeyNotes = PageType.KeyNotes, // 注释框
 }
 
+export enum itemBoxType {
+  FloorPlanItem = "Floor Plan Item",
+  ElevationItem = "Elevation Item",
+  WindowDoorUnitItem = "Window Door Unit Item",
+  TableItem = "Table Item",
+  WindowDoorUnitListItem = "window Door Unit list Item",
+}
+
 // 所有页面类型, 包含所有页面类型和图标
 export const allPageTypes = {
   [PageType.ActivePages]: {
@@ -140,7 +148,7 @@ export const ArchDrawingSummaryPageTypes = [
   allPageTypes[PageType.Schedule],
   allPageTypes[PageType.KeyNotes],
   allPageTypes[PageType.Mix],
-  allPageTypes[PageType.Unknown],
+  // allPageTypes[PageType.Unknown],
 ];
 
 // identification 所有标签类型
@@ -178,6 +186,19 @@ export const ArchDrawingLabelTypes = [
   allPageTypes[PageType.KeyNotes],
 ];
 
+export const ArchDrawingItemLabelTypes = [
+  {
+    type: itemBoxType.WindowDoorUnitItem,
+    icon: "W",
+    color: "#5859D6",
+  },
+  {
+    type: itemBoxType.TableItem,
+    icon: "T",
+    color: "#9400D3",
+  },
+];
+
 // identification Quote文件 页面下拉类型
 export const QuotePageTypes = [
   allPageTypes[PageType.Item],
@@ -197,6 +218,7 @@ export interface GroupFrame {
   completed: boolean; //绘制是否已经完成
   types?: TypeItem[]; //所选择的type类型
   bounds: Bounds; //边界
+  isParentEvidence?: boolean; //是否是父evidence
 }
 
 //evidence结构
@@ -219,6 +241,7 @@ export interface EvidenceType {
   page_height_pdf: number; //pdf页面高度
 
   evidence_url: string; //图片URL
+  isParentEvidence?: boolean; //是否是父evidence
 }
 
 // 增，删，改 矩形框后返回的所有结构
@@ -296,6 +319,8 @@ export interface PdfWrapperProps {
   allEvidence: EvidenceType[]; //当前文件所有的evidence
   typeList?: any[]; //当前文件所有框的全部类型
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
+  evidenceDraggable?: boolean; //是否可拖动evidence
+  showAddBtnOnBox?: boolean; //是否在框上显示添加按钮
   onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
   onAppendEvidence?: (evidenceResult: EvidenceResult) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新
@@ -304,6 +329,14 @@ export interface PdfWrapperProps {
   onCropSectionsCount?: (count: number) => void; // 截图区域数量变化时，通知父组件
   onUpdateSafeZoom?: (zoom: number) => void; // 更新安全缩放比例
   onSuccessOCRText?: (text: string) => void; // OCR识别成功后，通知父组件
+  onItemEvidenceConfirm?: (evidenceInfo: any) => void; // 确认evidence item后，通知父组件
+  onChangeSelectedEvidence?: (evidenceIds: number[]) => void; // 选中的evidence ids变化时，通知父组件
+  onChangeZoom?: (zoom: number) => void; // 缩放比例变化时，通知父组件
+  enableAreaSelection?: boolean; // 是否启用鼠标拖拽区域选择
+  onAreaSelectionAction?: (params: {
+    action: "edit" | "delete";
+    evidenceIds: number[];
+  }) => void; // 区域框选上的操作回调
 }
 
 export interface PdfWrapperRefMethods {
@@ -312,7 +345,10 @@ export interface PdfWrapperRefMethods {
   addingRect: (rect: { type: string; isSaveEvidence?: boolean }) => void; //添加矩形框
   rotatePDF: () => void; //旋转PDF
   clearCropSections: () => void; //清除所有裁剪区域
+  removeCropSectionByIds: (ids: string[]) => void; //根据id删除裁剪区域
   handleBatchSubmit: () => void; //批量提交
   handleBatchDelete: () => void; //批量删除
   checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域
+  getRevertCropSectionsData: () => any[]; // 获取转换成API body结构的裁剪区域数据
+  clearAreaSelection: () => void; // 清理区域框选相关状态
 }

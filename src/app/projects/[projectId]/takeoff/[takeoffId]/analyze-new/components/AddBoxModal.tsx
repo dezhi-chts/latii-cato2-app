@@ -46,7 +46,6 @@ export default function AddBoxModal({
 	onChangeFileEvidences,
 	onClose,
 }: AddBoxModalProps) {
-	console.log("files", files);
 	const { company_id } = useUser();
 	const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
 	const [selectedFileId, setSelectedFileId] = useState<number>(
@@ -363,6 +362,7 @@ export default function AddBoxModal({
 									onAppendEvidence={handleAppendEvidence}
 									onDeleteEvidence={handleDeleteEvidence}
 									onUpdateEvidence={handleUpdateEvidence}
+									onChangeZoom={handleZoomChange}
 								/>
 							</div>
 						</div>

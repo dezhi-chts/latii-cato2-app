@@ -38,23 +38,23 @@ const CreateTakeOffModal = ({
       open={isOpen}
       onCancel={() => setIsOpen(false)}
       title={
-        <div className="py-4 flex flex-col gap-2 font-nunito">
+        <div className="pt-4 flex flex-col gap-2 font-nunito">
           <div className="text-forumBlue-normal text-lg">Create a Quotii</div>
           <div className="text-sm text-grey-normal">
             Use our AI Agent to create your quote, save time and prevent errors.
           </div>
-          <div className="mt-4 text-xs">
+          {/* <div className="mt-4 text-xs">
             Name <span>project name</span>
-          </div>
+          </div> */}
         </div>
       }
       closable={false}
-      width={1130}
+      width={'auto'}
       footer={null}
       centered
     >
       <div className="mt-8 p-2 flex flex-row justify-between font-nunito">
-        <div className="p-4 w-[300px] flex flex-col border-2 border-grey-light-hover rounded-lg">
+        {/* <div className="p-4 w-[300px] flex flex-col border-2 border-grey-light-hover rounded-lg">
           <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
             <Image
               src="/assets/cato-images/architectural-drawings-new.png"
@@ -82,7 +82,7 @@ const CreateTakeOffModal = ({
             </Button>
           </div>
         </div>
-        <div></div>
+        <div></div> */}
         <div className="p-4 w-[720px] flex flex-col border-2 border-grey-light-hover rounded-lg">
           <TakeoffUpload
             showUploadTipLink={false}

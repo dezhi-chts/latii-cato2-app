@@ -96,7 +96,10 @@ export const updatePageType = async ({
   newType: string;
 }) => {
   try {
-    const url = `/pdf/project/page/type?project_file_id=${fileId}&page_number=${pageNum}&new_page_type=${newType}`;
+    let url = `/pdf/project/page/type?project_file_id=${fileId}&page_number=${pageNum}`;
+    if(newType?.length > 0){
+      url += `&new_page_type=${newType}`;
+    }
     const response = await http.put(url);
     return { data: response as any, status: "success" };
   } catch (error) {

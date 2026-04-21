@@ -2290,6 +2290,7 @@ const Analyze = () => {
             page={pageData.current}
             allEvidence={fileEvidence}
             onRefreshEvidence={getFileEvidences}
+            onChangeZoom={handleZoomChange}
           ></PdfWrapper>
         </div>
       </div>

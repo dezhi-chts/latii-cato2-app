@@ -69,11 +69,15 @@ export const UploadFileList = ({
 };
 
 export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
-  const maxFileLimit = 2;
+  const maxFileLimit = 1; //2;
 
   const handleRemove = (uid: string) => {
     const newFiles = files.filter((file: UploadFile) => file.uid !== uid);
     setFiles(newFiles);
+  };
+
+  const onChangeFiles = (fileList: UploadFile[]) => {
+    setFiles(fileList);
   };
 
   return (
@@ -94,7 +98,17 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
             accept=".pdf"
             fileList={files}
             maxCount={maxFileLimit}
-            onChange={({ fileList }) => setFiles(fileList)}
+            beforeUpload={(file) => {
+              const isPDF = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+              if (!isPDF) {
+                message.error("Please upload PDF files only.");
+                return Upload.LIST_IGNORE;
+              }
+              return true;
+            }}
+            onChange={({ fileList }) => {
+              onChangeFiles?.(fileList);
+            }}
             showUploadList={false}
           >
             <p className={`${files.length === 0 ? "text-forumBlue-normal" : "text-grey-light-strong"} underline cursor-pointer hover:opacity-80 active:opacity-60`}>
@@ -104,8 +118,8 @@ export const UploadBox = ({ files, setFiles }: UploadBoxProps) => {
           {
             files.length === 0 && (
               <p className="text-grey-light-strong text-center">
-                Up to 2 files. Only the PDF format is accepted. Maximum weight of
-                00MG
+                <span>Up to 1 files. Only the PDF format is accepted.</span>
+                {/* <span>Maximum weight of 00MG</span> */}
               </p>
             )
           }
@@ -199,7 +213,7 @@ export const QuoteUpload = ({
   onChangeHinegeStatus,
 }: UploadBoxProps) => {
   return (
-    <div className="h-full p-4 border border-grey-light-hover rounded-lg">
+    <div className="h-full p-4 border border-grey-light-hover rounded-lg relative">
       {files.length === 0 && <div className="w-full h-[100px] overflow-hidden border border-primaryN30 rounded">
         <Image
           src="/assets/cato-images/product-quotes-new.png"
@@ -218,6 +232,9 @@ export const QuoteUpload = ({
           }}
         />
       )}
+      <div className="absolute bottom-0 left-0 right-0 w-full h-full bg-[rgb(255,255,255,0.6)] rounded-lg z-99">
+
+      </div>
     </div>
   );
 };
