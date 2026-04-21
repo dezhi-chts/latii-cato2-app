@@ -14,20 +14,88 @@ const SYSTEM_KEYS = ["Category", "Product", "Type", "System"];
 export const parseItemResult = (
 	result: TakeoffItemRecord["result"],
 ): Record<string, unknown> => {
+	const normalizeDotNotationObject = (
+		source: Record<string, unknown>,
+	): Record<string, unknown> => {
+		const output: Record<string, unknown> = {};
+
+		const assignByPath = (path: string, val: unknown) => {
+			const pathParts = path
+				.split(".")
+				.map((part) => part.trim())
+				.filter(Boolean);
+			if (pathParts.length <= 1) {
+				output[path] = val;
+				return;
+			}
+
+			let current: Record<string, unknown> = output;
+			for (let index = 0; index < pathParts.length - 1; index += 1) {
+				const key = pathParts[index];
+				const existing = current[key];
+				if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+					current[key] = {};
+				}
+				current = current[key] as Record<string, unknown>;
+			}
+			current[pathParts[pathParts.length - 1]] = val;
+		};
+
+		Object.entries(source || {}).forEach(([key, value]) => {
+			const normalizedValue =
+				value && typeof value === "object" && !Array.isArray(value)
+					? normalizeDotNotationObject(value as Record<string, unknown>)
+					: value;
+
+			if (key.includes(".")) {
+				assignByPath(key, normalizedValue);
+				return;
+			}
+
+			const existing = output[key];
+			if (
+				existing &&
+				typeof existing === "object" &&
+				!Array.isArray(existing) &&
+				normalizedValue &&
+				typeof normalizedValue === "object" &&
+				!Array.isArray(normalizedValue)
+			) {
+				output[key] = {
+					...(existing as Record<string, unknown>),
+					...(normalizedValue as Record<string, unknown>),
+				};
+				return;
+			}
+
+			output[key] = normalizedValue;
+		});
+
+		return output;
+	};
+
 	if (!result) {
 		return {};
 	}
 
 	if (typeof result === "string") {
 		try {
-			return JSON.parse(result);
+			const parsed = JSON.parse(result);
+			if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+				return {};
+			}
+			return normalizeDotNotationObject(parsed as Record<string, unknown>);
 		} catch (error) {
 			console.error("Failed to parse takeoff item result:", error);
 			return {};
 		}
 	}
 
-	return result;
+	if (typeof result !== "object" || Array.isArray(result)) {
+		return {};
+	}
+
+	return normalizeDotNotationObject(result as Record<string, unknown>);
 };
 
 export const getResultValue = (
@@ -153,7 +221,9 @@ export const setResultValueByField = (
 	fieldName: string,
 	value: unknown,
 ): Record<string, unknown> => {
-	const nextResult: Record<string, unknown> = { ...(result || {}) };
+	const nextResult: Record<string, unknown> = {
+		...parseItemResult(result as TakeoffItemRecord["result"]),
+	};
 	const pathParts = fieldName
 		.split(".")
 		.map((part) => part.trim())

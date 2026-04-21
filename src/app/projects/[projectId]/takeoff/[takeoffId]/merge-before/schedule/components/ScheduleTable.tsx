@@ -180,12 +180,10 @@ export default function ScheduleTable({
 		}
 
 		const parsedResult = parseItemResultUtil(record?.result as any);
+		const nextResult = setResultValueByField(parsedResult, fieldName, newValue);
 		const updatedItem = {
 			...record,
-			result: {
-				...parsedResult,
-				[fieldName]: newValue,
-			},
+			result: nextResult,
 		};
 
 		// Blur 后立即退出编辑态，避免 Input 长时间停留
