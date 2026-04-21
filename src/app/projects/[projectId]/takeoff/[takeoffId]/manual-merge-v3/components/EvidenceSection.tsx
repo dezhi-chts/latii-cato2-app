@@ -17,6 +17,7 @@ interface EvidenceSectionProps {
   evidences: Array<{ id: string; url: string }>;
   currentLabel: string;
   allLabels: any[];
+  isLabelMerged: boolean;
   onRefreshItemsAndEvidence: () => Promise<void>;
 }
 
@@ -25,6 +26,7 @@ export default function EvidenceSection({
   evidences,
   currentLabel,
   allLabels,
+  isLabelMerged,
   onRefreshItemsAndEvidence,
 }: EvidenceSectionProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -150,24 +152,26 @@ export default function EvidenceSection({
                   <div className="absolute left-1 top-1 rounded z-10 flex h-[15px] w-[15px] text-xxs items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
                     {index + 1}
                   </div>
-                  <div className="absolute right-1 top-1 z-10 items-center gap-1  hidden group-hover:flex">
-                    <div
-                      className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                      onClick={() => {
-                        handleOpenEdit(evidence.id, evidence.url);
-                      }}
-                    >
-                      <EditOutlined className="text-[12px]" />
+                  {!isLabelMerged &&
+                    <div className="absolute right-1 top-1 z-10 items-center gap-1  hidden group-hover:flex">
+                      <div
+                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                        onClick={() => {
+                          handleOpenEdit(evidence.id, evidence.url);
+                        }}
+                      >
+                        <EditOutlined className="text-[12px]" />
+                      </div>
+                      <div
+                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                        onClick={() => {
+                          handleDeleteEvidence(evidence.id, evidence.url);
+                        }}
+                      >
+                        <DeleteOutlined className="text-[12px]" />
+                      </div>
                     </div>
-                    <div
-                      className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                      onClick={() => {
-                        handleDeleteEvidence(evidence.id, evidence.url);
-                      }}
-                    >
-                      <DeleteOutlined className="text-[12px]" />
-                    </div>
-                  </div>
+                  }
                   <div className="flex h-full w-full items-center justify-center p-2">
                     <ImagePreviewWithExpand
                       src={evidence.url}

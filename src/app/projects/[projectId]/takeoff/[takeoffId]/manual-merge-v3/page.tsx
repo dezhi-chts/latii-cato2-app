@@ -1313,6 +1313,7 @@ export default function ManualMergeV2Page() {
                       evidences={scheduleEvidences}
                       currentLabel={selectedLabel}
                       allLabels={labels}
+                      isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                     <EvidenceSection
@@ -1320,6 +1321,7 @@ export default function ManualMergeV2Page() {
                       evidences={floorPlanEvidences}
                       currentLabel={selectedLabel}
                       allLabels={labels}
+                      isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                     <EvidenceSection
@@ -1327,6 +1329,7 @@ export default function ManualMergeV2Page() {
                       evidences={elevationEvidences}
                       currentLabel={selectedLabel}
                       allLabels={labels}
+                      isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                   </div>
