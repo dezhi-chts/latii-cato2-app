@@ -663,6 +663,72 @@ export const updateSingleFileMergeResultsLabelByEvidenceIds = async (evidence_id
   }
 }
 
+/**
+ * 更新take off result item的result
+ * @param data 
+ * @returns 
+ */
+export const updateTakeOffResultItemResultByIdList = async (data:any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/update_take_off_result_item_result_by_id_list`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error updating take off result item result by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 删除take off result item
+ * @param take_off_result_item_ids 
+ * @returns 
+ */
+export const deleteTakeOffResultItemByIdList = async (take_off_result_item_ids:string)=>{
+  try{ 
+    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_by_id_list?take_off_result_item_ids=${take_off_result_item_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error deleting take off result item by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 添加多个take off result item
+ * @param data 
+ * @returns 
+ */
+export const addMultipleTakeOffResultItems = async (data:any) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/add_take_off_result_items`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error adding multiple take off result items:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 批量更新take off result items
+ * @param data
+ * @returns
+ */
+export const updateMultipleTakeOffResultItems = async (data: any) => {
+  return updateTakeOffResultItemResultByIdList(data);
+}
+
+/**
+ * 批量删除take off result items
+ * @param take_off_result_item_ids
+ * @returns
+ */
+export const deleteMultipleTakeOffResultItems = async (take_off_result_item_ids: string) => {
+  return deleteTakeOffResultItemByIdList(take_off_result_item_ids);
+}
+
 
 
 

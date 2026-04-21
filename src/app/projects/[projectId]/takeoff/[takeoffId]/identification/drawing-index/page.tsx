@@ -1,7 +1,6 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import {
-  notification,
   Popover,
   Radio,
   Select,
@@ -50,6 +49,7 @@ import Header from "../components/Header";
 
 import { useTakeoff, FileViewStep } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
+import { notify } from "@/utils/notify";
 
 const confirm = Modal.confirm;
 
@@ -130,8 +130,8 @@ const IdentIndex = forwardRef<IdentIndexRef, {
       setFileEvidence(evidenceList);
     } else {
       evidenceIsLoaded.current = false;
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to get file evidence",
       });
     }
@@ -191,15 +191,15 @@ const IdentIndex = forwardRef<IdentIndexRef, {
     setBuildLoading(false);
 
     if (res.status === "success") {
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Drawing index recognized successfully",
       });
       // 识别成功后跳转到summary页面
       router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to recognize drawing index",
       });
     }
@@ -272,8 +272,8 @@ const IdentIndex = forwardRef<IdentIndexRef, {
     if (res.status === "success") {
       handleDeleteEvidence({ deleteIds } as any);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to delete evidence",
       });
     }

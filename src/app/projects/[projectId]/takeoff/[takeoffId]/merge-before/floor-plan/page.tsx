@@ -378,11 +378,48 @@ export default function FloorPlanPage() {
     setSelectedEvidenceIds([item.id]);
   };
 
-  const handleUpdateItemByLabelTable = useCallback((updatedItem: any) => {
-    setItemBoxList((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-    );
+  const getLabelFromOcrText = useCallback((ocrText: any): string => {
+    if (!ocrText) return "";
+    try {
+      const parsed = typeof ocrText === "string" ? JSON.parse(ocrText) : ocrText;
+      return String(parsed?.result?.Label || "").trim();
+    } catch (error) {
+      return "";
+    }
   }, []);
+
+  const hasEmptyLabelInCurrentEvidence = useMemo(() => {
+    return labelTableData.some((item: any) => {
+      const label = getLabelFromOcrText(item?.ocr_text);
+      return !label;
+    });
+  }, [getLabelFromOcrText, labelTableData]);
+
+  useEffect(() => {
+    if (!pageEvidenceId) return;
+    setThumbnailData((prev) =>
+      prev.map((item) => {
+        if (item.id !== pageEvidenceId) return item;
+        if (Boolean(item?.has_empty_label) === hasEmptyLabelInCurrentEvidence) return item;
+        return {
+          ...item,
+          has_empty_label: hasEmptyLabelInCurrentEvidence,
+        };
+      }),
+    );
+  }, [hasEmptyLabelInCurrentEvidence, pageEvidenceId]);
+
+  const handleUpdateItemByLabelTable = useCallback(
+    (updatedItem: any) => {
+      setItemBoxList((prev) =>
+        prev.map((item) => {
+          if (item.id !== updatedItem.id) return item;
+          return updatedItem;
+        }),
+      );
+    },
+    [],
+  );
 
   const handleDeleteItemByLabelTable = useCallback(
     async (deletedId: number) => {

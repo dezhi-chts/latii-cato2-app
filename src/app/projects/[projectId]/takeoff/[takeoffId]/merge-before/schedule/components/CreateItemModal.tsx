@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Button, Form, Input, Modal, notification } from "antd";
+import { Button, Form, Input, Modal } from "antd";
 
 import { addTakeOffResultItemByEvidenceId } from "@/services/takeOffService";
+import { notify } from "@/utils/notify";
 
 interface CreateItemModalProps {
   open: boolean;
@@ -71,15 +72,15 @@ export default function CreateItemModal({
       );
       setSubmitLoading(false);
       if (response.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "Failed to create item.",
         });
         return;
       }
 
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Item created successfully.",
       });
       form.resetFields();
@@ -88,8 +89,8 @@ export default function CreateItemModal({
     } catch (error: any) {
       setSubmitLoading(false);
       if (error?.errorFields?.length) return;
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to create item.",
       });
     }

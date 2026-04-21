@@ -1,8 +1,9 @@
 "use client";
 
-import { Input, Modal, Table, notification } from "antd";
+import { Input, Modal, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
+import { notify } from "@/utils/notify";
 
 interface SplitItemsModalProps {
   open: boolean;
@@ -37,8 +38,8 @@ export default function SplitItemsModal({
 
   const handleSubmit = async () => {
     if (selectedRowKeys.length === 0) {
-      notification.warning({
-        message: "No Items Selected",
+      notify.warning({
+        title: "No Items Selected",
         description: "Please select at least one item.",
       });
       return;
@@ -46,16 +47,16 @@ export default function SplitItemsModal({
 
     const normalizedTargetLabel = targetLabel.trim();
     if (!normalizedTargetLabel) {
-      notification.warning({
-        message: "Label Required",
+      notify.warning({
+        title: "Label Required",
         description: "Please input a new label name.",
       });
       return;
     }
 
     if (normalizedTargetLabel === currentLabel) {
-      notification.warning({
-        message: "Invalid Label",
+      notify.warning({
+        title: "Invalid Label",
         description: "Please input a different label name.",
       });
       return;
@@ -66,8 +67,8 @@ export default function SplitItemsModal({
       (label) => String(label || "").trim().toLowerCase() === normalizedInputLabel,
     );
     if (duplicated) {
-      notification.warning({
-        message: "Duplicate Label",
+      notify.warning({
+        title: "Duplicate Label",
         description: "This label already exists. Please input a new label name.",
       });
       return;
