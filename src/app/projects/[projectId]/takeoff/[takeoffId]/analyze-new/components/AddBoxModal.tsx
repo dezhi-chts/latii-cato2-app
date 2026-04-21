@@ -1,7 +1,7 @@
 "use client";
 
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Button, Empty, Modal, Select, notification } from "antd";
+import { Button, Empty, Modal, Select } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useUser } from "@/context/UserContext";
@@ -21,6 +21,8 @@ import {
 } from "../../types/evidence";
 import NewLogicBoxModal from "../../identification/page-label/components/NewLogicBoxModal";
 import { EvidenceRecord, ProjectFileRecord, TakeoffItemRecord } from "../types";
+import { notify } from "@/utils/notify";
+
 
 interface AddBoxModalProps {
 	open: boolean;
@@ -125,8 +127,8 @@ export default function AddBoxModal({
 			return;
 		}
 
-		notification.error({
-			message: "Error",
+		notify.error({
+			title: "Error",
 			description: "Failed to load box types",
 		});
 	}, [company_id]);
@@ -178,8 +180,8 @@ export default function AddBoxModal({
 			return;
 		}
 
-		notification.error({
-			message: "Error",
+		notify.error({
+			title: "Error",
 			description: response?.data?.detail || "Failed to delete logic box",
 		});
 	};

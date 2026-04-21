@@ -6,7 +6,6 @@ import {
   ConfigProvider,
   Divider,
   message,
-  notification,
   Popover,
   Radio,
   Select,
@@ -54,6 +53,7 @@ import {
 import BuildingBackground, { BuildLoadingStep } from "../components/BuildingBackground";
 import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
+import { notify } from "@/utils/notify";
 
 const confirm = Modal.confirm;
 
@@ -124,8 +124,8 @@ const IdentSummary = () => {
       setFileEvidence(evidenceList);
     } else {
       evidenceIsLoaded.current = false;
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to get file evidence",
       });
     }
@@ -199,8 +199,8 @@ const IdentSummary = () => {
         setIsEmptyContent(true);
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to get drawing index",
       });
     }
@@ -282,8 +282,8 @@ const IdentSummary = () => {
     let isAllPageTypeConfirmed = contentData.every((item: any) => item.type !== "" && item.type !== null && item.type !== undefined);
 
     if (!isAllPageTypeConfirmed) {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Please confirm all page types first",
       });
       return;

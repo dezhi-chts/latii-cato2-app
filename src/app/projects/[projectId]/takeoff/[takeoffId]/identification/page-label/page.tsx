@@ -5,7 +5,6 @@ import {
 	ConfigProvider,
 	Divider,
 	Modal,
-	notification,
 	Popover,
 	Select,
 	Spin,
@@ -66,6 +65,7 @@ import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { enrichElevationFloorPlanByEvidenceIds, generateFileKeysByProjectFileIds } from "@/services/takeOffService";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 
@@ -173,15 +173,15 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		const result = await deleteBoxType(item.company_id.toString(), item.id);
 
 		if (result.status === "success") {
-			notification.success({
-				message: "Success",
+			notify.success({
+				title: "Success",
 				description: "Logic Box deleted successfully",
 			});
 			getBoxTypeList();
 		} else {
 			const errorMsg = result?.data?.detail || "Failed to delete Logic Box";
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: errorMsg,
 			});
 		}
@@ -290,8 +290,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			);
 		} else {
 			evidenceIsLoaded.current = false;
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to get file evidence",
 			});
 		}
@@ -306,8 +306,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			initPageTypeWidthSummary(res?.data?.data ?? null);
 			initThumbnailWidthSummary(res?.data?.data ?? null);
 		} else {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to get pdf analyse pages",
 			});
 		}
@@ -622,8 +622,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				setBuildLoading(false);
 				setAnalyzeMessage("");
 				eventSourceRef.current = null;
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: error || "Failed to analyze the file",
 				});
 			},
@@ -653,8 +653,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			// 获取文件中所有的evidence
 			handleEvidenceItems();
 		} else {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: res?.data?.detail || "Failed to generate file keys",
 			});
 		}
@@ -674,8 +674,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				`/projects/${projectId}/takeoff/${takeOffId}/merge-before/floor-plan`,
 			);
 		} else {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: res?.data?.detail || "Failed to get evidence items",
 			});
 		}

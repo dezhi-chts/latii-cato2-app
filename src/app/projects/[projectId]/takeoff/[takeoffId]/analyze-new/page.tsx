@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, notification, Spin } from "antd";
+import { Modal, Spin } from "antd";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -35,6 +35,7 @@ import {
 } from "./types";
 import { FileOperationType } from "../types/evidence";
 import LoadingScreen from "@/components/loading-screen";
+import { notify } from "@/utils/notify";
 
 interface ParsedTakeoffItem {
 	id: number | string;
@@ -323,8 +324,8 @@ export default function TakeoffListPage() {
 			}
 
 			setDynamicFields(getFallbackDynamicFields(fallbackItems));
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to get template fields",
 			});
 			return [];
@@ -383,8 +384,8 @@ export default function TakeoffListPage() {
 			// Step 1: Get takeoff basic info
 			const takeoffResponse = await getTakeOffById(takeoffId);
 			if (takeoffResponse.status !== "success" || !takeoffResponse.data) {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "Failed to get takeoff details",
 				});
 				setLoading(false);
@@ -431,8 +432,8 @@ export default function TakeoffListPage() {
 			//await fetchAllFileEvidences(projectFiles);
 		} catch (error) {
 			console.error("Error fetching takeoff:", error);
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to get takeoff details",
 			});
 		} finally {
@@ -563,8 +564,8 @@ export default function TakeoffListPage() {
 			};
 		});
 
-		notification.error({
-			message: "Error",
+		notify.error({
+			title: "Error",
 			description: "Failed to update item status",
 		});
 	};
@@ -583,16 +584,16 @@ export default function TakeoffListPage() {
 				const response = await resetTakeOff(takeoffId, fileIds);
 				setFullLoading(false);
 				if (response.status === "success") {
-					notification.success({
-						message: "Success",
+					notify.success({
+						title: "Success",
 						description: "Take off reset successfully",
 					});
 					router.push(
 						`/projects/${projectId}/takeoff/${takeoffId}/identification`,
 					);
 				} else {
-					notification.error({
-						message: "Error",
+					notify.error({
+						title: "Error",
 						description: "Failed to reset take off",
 					});
 				}
@@ -618,23 +619,23 @@ export default function TakeoffListPage() {
 						link.click();
 						document.body.removeChild(link);
 					} else {
-						notification.error({
-							message: "Error",
+						notify.error({
+							title: "Error",
 							description: "No file url found",
 						});
 					}
 				}
 			} else {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description:
 						response?.data?.detail || "Failed to download take off result",
 				});
 			}
 		} catch (error) {
 			console.error("Download error:", error);
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to download take off result",
 			});
 		} finally {
@@ -644,8 +645,8 @@ export default function TakeoffListPage() {
 
 	const handleOpenReconcile = () => {
 		if (!selectedFileId || reconcileCount < 1) {
-			notification.info({
-				message: "Info",
+			notify.info({
+				title: "Info",
 				description: "There are no reconcile conflicts in the current file",
 			});
 			return;
