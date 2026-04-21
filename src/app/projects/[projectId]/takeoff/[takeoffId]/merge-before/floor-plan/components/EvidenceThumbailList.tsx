@@ -106,6 +106,7 @@ interface EvidenceThumbailListProps {
 		project_file_page_number: number; // 页面编号
 		evidence_url: string; // 证据url
 		type: string; // 类型
+		has_empty_label: boolean; // 是否有空标签
 	}[];
 	evidenceId: number; // 当前选中的页面
 	onChangeEvidenceId: (evidenceId: number) => void;
@@ -227,50 +228,52 @@ const EvidenceThumbailList = ({
 									}}
 									onClick={() => onClickEvidenceId(info.id)}
 								>
-									<div className="p-[10px]">
-										<div className="h-[30px] flex flex-row justify-between group">
-											<div className="overflow-hidden">
-												<PageTextWithTooltip text={itemPageNum} />
-											</div>
-											{
-												showDownload && (
-													<div
-														onClick={(e) => {
-															e.stopPropagation();
-															if (info.evidence_url) {
-																const link = document.createElement('a');
-																link.href = info.evidence_url;
-																link.download = `evidence_${info.id}.png`;
-																document.body.appendChild(link);
-																link.click();
-																document.body.removeChild(link);
-															}
-														}}
-														className="pl-1 pr-2 mt-[-8px] flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
-													>
-														<VerticalAlignBottomOutlined className="text-forumBlue-normal" />
-													</div>
-												)
-											}
-											{showCategory && (
-												<div
-													className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
-													style={{ backgroundColor: color }}
-												>
-													<span>{icon}</span>
+									<div className={`${info?.has_empty_label ? 'border border-red-600 rounded-2xl' : ''}`}>
+										<div className="p-[10px] pb-1">
+											<div className="h-[30px] flex flex-row justify-between group">
+												<div className="overflow-hidden">
+													<PageTextWithTooltip text={itemPageNum} />
 												</div>
-											)}
-										</div>
-										<div>
-											<LazyImage
-												src={info.evidence_url || ""}
-												alt={"Evidence"}
-												size={size}
-												onError={(e) => {
-													e.currentTarget.src =
-														"/assets/placeholder-images/example_1.png";
-												}}
-											/>
+												{
+													showDownload && (
+														<div
+															onClick={(e) => {
+																e.stopPropagation();
+																if (info.evidence_url) {
+																	const link = document.createElement('a');
+																	link.href = info.evidence_url;
+																	link.download = `evidence_${info.id}.png`;
+																	document.body.appendChild(link);
+																	link.click();
+																	document.body.removeChild(link);
+																}
+															}}
+															className="pl-1 pr-2 mt-[-8px] flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
+														>
+															<VerticalAlignBottomOutlined className="text-forumBlue-normal" />
+														</div>
+													)
+												}
+												{showCategory && (
+													<div
+														className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
+														style={{ backgroundColor: color }}
+													>
+														<span>{icon}</span>
+													</div>
+												)}
+											</div>
+											<div>
+												<LazyImage
+													src={info.evidence_url || ""}
+													alt={"Evidence"}
+													size={size}
+													onError={(e) => {
+														e.currentTarget.src =
+															"/assets/placeholder-images/example_1.png";
+													}}
+												/>
+											</div>
 										</div>
 									</div>
 									{onClickDelete && <button className="absolute right-[-8px] top-[-8px] cursor-pointer hidden group-hover:block"

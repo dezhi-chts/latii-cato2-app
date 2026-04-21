@@ -47,6 +47,7 @@ export default function SchedulePage() {
   const [files, setFiles] = useState<any[]>([]);
   const [scheduleList, setScheduleList] = useState<any[]>([]);
   const [itemBoxList, setItemBoxList] = useState<EvidenceType[]>([]);
+  const [itemBoxEvidenceId, setItemBoxEvidenceId] = useState<number>(-1);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
@@ -93,14 +94,13 @@ export default function SchedulePage() {
       let list = response.data || [];
       setScheduleList(list);
       if (list.length > 0) {
-        let exitScheduleEvidence = list.find(
+        let existingScheduleEvidence = list.find(
           (item: any) => item.id === pageEvidenceId,
         );
-        if (exitScheduleEvidence) {
-          setPageEvidenceId(exitScheduleEvidence.id);
-        } else {
-          setPageEvidenceId(list[0].id);
-        }
+        const nextEvidence = existingScheduleEvidence || list[0];
+        setPageEvidenceId(nextEvidence.id);
+        setCurrentPage(nextEvidence?.project_file_page_number || 0);
+        setImageUrl(nextEvidence?.evidence_url || "");
       }
     } else {
       notification.error({
@@ -113,7 +113,6 @@ export default function SchedulePage() {
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
       if (id) {
-        setItemBoxList([]);
         setTableLoading(true);
         let res = await getTakeOffResultItemsByEvidenceIds(id.toString());
         setTableLoading(false);
@@ -121,7 +120,10 @@ export default function SchedulePage() {
           let values: any = Object.values(res.data || {}) || [];
           let list = values.flatMap((item: any) => item || []);
           setItemBoxList(list);
+          setItemBoxEvidenceId(id);
         } else {
+          setItemBoxList([]);
+          setItemBoxEvidenceId(id);
           notification.error({
             message: "Error",
             description: "Failed to load evidence data.",
@@ -129,7 +131,7 @@ export default function SchedulePage() {
         }
       }
     },
-    [pageEvidenceId],
+    [],
   );
 
   useEffect(() => {
@@ -144,27 +146,25 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (pageEvidenceId !== -1) {
-      setImageUrl(scheduleList.find((item) => item.id === pageEvidenceId)?.evidence_url || "");
       getItemsByPageEvidences(pageEvidenceId);
     }
-  }, [pageEvidenceId, scheduleList]);
+  }, [pageEvidenceId]);
 
   useEffect(() => {
-    if (scheduleList.length > 0 && pageEvidenceId === -1) {
-      setPageEvidenceId(scheduleList[0].id);
+    if (pageEvidenceId !== -1) {
+      setImageUrl(scheduleList.find((item) => item.id === pageEvidenceId)?.evidence_url || "");
     }
-  }, [scheduleList]);
+  }, [pageEvidenceId, scheduleList]);
 
 
   const handlePageEvidenceChange = useCallback(
     (evidenceId: any) => {
       setPageEvidenceId(evidenceId);
-      let currentPage =
-        scheduleList.find((item) => item.id === evidenceId)
-          ?.project_file_page_number || 0;
-      setCurrentPage(currentPage);
+      const selectedEvidence = scheduleList.find((item) => item.id === evidenceId);
+      setCurrentPage(selectedEvidence?.project_file_page_number || 0);
+      setImageUrl(selectedEvidence?.evidence_url || "");
     },
-    [currentPage, scheduleList],
+    [scheduleList],
   );
 
   const handleDeleteEvidence = (data: any) => {
@@ -340,6 +340,44 @@ export default function SchedulePage() {
       return !labelValue || labelValue === "-";
     });
   }, [itemBoxList]);
+
+  const dedupedLabelsInCurrentEvidence = useMemo(() => {
+    const labelSet = new Set<string>();
+    itemBoxList.forEach((item) => {
+      const parsedResult = parseItemResultUtil((item as any)?.result as any);
+      const labelValue = String(parsedResult?.Label ?? "").trim();
+      if (!labelValue || labelValue === "-") return;
+      labelSet.add(labelValue);
+    });
+    return Array.from(labelSet).sort((a, b) => a.localeCompare(b));
+  }, [itemBoxList]);
+
+  useEffect(() => {
+    if (pageEvidenceId === -1) return;
+    if (itemBoxEvidenceId !== pageEvidenceId) return;
+    setScheduleList((prev) => {
+      let hasChanged = false;
+      const next = prev.map((item) => {
+        if (item.id !== pageEvidenceId) return item;
+        const prevLabels = Array.isArray(item?.label_list) ? item.label_list : [];
+        const labelsChanged =
+          prevLabels.length !== dedupedLabelsInCurrentEvidence.length ||
+          prevLabels.some((label: string, index: number) => label !== dedupedLabelsInCurrentEvidence[index]);
+        const emptyChanged = Boolean(item?.has_empty_label) !== hasEmptyLabelInTable;
+
+        if (!labelsChanged && !emptyChanged) {
+          return item;
+        }
+        hasChanged = true;
+        return {
+          ...item,
+          has_empty_label: hasEmptyLabelInTable,
+          label_list: dedupedLabelsInCurrentEvidence,
+        };
+      });
+      return hasChanged ? next : prev;
+    });
+  }, [dedupedLabelsInCurrentEvidence, hasEmptyLabelInTable, pageEvidenceId]);
 
   const handleDeleteScheduleItem = useCallback(
     async (itemId: number) => {
