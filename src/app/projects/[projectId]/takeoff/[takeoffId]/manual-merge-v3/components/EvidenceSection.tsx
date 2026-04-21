@@ -1,34 +1,48 @@
 "use client";
 
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
-import { Button, Empty, Modal, Select, notification } from "antd";
+import { Button, Empty, Modal, Select, Spin, notification } from "antd";
 import { useMemo, useState } from "react";
 
+import {
+  deleteFileSourceMergeResultsByEvidenceIds,
+  updateSingleFileMergeResultsLabelByEvidenceIds,
+} from "@/services/takeOffService";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 
 interface EvidenceSectionProps {
   title: string;
-  evidenceUrls: string[];
+  evidences: Array<{ id: string; url: string }>;
   currentLabel: string;
-  labelOptions: string[];
+  allLabels: any[];
+  onRefreshItemsAndEvidence: () => Promise<void>;
 }
 
 export default function EvidenceSection({
   title,
-  evidenceUrls,
+  evidences,
   currentLabel,
-  labelOptions,
+  allLabels,
+  onRefreshItemsAndEvidence,
 }: EvidenceSectionProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvidenceUrl, setEditingEvidenceUrl] = useState("");
   const [targetLabel, setTargetLabel] = useState<string>();
+  const [apiLoading, setApiLoading] = useState(false);
 
-  const availableTargetLabels = useMemo(
-    () => labelOptions.filter((label) => label !== currentLabel),
-    [currentLabel, labelOptions],
-  );
+  const availableTargetLabels = useMemo(() => {
+    const seen = new Set<string>();
+    return (allLabels || [])
+      .map((item: any) => String(item?.label || "").trim())
+      .filter((label: string) => label && label !== currentLabel)
+      .filter((label: string) => {
+        if (seen.has(label)) return false;
+        seen.add(label);
+        return true;
+      });
+  }, [allLabels, currentLabel]);
 
-  const handleDeleteEvidence = (evidenceUrl: string) => {
+  const handleDeleteEvidence = (evidenceId: string, evidenceUrl: string) => {
     Modal.confirm({
       title: "Delete Evidence",
       content: (
@@ -54,22 +68,39 @@ export default function EvidenceSection({
       okText: "Delete",
       cancelText: "Cancel",
       okButtonProps: { danger: true },
-      onOk: () => {
-        notification.info({
-          message: "Delete Confirmed",
-          description: "Delete API is not available yet, no data has been changed.",
-        });
+      onOk: async () => {
+        setApiLoading(true);
+        try {
+          const response = await deleteFileSourceMergeResultsByEvidenceIds(evidenceId);
+          if (response.status !== "success") {
+            notification.error({
+              message: "Error",
+              description: response?.data?.detail || "Failed to delete evidence.",
+            });
+            return;
+          }
+          notification.success({
+            message: "Success",
+            description: "Evidence deleted successfully.",
+          });
+          await onRefreshItemsAndEvidence();
+        } finally {
+          setApiLoading(false);
+        }
       },
     });
   };
 
-  const handleOpenEdit = (evidenceUrl: string) => {
+  const [editingEvidenceId, setEditingEvidenceId] = useState("");
+
+  const handleOpenEdit = (evidenceId: string, evidenceUrl: string) => {
+    setEditingEvidenceId(evidenceId);
     setEditingEvidenceUrl(evidenceUrl);
     setTargetLabel(undefined);
     setIsEditModalOpen(true);
   };
 
-  const handleConfirmEdit = () => {
+  const handleConfirmEdit = async () => {
     if (!targetLabel) {
       notification.warning({
         message: "Label Required",
@@ -78,26 +109,40 @@ export default function EvidenceSection({
       return;
     }
 
-    notification.info({
-      message: "Update Prepared",
-      description: `Will move evidence from "${currentLabel}" to "${targetLabel}" after API is ready.`,
-    });
-    setIsEditModalOpen(false);
+    setApiLoading(true);
+    try {
+      const response = await updateSingleFileMergeResultsLabelByEvidenceIds(editingEvidenceId, targetLabel);
+      if (response.status !== "success") {
+        notification.error({
+          message: "Error",
+          description: response?.data?.detail || "Failed to update evidence label.",
+        });
+        return;
+      }
+      notification.success({
+        message: "Success",
+        description: "Evidence label updated successfully.",
+      });
+      setIsEditModalOpen(false);
+      await onRefreshItemsAndEvidence();
+    } finally {
+      setApiLoading(false);
+    }
   };
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
+      <div className="relative flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
         <div className="mb-3 flex items-center justify-between gap-2">
           <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-          <span className="text-xs text-grey-normal">{evidenceUrls.length} images</span>
+          <span className="text-xs text-grey-normal">{evidences.length} images</span>
         </div>
-        {evidenceUrls.length > 0 ? (
+        {evidences.length > 0 ? (
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             <div className="grid grid-cols-2 gap-3">
-              {evidenceUrls.map((url, index) => (
+              {evidences.map((evidence, index) => (
                 <div
-                  key={`${url}-${index}`}
+                  key={`${evidence.id}-${index}`}
                   className="group relative h-[220px] overflow-hidden rounded-md border border-primaryN30 bg-white"
                 >
                   <div className="absolute left-1 top-1 rounded z-10 flex h-[15px] w-[15px] text-xxs items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
@@ -107,7 +152,7 @@ export default function EvidenceSection({
                     <div
                       className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
                       onClick={() => {
-                        handleOpenEdit(url);
+                        handleOpenEdit(evidence.id, evidence.url);
                       }}
                     >
                       <EditOutlined className="text-[12px]" />
@@ -115,7 +160,7 @@ export default function EvidenceSection({
                     <div
                       className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
                       onClick={() => {
-                        handleDeleteEvidence(url);
+                        handleDeleteEvidence(evidence.id, evidence.url);
                       }}
                     >
                       <DeleteOutlined className="text-[12px]" />
@@ -123,7 +168,7 @@ export default function EvidenceSection({
                   </div>
                   <div className="flex h-full w-full items-center justify-center p-2">
                     <ImagePreviewWithExpand
-                      src={url}
+                      src={evidence.url}
                       alt={`${title} Evidence`}
                       className="h-full w-full"
                       imageClassName="max-h-full max-w-full object-contain"
@@ -138,6 +183,12 @@ export default function EvidenceSection({
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
           </div>
         )}
+
+        {apiLoading && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-white/40">
+            <Spin />
+          </div>
+        )}
       </div>
 
       <Modal
@@ -147,6 +198,7 @@ export default function EvidenceSection({
         cancelText="Cancel"
         onOk={handleConfirmEdit}
         onCancel={() => setIsEditModalOpen(false)}
+        confirmLoading={apiLoading}
       >
         <div className="flex flex-col gap-3">
           <div className="h-[260px] w-full overflow-hidden rounded-md border border-primaryN30 bg-primaryN20 p-2">

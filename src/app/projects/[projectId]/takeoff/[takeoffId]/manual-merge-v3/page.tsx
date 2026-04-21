@@ -15,6 +15,7 @@ import {
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
   getTakeOffEvidenceUrlsByIds,
+  updateFileSourceMergeResultsByIdList,
   updateSingleFileMergeResultsByIdList,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
@@ -30,6 +31,7 @@ import LabelSidebar from "./components/LabelSidebar";
 import EvidencePreviewModal from "./components/EvidencePreviewModal";
 import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
+import SplitItemsModal from "./components/SplitItemsModal";
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -55,9 +57,9 @@ interface EvidenceInfo {
 }
 
 interface ClassifiedEvidenceUrls {
-  schedule: string[];
-  floorPlan: string[];
-  elevation: string[];
+  schedule: Array<{ id: string; url: string }>;
+  floorPlan: Array<{ id: string; url: string }>;
+  elevation: Array<{ id: string; url: string }>;
 }
 
 const SOURCE_ALIAS: Record<SourceKey, string[]> = {
@@ -85,18 +87,26 @@ const getEvidenceUrlFromItem = (evidence: any): string => {
   return "";
 };
 
-const getEvidenceUniqueId = (evidence: any, fallbackUrl: string): string => {
+const getRawEvidenceId = (evidence: any): string => {
   const rawId = evidence?.evidence_id ?? evidence?.evidenceId ?? evidence?.id;
   if (rawId !== null && rawId !== undefined && String(rawId).trim()) {
     return String(rawId);
+  }
+  return "";
+};
+
+const getEvidenceUniqueId = (evidence: any, fallbackUrl: string): string => {
+  const id = getRawEvidenceId(evidence);
+  if (id) {
+    return id;
   }
   return fallbackUrl;
 };
 
 const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
-  const scheduleSet = new Set<string>();
-  const floorPlanSet = new Set<string>();
-  const elevationSet = new Set<string>();
+  const scheduleList: Array<{ id: string; url: string }> = [];
+  const floorPlanList: Array<{ id: string; url: string }> = [];
+  const elevationList: Array<{ id: string; url: string }> = [];
   const seenEvidenceIds = new Set<string>();
 
   const normalizeType = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -107,25 +117,26 @@ const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
     const uniqueId = getEvidenceUniqueId(evidence, url);
     if (seenEvidenceIds.has(uniqueId)) return;
     seenEvidenceIds.add(uniqueId);
+    const evidenceId = getRawEvidenceId(evidence) || uniqueId;
 
     const evidenceType = normalizeType(evidence?.evidence_type ?? evidence?.type);
     if (evidenceType === "window door unit" || evidenceType === "table") {
-      scheduleSet.add(url);
+      scheduleList.push({ id: evidenceId, url });
       return;
     }
     if (evidenceType === "floor plan item") {
-      floorPlanSet.add(url);
+      floorPlanList.push({ id: evidenceId, url });
       return;
     }
     if (evidenceType === "elevation item") {
-      elevationSet.add(url);
+      elevationList.push({ id: evidenceId, url });
     }
   });
 
   return {
-    schedule: Array.from(scheduleSet),
-    floorPlan: Array.from(floorPlanSet),
-    elevation: Array.from(elevationSet),
+    schedule: scheduleList,
+    floorPlan: floorPlanList,
+    elevation: elevationList,
   };
 };
 
@@ -397,6 +408,8 @@ export default function ManualMergeV2Page() {
   const [classifiedEvidenceUrls, setClassifiedEvidenceUrls] = useState<ClassifiedEvidenceUrls>(
     emptyClassifiedEvidenceUrls,
   );
+  const [splitModalOpen, setSplitModalOpen] = useState(false);
+  const [splitSubmitting, setSplitSubmitting] = useState(false);
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
   const selectedLabelMeta = useMemo(
@@ -414,9 +427,9 @@ export default function ManualMergeV2Page() {
   );
   const allLabelNames = useMemo(() => labels.map((item) => item.label), [labels]);
 
-  const scheduleEvidenceUrls = classifiedEvidenceUrls.schedule;
-  const floorPlanEvidenceUrls = classifiedEvidenceUrls.floorPlan;
-  const elevationEvidenceUrls = classifiedEvidenceUrls.elevation;
+  const scheduleEvidences = classifiedEvidenceUrls.schedule;
+  const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
+  const elevationEvidences = classifiedEvidenceUrls.elevation;
 
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
     if (scheduleRows.length === 0) return [];
@@ -468,6 +481,26 @@ export default function ManualMergeV2Page() {
 
     return result;
   }, [collapsedSystemLabelMap, scheduleRows]);
+
+  const splitTableColumns = useMemo<ColumnsType<any>>(
+    () =>
+      columns.map((fieldName) => ({
+        title: <div className="text-center text-xs text-grey-normal">{fieldName}</div>,
+        key: `split-${fieldName}`,
+        dataIndex: fieldName,
+        width: fieldName === "Label" || fieldName === "Sub Label" ? 120 : 130,
+        align: "center" as const,
+        render: (_: unknown, record: any) => {
+          const value = getDisplayValueByField(record?.result || {}, fieldName);
+          return (
+            <div className="mx-auto w-full max-w-[280px] overflow-hidden text-xs">
+              <TruncatedTextCell value={value || "-"} />
+            </div>
+          );
+        },
+      })),
+    [columns],
+  );
 
   const fetchEvidenceUrlsByRows = useCallback(async (rows: any[]) => {
     const ids = Array.from(new Set(rows.flatMap((item) => getTakeOffResultItemIds(item))));
@@ -961,6 +994,60 @@ export default function ManualMergeV2Page() {
     [fetchLabelData, fileId, isSelectedLabelMerged, selectedLabel],
   );
 
+  const refreshItemsAndEvidence = useCallback(async () => {
+    await fetchLabelData(selectedLabel, fileId);
+  }, [fetchLabelData, fileId, selectedLabel]);
+
+  const openSplitModal = useCallback(() => {
+    setSplitModalOpen(true);
+  }, []);
+
+  const closeSplitModal = useCallback(() => {
+    setSplitModalOpen(false);
+  }, []);
+
+  const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
+    const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
+    const payload = scheduleRows
+      .filter((row) => selectedIdSet.has(String(row.id)))
+      .map((row) => ({
+        id: row.id,
+        result: {
+          ...parseItemResultUtil(row?.result as any),
+          Label: targetLabel,
+        },
+      }));
+
+    if (payload.length === 0) {
+      notification.warning({
+        message: "No Valid Items",
+        description: "Selected items are invalid, please reselect.",
+      });
+      return;
+    }
+
+    setSplitSubmitting(true);
+    try {
+      const response = await updateFileSourceMergeResultsByIdList(payload);
+      if (response.status !== "success") {
+        notification.error({
+          message: "Error",
+          description: response?.data?.detail || "Failed to split items.",
+        });
+        return;
+      }
+
+      notification.success({
+        message: "Success",
+        description: `Split ${payload.length} items successfully.`,
+      });
+      closeSplitModal();
+      await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
+    } finally {
+      setSplitSubmitting(false);
+    }
+  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, scheduleRows, selectedLabel]);
+
   const renderTable = (
     title: string,
     rows: any[],
@@ -1143,13 +1230,20 @@ export default function ManualMergeV2Page() {
                 editable={true}
                 withEvidenceAction={true}
                 extra={(
-                  <Button
-                    className={`ml-4 custom-primary-btn ${isSelectedLabelMerged ? '!w-[60px]' : ''}`}
-                    loading={submitting}
-                    onClick={isSelectedLabelMerged ? handleSaveChangesForMergedLabel : handleSubmitChanges}
-                  >
-                    {isSelectedLabelMerged ? "Save" : "Merge Complete"}
-                  </Button>
+                  <div className="ml-4 flex items-center gap-2">
+                    <Button
+                      className={`custom-primary-btn ${isSelectedLabelMerged ? '!w-[60px]' : ''}`}
+                      loading={submitting}
+                      onClick={isSelectedLabelMerged ? handleSaveChangesForMergedLabel : handleSubmitChanges}
+                    >
+                      {isSelectedLabelMerged ? "Save" : "Merge Complete"}
+                    </Button>
+                    {!isSelectedLabelMerged && (
+                      <Button className="custom-primary-btn !w-[60px]" onClick={openSplitModal}>
+                        Split
+                      </Button>
+                    )}
+                  </div>
                 )}
                 renderTable={renderTable}
               />
@@ -1215,21 +1309,24 @@ export default function ManualMergeV2Page() {
                   <div className="grid h-full min-h-0 grid-cols-3 gap-3">
                     <EvidenceSection
                       title="Schedule"
-                      evidenceUrls={scheduleEvidenceUrls}
+                      evidences={scheduleEvidences}
                       currentLabel={selectedLabel}
-                      labelOptions={allLabelNames}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                     <EvidenceSection
                       title="Floor Plan"
-                      evidenceUrls={floorPlanEvidenceUrls}
+                      evidences={floorPlanEvidences}
                       currentLabel={selectedLabel}
-                      labelOptions={allLabelNames}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                     <EvidenceSection
                       title="Elevation"
-                      evidenceUrls={elevationEvidenceUrls}
+                      evidences={elevationEvidences}
                       currentLabel={selectedLabel}
-                      labelOptions={allLabelNames}
+                      allLabels={labels}
+                      onRefreshItemsAndEvidence={refreshItemsAndEvidence}
                     />
                   </div>
                 </div>
@@ -1243,6 +1340,17 @@ export default function ManualMergeV2Page() {
         open={previewOpen}
         previewUrls={previewUrls}
         onCancel={() => setPreviewOpen(false)}
+      />
+
+      <SplitItemsModal
+        open={splitModalOpen}
+        loading={splitSubmitting}
+        rows={finalItemsRows}
+        columns={splitTableColumns}
+        currentLabel={selectedLabel}
+        allLabels={allLabelNames}
+        onCancel={closeSplitModal}
+        onSave={handleSubmitSplit}
       />
 
       {loading && (

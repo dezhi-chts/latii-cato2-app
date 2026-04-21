@@ -1,6 +1,8 @@
 "use client";
 
 import { CheckCircleFilled, DownOutlined, UpOutlined } from "@ant-design/icons";
+import { Tooltip } from "antd";
+import { useLayoutEffect, useRef, useState } from "react";
 
 interface LabelOption {
   key: string;
@@ -20,6 +22,30 @@ interface LabelSidebarProps {
   onSwitchLabel: (label: string) => void;
 }
 
+function TruncatedLabelWithTooltip({ label }: { label: string }) {
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const element = labelRef.current;
+    if (!element) return;
+    setIsTruncated(element.scrollWidth > element.clientWidth);
+  }, [label]);
+
+  const content = (
+    <span ref={labelRef} className="block w-full truncate">
+      {label}
+    </span>
+  );
+
+  if (!isTruncated) return content;
+  return (
+    <Tooltip title={label} placement="topLeft">
+      {content}
+    </Tooltip>
+  );
+}
+
 export default function LabelSidebar({
   labels,
   autoMergedLabels,
@@ -37,7 +63,7 @@ export default function LabelSidebar({
         <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
         <span className="text-xs text-grey-normal">{labels.length} Labels</span>
       </div>
-      <div className="space-y-3 overflow-auto max-h-[calc(100vh-200px)]">
+      <div className="max-h-[calc(100vh-200px)] space-y-3 overflow-y-auto overflow-x-hidden">
         <div>
           <button
             type="button"
@@ -71,9 +97,9 @@ export default function LabelSidebar({
                         <CheckCircleFilled className="text-green-normal mr-1" />
                       ) : null}
                     </span>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center text-left">
-                        <span className="truncate">{item.label}</span>
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      <span className="block min-w-0 text-left">
+                        <TruncatedLabelWithTooltip label={item.label} />
                       </span>
                     </div>
                   </button>
@@ -116,9 +142,9 @@ export default function LabelSidebar({
                         <CheckCircleFilled className="text-green-normal mr-1" />
                       ) : null}
                     </span>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center text-left">
-                        <span className="truncate">{item.label}</span>
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      <span className="block min-w-0 text-left">
+                        <TruncatedLabelWithTooltip label={item.label} />
                       </span>
                     </div>
                   </button>
