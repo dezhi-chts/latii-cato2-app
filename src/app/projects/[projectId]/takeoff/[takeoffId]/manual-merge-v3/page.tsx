@@ -578,7 +578,11 @@ export default function ManualMergeV2Page() {
     setColumns(["Label", "Sub Label", "Product", "Product Type", "Quantity"]);
   }, []);
 
-  const fetchLabelData = useCallback(async (label: string, fileIdOverride?: string) => {
+  const fetchLabelData = useCallback(async (
+    label: string,
+    fileIdOverride?: string,
+    mergedOverride?: boolean,
+  ) => {
     if (!label) return;
     const resolvedFileId = fileIdOverride || fileId;
     if (!takeoffId || !resolvedFileId) return;
@@ -599,9 +603,11 @@ export default function ManualMergeV2Page() {
       }
 
       const payload = response.data?.data ?? response.data ?? [];
-
       const labelMeta = labels.find((item) => item.label === label);
-      const isLabelMerged = Boolean(labelMeta?.isMerged);
+      const isLabelMerged =
+        typeof mergedOverride === "boolean"
+          ? mergedOverride
+          : Boolean(labelMeta?.isMerged);
 
       const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
       const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
@@ -715,9 +721,17 @@ export default function ManualMergeV2Page() {
         }
       }
 
+      const nextSelectedLabelMeta = nextLabels.find(
+        (item) => item.label === nextSelectedLabel,
+      );
+
       setSelectedLabel(nextSelectedLabel);
       setContentTab("evidences");
-      await fetchLabelData(nextSelectedLabel, resolvedFileId);
+      await fetchLabelData(
+        nextSelectedLabel,
+        resolvedFileId,
+        Boolean(nextSelectedLabelMeta?.isMerged),
+      );
     },
     [fetchLabelData, takeoffId],
   );

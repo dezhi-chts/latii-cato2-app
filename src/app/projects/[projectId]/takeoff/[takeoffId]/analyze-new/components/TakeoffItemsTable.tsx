@@ -346,7 +346,9 @@ export default function TakeoffItemsTable({
 			return;
 		}
 
-		const originalResult = parseItemResult(selectedItem.result);
+		const originalResult = parseItemResult(
+			(selectedItem as any).originalResult ?? selectedItem.result,
+		);
 		const originalLabel = String(originalResult["Label"] ?? "").trim();
 		const newLabel = generateUniqueCopyLabel(originalLabel);
 
@@ -500,9 +502,11 @@ export default function TakeoffItemsTable({
 									}
 								}
 
-								const originalResult = currentItem.result;
+								const originalResult = parseItemResult(
+									(currentItem as any).originalResult ?? currentItem.result,
+								);
 								const nextResultObject = setResultValueByField(
-									parseItemResult(currentItem.result),
+									originalResult,
 									fieldName,
 									normalizedNextValue,
 								);
@@ -514,6 +518,7 @@ export default function TakeoffItemsTable({
 											return {
 												...item,
 												result: nextResultObject,
+												originalResult: nextResultObject,
 											};
 										}
 
@@ -541,6 +546,7 @@ export default function TakeoffItemsTable({
 											return {
 												...item,
 												result: originalResult,
+												originalResult,
 											};
 										}
 
