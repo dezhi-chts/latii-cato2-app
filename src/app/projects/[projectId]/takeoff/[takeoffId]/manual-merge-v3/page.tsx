@@ -374,6 +374,19 @@ const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boole
   return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
 
+// Evidence ids should always come from API "list" rows,
+// regardless of schedule showing merged_list or list in UI.
+const collectSourceRowsForEvidence = (payload: any, source: SourceKey): any[] => {
+  if (!Array.isArray(payload)) return [];
+
+  const sourceNode = payload.find((node: any) => {
+    const nodeType = normalizeKey(String(node?.source_type || ""));
+    return SOURCE_ALIAS[source].some((alias) => nodeType === normalizeKey(alias));
+  });
+
+  return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
+};
+
 export default function ManualMergeV2Page() {
   const router = useRouter();
   const projectId = useParams().projectId as string;
@@ -593,6 +606,9 @@ export default function ManualMergeV2Page() {
       const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
       const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
       const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation", isLabelMerged));
+      const evidenceScheduleRows = normalizeRows(collectSourceRowsForEvidence(payload, "schedule"));
+      const evidenceFloorPlanRows = normalizeRows(collectSourceRowsForEvidence(payload, "floorPlan"));
+      const evidenceElevationRows = normalizeRows(collectSourceRowsForEvidence(payload, "elevation"));
 
       const nextCollapsedMap: Record<string, boolean> = {};
       const labelCountMap = new Map<string, number>();
@@ -621,9 +637,9 @@ export default function ManualMergeV2Page() {
       );
       setCollapsedSystemLabelMap(nextCollapsedMap);
       await fetchEvidenceUrlsByRows([
-        ...nextScheduleRows,
-        ...nextFloorPlanRows,
-        ...nextElevationRows,
+        ...evidenceScheduleRows,
+        ...evidenceFloorPlanRows,
+        ...evidenceElevationRows,
       ]);
       setScheduleChanges({});
       setEditingCell(null);
