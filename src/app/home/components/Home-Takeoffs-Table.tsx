@@ -206,6 +206,7 @@ const HomeTakeoffsTable = ({
                   router.push(scheduleUrl);
                   break;
                 case TakeOffFileStatus.STATUS_SCHEDULE_REVIEWED:
+                case TakeOffFileStatus.STATUS_MERGING:
                   router.push(manualMergeUrl);
                   break;
                 case TakeOffFileStatus.STATUS_MERGED:
