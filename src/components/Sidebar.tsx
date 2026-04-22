@@ -320,7 +320,7 @@ export default function Sidebar() {
           {expanded.sidebar && (
             <div className="pl-2.5 pt-4 flex flex-col gap-4">
               <p className="text-grey-light-strong text-sm ">Management</p>
-              {canAccessCompanyManagement && (
+              {isAdmin && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
@@ -375,7 +375,7 @@ export default function Sidebar() {
                 </Link>
               </div> */}
 
-              {isAdmin && (
+              {canAccessCompanyManagement && (
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
