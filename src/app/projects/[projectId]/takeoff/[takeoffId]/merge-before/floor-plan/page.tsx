@@ -134,6 +134,7 @@ export default function FloorPlanPage() {
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
   const { username } = useUser();
+  const [evidenceList, setEvidenceList] = useState<EvidenceType[]>([]);
 
   const promptHintText =
     "Customize the fields Cato uses to read your PDF. Create specialized templates to accurately capture data for different takeoff types (e.g., steel vs. aluminum).";
@@ -238,19 +239,20 @@ export default function FloorPlanPage() {
   // 获取当前文件的evidence，并按照type进行分类
   const getFileEvidences = useCallback(async () => {
     if (selectedFileId === -1) return;
-    const file = files.find((file: any) => file.id === selectedFileId);
-    let filterType = "QuoteLabel";
-    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
-      filterType = "ArchDrawingLabel";
-    }
 
     const response = await getEvidenceByFileId(
       projectId as string,
       selectedFileId as number,
-      { filter_type: filterType },
+      { filter_type: 'ArchDrawingLabel' },
     );
     if (response.status === "success") {
       const evidenceList = response?.data ?? [];
+      if (evidenceList.length > 0) {
+        let filter = evidenceList.filter((item: any) => item?.type === "Floor Plan" || item?.type === "Elevation");
+        setEvidenceList(filter);
+      } else {
+        setEvidenceList([]);
+      }
     } else {
       notify.error({
         title: "Error",
@@ -275,18 +277,36 @@ export default function FloorPlanPage() {
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
       if (id) {
+        setItemBoxList([])
         let res = await getEvidenceBySubTextEvidenceIds(id.toString());
         if (res.status === "success" && res.data) {
-          let currentPageEvidence = thumbnailData.find(
+          const removeParentFlags = (item: any) => {
+            if (!item) return item;
+            const { isParentEvidence, isOtherParentEvidence, ...rest } = item;
+            return rest;
+          };
+
+          const currentPageEvidenceRaw = thumbnailData.find(
             (item: any) => item.id === id,
           );
-          if (currentPageEvidence) {
-            currentPageEvidence.isParentEvidence = true;
-          }
+          const currentPageEvidence = currentPageEvidenceRaw
+            ? { ...removeParentFlags(currentPageEvidenceRaw), isParentEvidence: true }
+            : null;
+
+          let otherEvidence = thumbnailData.filter(
+            (item: any) => item.id !== id,
+          );
+          let OtherPageEvidence = otherEvidence.map((item: any) => ({
+            ...removeParentFlags(item),
+            isOtherParentEvidence: true,
+          }));
 
           let list = res.data || [];
           if (currentPageEvidence) {
             list.unshift(currentPageEvidence);
+          }
+          if (OtherPageEvidence.length > 0) {
+            list.unshift(...OtherPageEvidence);
           }
           setItemBoxList(list);
         } else {
