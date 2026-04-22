@@ -374,6 +374,17 @@ const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boole
   return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
 
+const collectSourceMergedRows = (payload: any, source: SourceKey): any[] => {
+  if (!Array.isArray(payload)) return [];
+
+  const sourceNode = payload.find((node: any) => {
+    const nodeType = normalizeKey(String(node?.source_type || ""));
+    return SOURCE_ALIAS[source].some((alias) => nodeType === normalizeKey(alias));
+  });
+
+  return Array.isArray(sourceNode?.merged_list) ? sourceNode.merged_list : [];
+};
+
 // Evidence ids should always come from API "list" rows,
 // regardless of schedule showing merged_list or list in UI.
 const collectSourceRowsForEvidence = (payload: any, source: SourceKey): any[] => {
@@ -404,6 +415,9 @@ export default function ManualMergeV2Page() {
   const [scheduleRows, setScheduleRows] = useState<any[]>([]);
   const [floorPlanRows, setFloorPlanRows] = useState<any[]>([]);
   const [elevationRows, setElevationRows] = useState<any[]>([]);
+  const [scheduleMergedRows, setScheduleMergedRows] = useState<any[]>([]);
+  const [floorPlanMergedRows, setFloorPlanMergedRows] = useState<any[]>([]);
+  const [elevationMergedRows, setElevationMergedRows] = useState<any[]>([]);
 
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -446,17 +460,29 @@ export default function ManualMergeV2Page() {
   const elevationEvidences = classifiedEvidenceUrls.elevation;
 
   const finalItemsSource = useMemo<{ source: SourceKey | null; rows: any[] }>(() => {
-    if (scheduleRows.length > 0) {
-      return { source: "schedule", rows: scheduleRows };
+    const sourceScheduleRows = isSelectedLabelMerged ? scheduleMergedRows : scheduleRows;
+    const sourceFloorPlanRows = isSelectedLabelMerged ? floorPlanMergedRows : floorPlanRows;
+    const sourceElevationRows = isSelectedLabelMerged ? elevationMergedRows : elevationRows;
+
+    if (sourceScheduleRows.length > 0) {
+      return { source: "schedule", rows: sourceScheduleRows };
     }
-    if (floorPlanRows.length > 0) {
-      return { source: "floorPlan", rows: floorPlanRows };
+    if (sourceFloorPlanRows.length > 0) {
+      return { source: "floorPlan", rows: sourceFloorPlanRows };
     }
-    if (elevationRows.length > 0) {
-      return { source: "elevation", rows: elevationRows };
+    if (sourceElevationRows.length > 0) {
+      return { source: "elevation", rows: sourceElevationRows };
     }
     return { source: null, rows: [] };
-  }, [elevationRows, floorPlanRows, scheduleRows]);
+  }, [
+    elevationMergedRows,
+    elevationRows,
+    floorPlanMergedRows,
+    floorPlanRows,
+    isSelectedLabelMerged,
+    scheduleMergedRows,
+    scheduleRows,
+  ]);
 
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
     if (finalItemsSource.rows.length === 0) return [];
@@ -608,6 +634,9 @@ export default function ManualMergeV2Page() {
     setScheduleRows([]);
     setFloorPlanRows([]);
     setElevationRows([]);
+    setScheduleMergedRows([]);
+    setFloorPlanMergedRows([]);
+    setElevationMergedRows([]);
     setOriginalScheduleLabelById({});
     setCollapsedSystemLabelMap({});
     try {
@@ -630,6 +659,9 @@ export default function ManualMergeV2Page() {
       const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
       const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
       const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation", isLabelMerged));
+      const nextScheduleMergedRows = normalizeRows(collectSourceMergedRows(payload, "schedule"));
+      const nextFloorPlanMergedRows = normalizeRows(collectSourceMergedRows(payload, "floorPlan"));
+      const nextElevationMergedRows = normalizeRows(collectSourceMergedRows(payload, "elevation"));
       const evidenceScheduleRows = normalizeRows(collectSourceRowsForEvidence(payload, "schedule"));
       const evidenceFloorPlanRows = normalizeRows(collectSourceRowsForEvidence(payload, "floorPlan"));
       const evidenceElevationRows = normalizeRows(collectSourceRowsForEvidence(payload, "elevation"));
@@ -651,6 +683,9 @@ export default function ManualMergeV2Page() {
       setScheduleRows(nextScheduleRows);
       setFloorPlanRows(nextFloorPlanRows);
       setElevationRows(nextElevationRows);
+      setScheduleMergedRows(nextScheduleMergedRows);
+      setFloorPlanMergedRows(nextFloorPlanMergedRows);
+      setElevationMergedRows(nextElevationMergedRows);
       setOriginalScheduleLabelById(
         nextScheduleRows.reduce((acc: Record<string, string>, row: any) => {
           if (row?.id !== null && row?.id !== undefined) {
@@ -715,6 +750,9 @@ export default function ManualMergeV2Page() {
         setScheduleRows([]);
         setFloorPlanRows([]);
         setElevationRows([]);
+        setScheduleMergedRows([]);
+        setFloorPlanMergedRows([]);
+        setElevationMergedRows([]);
         setOriginalScheduleLabelById({});
         setScheduleChanges({});
         return;
@@ -937,11 +975,23 @@ export default function ManualMergeV2Page() {
       }));
     }
     if (finalItemsSource.source === "schedule") {
-      setScheduleRows(nextSourceRows);
+      if (isSelectedLabelMerged) {
+        setScheduleMergedRows(nextSourceRows);
+      } else {
+        setScheduleRows(nextSourceRows);
+      }
     } else if (finalItemsSource.source === "floorPlan") {
-      setFloorPlanRows(nextSourceRows);
+      if (isSelectedLabelMerged) {
+        setFloorPlanMergedRows(nextSourceRows);
+      } else {
+        setFloorPlanRows(nextSourceRows);
+      }
     } else if (finalItemsSource.source === "elevation") {
-      setElevationRows(nextSourceRows);
+      if (isSelectedLabelMerged) {
+        setElevationMergedRows(nextSourceRows);
+      } else {
+        setElevationRows(nextSourceRows);
+      }
     }
   };
 
