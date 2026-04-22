@@ -12,6 +12,27 @@ import { usePathname } from "next/navigation";
 import { UserDataForUpdate } from "@/types/user";
 import { Tooltip } from "antd";
 
+const COMPANY_MANAGEMENT_ALLOWED_GROUPS = new Set([
+  "LatiiCato2SuperAdmin",
+  "LatiiCato2SuperAdmin_DEV",
+  "LatiiCato2SuperAdmin_TEST",
+]);
+
+const hasCompanyManagementPermission = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    const userDataRaw = localStorage.getItem("userData");
+    if (!userDataRaw) return false;
+    const parsed = JSON.parse(userDataRaw);
+    const groups = Array.isArray(parsed?.groups) ? parsed.groups : [];
+    return groups.some((group: string) =>
+      COMPANY_MANAGEMENT_ALLOWED_GROUPS.has(group),
+    );
+  } catch {
+    return false;
+  }
+};
+
 export default function Sidebar() {
   const {
     email,
@@ -38,6 +59,8 @@ export default function Sidebar() {
   });
   const [loadingExpansion, setLoadingExpansion] = useState(false);
   const [showInitialStyles, setShowInitialStyles] = useState(false);
+  const [canAccessCompanyManagement, setCanAccessCompanyManagement] =
+    useState(false);
   const [userData, setUserData] = useState<UserDataForUpdate>({
     first_name: first_name,
     last_name: last_name,
@@ -51,6 +74,18 @@ export default function Sidebar() {
       email: email,
     }));
   }, [first_name, email]);
+
+  useEffect(() => {
+    const syncPermissionFromLocalStorage = () => {
+      setCanAccessCompanyManagement(hasCompanyManagementPermission());
+    };
+
+    syncPermissionFromLocalStorage();
+    window.addEventListener("storage", syncPermissionFromLocalStorage);
+    return () => {
+      window.removeEventListener("storage", syncPermissionFromLocalStorage);
+    };
+  }, []);
 
   const toggleExpand = useCallback(
     (field: "recent" | "favorite" | "sidebar" | "all") => {
@@ -339,6 +374,34 @@ export default function Sidebar() {
                   </div>
                 </Link>
               </div> */}
+
+              {canAccessCompanyManagement && (
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (expanded.sidebar) toggleExpand("sidebar");
+                  }}
+                  className={`${firstSegment === "company-management" ? "bg-grey-light" : ""} hover:bg-grey-light rounded-md transition-all duration-150 ease-in-out`}
+                >
+                  <Link href="/company-management">
+                    <div
+                      className={`flex gap-3 ${showInitialStyles ? "" : "justify-start"
+                        } h-8 min-w-10 items-center cursor-pointer`}
+                    >
+                      <Image
+                        src={`/assets/icons/navbar/your-company${`${firstSegment}` === "company-management" ? "-selected" : ""}.svg`}
+                        alt="company management icon"
+                        width={20}
+                        height={20}
+                        className="w-4 h-4 ml-2"
+                      />
+                      <p className="whitespace-nowrap text-black text-sm">
+                        {expanded.sidebar && "Company Management"}
+                      </p>
+                    </div>
+                  </Link>
+                </div>
+              )}
 
               {/* For now, Lucius Knowledge Base has been removed from the sidebar. Don't delete the code below, it's just commented out. */}
               {/* <Link href="/knowledge-base-lucius">
