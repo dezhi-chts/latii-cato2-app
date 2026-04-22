@@ -133,7 +133,7 @@ const PdfParse = ({
     endpoints: {
       init: "/sse/classify-pages-sse-init",
       initFromProjectFile: "/sse/classify-pages-from-project-file-init",
-      sse: "/sse/classify-status",
+      sse: "/sse/classify-status"
     },
   };
 
