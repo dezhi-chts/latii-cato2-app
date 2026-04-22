@@ -794,7 +794,15 @@ export default function ManualMergeV2Page() {
     if (modifiedCount > 0) {
       confirm({
         title: "Unsaved Changes",
-        content: "You have unsaved Schedule edits. Please submit label changes before switching.",
+        content: "You have unsaved Schedule edits. Are you sure you want to continue?.",
+        onCancel: async () => {
+
+        },
+        onOk: async () => {
+          setContentTab("evidences");
+          setSelectedLabel(label);
+          fetchLabelData(label);
+        },
       });
       return;
     }
@@ -824,17 +832,28 @@ export default function ManualMergeV2Page() {
     setEditingValue(currentValue === "-" ? "" : currentValue);
   };
 
-  const submitScheduleRows = useCallback(
+  const submitFinalItemsRows = useCallback(
     async (
-      nextScheduleRows: any[],
+      nextFinalItemsRows: any[],
       options?: {
         silentSuccess?: boolean;
       },
     ) => {
       if (!takeoffId || !fileId) return false;
 
+      const nextScheduleRowsForSubmit =
+        finalItemsSource.source === "schedule" ? nextFinalItemsRows : scheduleRows;
+      const nextFloorPlanRowsForSubmit =
+        finalItemsSource.source === "floorPlan" ? nextFinalItemsRows : floorPlanRows;
+      const nextElevationRowsForSubmit =
+        finalItemsSource.source === "elevation" ? nextFinalItemsRows : elevationRows;
+
       const allItemIds = Array.from(
-        [...nextScheduleRows, ...floorPlanRows, ...elevationRows]
+        [
+          ...nextScheduleRowsForSubmit,
+          ...nextFloorPlanRowsForSubmit,
+          ...nextElevationRowsForSubmit,
+        ]
           .map((item) => toValidItemId(item))
           .filter(Boolean),
       ) as string[];
@@ -851,7 +870,7 @@ export default function ManualMergeV2Page() {
         takeoffId,
         fileId,
         allItemIds.join(","),
-        nextScheduleRows,
+        nextFinalItemsRows,
       );
       setLoading(false);
       if (response.status === "success") {
@@ -859,8 +878,8 @@ export default function ManualMergeV2Page() {
           notify.success({
             title: "Success",
             description:
-              nextScheduleRows.length > 0
-                ? `Merged complete with ${nextScheduleRows.length} schedule rows.`
+              nextFinalItemsRows.length > 0
+                ? `Merged complete with ${nextFinalItemsRows.length} rows.`
                 : "Merged complete.",
           });
         }
@@ -870,11 +889,20 @@ export default function ManualMergeV2Page() {
       } else {
         notify.error({
           title: "Error",
-          description: response?.data?.detail || "Failed to submit modified Schedule rows.",
+          description: response?.data?.detail || "Failed to submit modified rows.",
         });
       }
     },
-    [elevationRows, fileId, floorPlanRows, fetchLabelsAndMaybeLoadData, selectedLabel, takeoffId],
+    [
+      elevationRows,
+      fileId,
+      finalItemsSource.source,
+      floorPlanRows,
+      scheduleRows,
+      fetchLabelsAndMaybeLoadData,
+      selectedLabel,
+      takeoffId,
+    ],
   );
 
   const commitEdit = async (record: any, fieldName: string) => {
@@ -887,7 +915,8 @@ export default function ManualMergeV2Page() {
     setEditingValue("");
     if (oldValue === newValue) return;
 
-    const nextScheduleRows = scheduleRows.map((row) => {
+    const sourceRows = finalItemsSource.rows;
+    const nextSourceRows = sourceRows.map((row) => {
       if (String(row.id) !== id) return row;
       const nextRow = {
         ...row,
@@ -900,14 +929,20 @@ export default function ManualMergeV2Page() {
       return nextRow;
     });
 
-    const changedRow = nextScheduleRows.find((row) => String(row.id) === id);
+    const changedRow = nextSourceRows.find((row) => String(row.id) === id);
     if (changedRow) {
       setScheduleChanges((prevChanges) => ({
         ...prevChanges,
         [id]: changedRow,
       }));
     }
-    setScheduleRows(nextScheduleRows);
+    if (finalItemsSource.source === "schedule") {
+      setScheduleRows(nextSourceRows);
+    } else if (finalItemsSource.source === "floorPlan") {
+      setFloorPlanRows(nextSourceRows);
+    } else if (finalItemsSource.source === "elevation") {
+      setElevationRows(nextSourceRows);
+    }
   };
 
   const handleSaveChangesForMergedLabel = useCallback(async () => {
@@ -973,10 +1008,30 @@ export default function ManualMergeV2Page() {
   );
 
   const handleSubmitChanges = useCallback(async () => {
-    const normalizedRows = normalizeScheduleRowsForSubmit([...scheduleRows]);
-    setScheduleRows(normalizedRows);
-    await submitScheduleRows(normalizedRows, { silentSuccess: false });
-  }, [normalizeScheduleRowsForSubmit, scheduleRows, submitScheduleRows]);
+    if (!finalItemsSource.source) {
+      notify.warning({
+        title: "No Items",
+        description: "No items found to submit.",
+      });
+      return;
+    }
+
+    const currentRows = finalItemsSource.rows;
+    const normalizedRows =
+      finalItemsSource.source === "schedule"
+        ? normalizeScheduleRowsForSubmit([...currentRows])
+        : [...currentRows];
+
+    if (finalItemsSource.source === "schedule") {
+      setScheduleRows(normalizedRows);
+    } else if (finalItemsSource.source === "floorPlan") {
+      setFloorPlanRows(normalizedRows);
+    } else if (finalItemsSource.source === "elevation") {
+      setElevationRows(normalizedRows);
+    }
+
+    await submitFinalItemsRows(normalizedRows, { silentSuccess: false });
+  }, [finalItemsSource, normalizeScheduleRowsForSubmit, submitFinalItemsRows]);
 
   const handleCreateMergeResult = useCallback(async () => {
     if (!takeoffId) return;
@@ -1057,7 +1112,7 @@ export default function ManualMergeV2Page() {
 
   const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
     const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
-    const payload = scheduleRows
+    const payload = finalItemsSource.rows
       .filter((row) => selectedIdSet.has(String(row.id)))
       .map((row) => ({
         id: row.id,
@@ -1095,7 +1150,7 @@ export default function ManualMergeV2Page() {
     } finally {
       setSplitSubmitting(false);
     }
-  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, scheduleRows, selectedLabel]);
+  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, finalItemsSource.rows, selectedLabel]);
 
   const renderTable = (
     title: string,
