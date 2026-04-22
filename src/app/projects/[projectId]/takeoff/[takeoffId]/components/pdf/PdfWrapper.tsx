@@ -510,7 +510,7 @@ const PdfWrapper = forwardRef(
 					let evidenceList = [...pageEvidence];
 					if (!isDeleteParentEvidence) {
 						// 不删除父证据，只删除子证据
-						evidenceList = evidenceList.filter((item) => !item.isParentEvidence);
+						evidenceList = evidenceList.filter((item) => !item.isParentEvidence && !item.isOtherParentEvidence);
 					}
 					let deleteIds = evidenceList.map((item) => item.id);
 					batchDelete(deleteIds);
@@ -2802,7 +2802,7 @@ const PdfWrapper = forwardRef(
 				};
 				return pageEvidence
 					.filter((shape) => {
-						if (shape.isParentEvidence) return false;
+						if (shape.isParentEvidence || shape.isOtherParentEvidence) return false;
 						const shapeBounds = toViewportBounds(shape);
 						return shapeBounds ? intersects(targetRect, shapeBounds) : false;
 					})
@@ -3143,7 +3143,7 @@ const PdfWrapper = forwardRef(
 
 									if (
 										showSelectGroupTypes.includes(type) &&
-										pdfOperationType === FileOperationType.ArchitectureDrawing && !item.isParentEvidence
+										pdfOperationType === FileOperationType.ArchitectureDrawing && !item.isParentEvidence && !item.isOtherParentEvidence
 									) {
 										// ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
 										showSelectGroup = true;
@@ -3165,7 +3165,7 @@ const PdfWrapper = forwardRef(
 										}
 									}
 
-									if (selectedShapeId === item.id && !item.isParentEvidence) {
+									if (selectedShapeId === item.id && !item.isParentEvidence && !item.isOtherParentEvidence) {
 										// 如果当前选中的元素是当前Evidence，那么显示删除按钮
 										showDeleteBtn = true;
 									}
@@ -3735,7 +3735,7 @@ const ShapeWrapper = ({
 
 	let shapeDraggable = evidenceDraggable ?? true;
 	if (type === "evidence") {
-		if (shape?.isParentEvidence) {
+		if (shape?.isParentEvidence || shape?.isOtherParentEvidence) {
 			// 如果是父级红色外框，则不允许点击和移动
 			shapeDraggable = false;
 		}
@@ -3760,21 +3760,34 @@ const ShapeWrapper = ({
 		}
 	}
 
+	const isParentEvidence = shape?.isParentEvidence;
+	const isOtherParentEvidence = shape?.isOtherParentEvidence;
+	let fill: any = color + "30";
+	if (isParentEvidence) {
+		fill = undefined;
+	} else if (isOtherParentEvidence) {
+		//fill = "#717171" + "90";
+		fill = undefined;
+		color = "#717171";
+	}
+
+
+
 	return (
 		<Group key={shape.id} x={minX} y={minY}>
 			{/** 填充区域  */}
 			<Path
 				data={pathData}
-				fill={shape?.isParentEvidence ? undefined : color + "30"}
+				fill={fill}
 				stroke={color}
-				strokeWidth={shape?.isParentEvidence ? 3 : 1}
-				dash={shape?.isParentEvidence ? [10, 5] : undefined}
-				listening={!shape?.isParentEvidence}
+				strokeWidth={isParentEvidence || isOtherParentEvidence ? 3 : 1}
+				dash={isParentEvidence || isOtherParentEvidence ? [10, 5] : undefined}
+				listening={!isParentEvidence && !isOtherParentEvidence}
 				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {
 					const stage = e.target.getStage();
-					if (shape?.isParentEvidence) {
+					if (isParentEvidence || isOtherParentEvidence) {
 						return;
 					}
 					if (stage && operationMode === "edit") {
@@ -3809,7 +3822,7 @@ const ShapeWrapper = ({
 				}}
 				onClick={(e) => {
 					e.cancelBubble = true;
-					if (shape?.isParentEvidence) {
+					if (isParentEvidence || isOtherParentEvidence) {
 						return;
 					}
 					onClick?.();
