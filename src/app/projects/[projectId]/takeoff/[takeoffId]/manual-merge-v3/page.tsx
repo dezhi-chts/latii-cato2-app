@@ -445,11 +445,29 @@ export default function ManualMergeV2Page() {
   const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
   const elevationEvidences = classifiedEvidenceUrls.elevation;
 
+  const finalItemsSource = useMemo<{ source: SourceKey | null; rows: any[] }>(() => {
+    if (scheduleRows.length > 0) {
+      return { source: "schedule", rows: scheduleRows };
+    }
+    if (floorPlanRows.length > 0) {
+      return { source: "floorPlan", rows: floorPlanRows };
+    }
+    if (elevationRows.length > 0) {
+      return { source: "elevation", rows: elevationRows };
+    }
+    return { source: null, rows: [] };
+  }, [elevationRows, floorPlanRows, scheduleRows]);
+
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
-    if (scheduleRows.length === 0) return [];
+    if (finalItemsSource.rows.length === 0) return [];
+    if (finalItemsSource.source !== "schedule") {
+      return finalItemsSource.rows as FinalItemRow[];
+    }
+
+    const sourceRows = finalItemsSource.rows;
 
     const groupedMap = new Map<string, { labelValue: string; rows: any[] }>();
-    scheduleRows.forEach((row, index) => {
+    sourceRows.forEach((row, index) => {
       const labelValue = getDisplayValueByField(row?.result || {}, "Label");
       const normalizedKey = normalizeLabelKey(labelValue || "");
       const groupKey = normalizedKey || `__unknown__${String(row?.id ?? row?.__rowKey ?? index)}`;
@@ -462,7 +480,7 @@ export default function ManualMergeV2Page() {
     const visited = new Set<string>();
     const result: FinalItemRow[] = [];
 
-    scheduleRows.forEach((row, index) => {
+    sourceRows.forEach((row, index) => {
       const labelValue = getDisplayValueByField(row?.result || {}, "Label");
       const normalizedKey = normalizeLabelKey(labelValue || "");
       const groupKey = normalizedKey || `__unknown__${String(row?.id ?? row?.__rowKey ?? index)}`;
@@ -494,7 +512,7 @@ export default function ManualMergeV2Page() {
     });
 
     return result;
-  }, [collapsedSystemLabelMap, scheduleRows]);
+  }, [collapsedSystemLabelMap, finalItemsSource]);
 
   const splitTableColumns = useMemo<ColumnsType<any>>(
     () =>

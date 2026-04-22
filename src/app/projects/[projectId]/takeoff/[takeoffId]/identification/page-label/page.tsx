@@ -64,7 +64,12 @@ import { useUser } from "@/context/UserContext";
 import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
-import { enrichElevationFloorPlanByEvidenceIds, generateFileKeysByProjectFileIds } from "@/services/takeOffService";
+import { getTemplates } from "@/services/templateService";
+import {
+	enrichElevationFloorPlanByEvidenceIds,
+	generateFileKeysByProjectFileIds,
+	getGroupedEvidencesByTakeOffAndFile,
+} from "@/services/takeOffService";
 import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
@@ -77,6 +82,11 @@ const validPageType = [
 	PageType.KeyNotes,
 	PageType.Mix,
 ];
+
+interface PromptTemplateOption {
+	id: number;
+	name: string;
+}
 
 export interface IdentLabelRef {
 	pdfRef: React.RefObject<PdfWrapperRefMethods | null>;
@@ -106,6 +116,14 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const [analyzeProgress, setAnalyzeProgress] = useState<number>(0);
 	const [analyzeMessage, setAnalyzeMessage] = useState<string>("");
 	const eventSourceRef = useRef<{ close: () => void } | null>(null);
+	const [showScheduleTemplateModal, setShowScheduleTemplateModal] =
+		useState<boolean>(false);
+	const [promptTemplates, setPromptTemplates] = useState<PromptTemplateOption[]>(
+		[],
+	);
+	const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
+	const [scheduleTemplateLoading, setScheduleTemplateLoading] =
+		useState<boolean>(false);
 
 	const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
 	const [labelTypeList, setLabelTypeList] = useState<any>([]);
@@ -632,6 +650,76 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		eventSourceRef.current = sseConnection;
 	};
 
+	const fetchPromptTemplates = useCallback(async () => {
+		setScheduleTemplateLoading(true);
+		const response = await getTemplates();
+		setScheduleTemplateLoading(false);
+		if (response.status !== "success") {
+			notify.error({
+				title: "Error",
+				description: "Failed to load prompt templates.",
+			});
+			return false;
+		}
+		const list = response.data?.items || [];
+		setPromptTemplates(list);
+		if (list.length > 0) {
+			const defaultTemplate = list.find((template: any) => template?.is_default);
+			setSelectedTemplateId(defaultTemplate?.id || list[0].id);
+		}
+		return true;
+	}, []);
+
+	const handleScheduleAnalyze = useCallback(async () => {
+		if (!selectedTemplateId) {
+			notify.error({
+				title: "Error",
+				description: "Please select a template before analysis.",
+			});
+			return;
+		}
+
+		setShowScheduleTemplateModal(false);
+		setBuildLoading(true);
+
+		if (eventSourceRef.current) {
+			eventSourceRef.current.close();
+			eventSourceRef.current = null;
+		}
+
+		const sseConnection = AnalyzeItemBySourceTypeSSE(
+			takeOffId as string,
+			selectedTemplateId,
+			{
+				onConnected: () => {
+					console.log("[SSE] Connected to analyze service");
+				},
+				onHeartbeat: (data) => {
+					console.log("[SSE] Heartbeat received:", data);
+				},
+				onCompleted: () => {
+					eventSourceRef.current = null;
+					router.push(
+						`/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
+					);
+				},
+				onError: (error: string) => {
+					console.error("[SSE] Analysis error:", error);
+					setBuildLoading(false);
+					setAnalyzeMessage("");
+					eventSourceRef.current = null;
+					notify.error({
+						title: "Error",
+						description: error || "Failed to analyze the file",
+					});
+				},
+			},
+		);
+
+		eventSourceRef.current = sseConnection;
+	}, [projectId, router, selectedTemplateId, takeOffId]);
+
+
 	const handleChangeFile = async (fileId: number) => {
 		if (selectedFileId === fileId) return;
 		// 切换文件, 判断当前是否有未保存的crop，如果有则显示提示框并且保存
@@ -681,6 +769,48 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		}
 		setFullLoading(false);
 	};
+
+	const handleCreateTakeoff = useCallback(async () => {
+		if (!selectedFileId) return;
+		setFullLoading(true);
+		const response = await getGroupedEvidencesByTakeOffAndFile(
+			takeOffId as string,
+			selectedFileId,
+		);
+		setFullLoading(false);
+		if (response.status !== "success") {
+			notify.error({
+				title: "Error",
+				description:
+					response?.data?.detail ||
+					"Failed to get grouped evidences by takeoff and file",
+			});
+			return;
+		}
+		const groupedData = response?.data || {};
+		const elevationFloorPlan = Array.isArray(groupedData?.elevation_floor_plan)
+			? groupedData.elevation_floor_plan
+			: [];
+		const schedule = Array.isArray(groupedData?.schedule)
+			? groupedData.schedule
+			: [];
+
+		if (elevationFloorPlan.length > 0) {
+			handleFileKeys();
+			return;
+		}
+		if (schedule.length === 0) {
+			notify.error({
+				title: "Error",
+				description: "No valid evidence detected.",
+			});
+			return;
+		}
+
+		const loaded = await fetchPromptTemplates();
+		if (!loaded) return;
+		setShowScheduleTemplateModal(true);
+	}, [fetchPromptTemplates, handleFileKeys, selectedFileId, takeOffId]);
 
 	const handleFileStatus = (oldFileId: number, newFileId: number) => {
 		setSelectedFileId(newFileId);
@@ -733,16 +863,10 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			// 切换到合并页面的时候，判断是否有未保存的crop
 			const unsaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
 			if (!pdfRef.current || unsaved) {
-				// 先将当前文件状态标记为 Completed
-				// setFileList((prev: any[]) => {
-				//   return prev.map((file: any) => {
-				//     if (file.id === selectedFileId) {
-				//       return { ...file, status: FileStatus.Completed };
-				//     }
-				//     return file;
-				//   });
-				// });
-				//await handleAnaylize();
+				if (buttonInfo.text === ButtonText.CreateTakeoff) {
+					await handleCreateTakeoff();
+					return;
+				}
 				handleFileKeys();
 			}
 		}
@@ -1028,6 +1152,31 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			{buildLoading && (
 				<BuildingBackground step={"page-merge"} durationSeconds={20 * 60} />
 			)}
+			<Modal
+				title="Select Template"
+				open={showScheduleTemplateModal}
+				onCancel={() => setShowScheduleTemplateModal(false)}
+				onOk={handleScheduleAnalyze}
+				okText="Confirm"
+				cancelText="Cancel"
+				destroyOnClose
+			>
+				<div className="mt-3">
+					<Select
+						className="w-full"
+						placeholder="Please select a template"
+						loading={scheduleTemplateLoading}
+						value={selectedTemplateId}
+						onChange={(value: number | string) => {
+							setSelectedTemplateId(Number(value));
+						}}
+						options={promptTemplates.map((template) => ({
+							label: template.name,
+							value: template.id,
+						}))}
+					/>
+				</div>
+			</Modal>
 			<NewLogicBoxModal
 				isOpen={showNewLogicBoxModal}
 				onClose={handleCloseModal}
