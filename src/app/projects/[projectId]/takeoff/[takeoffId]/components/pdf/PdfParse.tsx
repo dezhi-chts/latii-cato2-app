@@ -119,7 +119,7 @@ const PdfParse = ({
   }, []);
 
   // ===== 设置状态 =====
-  const apiBaseUrl = "https://cato-service2.dev.latii.com";
+  const apiBaseUrl = process.env.NEXT_PUBLIC_PROJECTS_API;
   const modelName = "unit_detect_11x_v1"; //'unit_detect_8l_v1';
   const confidenceThreshold = 0.35;
   const iouThreshold = 0.45;
@@ -131,9 +131,9 @@ const PdfParse = ({
   const API_CONFIG = {
     baseUrl: apiBaseUrl,
     endpoints: {
-      init: "/api/sse/classify-pages-sse-init",
-      initFromProjectFile: "/api/sse/classify-pages-from-project-file-init",
-      sse: "/api/sse/classify-status",
+      init: "/sse/classify-pages-sse-init",
+      initFromProjectFile: "/sse/classify-pages-from-project-file-init",
+      sse: "/sse/classify-status",
     },
   };
 
