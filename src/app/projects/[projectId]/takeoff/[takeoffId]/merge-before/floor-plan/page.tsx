@@ -38,6 +38,7 @@ import {
   getTakeOffById,
   getEvidencesWindowTableQuoteWithUrlByProjectFileId,
   getEvidencesElevationFloorPlanWithUrlByProjectFileId,
+  getGroupedEvidencesByTakeOffAndFile,
 } from "@/services/takeOffService";
 
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
@@ -496,7 +497,9 @@ export default function FloorPlanPage() {
     [evidenceType, labelTableData],
   );
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (!selectedFileId) return;
+
     let findLabelEmpty = (data: any) => {
       return data.find((item: any) => {
         try {
@@ -518,6 +521,33 @@ export default function FloorPlanPage() {
       });
       return;
     }
+
+    setFullLoading(true);
+    const groupedResponse = await getGroupedEvidencesByTakeOffAndFile(
+      takeOffId as string,
+      selectedFileId,
+    );
+    setFullLoading(false);
+    if (groupedResponse.status !== "success") {
+      notify.error({
+        title: "Error",
+        description:
+          groupedResponse?.data?.detail ||
+          "Failed to get grouped evidences by takeoff and file",
+      });
+      return;
+    }
+    const groupedData = groupedResponse?.data || {};
+    const schedule = Array.isArray(groupedData?.schedule)
+      ? groupedData.schedule
+      : [];
+    if (schedule.length === 0) {
+      router.push(
+        `/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`,
+      );
+      return;
+    }
+
     handleAnaylize();
   };
 
