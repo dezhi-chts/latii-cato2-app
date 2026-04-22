@@ -1,138 +1,78 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { Divider, Input, notification, Popover, Spin } from "antd";
-import Button from "@/components/Button";
-import { useEffect, useState } from "react";
-import { changePassword } from "@/services/userService";
-import { passwordChangeData } from "@/types/user";
+import { ConfigProvider } from "antd";
+
+import YourProfile from "./components/YourProfile";
+import TeamMembers from "./components/TeamMembers";
+import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 
 const AccountSettings = () => {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { isAdmin } = useUser();
 
-  const isPasswordValid = (password: string) => password.length >= 6;
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab");
 
-  const validatePasswords = () => {
-    let message = "";
+  const defaultKey = useMemo(() => {
+    if (tab === "team-management") return "2";
+    return "1";
+  }, [tab]);
 
-    if (!currentPassword) {
-      message = "Please enter your current password.";
-    } else if (!isPasswordValid(newPassword)) {
-      message = "Your new password must be at least 6 characters long.";
-    } else if (newPassword !== confirmPassword) {
-      message = "Your new passwords do not match.";
-    }
+  const tabs = [
+    {
+      id: "1",
+      text: "Your Profile",
+    },
+  ];
 
-    setErrorMessage(message);
-    return !message;
-  };
+  const adminTabs = [
+    {
+      id: "1",
+      text: "Your Profile",
+    },
+    {
+      id: "2",
+      text: "Team Management",
+    },
+  ];
 
-  const handleChangePassword = async () => {
-    if (!validatePasswords()) return;
+  const items = isAdmin ? adminTabs : tabs;
 
-    setLoading(true);
-    const body: passwordChangeData = {
-      current_password: currentPassword,
-      new_password: newPassword,
-    };
-
-    const response = await changePassword(body);
-
-    setLoading(false);
-
-    if (response.status === "success") {
-      notification.success({
-        message: "Password updated",
-        description: "Your password has been changed successfully.",
-        duration: 5,
-      });
-    } else {
-      let errorMessage= "Something went wrong while changing your password."
-      const detail = response?.data?.detail || response?.data?.response?.data?.detail;
-      if (detail) {
-        errorMessage = detail;
-      }
-      notification.error({
-        message: "Error",
-        description: errorMessage,
-        duration: 5,
-      });
-      return;
-    }
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setErrorMessage("");
-  };
-
-  useEffect(() => {
-    validatePasswords();
-  }, [currentPassword, newPassword, confirmPassword]);
-
-  const areInputsValid =
-    currentPassword && newPassword && confirmPassword && !errorMessage;
+  const [selectedTabId, setSelectedTabId] = useState<any>(defaultKey);
 
   return (
-    <div className="pl-32 mt-20 flex flex-col gap-12 text-sm w-full zoomed-container">
-      <div className="w-1/2">
-        <p className="text-xl text-neutral-900">Account Preferences</p>
-        <p>Manage your data, privacy and security.</p>
-        <Divider className="bg-primaryN30" />
+    <div className="mt-10 flex flex-col gap-2 w-full">
+      <div className="flex flex-col gap-1 pl-24 border-b border-grey-light-hover py-6 fixed bg-white top-0 left-0 w-full z-40">
+        <p className="text-2xl text-forumBlue-normal">Account Preferences</p>
+        <p className="text-[13px] text-grey-normal">
+          Manage your data and your team members, privacy and security.
+        </p>
       </div>
 
-      <div className="flex flex-col gap-6 w-4/6">
-        <p className="text-primaryN900 text-base">Password Security</p>
-
-        <div className="flex gap-x-14 pl-10 w-full gap-y-10 flex-col">
-          <div className="w-80 flex flex-col gap-1">
-            <p>Current password</p>
-            <Input.Password
-              value={currentPassword}
-              placeholder="Enter your current password"
-              className="rounded-lg"
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </div>
-
-          <div className="flex gap-x-14 gap-y-10 flex-wrap">
-            <div className="w-80 flex flex-col gap-1">
-              <p>New password</p>
-              <Input.Password
-                value={newPassword}
-                placeholder="Enter a new password"
-                className="rounded-lg"
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+      <div className="flex pl-12 gap-2 pt-20">
+        {items.map((item: any) => {
+          return (
+            <div
+              key={item.id}
+              onClick={() => setSelectedTabId(item.id)}
+              className={`flex items-center justify-center w-32 h-8 rounded-md cursor-pointer text-xs ${
+                item.id === selectedTabId
+                  ? "bg-forumBlue-light text-grey-dark font-semibold"
+                  : "bg-white text-grey-light-strong"
+              }`}
+            >
+              {item.text}
             </div>
-
-            <div className="w-80 flex flex-col gap-1">
-              <p>Confirm new password</p>
-              <Input.Password
-                value={confirmPassword}
-                placeholder="Re-enter your new password"
-                className="rounded-lg"
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
-      <div>
-        <Popover content={errorMessage || ""} placement="right">
-          <div></div>
-          <Button
-            className="w-40"
-            onClick={handleChangePassword}
-            disabled={loading || !areInputsValid}
-          >
-            {loading ? <Spin /> : "Change Password"}
-          </Button>
-        </Popover>
+      <div className={selectedTabId === "1" ? "block" : "hidden"}>
+        <YourProfile />
+      </div>
+
+      <div className={selectedTabId === "2" ? "block" : "hidden"}>
+        <TeamMembers />
       </div>
     </div>
   );

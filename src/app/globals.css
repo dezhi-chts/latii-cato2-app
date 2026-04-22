@@ -73,11 +73,115 @@ body {
   color: #ffffff;
 }
 
+/* We shouldn't use this section for styles, you can create a new css file if needed.
+For Styling we use Tailwind Library. You can find documentation on how to use here: https://tailwindcss.com/
+Use of !Important for everything is a bad programming practice, please try to avoid it.
+Our Buttons already have premade styles and the chance to add custom tailwind classes.
+*/
+
 .input-focus:focus {
+  /* Plase avoid using !important for Everything. We have Tailwind Library for styling. */
   outline: none !important;
   box-shadow: none !important;
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
   width: fit-content !important;
+}
+
+/* Button primary type global styles */
+.ant-btn-primary {
+  background-color: #427cce !important;
+  border-color: #427cce !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: #356bb3 !important;
+  border-color: #356bb3 !important;
+}
+
+/* Checkbox global styles */
+.ant-checkbox:not(.ant-checkbox-disabled).ant-checkbox-checked
+  .ant-checkbox-inner {
+  background-color: #427cce !important;
+  border-color: #427cce !important;
+}
+
+/* 自定义 checkbox 样式 - 用于 NewTemplateModal */
+/* 使用更高的选择器优先级覆盖全局样式 */
+.custom-checkbox.ant-checkbox-wrapper
+  .ant-checkbox-checked
+  .ant-checkbox-inner {
+  background-color: #e3ebf8 !important;
+  border-color: transparent !important;
+}
+
+.custom-checkbox.ant-checkbox-wrapper
+  .ant-checkbox-checked
+  .ant-checkbox-inner::after {
+  border-color: #325d9b !important;
+}
+
+.custom-checkbox.ant-checkbox-wrapper .ant-checkbox-inner {
+  border-radius: 4px !important;
+}
+
+.custom-select-page .ant-select-selector {
+  color: #717171 !important;
+  font-size: 10px !important;
+  text-align: center;
+}
+
+/* 确保选择器本身也没有内边距 */
+.custom-select-page .ant-select-selector {
+  padding: 0 !important;
+}
+
+/* 为Select.Option组件设置padding为0 */
+.custom-select-page .ant-select-item-option {
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 自定义的primary按钮样式 */
+.custom-primary-btn {
+  width: 124px;
+  height: 28px;
+  font-family: "Nunito Sans";
+  background-color: #427cce;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.custom-primary-btn:hover {
+  background-color: #427cce !important;
+  color: #ffffff !important;
+  border-color: #427cce !important;
+}
+
+.custom-primary-btn:disabled {
+  background-color: #d9d9d9 !important;
+  color: #999999 !important;
+  border-color: #d9d9d9 !important;
+}
+
+/* 自定义的default按钮样式 */
+.custom-default-btn {
+  width: 76px;
+  height: 28px;
+  font-family: "Nunito Sans";
+  background-color: #f8f8f8;
+  border-width: 0px;
+  border-radius: 6px;
+  color: #555555;
+  font-size: 12px;
+}
+
+.custom-default-btn:hover {
+  background-color: #f8f8f8 !important;
 }

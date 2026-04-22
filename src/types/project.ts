@@ -22,6 +22,7 @@ export type ProjectSettings = {
   project_id?: number;
   // quotes_ready_for_process?: number;
   // order?: number;
+  [key: string]: any;
 };
 
 export const defaultProjectSettings: ProjectSettings = {
@@ -51,24 +52,30 @@ export type CreateProjectModalProps = {
   isOpen: boolean;
   closeModal: () => void;
   onSuccess?: () => void;
+  projectId: string;
+  takeOffId: string;
+  onOpenTakeoffModal?: (data: any) => void;
 };
 
 export type LocationSelectorProps = {
-  onClose: () => void;
-  handleInputChange: <K extends keyof ProjectSettings>(
-    field: K
-  ) => (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  onClose?: () => void;
+  handleInputChange?: <K extends Extract<keyof ProjectSettings, string>>(
+    field: K,
+    value: string,
   ) => void;
-  handleDropdownChange: <K extends keyof ProjectSettings>(
-    field: K
-  ) => (value: ProjectSettings[K]) => void;
-  projectSettings: ProjectSettings;
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  handleDropdownChange?: <K extends keyof ProjectSettings["location"]>(
+    field: K,
+  ) => (value: ProjectSettings["location"][K]) => void;
+  projectSettings?: any;
+  isOpen?: boolean;
+  setIsOpen?: (isOpen: boolean) => void;
   selectorClassName?: string;
+  inputClassName?: string;
   updateProject?: () => void;
   height?: "small" | "medium";
+  style?: any;
+  handleOnBlur?: () => void;
+  name?: string;
 };
 
 export type QuickActionsForm = {
@@ -101,3 +108,29 @@ export type PreviewImage = {
   image_url: string;
   is_open: boolean;
 };
+
+export enum FieldType {
+  INPUT_TEXT = "input_text",
+  TEXTAREA = "textarea",
+  INPUT_NUMBER = "input_number",
+  DROPDOWN = "dropdown",
+  CHECKBOX = "checkbox",
+  RADIO = "radio",
+  SWITCH = "switch",
+  DATE = "date",
+  LINK = "link",
+  LOCATION = "location",
+}
+
+export type CustomField = {
+  field_name: string;
+  field_type: string;
+  required: boolean;
+  field_options?: string[];
+  Hint_text: string;
+  Multiple_selection?: boolean;
+  range?: boolean;
+  suffixIcon?: string;
+};
+
+export type Option = { value: string; label: string };

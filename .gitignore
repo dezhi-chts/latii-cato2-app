@@ -89,3 +89,5 @@ yarn-error.log*
 next-env.d.ts
 .qodo
 .husky
+/.trae
+/.cursor

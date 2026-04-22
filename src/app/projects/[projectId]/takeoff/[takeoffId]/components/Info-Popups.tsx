@@ -136,7 +136,7 @@ const SdlPopover = ({ title, item }: any) => {
     <div className="flex flex-col rounded-lg border border-primaryN30 bg-white px-5 py-4 gap-4">
       <div className="flex items-center gap-4">
         <Image src={src} width={94} height={72} alt="sdl image" />
-        <p className="text-xs text-basicGray">{text}</p>
+        <p className="text-xs text-grey-normal">{text}</p>
       </div>
       <BottomPart />
     </div>
@@ -153,7 +153,7 @@ const FramePopover = ({ title }: any) => {
     <div className="flex flex-col gap-4 rounded-lg border border-primaryN30 bg-white px-5 py-4">
       <div className="flex items-center gap-5">
         <Image src={src} width={69} height={81} alt="frame image" />
-        <div className="flex flex-col gap-1 text-basicGray">
+        <div className="flex flex-col gap-1 text-grey-normal">
           <p className="font-semibold">{title}</p>
           <p className="text-sm ">Minimalist Profiles</p>
         </div>
@@ -181,7 +181,7 @@ const GlassPopover = ({
           alt="glass image"
           className="w-10 h-10"
         />
-        <div className="flex flex-col gap-1 text-basicGray text-sm">
+        <div className="flex flex-col gap-1 text-grey-normal text-sm">
           <p className="font-semibold">{isGlassCustom ? "Custom" : title}</p>
           <p>{isGlassCustom ? customGlass : details}</p>
           <p>

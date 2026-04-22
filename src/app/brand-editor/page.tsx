@@ -1,18 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import Header from "./components/Header";
-import Body from "./components/Body";
+import Header from "@/app/brand-editor/components/header";
+import Company from "./components/body-components/company";
 
 const BrandEditor = () => {
-  const [selectedOptionId, setSelectedOptionId] = useState<number>(1);
   return (
-    <div className="pt-14">
-      <Header
-        selectedOptionId={selectedOptionId}
-        setSelectedOptionId={setSelectedOptionId}
-      />
-      <Body selectedOptionId={selectedOptionId} />
+    <div className="pt-9">
+      <Header />
+      <div className="w-full h-full pl-12 pt-10">
+        <Company />
+      </div>
     </div>
   );
 };

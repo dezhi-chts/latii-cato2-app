@@ -30,14 +30,14 @@ const Footer = ({ quote }: FooterProps) => {
 
   const handleSendToLatii = async (
     files: any[] | null = [],
-    description: string = ""
+    description: string = "",
   ) => {
     const response = await sendToLatii(
       quote?.id,
       "QUOTE_SENT",
       "dealer",
       files,
-      description
+      description,
     );
     if (response.status === "success") {
       setSendToLatiiModalOpen(false);
@@ -94,65 +94,66 @@ const Footer = ({ quote }: FooterProps) => {
   const isAnyLoading = Object.values(loading).some(Boolean);
 
   return (
-    <div className="flex border-t border-neutralsN50 fixed bottom-0 min-h-20 py-8 xl:px-32 px-10 w-full gap-2.5 justify-evenly bg-white z-50 max-h-24">
+    <div className="flex border-t border-primaryN50 fixed bottom-0 min-h-20 py-8 xl:px-32 px-10 w-full gap-2.5 justify-evenly bg-white z-50 max-h-24">
       <div className="flex items-center gap-6">
         <div className="text-xs flex flex-col gap-2">
           <p>
             {quote?.item_count}{" "}
-            <span className="text-basicGray">Item Cards</span>
+            <span className="text-grey-normal">Item Cards</span>
           </p>
           <p>
-            {quote?.unit_count} <span className="text-basicGray">Products</span>
+            {quote?.unit_count}{" "}
+            <span className="text-grey-normal">Products</span>
           </p>
         </div>
         <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
         <div>
           <p>{quote?.window_count}</p>
-          <p className="text-basicGray text-xs">Windows</p>
+          <p className="text-grey-normal text-xs">Windows</p>
         </div>
         <div>
           <p>{quote?.door_count}</p>
-          <p className="text-basicGray text-xs">Doors</p>
+          <p className="text-grey-normal text-xs">Doors</p>
         </div>
         <div>
           <p>{quote?.system_count}</p>
-          <p className="text-basicGray text-xs">Systems</p>
+          <p className="text-grey-normal text-xs">Systems</p>
         </div>
       </div>
       <div className="flex items-center gap-6">
-        <p className="text-sm text-basicGray font-semibold">Price</p>
+        <p className="text-sm text-grey-normal font-semibold">Price</p>
         <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
         <div>
           <p className="text-kahuBlue">
             ${quote?.total_price.toLocaleString("en-US")}
           </p>
-          <p className="text-xs text-basicGray">Price</p>
+          <p className="text-xs text-grey-normal">Price</p>
         </div>
         <div>
           <p className="text-kahuBlue">
             ${quote?.price_sqft.toLocaleString("en-US")}
           </p>
-          <p className="text-xs text-basicGray">Price/sf</p>
+          <p className="text-xs text-grey-normal">Price/sf</p>
         </div>
 
         <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
         <div>
           <p>${quote?.product_price.toLocaleString("en-US")}</p>
-          <p className="text-xs text-basicGray">Product Price</p>
+          <p className="text-xs text-grey-normal">Product Price</p>
         </div>
 
         <div>
           <p>${quote?.max_custom_fee.toLocaleString("en-US")}</p>
-          <p className="text-xs text-basicGray">Max Tariff</p>
+          <p className="text-xs text-grey-normal">Max Tariff</p>
         </div>
         <div>
           <p>${quote?.transportation_fee.toLocaleString("en-US")}</p>
-          <p className="text-xs text-basicGray">Shipping & Packaging</p>
+          <p className="text-xs text-grey-normal">Shipping & Packaging</p>
         </div>
         {quote?.custom_fee !== 0 && (
           <div>
             <p>${quote?.custom_fee.toLocaleString("en-US")}</p>
-            <p className="text-xs text-basicGray">Sales Tax</p>
+            <p className="text-xs text-grey-normal">Sales Tax</p>
           </div>
         )}
       </div>

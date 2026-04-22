@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { Divider, Input, UploadFile, notification } from "antd";
+import { Divider, Input, Popover, UploadFile, notification } from "antd";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -49,9 +49,35 @@ const Header = ({
     }
   };
 
+  const infoTooltipContent = (
+    <div className="px-2 py-1 max-w-72 text-xs">
+      <p className="text-grey-normal font-semibold mb-2">Summary data</p>
+      <ul className="list-disc marker:text-grey-normal pl-4 flex flex-col gap-1">
+        <li>
+          <span className="font-semibold text-grey-normal">Items:</span>The
+          total count of primary labels in your takeoff list (excludes sub-items
+          inside systems).
+        </li>
+        <li>
+          <span className="font-semibold text-grey-normal">Products:</span>The
+          overall quantity (the sum of quantities across all labels).
+        </li>
+        <li>
+          <span className="font-semibold text-grey-normal">Systems:</span>The
+          number of labels that are classified as systems.
+        </li>
+        <li>
+          <span className="font-semibold text-grey-normal">Items:</span>Items
+          specifically marked within the boxing takeoff section.
+        </li>
+      </ul>
+    </div>
+  );
+
   return (
     <div>
-      <div className="pt-6 pb-3 px-14 flex border-b-neutralsN50 bg-white border-b justify-between relative z-50 zoomed-container">
+      <div className="pt-6 pb-3 px-14 flex border-b-primaryN50 bg-white border-b justify-between relative z-50 zoomed-container">
+        {/*   Project name */}
         <div className="flex gap-5 items-center">
           <Link
             href={`/projects/${projectId}`}
@@ -77,64 +103,58 @@ const Header = ({
               onChange={(e) => setTakeOffName(e.target.value)}
               onBlur={() => handleUpdateTakeOffName(takeOffName)}
             />
-            <div className="flex ml-8 gap-8">
+          </div>
+        </div>
+
+        {/*  Summary */}
+        <div className="flex ml-8 gap-8">
+          <div className="flex items-center h-full gap-4">
+            <div className="flex gap-1 items-center">
               <span className="text-kahuBlue">Summary</span>
-              <Divider type="vertical" className="h-auto m-0 bg-primaryN30" />
-              <p>
-                <span className="font-semibold">{takeOffData?.length}</span>{" "}
-                Items
-              </p>
-              <p>
-                <span className="font-semibold">
-                  {takeOffData?.reduce((sum: number, item: any) => {
-                    try {
-                      if (!item.result) {
-                        return sum;
-                      } else {
-                        let result = JSON.parse(item.result);
-                        return sum + (1 * (result?.Quantity ?? 1));
-                      }
-                    } catch (e) {}
-                  }, 0)}
-                </span>{" "}
-                Products
-              </p>
+              <Popover content={infoTooltipContent}>
+                <Image
+                  src="/assets/icons/info-forum-blue.svg"
+                  alt="Info"
+                  width={20}
+                  height={20}
+                />
+              </Popover>
+            </div>
+
+            <Divider type="vertical" className="h-6 m-0 bg-primaryN30" />
+          </div>
+
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col gap-1 justify-center ">
+              <span className="text-base">5</span>
+              <span className="text-grey-normal"> Items</span>
+            </div>
+            <div className="flex flex-col gap-1 justify-center ">
+              <span className="text-base">5</span>
+              <span className="text-grey-normal"> Products</span>
+            </div>
+            <div className="flex flex-col gap-1 justify-center ">
+              <span className="text-base">5</span>
+              <span className="text-grey-normal"> Systems</span>
+            </div>
+            <div className="flex flex-col gap-1 justify-center ">
+              <span className="text-base">5</span>
+              <span className="text-grey-normal"> Boxed Items</span>
             </div>
           </div>
         </div>
+        {/* Botones  */}
         <div className="flex items-center gap-4 h-20">
-          {filesData?.map((file: any, index: number) => {
-            const uploadFile: UploadFile = {
-              uid: String(file.id),
-              name: file.file_name,
-              status: "done",
-              url: file.parse_detail?.uploaded_file_url,
-              type: "application/pdf",
-              size: 0,
-            };
-            return (
-              <div
-                key={index}
-                className={`rounded cursor-pointer ${
-                  selectedFileId === file.id
-                    ? "bg-primaryN20"
-                    : "hover:bg-primaryN10"
-                }`}
-                onClick={() => setSelectedFileId(file.id)}
-              >
-                <FilePanel
-                  file={uploadFile}
-                  canBeRemoved={false}
-                  textClassName="text-xs"
-                  isSelected={selectedFileId === file.id}
-                />
-              </div>
-            );
-          })}
-          <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
           <Button
-            backgroundColor="forumBlue"
-            className="px-8"
+            backgroundColor="grey-light"
+            color="grey-dark"
+            className=" rounded-md"
+          >
+            Reset Takeoff
+          </Button>
+          <Button
+            backgroundColor="forumBlue-normal"
+            className="rounded-md"
             onClick={() => {}}
           >
             Download

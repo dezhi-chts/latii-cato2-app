@@ -20,7 +20,7 @@ type ItemProps = {
     index: number,
     field: string | boolean,
     units?: boolean,
-    $unit_index?: number
+    $unit_index?: number,
   ) => void;
   index?: number;
   handleMultipleChanges?: HandleMultipleChanges;
@@ -32,19 +32,19 @@ type ItemProps = {
 const ContentHeader = ({ item, hasBeenReviewed }: ItemProps) => {
   const type = item?.units[0]?.product_type?.options.find(
     (option: any) =>
-      option.value === item?.units[0]?.product_type?.selected_value
+      option.value === item?.units[0]?.product_type?.selected_value,
   )?.text;
 
   const open = item?.units[0]?.operability?.options.find(
     (option: any) =>
-      option.value === item?.units[0]?.operability?.selected_value
+      option.value === item?.units[0]?.operability?.selected_value,
   )?.text;
 
   const muntinText = item?.is_have_sdl
     ? "SDL"
     : item?.is_have_tdl
-    ? "TDL"
-    : "None";
+      ? "TDL"
+      : "None";
 
   return (
     <div className="flex justify-between w-full mx-14 items-start text-sm">
@@ -59,10 +59,10 @@ const ContentHeader = ({ item, hasBeenReviewed }: ItemProps) => {
         <div className="flex flex-col gap-1 pr-2">
           <p className="text-lushAqua font-semibold">Configuration</p>
           <p>
-            <span className="text-basicGray">Type</span> {type}
+            <span className="text-grey-normal">Type</span> {type}
           </p>
           <p>
-            <span className="text-basicGray">Open</span> {open}
+            <span className="text-grey-normal">Open</span> {open}
           </p>
         </div>
       </div>
@@ -70,9 +70,9 @@ const ContentHeader = ({ item, hasBeenReviewed }: ItemProps) => {
       <div className="flex flex-col gap-1 w-1/3">
         <p className="text-lushAqua font-semibold">Dimensions</p>
         <p>
-          <span className="text-basicGray">Width </span>
+          <span className="text-grey-normal">Width </span>
           {`${mmToInchesWithFraction(item?.width_input) || 0}`} |{" "}
-          <span className="text-basicGray">Height</span>{" "}
+          <span className="text-grey-normal">Height</span>{" "}
           {`${mmToInchesWithFraction(item?.height_input) || 0}`}
         </p>
       </div>
@@ -89,13 +89,13 @@ const ContentHeader = ({ item, hasBeenReviewed }: ItemProps) => {
           <p className="text-lushAqua font-semibold">Dividers</p>
           <div className="flex gap-2">
             <p>
-              <span className="text-basicGray">Muntin</span> {muntinText}
+              <span className="text-grey-normal">Muntin</span> {muntinText}
             </p>
             {hasBeenReviewed && muntinText !== "None" && (
               <InformationBadge badge="sdl" title={muntinText} item={item} />
             )}
           </div>
-          <p className="text-basicGray text-xs">For arrangement see Image.</p>
+          <p className="text-grey-normal text-xs">For arrangement see Image.</p>
         </div>
       </div>
     </div>
@@ -159,7 +159,7 @@ const ContentBody = ({
     if (isCortizo) {
       hardwareUrl = `/assets/item-customization/hardware/cortizo/${item?.units[0]?.hardware_handle_style?.selected_value}.webp`;
       const colorName = item?.color.find(
-        (c: any) => c.id === item?.color_input
+        (c: any) => c.id === item?.color_input,
       )?.name;
       frameUrl = colorName
         ? `/assets/finish-colors/${sanitizeKey(colorName)}.webp`
@@ -170,7 +170,7 @@ const ContentBody = ({
         frameMaterial = getTextByOptionsValue(item?.material);
         finishMethod = getTextByOptionsValue(item?.finish_method);
         frameUrl = `/assets/finishes/${sanitizeName(
-          frameMaterial
+          frameMaterial,
         )}/${sanitizeName(finishMethod)}.webp`;
       }
     }
@@ -229,7 +229,7 @@ const ContentBody = ({
               <div className="flex flex-col gap-1">
                 <div className="flex gap-2">
                   <p>
-                    <span className="text-basicGray">Line </span>
+                    <span className="text-grey-normal">Line </span>
                     {getTextByOptionsValue(item?.profile_line)}
                   </p>
                   {hasBeenReviewed && (
@@ -237,11 +237,11 @@ const ContentBody = ({
                   )}
                 </div>
                 <p>
-                  <span className="text-basicGray">Material </span>
+                  <span className="text-grey-normal">Material </span>
                   {getTextByOptionsValue(item?.material)}
                 </p>
                 <p>
-                  <span className="text-basicGray">Finish </span>
+                  <span className="text-grey-normal">Finish </span>
                   {getTextByOptionsValue(item?.finish_method) ===
                     "Powder Coating" ||
                   getTextByOptionsValue(item?.finish_method) ===
@@ -253,10 +253,10 @@ const ContentBody = ({
                 {item?.frame_material?.selected_value === "Spazio-Aluminum" &&
                   item?.color_input && (
                     <p>
-                      <span className="text-basicGray">Finish II </span>
+                      <span className="text-grey-normal">Finish II </span>
                       {
                         item?.color?.find(
-                          (c: any) => c.id === item?.color_input
+                          (c: any) => c.id === item?.color_input,
                         )?.name
                       }
                     </p>
@@ -264,13 +264,15 @@ const ContentBody = ({
 
                 {(item?.finish_method?.selected_value === "126" ||
                   item?.finish_method?.selected_value === "210") && (
-                  <p className="text-basicGray text-xs">AAMA 2604 certified</p>
+                  <p className="text-grey-normal text-xs">
+                    AAMA 2604 certified
+                  </p>
                 )}
 
                 {item?.frame_material?.selected_value ===
                   "BELLAVISTA-Steel" && (
                   <p>
-                    <span className="text-basicGray">G. Bead </span>
+                    <span className="text-grey-normal">G. Bead </span>
                     {getTextByOptionsValue(item?.casting_style)}
                   </p>
                 )}
@@ -302,41 +304,41 @@ const ContentBody = ({
                 />
                 <div className="flex flex-col gap-1">
                   <p>
-                    <span className="text-basicGray">Style </span>
+                    <span className="text-grey-normal">Style </span>
                     {`${getTextByOptionsValue(
-                      item?.units[0].hardware_handle_style
+                      item?.units[0].hardware_handle_style,
                     )} | ${getTextByOptionsValue(
-                      item?.units[0].hardware_handle_latii_style
+                      item?.units[0].hardware_handle_latii_style,
                     )}`}
                   </p>
                   <p>
-                    <span className="text-basicGray">Finish </span>
+                    <span className="text-grey-normal">Finish </span>
                     {getTextByOptionsValue(item?.units[0].hardware_finish)}
                   </p>
                   {item?.units[0].hardware_fixion?.selected_value && (
                     <p>
-                      <span className="text-basicGray">Fixions </span>
+                      <span className="text-grey-normal">Fixions </span>
                       {getTextByOptionsValue(item?.units[0].hardware_fixion)}
                     </p>
                   )}
                   {item?.units[0].hardware_key_yes_no?.selected_value && (
                     <p>
-                      <span className="text-basicGray">Key </span>
+                      <span className="text-grey-normal">Key </span>
                       {getTextByOptionsValue(
-                        item?.units[0].hardware_key_yes_no
+                        item?.units[0].hardware_key_yes_no,
                       )}
                     </p>
                   )}
                   {item?.units[0].hardware_keyed_aliked_yes_no
                     ?.selected_value && (
                     <p>
-                      <span className="text-basicGray">K. Alike </span>
+                      <span className="text-grey-normal">K. Alike </span>
                       {getTextByOptionsValue(
-                        item?.units[0].hardware_keyed_aliked_yes_no
+                        item?.units[0].hardware_keyed_aliked_yes_no,
                       )}
                     </p>
                   )}
-                  <p className="text-basicGray text-xs">
+                  <p className="text-grey-normal text-xs">
                     We use a Multi-lock system.
                   </p>
                 </div>
@@ -361,21 +363,23 @@ const ContentBody = ({
           <div className="flex flex-col gap-1">
             <p className="text-lushAqua font-semibold">Glass</p>
             <p>
-              <span className="text-basicGray">Brand </span>
+              <span className="text-grey-normal">Brand </span>
               {getTextByOptionsValue(item?.glass_brand)}
             </p>
             <p>
-              <span className="text-basicGray">Type </span>
+              <span className="text-grey-normal">Type </span>
               {getTextByOptionsValue(item?.glass_style)}
             </p>
-            <p className="text-basicGray text-xs">All our glass is tempered.</p>
+            <p className="text-grey-normal text-xs">
+              All our glass is tempered.
+            </p>
             <p>
-              <span className="text-basicGray">Low-E Coating </span>
+              <span className="text-grey-normal">Low-E Coating </span>
               {getTextByOptionsValue(item?.glass_coating)}
             </p>
             <div className="flex gap-2">
               <p>
-                <span className="text-basicGray">Arrangement </span>
+                <span className="text-grey-normal">Arrangement </span>
 
                 {item?.glass_is_custom_arrangment
                   ? `Custom [${item?.glass_custom_arrangment}]`
@@ -409,19 +413,19 @@ const ContentBody = ({
           <div className="flex flex-col gap-1">
             <p className="text-lushAqua font-semibold">Installation</p>
             <p>
-              <span className="text-basicGray">Method </span>
+              <span className="text-grey-normal">Method </span>
               {getTextByOptionsValue(item?.installation_method)}
             </p>
             {item?.installation_method?.selected_value === "nailing_fin" && (
               <p>
-                <span className="text-basicGray">Location </span>
+                <span className="text-grey-normal">Location </span>
                 {renderNailingFinsText(
-                  item?.installation_nailing_fin?.selected_value
+                  item?.installation_nailing_fin?.selected_value,
                 )}
               </p>
             )}
             <p>
-              <span className="text-basicGray">Glazed </span>
+              <span className="text-grey-normal">Glazed </span>
               {getTextByOptionsValue(item?.installation_glazed)}
             </p>
           </div>
@@ -463,7 +467,7 @@ const NewBody = ({
           height={24}
           width={24}
         />
-        <p className="text-basicGray text-sm">
+        <p className="text-grey-normal text-sm">
           Personalize your item specifications
         </p>
         <Button variant="outline" disabled={isDisabled}>
@@ -486,7 +490,7 @@ const UploadBody = () => {
           width={24}
           height={24}
         />
-        <p className="text-basicGray text-sm text-center">
+        <p className="text-grey-normal text-sm text-center">
           Latii will fill and Personalize your item specifications based on your
           uploaded information.
         </p>
@@ -545,7 +549,7 @@ const ContentBodySystem = ({
     if (isCortizo) {
       hardwareUrl = `/assets/item-customization/hardware/cortizo/${item?.units[0]?.hardware_handle_style?.selected_value}.webp`;
       const colorName = item?.color.find(
-        (c: any) => c.id === item?.color_input
+        (c: any) => c.id === item?.color_input,
       )?.name;
 
       frameUrl = colorName
@@ -557,7 +561,7 @@ const ContentBodySystem = ({
         frameMaterial = getTextByOptionsValue(item?.material);
         finishMethod = getTextByOptionsValue(item?.finish_method);
         frameUrl = `/assets/finishes/${sanitizeName(
-          frameMaterial
+          frameMaterial,
         )}/${sanitizeName(finishMethod)}.webp`;
       }
     }
@@ -596,15 +600,15 @@ const ContentBodySystem = ({
                 <div className="flex flex-col gap-2">
                   <p className="font-semibold">Configuration</p>
                   <p>
-                    <span className="text-basicGray"> Category</span>{" "}
+                    <span className="text-grey-normal"> Category</span>{" "}
                     {getTextByOptionsValue(unit?.product)}
                   </p>
                   <p>
-                    <span className="text-basicGray"> Type </span>
+                    <span className="text-grey-normal"> Type </span>
                     {getTextByOptionsValue(unit?.product_type)}
                   </p>
                   <p>
-                    <span className="text-basicGray"> Open </span>{" "}
+                    <span className="text-grey-normal"> Open </span>{" "}
                     {getTextByOptionsValue(unit?.operability)}
                   </p>
                 </div>
@@ -612,15 +616,15 @@ const ContentBodySystem = ({
                   <div className="flex flex-col gap-2">
                     <p className="font-semibold">Dimensions</p>
                     <p>
-                      <span className="text-basicGray"> Width </span>{" "}
+                      <span className="text-grey-normal"> Width </span>{" "}
                       {mmToInchesWithFraction(unit?.width_input)} |
-                      <span className="text-basicGray"> Height </span>
+                      <span className="text-grey-normal"> Height </span>
                       {mmToInchesWithFraction(unit?.height_input)}
                     </p>
                     <p className="font-semibold">Dividers</p>
                     <p className="flex gap-2">
                       {" "}
-                      <span className="text-basicGray"> Muntin </span>{" "}
+                      <span className="text-grey-normal"> Muntin </span>{" "}
                       {muntinText}
                       {hasBeenReviewed &&
                         muntinText &&
@@ -677,7 +681,7 @@ const ContentBodySystem = ({
               <div className="flex flex-col gap-1">
                 <div className="flex gap-2">
                   <p>
-                    <span className="text-basicGray">Line </span>
+                    <span className="text-grey-normal">Line </span>
                     {getTextByOptionsValue(item?.profile_line)}
                   </p>
                   {hasBeenReviewed && (
@@ -685,11 +689,11 @@ const ContentBodySystem = ({
                   )}
                 </div>
                 <p>
-                  <span className="text-basicGray">Material </span>
+                  <span className="text-grey-normal">Material </span>
                   {getTextByOptionsValue(item?.material)}
                 </p>
                 <p>
-                  <span className="text-basicGray">Finish </span>
+                  <span className="text-grey-normal">Finish </span>
                   {getTextByOptionsValue(item?.finish_method) ===
                     "Powder Coating" ||
                   getTextByOptionsValue(item?.finish_method) ===
@@ -700,11 +704,13 @@ const ContentBodySystem = ({
                 </p>
                 {(item?.finish_method?.selected_value === "126" ||
                   item?.finish_method?.selected_value === "210") && (
-                  <p className="text-basicGray text-xs">AAMA 2604 certified</p>
+                  <p className="text-grey-normal text-xs">
+                    AAMA 2604 certified
+                  </p>
                 )}
                 {item?.frame_material === "BELLAVISTA-Steel" && (
                   <p>
-                    <span className="text-basicGray">G. Bead </span>
+                    <span className="text-grey-normal">G. Bead </span>
                     {getTextByOptionsValue(item?.casting_style)}
                   </p>
                 )}
@@ -726,21 +732,23 @@ const ContentBodySystem = ({
           <div className="flex flex-col gap-1">
             <p className="text-lushAqua font-semibold">Glass</p>
             <p>
-              <span className="text-basicGray">Brand </span>
+              <span className="text-grey-normal">Brand </span>
               {getTextByOptionsValue(item?.glass_brand)}
             </p>
             <p>
-              <span className="text-basicGray">Type </span>
+              <span className="text-grey-normal">Type </span>
               {getTextByOptionsValue(item?.glass_style)}
             </p>
-            <p className="text-basicGray text-xs">All our glass is tempered.</p>
+            <p className="text-grey-normal text-xs">
+              All our glass is tempered.
+            </p>
             <p>
-              <span className="text-basicGray">Low-E Coating </span>
+              <span className="text-grey-normal">Low-E Coating </span>
               {getTextByOptionsValue(item?.glass_coating)}
             </p>
             <div className="flex gap-2">
               <p>
-                <span className="text-basicGray">Arrangement </span>
+                <span className="text-grey-normal">Arrangement </span>
 
                 {item?.glass_is_custom_arrangment
                   ? `Custom [${item?.glass_custom_arrangment}]`
@@ -785,41 +793,41 @@ const ContentBodySystem = ({
                 />
                 <div className="flex flex-col gap-1">
                   <p>
-                    <span className="text-basicGray">Style </span>
+                    <span className="text-grey-normal">Style </span>
                     {`${getTextByOptionsValue(
-                      item?.units[0].hardware_handle_style
+                      item?.units[0].hardware_handle_style,
                     )} | ${getTextByOptionsValue(
-                      item?.units[0].hardware_handle_latii_style
+                      item?.units[0].hardware_handle_latii_style,
                     )}`}
                   </p>
                   <p>
-                    <span className="text-basicGray">Finish </span>
+                    <span className="text-grey-normal">Finish </span>
                     {getTextByOptionsValue(item?.units[0].hardware_finish)}
                   </p>
                   {item?.units[0].hardware_fixion?.selected_value && (
                     <p>
-                      <span className="text-basicGray">Fixions </span>
+                      <span className="text-grey-normal">Fixions </span>
                       {getTextByOptionsValue(item?.units[0].hardware_fixion)}
                     </p>
                   )}
                   {item?.units[0].hardware_key_yes_no?.selected_value && (
                     <p>
-                      <span className="text-basicGray">Key </span>
+                      <span className="text-grey-normal">Key </span>
                       {getTextByOptionsValue(
-                        item?.units[0].hardware_key_yes_no
+                        item?.units[0].hardware_key_yes_no,
                       )}
                     </p>
                   )}
                   {item?.units[0].hardware_keyed_aliked_yes_no
                     ?.selected_value && (
                     <p>
-                      <span className="text-basicGray">K. Alike </span>
+                      <span className="text-grey-normal">K. Alike </span>
                       {getTextByOptionsValue(
-                        item?.units[0].hardware_keyed_aliked_yes_no
+                        item?.units[0].hardware_keyed_aliked_yes_no,
                       )}
                     </p>
                   )}
-                  <p className="text-basicGray text-xs">
+                  <p className="text-grey-normal text-xs">
                     We use a Multi-lock system.
                   </p>
                 </div>
@@ -841,17 +849,17 @@ const ContentBodySystem = ({
           <div className="flex flex-col gap-1">
             <p className="text-lushAqua font-semibold">Installation</p>
             <p>
-              <span className="text-basicGray">Method </span>
+              <span className="text-grey-normal">Method </span>
               {getTextByOptionsValue(item?.installation_method)}
             </p>
             <p>
-              <span className="text-basicGray">Location </span>
+              <span className="text-grey-normal">Location </span>
               {renderNailingFinsText(
-                item?.installation_nailing_fin?.selected_value
+                item?.installation_nailing_fin?.selected_value,
               )}
             </p>
             <p>
-              <span className="text-basicGray">Glazed </span>
+              <span className="text-grey-normal">Glazed </span>
               {getTextByOptionsValue(item?.installation_glazed)}
             </p>
           </div>

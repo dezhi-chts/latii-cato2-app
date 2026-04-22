@@ -21,7 +21,7 @@ export const ProductQuotesModal = ({
     >
       <div className="flex flex-col gap-8 ml-6">
         <div className="flex flex-col gap-2.5">
-          <p className="text-forumBlue text-lg">Product Quote List</p>
+          <p className="text-forumBlue-normal text-lg">Product Quote List</p>
           <p className="font-light text-xs">
             To ensure accurate AI reading and faster processing, please follow
             these guidelines when uploading your PDF.

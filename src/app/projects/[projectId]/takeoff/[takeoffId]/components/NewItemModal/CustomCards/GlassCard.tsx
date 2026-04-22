@@ -19,7 +19,7 @@ const GlassCard = ({
   const [isLoadingImage, setIsLoadingImage] = useState(true);
 
   const imgSrc = `/assets/item-customization/glass/${sanitizeNameForFile(
-    card.text
+    card.text,
   )}.webp`;
 
   const handleSelectedOptionChange = () => {
@@ -52,7 +52,7 @@ const GlassCard = ({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p className="font-semibold text-base text-basicGray text-center">
+          <p className="font-semibold text-base text-grey-normal text-center">
             {card.text}
           </p>
           <p className="text-xs text-basicLightGray text-start">
@@ -62,7 +62,7 @@ const GlassCard = ({
         {card.value === selectedValue && (
           <div className="w-full flex flex-col gap-4">
             <div className="flex flex-col gap-2 w-full items-start">
-              <p className="text-xs text-basicGray font-semibold">Glazing</p>
+              <p className="text-xs text-grey-normal font-semibold">Glazing</p>
               <div>
                 <Radio.Group
                   className="gap-2 flex flex-wrap justify-start gap-y-3"
@@ -72,7 +72,7 @@ const GlassCard = ({
                       e.target.value,
                       index,
                       "glass_specification",
-                      false
+                      false,
                     );
                   }}
                 >
@@ -81,18 +81,18 @@ const GlassCard = ({
                       <Radio
                         key={value}
                         value={value}
-                        className="text-xs text-basicGray px-1"
+                        className="text-xs text-grey-normal px-1"
                       >
                         {text}
                       </Radio>
-                    )
+                    ),
                   )}
                 </Radio.Group>
               </div>
             </div>
             {Boolean(item?.glass_air_type.options.length) && (
               <div className="flex flex-col gap-2 w-full items-start">
-                <p className="text-xs text-basicGray font-semibold">Spacer</p>
+                <p className="text-xs text-grey-normal font-semibold">Spacer</p>
                 <div>
                   <Radio.Group
                     className="px-1 mb-2"
@@ -102,7 +102,7 @@ const GlassCard = ({
                         e.target.value,
                         index,
                         "glass_air_type",
-                        false
+                        false,
                       );
                     }}
                   >
@@ -111,11 +111,11 @@ const GlassCard = ({
                         <Radio
                           key={value}
                           value={value}
-                          className="text-xs text-basicGray px-1"
+                          className="text-xs text-grey-normal px-1"
                         >
                           {text}
                         </Radio>
-                      )
+                      ),
                     )}
                   </Radio.Group>
                 </div>
@@ -123,11 +123,11 @@ const GlassCard = ({
             )}
             {/* Glass Energy Rating hidden for now   
           <div className="w-full flex flex-col items-start gap-3">
-              <p className="text-basicGray font-semibold text-xs">
+              <p className="text-grey-normal font-semibold text-xs">
                 Glass Energy Rating
               </p>
               <div className="flex w-full justify-center">
-                <div className="flex flex-col rounded-lg overflow-hidden border-primaryN30 border-2 text-basicGray text-xs w-5/6">
+                <div className="flex flex-col rounded-lg overflow-hidden border-primaryN30 border-2 text-grey-normal text-xs w-5/6">
                   <div className="flex bg-primaryN30 pt-0.5 pb-1">
                     <p className="w-1/3">VLT (%)</p>
                     <p className="w-1/3">SGHGC</p>

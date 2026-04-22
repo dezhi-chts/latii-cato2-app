@@ -10,7 +10,7 @@ type SendLatiiModalProps = {
   onSuccess: (
     files?: UploadFile[],
     description?: string,
-    title?: string
+    title?: string,
   ) => Promise<any>;
   quote: any;
   showSummary?: boolean;
@@ -43,7 +43,7 @@ const SendLatiiModal = ({
     items: { is_priced: boolean }[];
   }): number {
     const unpricedCount = quote?.items?.filter(
-      (item) => !item.is_priced
+      (item) => !item.is_priced,
     ).length;
     return unpricedCount;
   }
@@ -58,7 +58,7 @@ const SendLatiiModal = ({
     const response = await onSuccess(
       fileList,
       settings.description,
-      settings.title
+      settings.title,
     );
     if (response === "success") resetForm();
   };
@@ -99,7 +99,7 @@ const SendLatiiModal = ({
                   Summary of your Quotii
                 </p>
                 {unpricedCount === 0 ? (
-                  <p className="py-1 px-4 text-accentGreen bg-accentGreen/5 font-light text-xs rounded-lg">
+                  <p className="py-1 px-4 text-green-normal bg-green-normal/5 font-light text-xs rounded-lg">
                     *All items were priced.
                   </p>
                 ) : (
@@ -112,36 +112,40 @@ const SendLatiiModal = ({
                 )}
               </div>
               <div className="flex gap-10 items-center h-11">
-                <p className="text-sm text-basicGray font-medium w-10">Items</p>
+                <p className="text-sm text-grey-normal font-medium w-10">
+                  Items
+                </p>
                 <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
                 <div className="flex flex-col gap-1 text-xs">
                   <p>
                     {quote?.item_count}{" "}
-                    <span className="text-basicGray">Item Cards</span>
+                    <span className="text-grey-normal">Item Cards</span>
                   </p>
                   <p>
                     {quote?.unit_count}{" "}
-                    <span className="text-basicGray">Products</span>
+                    <span className="text-grey-normal">Products</span>
                   </p>
                 </div>
                 <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
                 <div className="flex gap-4 items-center">
                   <div className="flex flex-col gap-1 w-14">
                     <p>{quote?.window_count}</p>
-                    <p className="text-xs text-basicGray">Windows</p>
+                    <p className="text-xs text-grey-normal">Windows</p>
                   </div>
                   <div className="flex flex-col gap-1 w-14">
                     <p>{quote?.door_count}</p>
-                    <p className="text-xs text-basicGray">Doors</p>
+                    <p className="text-xs text-grey-normal">Doors</p>
                   </div>
                   <div className="flex flex-col gap-1 w-14">
                     <p>{quote?.system_count}</p>
-                    <p className="text-xs text-basicGray">Systems</p>
+                    <p className="text-xs text-grey-normal">Systems</p>
                   </div>
                 </div>
               </div>
               <div className="h-28 flex gap-10">
-                <p className="text-sm text-basicGray font-medium w-10">Price</p>
+                <p className="text-sm text-grey-normal font-medium w-10">
+                  Price
+                </p>
                 <Divider type="vertical" className="h-full m-0 bg-primaryN30" />
                 <div className="flex flex-col gap-4">
                   <div className="h-1/2 flex items-center gap-6">
@@ -150,7 +154,7 @@ const SendLatiiModal = ({
                         <p className="text-kahuBlue">
                           {convertToCurrencyFormat(quote?.total_price)}
                         </p>
-                        <p className="text-basicGray text-xs">
+                        <p className="text-grey-normal text-xs">
                           Estimated Price
                         </p>
                       </div>
@@ -159,13 +163,13 @@ const SendLatiiModal = ({
                       <p className="text-kahuBlue">
                         {isDraft
                           ? `${convertToCurrencyFormat(
-                              quote?.min_total_price
+                              quote?.min_total_price,
                             )} - ${convertToCurrencyFormat(
-                              quote?.max_total_price
+                              quote?.max_total_price,
                             )}`
                           : convertToCurrencyFormat(quote?.total_price)}
                       </p>
-                      <p className="text-basicGray text-xs">
+                      <p className="text-grey-normal text-xs">
                         Total Price {isDraft && "Range"}
                       </p>
                     </div>
@@ -173,7 +177,7 @@ const SendLatiiModal = ({
                       <p className="text-kahuBlue">
                         {convertToCurrencyFormat(quote?.price_sqft)}
                       </p>
-                      <p className="text-basicGray text-xs">Total Price/sf</p>
+                      <p className="text-grey-normal text-xs">Total Price/sf</p>
                     </div>
                   </div>
                   <div className="h-1/2 flex items-center gap-6">
@@ -181,25 +185,25 @@ const SendLatiiModal = ({
                       <p>
                         {isDraft
                           ? `${convertToCurrencyFormat(
-                              quote?.min_product_price
+                              quote?.min_product_price,
                             )} - ${convertToCurrencyFormat(
-                              quote?.max_product_price
+                              quote?.max_product_price,
                             )}`
                           : convertToCurrencyFormat(quote?.product_price)}
                       </p>
-                      <p className="text-basicGray text-xs">
+                      <p className="text-grey-normal text-xs">
                         Product Price {isDraft && "Range"}
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 w-20">
                       <p>{convertToCurrencyFormat(quote?.max_custom_fee)}</p>
-                      <p className="text-basicGray text-xs">Max Tariff</p>
+                      <p className="text-grey-normal text-xs">Max Tariff</p>
                     </div>
                     <div className="flex flex-col gap-1">
                       <p>
                         {convertToCurrencyFormat(quote?.transportation_fee)}
                       </p>
-                      <p className="text-basicGray text-xs">
+                      <p className="text-grey-normal text-xs">
                         Shipping & Packaging
                       </p>
                     </div>

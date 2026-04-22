@@ -68,7 +68,7 @@ export function convertToCurrencyFormat(
   options?: {
     withSymbol?: boolean;
     noDecimals?: boolean;
-  }
+  },
 ): string {
   const { withSymbol = true, noDecimals = false } = options || {};
 
@@ -89,7 +89,7 @@ export function formatPriceRange(
   options?: {
     withSymbol?: boolean;
     noDecimals?: boolean;
-  }
+  },
 ): string {
   if (!range) return "";
 
@@ -99,7 +99,7 @@ export function formatPriceRange(
 
   return `${convertToCurrencyFormat(min, options)} - ${convertToCurrencyFormat(
     max,
-    options
+    options,
   )}`;
 }
 
@@ -118,7 +118,7 @@ export const getTextByOptionsValue = (section: any) => {
 };
 
 export const hasChanges = async (
-  id: string
+  id: string,
 ): Promise<Record<string, boolean>> => {
   const response = await checkChanges(id);
   const rawData = response as any;
@@ -131,7 +131,7 @@ export const hasChanges = async (
     const data = itemData as Record<string, boolean>;
 
     const hasTrueOtherThanIsRead = Object.entries(data).some(
-      ([key, value]) => key !== "is_read" && value === true
+      ([key, value]) => key !== "is_read" && value === true,
     );
     result[itemId] = hasTrueOtherThanIsRead && data.is_read === false;
   }
@@ -157,12 +157,12 @@ export function formatFullDate(dateStr: string): string {
 
 export function getFileName(
   name: string,
-  nameToFileMap: Record<string, string>
+  nameToFileMap: Record<string, string>,
 ) {
   const lowerName = name.toLowerCase();
 
   const sortedKeys = Object.keys(nameToFileMap).sort(
-    (a, b) => b.length - a.length
+    (a, b) => b.length - a.length,
   );
 
   for (const key of sortedKeys) {
@@ -180,7 +180,7 @@ export function getDividerText(item: any, title: string): string {
 
   const selectedValue = arrangement?.selected_value;
   const selectedText = arrangement?.options?.find(
-    (opt: any) => opt.value === selectedValue
+    (opt: any) => opt.value === selectedValue,
   )?.text;
 
   if (!selectedText) return title === "SDL" ? "Flat - Flat 25mm" : "Thin";
@@ -228,3 +228,65 @@ export const getPropertyNameFromTitle = (title: string) => {
   const propertyName = title.replace(/ /g, "_");
   return propertyName.toLowerCase();
 };
+
+export const formatLabel = (value: unknown) => {
+  const str = typeof value === "string" ? value : "";
+  return str.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+export const FIELD_TYPE_MAP = {
+  0: "SHORT_TEXT",
+  1: "LONG_TEXT",
+  2: "NUMBERS",
+  3: "SELECTOR",
+  4: "CHECKS",
+  5: "RADIO",
+  6: "SWITCHES",
+  7: "DATE",
+  8: "LINK",
+  9: "LOCATION",
+} as const;
+
+export type FieldTypeValue =
+  (typeof FIELD_TYPE_MAP)[keyof typeof FIELD_TYPE_MAP];
+
+export const getFieldType = (type: number): FieldTypeValue | undefined =>
+  FIELD_TYPE_MAP[type as keyof typeof FIELD_TYPE_MAP];
+type FieldOption = {
+  label: string;
+  value: string;
+};
+
+export const formatMetadataOptions = (metadata?: any[]): FieldOption[] => {
+  try {
+    if (!metadata?.length) return [];
+
+    const parsed = JSON.parse(metadata[0]);
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((o) => ({
+      label: String(o.label ?? ""),
+      value: String(o.value ?? ""),
+    }));
+  } catch {
+    return [];
+  }
+};
+
+export const buildMetadataOptions = (options: FieldOption[]): string[] => {
+  return [JSON.stringify(options)];
+};
+
+export const normalizeKey = (label: string) =>
+  label.trim().toLowerCase().replaceAll(" ", "_");
+
+export function formatDateLong(dateString: string): string {
+  const date = new Date(dateString);
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}

@@ -6,8 +6,8 @@ import Image from "next/image";
 const ItemsPanel = ({ options }: any) => {
   return (
     <div className="w-[20%] flex flex-col gap-4 pt-8 pr-4">
-      <p className="text-forumBlue text-sm">Page Labeling</p>
-      <p className="text-basicGray text-xs mb-3">
+      <p className="text-forumBlue-normal text-sm">Page Labeling</p>
+      <p className="text-grey-normal text-xs mb-3">
         Label pages information to improve AI analysis.
       </p>
       {options.map((option: any, index: number) => {
@@ -16,7 +16,7 @@ const ItemsPanel = ({ options }: any) => {
             key={index}
             className="flex flex-col gap-2 bg-primaryN20 p-4 rounded-lg"
           >
-            <div className="flex justify-between items-center text-xs text-basicGray">
+            <div className="flex justify-between items-center text-xs text-grey-normal">
               <p>{option.id}</p>
               <div
                 className="flex gap-2 items-center px-3 py-0.5 rounded-full"

@@ -15,7 +15,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
         client_secret: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_SECRET || "",
         refresh_token: refreshToken,
         grant_type: "refresh_token",
-      })
+      }),
     );
     return response.data;
   } catch (error) {
@@ -39,7 +39,7 @@ request.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 request.interceptors.response.use(
@@ -50,7 +50,7 @@ request.interceptors.response.use(
       signOut();
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export const http = {
@@ -60,13 +60,15 @@ export const http = {
   post: <T>(
     endpoint: string,
     data?: Record<string, unknown> | FormData | any,
-    timeout?: number
-  ) => request.post<T>(endpoint, data, { timeout }),
+    timeout?: number,
+    config?: any,
+  ) => request.post<T>(endpoint, data, { timeout, ...config }),
 
-  put: <T>(endpoint: string, data?: Record<string, unknown>) =>
+  put: <T>(endpoint: string, data?: Record<string, unknown> | FormData | any) =>
     request.put<T>(endpoint, data),
 
-  delete: <T>(endpoint: string) => request.delete<T>(endpoint),
+  delete: <T>(endpoint: string, data?: Record<string, unknown> | any) =>
+    request.delete<T>(endpoint, { data }),
 
   patch: <T>(endpoint: string, data?: Record<string, unknown>) =>
     request.patch<T>(endpoint, data),

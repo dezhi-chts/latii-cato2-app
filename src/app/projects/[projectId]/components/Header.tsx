@@ -12,6 +12,7 @@ import {
 import { useProjects } from "@/context/ProjectsContext";
 import { useRouter } from "next/navigation";
 import { notification } from "antd";
+import { useCompany } from "@/context/CompanyContext";
 
 type Status = {
   is_favorite: boolean | undefined;
@@ -30,6 +31,8 @@ type HeaderProps = {
 const Header = ({ project, refetchProject }: HeaderProps) => {
   const router = useRouter();
 
+  const { company } = useCompany();
+
   const [api, contextHolder] = notification.useNotification();
 
   const [status, setStatus] = useState<Status>({
@@ -46,13 +49,27 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
     if (field === "is_favorite") {
       const newValue = !status.is_favorite;
 
-      await toggleFavoriteProject(project);
-      await refetchProjects();
+      const response: any = await toggleFavoriteProject(project);
 
-      setStatus((prev) => ({
-        ...prev,
-        is_favorite: newValue,
-      }));
+      if (response.status === "success") {
+        await refetchProjects();
+        setStatus((prev) => ({
+          ...prev,
+          is_favorite: newValue,
+        }));
+      } else {
+        const errorMessage = response.data.response.data.detail;
+        const isRequiredAttributeError =
+          /^Attribute [0-9a-fA-F-]+ is required$/.test(errorMessage);
+
+        notification.error({
+          message: "Error toggling favorite",
+          description: isRequiredAttributeError
+            ? "This project has empty required fields. Please fill them first."
+            : "",
+          duration: 5,
+        });
+      }
     } else {
       setStatus((prev) => ({
         ...prev,
@@ -68,7 +85,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
             should_hide_overflow: !prev.should_hide_overflow,
           }));
         },
-        status.should_hide_overflow ? 300 : 0
+        status.should_hide_overflow ? 300 : 0,
       );
     }
   };
@@ -102,9 +119,19 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleUpdate = async (updatedProject: any) => {
     if (!updatedProject?.project_id) return;
-    await updateProject(updatedProject);
+
+    const normalizedProject = {
+      ...updatedProject,
+      attributes: Object.fromEntries(
+        Object.entries(updatedProject.attributes ?? {}).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? JSON.stringify(value) : value,
+        ]),
+      ),
+    };
+
+    await updateProject(normalizedProject);
     await refetchProject();
-    // await refetchProjects();
   };
 
   const ref = useRef<HTMLDivElement>(null);
@@ -136,6 +163,23 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const getTitleByAttribueId = (attributeId: string) => {
+    const attribute = company?.project_attributes?.find(
+      (attr) => attr.uuid === attributeId,
+    );
+    if (!attribute) return null;
+    return attribute.label;
+  };
+
+  const curateAttributes = (attributes: any) => {
+    const validAttributesIds =
+      company?.project_attributes.map((attr) => attr.uuid) ?? [];
+
+    return Object.entries(attributes ?? {})
+      .filter(([key]) => validAttributesIds.includes(key))
+      .slice(0, 4);
+  };
 
   return (
     <div
@@ -196,51 +240,41 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
           />
         )}
       </div>
-      <div className="flex items-center gap-10">
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*      height={20}*/}
-        {/*      width={20}*/}
-        {/*      src="/assets/icons/calendar.svg"*/}
-        {/*      alt="calendar icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Project name </span>*/}
-        {/*    {project.project_name}*/}
-        {/*  </p>*/}
-        {/*</div>*/}
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*    height={20}*/}
-        {/*    width={20}*/}
-        {/*    src="/assets/icons/calendar.svg"*/}
-        {/*    alt="calendar icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Expected Delivery </span>*/}
-        {/*    {new Date(project.expected_end_date).toLocaleDateString("es-AR") ||*/}
-        {/*      "..."}*/}
-        {/*  </p>*/}
-        {/*</div>*/}
-        {/*<div className="flex items-center gap-2">*/}
-        {/*  <Image*/}
-        {/*    height={20}*/}
-        {/*    width={20}*/}
-        {/*    src="/assets/icons/project-likelihood.svg"*/}
-        {/*    alt="award icon"*/}
-        {/*  />*/}
-        {/*  <p className="text-sm text-basicGray flex items-center gap-3">*/}
-        {/*    <span className="font-bold">Project Likelihood </span>*/}
-        {/*    High*/}
-        {/*  </p>*/}
-        {/*</div>*/}
+      <div
+        className={`${status.is_displayed ? "max-h-0 opacity-0" : "max-h-6 opacity-100"} transition-all duration-500 ease-in-out overflow-hidden flex gap-20 pt-1`}
+      >
+        {project?.attributes &&
+          curateAttributes(project.attributes).map(([key, value]) => {
+            const title = getTitleByAttribueId(key);
+
+            let displayValue = value;
+
+            if (Array.isArray(value)) {
+              displayValue = value.join(", ");
+            } else if (typeof value === "string" && value.startsWith("[")) {
+              try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                  displayValue = parsed.join(", ");
+                }
+              } catch { }
+            }
+
+            return (
+              <div key={key} className="flex gap-2 text-sm text-grey-normal">
+                <span className="font-bold ">{title}</span>
+                <span className="max-w-32 truncate">
+                  {String(displayValue)}
+                </span>
+              </div>
+            );
+          })}
       </div>
       <div
-          className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${
-              status.should_hide_overflow ? "overflow-hidden" : ""
+        className={`${status.is_displayed ? "max-h-[230px]" : "max-h-0"} ${status.should_hide_overflow ? "overflow-hidden" : ""
           } transition-all duration-500 ease-in-out `}
       >
-        <ProjectSettings project={project} handleUpdate={handleUpdate}/>
+        <ProjectSettings project={project} handleUpdate={handleUpdate} />
       </div>
     </div>
   );

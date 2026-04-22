@@ -34,7 +34,7 @@ type NewItemModalProps = {
     index: number,
     field: string,
     units?: boolean,
-    $unit_index?: number
+    $unit_index?: number,
   ) => void;
   isButtonEnabled?: boolean;
   index: number;
@@ -201,7 +201,7 @@ export const NewItemModal = ({
   const setSelectedValue = (
     section: SectionName,
     value: string,
-    isUnit: boolean = false
+    isUnit: boolean = false,
   ) => {
     const newStepsArray = stepsArray.map((step) => {
       if (step.options?.length === 0) {
@@ -240,7 +240,7 @@ export const NewItemModal = ({
       title={
         <div className="text-sm">
           <p className="text-primaryN900 font-semibold">Item Customization</p>
-          <p className="text-basicGray font-normal">
+          <p className="text-grey-normal font-normal">
             Customize your frame, glass, hardware and installation adjusted to
             all your special needs. Select your options for each section.
           </p>
@@ -263,7 +263,7 @@ export const NewItemModal = ({
               item?.frame_material?.selected_value === "Spazio-Aluminum"
             }
             shouldShowHardware={item.units?.some(
-              (unit: any) => unit?.is_have_hardware_section
+              (unit: any) => unit?.is_have_hardware_section,
             )}
           />
           <div className="w-full flex justify-center ">

@@ -43,8 +43,8 @@ const HoverCard = ({ brand }: HoverCardProps) => {
         />
       </div>
 
-      <p className="text-basicGray font-bold">{brandOptions[brand].title}</p>
-      <p className="text-basicGray text-sm">
+      <p className="text-grey-normal font-bold">{brandOptions[brand].title}</p>
+      <p className="text-grey-normal text-sm">
         {brandOptions[brand].description}
       </p>
       <a

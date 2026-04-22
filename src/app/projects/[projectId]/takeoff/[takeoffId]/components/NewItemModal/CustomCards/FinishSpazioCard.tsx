@@ -48,7 +48,7 @@ const FinishSpazioCard = ({
 
           <Image
             src={`/assets/item-customization/cortizo/${sanitizeName(
-              card.text
+              card.text,
             )}.webp`}
             alt="Card Image"
             width={264}
@@ -60,7 +60,7 @@ const FinishSpazioCard = ({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <p className="font-semibold text-base text-basicGray text-center">
+          <p className="font-semibold text-base text-grey-normal text-center">
             {card.text}
           </p>
           <p className="text-xs text-basicLightGray text-start">
@@ -101,7 +101,7 @@ const FinishOption = ({
 
   const src = option.text
     ? `/assets/finishes/${sanitizeName(card.text)}/${sanitizeName(
-        option.text
+        option.text,
       )}.png`
     : `/assets/finish-colors/${sanitizeKey(option.name)}.webp`;
 
@@ -196,7 +196,7 @@ const FinishContainer = ({
       <div
         className={`flex flex-col gap-2 ${!allImagesLoaded ? "opacity-0" : ""}`}
       >
-        <p className="text-basicGray text-xs font-semibold text-start">
+        <p className="text-grey-normal text-xs font-semibold text-start">
           Finishes
           {isPowderCoating && (
             <span className="font-normal"> (Powder Coating)</span>

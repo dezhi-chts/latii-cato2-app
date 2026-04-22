@@ -10,8 +10,8 @@ const nunito = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Latii - Dealer Platform",
-  description: "Platform for Latii Dealers",
+  title: "Latii - Forum",
+  description: "Latii - Forum",
 };
 
 export default function RootLayout({

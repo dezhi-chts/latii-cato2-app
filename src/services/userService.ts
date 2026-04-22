@@ -1,5 +1,5 @@
 import { http } from "@/lib/http";
-import { passwordChangeData, UserDataForUpdate } from "@/types/user";
+import { PasswordChangeData, UserDataForUpdate } from "@/types/user";
 import qs from "qs";
 
 export const fetchUser = async (username: string) => {
@@ -25,35 +25,27 @@ export const fetchUser = async (username: string) => {
   }
 };
 
-export const updateUser = async (
-  auth_provider_uid: string,
-  data: UserDataForUpdate,
-  file?: File | null
-) => {
-  const url = `/admin/dealer/user/${auth_provider_uid}`;
+export const updateUser = async (data: UserDataForUpdate) => {
+  const url = `/admin/dealer/user`;
 
   try {
-    const formData = new FormData();
+    const params = new URLSearchParams();
 
     Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, value as any);
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, value);
       }
     });
 
-    if (file) {
-      formData.append("company_logo_file", file);
-    }
+    const response = await http.post(url, params.toString());
 
-    const response = await http.post(url, formData);
-
-    return response;
+    return { status: "success", data: response };
   } catch (error) {
     console.error("Error updating user:", error);
+    return { status: "error", data: error };
   }
 };
-
-export const changePassword = async (data: passwordChangeData) => {
+export const changePassword = async (data: PasswordChangeData) => {
   const url = "/admin/dealer/user";
 
   try {
@@ -71,5 +63,15 @@ export const changePassword = async (data: passwordChangeData) => {
       data: error,
       status: "error",
     };
+  }
+};
+
+export const isUserAdmin = async () => {
+  const url = "/auth/is_admin";
+  try {
+    const response: any = await http.get(url);
+    return response?.is_admin || false;
+  } catch (error) {
+    console.error("Error checking if user is admin:", error);
   }
 };

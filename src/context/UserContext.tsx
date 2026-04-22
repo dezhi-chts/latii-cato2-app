@@ -1,4 +1,5 @@
-import { fetchUser } from "@/services/userService";
+import { fetchCompanyByKeycloakUser } from "@/services/companyService";
+import { isUserAdmin } from "@/services/userService";
 import { UserDataForUpdate } from "@/types/user";
 import {
   createContext,
@@ -14,11 +15,15 @@ type UserContextType = {
   first_name?: string;
   last_name?: string;
   email?: string;
+  job_title: string;
   company?: any;
   company_contact?: any;
+  company_id?: number;
   force_logout: boolean;
   changeUser: (updatedData: UserDataForUpdate) => void;
   clearLocalStorage: () => void;
+  isAdmin: boolean;
+  project_attributes?: any[];
 };
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -30,18 +35,37 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     first_name: "Guest",
     last_name: "",
     email: "guest@example.com",
+    job_title: "",
     company: null,
     company_contact: null,
+    company_id: 0,
     force_logout: false,
     changeUser: () => {},
     clearLocalStorage: () => {},
+    isAdmin: false,
+    project_attributes: [],
   });
 
   const changeUser = (updatedData: UserDataForUpdate) => {
+    saveChangesOnLocalStorage(updatedData);
     setUser((prev) => {
       const updatedUser = { ...prev, ...updatedData };
       return updatedUser;
     });
+  };
+
+  const saveChangesOnLocalStorage = (updatedUser: UserDataForUpdate) => {
+    try {
+      const user = localStorage.getItem("userData");
+      if (!user) return;
+      const parsedUser = JSON.parse(user);
+      const newUser = {
+        ...parsedUser,
+        email: updatedUser.email,
+        name: `${updatedUser.first_name} ${updatedUser.last_name}`,
+      };
+      localStorage.setItem("userData", JSON.stringify(newUser));
+    } catch (error) {}
   };
 
   const clearLocalStorage = () => {
@@ -61,46 +85,52 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (!savedUser?.username)
-      return;
+    if (!savedUser?.username) return;
 
-    // const response = await fetchUser(savedUser.username);
-    // return;
+    const { companyId, projectAttributes, companyName } =
+      await getCompanyInfo();
 
-    // if (response.is_force_logout) {
-    //   setUser((prev) => ({
-    //     ...prev,
-    //     force_logout: true,
-    //   }));
-    //   return;
-    // }
-
-    // if (!response.is_success) throw new Error("Error fetching user data");
-
-    // setUser({
-    //   ...response.data,
-    //   changeUser,
-    //   clearLocalStorage,
-    // });
-    let first_name = "Guest"
-    let last_name = ""
-    if(savedUser.name.split(' ').length==2){
-       first_name = savedUser.name.split(' ')[0]
-       last_name = savedUser.name.split(' ')[1]
+    const isAdmin = await isUserAdmin();
+    let first_name = "Guest";
+    let last_name = "";
+    if (savedUser.name.split(" ").length == 2) {
+      first_name = savedUser.name.split(" ")[0];
+      last_name = savedUser.name.split(" ")[1];
     }
     setUser({
-       id: "",
+      id: "",
       username: savedUser.username,
       first_name: first_name,
       last_name: last_name,
       email: savedUser.email,
-      company: null,
+      company: companyName,
       company_contact: null,
+      company_id: companyId,
       force_logout: false,
       changeUser: () => {},
       clearLocalStorage: () => {},
-    })
+      isAdmin: isAdmin,
+      job_title: savedUser.job_title,
+      project_attributes: projectAttributes,
+    });
     return;
+  };
+
+  const getCompanyInfo = async () => {
+    try {
+      const response = await fetchCompanyByKeycloakUser();
+      return {
+        companyId: response?.data.id || null,
+        projectAttributes: response?.data.project_attributes || [],
+        companyName: response?.data.name || "",
+      };
+    } catch (error) {
+      console.log("Error fetching company id:", error);
+      return {
+        companyId: null,
+        projectAttributes: [],
+      };
+    }
   };
 
   useEffect(() => {

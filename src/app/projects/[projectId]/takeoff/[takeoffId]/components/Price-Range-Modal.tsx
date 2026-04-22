@@ -164,7 +164,7 @@ const ProductTable = () => {
           <div className="overflow-x-auto border border-primaryN30 rounded-xl">
             <table className="min-w-full ">
               <thead className="bg-primaryN30">
-                <tr className="font-medium text-basicGray">
+                <tr className="font-medium text-grey-normal">
                   <th className="w-32 border border-primaryN30">Line</th>
                   <th className="w-32 border border-primaryN30">Sub Brand</th>
                   <th className="w-32 border border-primaryN30">Variant</th>
@@ -197,7 +197,7 @@ const ProductTable = () => {
                                     className="px-4 py-2 border font-semibold"
                                     rowSpan={Object.values(subBrands).reduce(
                                       (acc, v) => acc + v.length,
-                                      0
+                                      0,
                                     )}
                                   >
                                     {lineName}
@@ -222,10 +222,10 @@ const ProductTable = () => {
                                 </td>
                               </tr>
                             );
-                          })
+                          }),
                       )}
                     </React.Fragment>
-                  )
+                  ),
                 )}
               </tbody>
             </table>

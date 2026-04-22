@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Classification - WebSocket</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;  /* 从900px加宽到1200px */
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #e7eaff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-section h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .upload-section p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #e9ecef;
+            color: #495057;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            background: #dee2e6;
+            transform: translateY(-1px);
+        }
+
+        .selected-file {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .selected-file.show {
+            display: flex;
+        }
+
+        .file-icon {
+            font-size: 40px;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .progress-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .progress-percentage {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .progress-bar-container {
+            background: #e9ecef;
+            height: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .status-message {
+            padding: 12px 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            border-radius: 6px;
+            color: #004085;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;  /* 允许横向滚动 */
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.3;  /* 减小行高 */
+        }
+
+        .log-entry {
+            padding: 3px 0;  /* 减小行距 */
+            border-bottom: 1px solid #e9ecef;
+            white-space: nowrap;  /* 不换行 */
+            overflow: hidden;
+            text-overflow: ellipsis;  /* 超长显示省略号 */
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-entry:hover {
+            background: rgba(102, 126, 234, 0.05);
+            margin: 0 -15px;
+            padding: 3px 15px;  /* 保持一致的垂直padding */
+            overflow: visible;  /* 悬停时显示完整内容 */
+            white-space: normal;  /* 悬停时允许换行 */
+            z-index: 10;
+            position: relative;
+        }
+
+        .log-timestamp {
+            color: #6c757d;
+            margin-right: 10px;
+        }
+
+        .log-level-INFO {
+            color: #0066cc;
+            font-weight: 600;
+        }
+
+        .log-level-PROGRESS {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .log-level-SUCCESS {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .log-level-WARNING {
+            color: #ff8c00;
+            font-weight: 600;
+        }
+
+        .log-level-ERROR {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-label {
+            color: #6c757d;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            color: #212529;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .success-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .error-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 滚动条样式 */
+        .log-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;  /* 横向滚动条高度 */
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 10px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #adb5bd;
+            border-radius: 10px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: #868e96;
+        }
+
+        /* 横向滚动条（和纵向一样） */
+        .log-container::-webkit-scrollbar-corner {
+            background: #e9ecef;
+        }
+
+        .settings-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .settings-title {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .setting-item label {
+            display: block;
+            color: #6c757d;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .setting-item input,
+        .setting-item select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .toggle-settings {
+            cursor: pointer;
+            color: #667eea;
+            font-size: 14px;
+            text-decoration: underline;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        /* ========== 上传进度状态 ========== */
+        .upload-status {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        .upload-status.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-status-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .upload-status-icon {
+            font-size: 32px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .upload-status-text {
+            flex: 1;
+        }
+
+        .upload-status-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 4px;
+        }
+
+        .upload-status-detail {
+            font-size: 13px;
+            color: #636e72;
+        }
+
+        .upload-progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+            position: relative;
+        }
+
+        .upload-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00b894 0%, #00cec9 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .upload-progress-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.3) 50%,
+                transparent 100%
+            );
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .upload-progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #2d3436;
+            font-weight: 500;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 PDF Classification Service</h1>
+            <p>Upload your PDF and get real-time classification results</p>
+        </div>
+
+        <div class="content">
+            <!-- 上传区域 -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📁</div>
+                <h3>Choose PDF File</h3>
+                <p>Drag and drop or click to browse</p>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf">
+                <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                    Select PDF
+                </button>
+            </div>
+
+            <!-- 已选择文件 -->
+            <div class="selected-file" id="selectedFile">
+                <div class="file-icon">📄</div>
+                <div class="file-info">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+                <button class="btn btn-primary" id="uploadBtn" onclick="uploadFile()">
+                    <span class="spinner" id="uploadSpinner" style="display: none;"></span>
+                    <span id="uploadBtnText">Start Processing</span>
+                </button>
+                <button class="btn btn-secondary" onclick="clearFile()">Cancel</button>
+            </div>
+
+            <!-- 高级设置 -->
+            <div class="settings-section" id="settingsSection" style="display: none;">
+                <div class="settings-title">Advanced Settings</div>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Model Name</label>
+                        <select id="modelName">
+                            <option value="unit_detect_8l_v1">unit_detect_8l_v1</option>
+                            <option value="unit_detect_v2">unit_detect_v2</option>
+                            <option value="unit_detect_11x_v1">unit_detect_11x_v1</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>DPI</label>
+                        <input type="number" id="dpi" value="100" min="50" max="300">
+                    </div>
+                    <div class="setting-item">
+                        <label>Max Concurrent Batches</label>
+                        <input type="number" id="maxBatches" value="6" min="1" max="10">
+                    </div>
+                </div>
+            </div>
+            <a class="toggle-settings" onclick="toggleSettings()">Advanced Settings ⚙️</a>
+
+            <!-- 进度区域 -->
+
+            <!-- 上传进度状态 -->
+            <div class="upload-status" id="uploadStatus">
+                <div class="upload-status-header">
+                    <span class="upload-status-icon">📤</span>
+                    <div class="upload-status-text">
+                        <div class="upload-status-title">Uploading PDF file...</div>
+                        <div class="upload-status-detail" id="uploadStatusDetail">
+                            Preparing upload...
+                        </div>
+                    </div>
+                </div>
+                <div class="upload-progress-bar-container">
+                    <div class="upload-progress-bar-fill" id="uploadProgressFill"></div>
+                </div>
+                <div class="upload-progress-info">
+                    <span id="uploadProgressLoaded">0 MB</span>
+                    <span id="uploadProgressPercent">0%</span>
+                    <span id="uploadProgressTotal">0 MB</span>
+                </div>
+            </div>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-header">
+                    <span class="progress-title">Processing...</span>
+                    <span class="progress-percentage" id="progressPercentage">0%</span>
+                </div>
+                <!-- 显示正在处理的文件名 -->
+                <div style="background: #e7f3ff; border-left: 4px solid #0066cc; border-radius: 6px; padding: 12px 15px; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 20px;">📄</span>
+                        <div style="flex: 1;">
+                            <div style="font-size: 12px; color: #666; margin-bottom: 2px;">Processing File:</div>
+                            <div style="font-weight: 600; color: #004085;" id="processingFileName">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="status-message" id="statusMessage"></div>
+
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 600; color: #495057;">Real-time Logs</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-small" onclick="clearLogs()" title="Clear logs">
+                                🗑️ Clear
+                            </button>
+                            <button class="btn-small" onclick="exportLogs()" title="Export logs">
+                                💾 Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="log-container" id="logContainer"></div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #6c757d; text-align: right;">
+                        <span id="logCount">0</span> messages
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果区域 -->
+            <div class="result-section" id="resultSection">
+                <div class="success-badge" id="successBadge" style="display: none;">
+                    <span>✓</span>
+                    <span>Classification Completed Successfully!</span>
+                </div>
+                <div class="error-badge" id="errorBadge" style="display: none;">
+                    <span>✗</span>
+                    <span id="errorMessage">Classification Failed</span>
+                </div>
+
+                <div class="result-card">
+                    <div class="result-title">Summary</div>
+                    <div class="result-grid" id="resultGrid"></div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="downloadResult()">
+                        📥 Download Result (JSON)
+                    </button>
+                    <button class="btn btn-secondary" onclick="processAnother()">
+                        🔄 Process Another PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        // const API_BASE_URL = 'http://localhost/api';
+        // const WS_BASE_URL = 'ws://localhost';
+        const API_BASE_URL = 'https://cato-service2.dev.latii.com/api';  // 修改为你的服务器地址
+        const WS_BASE_URL = 'wss://cato-service2.dev.latii.com';          // WebSocket地址
+
+        let selectedFile = null;
+        let currentRequestId = null;
+        let currentResult = null;
+        let ws = null;
+
+        // 文件选择
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            console.log('File input changed');
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                console.log('File selected:', selectedFile.name);
+                showSelectedFile();
+            }
+        });
+
+        // 拖拽上传
+        const uploadSection = document.getElementById('uploadSection');
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type === 'application/pdf') {
+                    selectedFile = file;
+                    showSelectedFile();
+                } else {
+                    alert('Please select a PDF file');
+                }
+            }
+        });
+
+        function showSelectedFile() {
+            document.getElementById('fileName').textContent = selectedFile.name;
+            document.getElementById('fileSize').textContent = formatBytes(selectedFile.size);
+            document.getElementById('selectedFile').classList.add('show');
+            document.getElementById('selectedFile').style.display = 'flex';
+            document.getElementById('uploadSection').style.display = 'none';
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            document.getElementById('selectedFile').classList.remove('show');
+            document.getElementById('selectedFile').style.display = 'none';
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('fileInput').value = '';
+        }
+
+        function toggleSettings() {
+            const settings = document.getElementById('settingsSection');
+            settings.style.display = settings.style.display === 'none' ? 'block' : 'none';
+        }
+
+
+        // ========== 工具函数 ==========
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 使用 XMLHttpRequest 上传并监听进度
+        function uploadWithProgress(url, formData, onProgress) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                // 监听上传进度
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const progress = {
+                            loaded: e.loaded,
+                            total: e.total,
+                            percent: (e.loaded / e.total) * 100
+                        };
+                        onProgress(progress);
+                    }
+                });
+
+                // 监听完成
+                xhr.addEventListener('load', () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            resolve(response);
+                        } catch (e) {
+                            reject(new Error('Failed to parse response: ' + e.message));
+                        }
+                    } else {
+                        try {
+                            const error = JSON.parse(xhr.responseText);
+                            reject(new Error(error.detail || `HTTP ${xhr.status}`));
+                        } catch (e) {
+                            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                        }
+                    }
+                });
+
+                // 监听错误
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error during upload'));
+                });
+
+                // 监听中断
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload cancelled'));
+                });
+
+                // 发送请求
+                xhr.open('POST', url, true);
+                xhr.send(formData);
+            });
+        }
+
+        // 上传文件（带上传进度）
+        async function uploadFile() {
+            if (!selectedFile) return;
+
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadSpinner = document.getElementById('uploadSpinner');
+            const uploadBtnText = document.getElementById('uploadBtnText');
+
+            const progressSection = document.getElementById('progressSection');
+            progressSection.style.display = 'block';
+            progressSection.classList.add('show');
+
+            // 禁用按钮
+            uploadBtn.disabled = true;
+            uploadSpinner.style.display = 'inline-block';
+            uploadBtnText.textContent = 'Uploading...';
+
+            // ✅ 显示上传状态
+            const uploadStatus = document.getElementById('uploadStatus');
+            const uploadStatusDetail = document.getElementById('uploadStatusDetail');
+            const uploadProgressFill = document.getElementById('uploadProgressFill');
+            const uploadProgressLoaded = document.getElementById('uploadProgressLoaded');
+            const uploadProgressPercent = document.getElementById('uploadProgressPercent');
+            const uploadProgressTotal = document.getElementById('uploadProgressTotal');
+
+            uploadStatus.classList.add('active');
+            uploadStatusDetail.textContent = `Uploading ${selectedFile.name} (${formatFileSize(selectedFile.size)})...`;
+            uploadProgressTotal.textContent = formatFileSize(selectedFile.size);
+
+            // 准备表单数据
+            const formData = new FormData();
+            formData.append('pdf_file', selectedFile);
+
+            // 获取设置
+            const modelName = document.getElementById('modelName').value;
+            const dpi = document.getElementById('dpi').value;
+            const maxBatches = document.getElementById('maxBatches').value;
+
+            try {
+                // ✅ 使用 XMLHttpRequest 支持上传进度
+                const url = `${API_BASE_URL}/pdf/batch/classify-pages-async?model_name=${modelName}&dpi=${dpi}&max_concurrent_batches=${maxBatches}`;
+
+                const data = await uploadWithProgress(url, formData, (progress) => {
+                    // 实时更新进度
+                    const percent = Math.round(progress.percent);
+                    uploadProgressFill.style.width = percent + '%';
+                    uploadProgressLoaded.textContent = formatFileSize(progress.loaded);
+                    uploadProgressPercent.textContent = percent + '%';
+                    uploadStatusDetail.textContent =
+                        `Uploading ${selectedFile.name} - ${percent}% (${formatFileSize(progress.loaded)} / ${formatFileSize(progress.total)})`;
+                });
+
+                // ✅ 上传完成，隐藏上传状态
+                uploadStatus.classList.remove('active');
+
+                currentRequestId = data.request_id;
+
+                // 显示进度区域
+                document.getElementById('selectedFile').style.display = 'none';
+                document.getElementById('progressSection').classList.add('show');
+
+                // 显示正在处理的文件名
+                document.getElementById('processingFileName').textContent = selectedFile.name;
+
+                // ✅ 重置处理进度条为0%
+                const progressBar = document.getElementById('progressBar');
+                const progressPercentage = document.getElementById('progressPercentage');
+                if (progressBar) progressBar.style.width = '0%';
+                if (progressPercentage) progressPercentage.textContent = '0%';
+
+                // 连接WebSocket
+                connectWebSocket(currentRequestId);
+
+            } catch (error) {
+                // ✅ 错误时隐藏上传状态
+                if (uploadStatus) {
+                    uploadStatus.classList.remove('active');
+                }
+
+                alert(`Upload failed: ${error.message}`);
+                uploadBtn.disabled = false;
+                uploadSpinner.style.display = 'none';
+                uploadBtnText.textContent = 'Start Processing';
+            }
+        }
+
+        // 连接WebSocket
+        function connectWebSocket(requestId) {
+            const wsUrl = `${WS_BASE_URL}/ws/classify-status/${requestId}`;
+            console.log('Connecting to WebSocket:', wsUrl);
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                addLog('INFO', 'WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addLog('ERROR', 'WebSocket connection error');
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed');
+            };
+        }
+
+        // 处理WebSocket消息
+        function handleWebSocketMessage(data) {
+            const { type } = data;
+
+            if (type === 'PROGRESS') {
+                updateProgress(data.progress, data.message);
+                // 同时添加到日志
+                addLog('PROGRESS', data.message);
+            } else if (type === 'LOG') {
+                addLog(data.level, data.message);
+            } else if (type === 'COMPLETED') {
+                addLog('SUCCESS', 'Classification completed successfully!');
+                handleComplete(data.result);
+            } else if (type === 'ERROR') {
+                addLog('ERROR', `Classification failed: ${data.error}`);
+                handleError(data.error);
+            } else if (type === 'CANCELLED') {
+                addLog('WARNING', 'Task was cancelled');
+                handleError('Task cancelled by user');
+            }
+        }
+
+        // 更新进度
+        function updateProgress(progress, message) {
+            const percentage = Math.round(progress * 100);
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressPercentage').textContent = percentage + '%';
+            document.getElementById('statusMessage').textContent = message;
+        }
+
+        // 添加日志
+        function addLog(level, message) {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            // 根据级别添加不同的图标
+            let icon = '';
+            switch(level) {
+                case 'PROGRESS':
+                    icon = '⏳';
+                    break;
+                case 'SUCCESS':
+                    icon = '✅';
+                    break;
+                case 'INFO':
+                    icon = 'ℹ️';
+                    break;
+                case 'WARNING':
+                    icon = '⚠️';
+                    break;
+                case 'ERROR':
+                    icon = '❌';
+                    break;
+                default:
+                    icon = '📝';
+            }
+
+            logEntry.innerHTML = `
+                <span class="log-timestamp">[${timestamp}]</span>
+                <span class="log-level-${level}">${icon} [${level}]</span>
+                <span style="margin-left: 8px;">${message}</span>
+            `;
+
+            logContainer.appendChild(logEntry);
+
+            // 更新消息计数
+            updateLogCount();
+
+            // 自动滚动到底部
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 更新日志计数
+        function updateLogCount() {
+            const logContainer = document.getElementById('logContainer');
+            const count = logContainer.children.length;
+            document.getElementById('logCount').textContent = count;
+        }
+
+        // 清空日志
+        function clearLogs() {
+            if (confirm('Clear all logs?')) {
+                document.getElementById('logContainer').innerHTML = '';
+                updateLogCount();
+            }
+        }
+
+        // 导出日志
+        function exportLogs() {
+            const logContainer = document.getElementById('logContainer');
+            const logs = Array.from(logContainer.children).map(entry => entry.textContent).join('\n');
+
+            if (logs.length === 0) {
+                alert('No logs to export');
+                return;
+            }
+
+            const blob = new Blob([logs], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `classification_logs_${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 处理完成
+        function handleComplete(result) {
+            currentResult = result;
+
+            // 隐藏进度（只使用 class，不直接设置 style.display）
+            document.getElementById('progressSection').classList.remove('show');
+
+            // 显示结果
+            document.getElementById('resultSection').classList.add('show');
+            document.getElementById('resultSection').style.display = 'block';  // 确保显示
+            document.getElementById('successBadge').style.display = 'flex';
+
+            // 显示摘要
+            const resultGrid = document.getElementById('resultGrid');
+            resultGrid.innerHTML = `
+                <div class="result-item">
+                    <div class="result-label">Total Pages</div>
+                    <div class="result-value">${result.pdf_info.total_pages}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Processed Pages</div>
+                    <div class="result-value">${result.pdf_info.processed_pages}</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Processing Time</div>
+                    <div class="result-value">${result.processing_time.toFixed(2)}s</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Total Detections</div>
+                    <div class="result-value">${result.summary.total_detections || 'N/A'}</div>
+                </div>
+            `;
+
+            // 关闭WebSocket
+            if (ws) {
+                ws.close();
+            }
+
+            console.log('Classification completed, result stored:', currentResult ? 'Yes' : 'No');
+        }
+
+        // 处理错误
+        function handleError(error) {
+            document.getElementById('progressSection').classList.remove('show');
+            document.getElementById('resultSection').classList.add('show');
+            document.getElementById('resultSection').style.display = 'block';  // 确保显示
+            document.getElementById('errorBadge').style.display = 'flex';
+            document.getElementById('errorMessage').textContent = error;
+
+            if (ws) {
+                ws.close();
+            }
+
+            console.log('Error occurred:', error);
+        }
+
+        // 下载结果
+        function downloadResult() {
+            if (!currentResult) return;
+
+            const dataStr = JSON.stringify(currentResult, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `classification_result_${currentRequestId}.json`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+        // 处理另一个PDF
+        function processAnother() {
+            console.log('processAnother called - resetting UI');
+            // 重置状态
+            selectedFile = null;
+            currentRequestId = null;
+            currentResult = null;
+
+            // 重置UI - 确保所有区域正确显示/隐藏
+            document.getElementById('resultSection').classList.remove('show');
+            document.getElementById('successBadge').style.display = 'none';
+            document.getElementById('errorBadge').style.display = 'none';
+            document.getElementById('progressSection').classList.remove('show');
+
+            // 隐藏结果区
+            const resultSection = document.getElementById('resultSection');
+            resultSection.classList.remove('show');
+            resultSection.style.display = 'none';
+
+            // 隐藏进度区
+            const progressSection = document.getElementById('progressSection');
+            progressSection.classList.remove('show');
+            progressSection.style.display = 'none';
+
+            // 隐藏“已选择文件”区
+            document.getElementById('selectedFile').classList.remove('show');
+            document.getElementById('selectedFile').style.display = 'none';
+
+            // 显示上传框
+            document.getElementById('uploadSection').style.display = 'block';
+
+            // 3. 重置输入框和进度条
+            document.getElementById('fileInput').value = '';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('statusMessage').textContent = '';
+            document.getElementById('progressPercentage').textContent = '0%';
+            document.getElementById('processingFileName').textContent = '-';  // 重置文件名
+            updateLogCount();  // 重置日志计数
+            document.getElementById('logContainer').innerHTML = '';
+
+            // 恢复上传按钮状态
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = false;
+            document.getElementById('uploadSpinner').style.display = 'none';
+            document.getElementById('uploadBtnText').textContent = 'Start Processing';
+
+            // 关闭WebSocket连接（如果还在连接）
+            if (ws) {
+                try {
+                    ws.close();
+                } catch (e) {
+                    console.log('WebSocket already closed');
+                }
+                ws = null;
+            }
+
+            console.log('UI reset complete - ready for next upload');
+            console.log('Upload section display:', document.getElementById('uploadSection').style.display);
+            console.log('Result section display:', resultSection.style.display);
+            console.log('Ready for next PDF upload');
+        }
+
+        // 工具函数：格式化字节
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>

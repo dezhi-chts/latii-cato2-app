@@ -58,7 +58,7 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
       <div className="w-[450px] flex flex-col gap-3 pt-4">
         <p className="text-xs font-light">
           Name{" "}
-          <span className="text-basicGray">
+          <span className="text-grey-normal">
             (Use this to identify the file)
           </span>
         </p>
@@ -100,8 +100,10 @@ const DocumentModal = ({ isModalOpen, setIsModalOpen, data }: any) => {
                 <FilePreview file={settings.file} />
               ) : (
                 <>
-                  <p className="text-forumBlue underline text-xs">Upload</p>
-                  <p className="text-basicGray text-xxs">Drop a File.</p>
+                  <p className="text-forumBlue-normal underline text-xs">
+                    Upload
+                  </p>
+                  <p className="text-grey-normal text-xxs">Drop a File.</p>
                 </>
               )}
             </div>

@@ -22,10 +22,15 @@ export const getEvidencesByProjectId = async (projectId: string) => {
   }
 };
 
-export const getEvidenceByFileId = async (projectId:string, fileId: number) => {
+export const getEvidenceByFileId = async (
+  projectId: string,
+  fileId: number,
+  params?: any,
+) => {
+  let newParams = params ? { ...params } : {};
   try {
     const url = `/evidence/all/project_file?project_id=${projectId}&project_file_id=${fileId}`;
-    const response = await http.get(url);
+    const response = await http.get(url, newParams);
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error getting evidence by file id:", error);
@@ -46,12 +51,12 @@ export const deleteEvidenceById = async (evidenceId: string) => {
 
 export const changeEvidenceType = async (
   evidenceId: string,
-  type: "Table" | "Item"
+  type: "Table" | "Item",
 ) => {
   try {
     const body = {
       id: evidenceId,
-      type: JSON.stringify({name: type}),
+      type: JSON.stringify({ name: type }),
     };
 
     const url = `/evidence/update/type`;
@@ -59,6 +64,52 @@ export const changeEvidenceType = async (
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error changing evidence type:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const evidenceBatchSubmit = async (evidenceList: object[]) => {
+  try {
+    const url = `/evidence/save/new/list`;
+    const response = await http.post(url, evidenceList);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error evidence batch submit:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+};
+
+export const evidenceBatchDelete = async (evidenceIds: number[]) => {
+  try {
+    const url = `/evidence/batch/delete`;
+    const response = await http.delete(url, evidenceIds);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error evidence batch delete:", error);
+    return { data: null, status: "error" };
+  }
+};
+
+export const evidenceBatchUpdate = async (evidenceList: object[]) => {
+  try {
+    const url = `/evidence/batch/update`;
+    const response = await http.put(url, [...evidenceList] as any);
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error evidence batch update:", error);
+    return { data: null, status: "error" };
+  }
+};
+export const generateEvidenceByFileId = async (
+  projectId: string | number,
+  fileId: string | number,
+) => {
+  try {
+    const url = `/evidence/drawing-ai/generate_evidence?project_id=${projectId}&project_file_id=${fileId}`;
+    const response = await http.post(url, {});
+    return { data: response as any, status: "success" };
+  } catch (error) {
+    console.error("Error getting evidence by file id:", error);
     return { data: null, status: "error" };
   }
 };

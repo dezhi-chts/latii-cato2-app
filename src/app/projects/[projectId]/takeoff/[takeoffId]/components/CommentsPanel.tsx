@@ -114,7 +114,7 @@ const CommentsPanel = ({
       <div className={`${isFullyOpen ? "" : "hidden"}`}>
         <div className="mb-3">
           <p>Comments Panel</p>
-          <p className="text-xs text-basicGray">
+          <p className="text-xs text-grey-normal">
             Review all general comments added to this quotii.
           </p>
         </div>
@@ -172,7 +172,7 @@ const GeneralComments = ({
             : "Latii Team";
           return (
             <div key={index}>
-              {index !== 0 && <Divider className="bg-neutralsN30" />}
+              {index !== 0 && <Divider className="bg-primaryN30" />}
 
               <div
                 className="mb-6 flex flex-col gap-1"
@@ -249,7 +249,7 @@ const PerItemComments = ({
 
   const handleSelectItem = async (
     index: number,
-    itemRevisionGroupId: string
+    itemRevisionGroupId: string,
   ) => {
     setSelectedItem(index);
 
@@ -261,7 +261,7 @@ const PerItemComments = ({
   const handleMarkAsRead = async (
     comment: any,
     isNewMessage: boolean,
-    index: number
+    index: number,
   ) => {
     if (isNewMessage) {
       const response = await markCommentAsRead(comment.id);
@@ -289,12 +289,12 @@ const PerItemComments = ({
 
   const fetchAllItemComments = async (
     itemRevisionGroupId: any,
-    index: number
+    index: number,
   ) => {
     // const response = await getAllItemComments(itemRevisionGroupId);
     const response = await getItemCommentsByVersion(
       itemRevisionGroupId,
-      version
+      version,
     );
     if (response) {
       const comments = response as any;
@@ -316,18 +316,18 @@ const PerItemComments = ({
 
   const getItemClassNames = (
     isSelected: boolean,
-    itemRevisionGroupId: string
+    itemRevisionGroupId: string,
   ) => {
     const hasLatiiComments = itemsUnreadCount.some(
       (arrItem: any) =>
         arrItem.item_revision_group_id === itemRevisionGroupId &&
-        arrItem.internal_count > 0
+        arrItem.internal_count > 0,
     );
 
     const hasDealerComments = itemsUnreadCount.some(
       (arrItem: any) =>
         arrItem.item_revision_group_id === itemRevisionGroupId &&
-        arrItem.dealer_count > 0
+        arrItem.dealer_count > 0,
     );
 
     if (hasLatiiComments) {
@@ -344,17 +344,17 @@ const PerItemComments = ({
 
     return isSelected
       ? "bg-basicLightGray text-white"
-      : "bg-basicLightGray/45 text-basicGray";
+      : "bg-basicLightGray/45 text-grey-normal";
   };
 
   return (
     <div className="zoomed-container flex flex-col gap-10">
-      <p className="text-xs text-basicGray">
+      <p className="text-xs text-grey-normal">
         Select Item to see comments if available and to add new comments.
       </p>
       <div className="flex gap-14">
         <div className="flex flex-col gap-3 items-center ">
-          <p className="text-basicGray">Items</p>
+          <p className="text-grey-normal">Items</p>
           <div className="overflow-auto w-10 scrollbar-hidden max-h-80 flex flex-col gap-3">
             {items.map((item: any, index: number) => {
               const isSelected = selectedItem === index;
@@ -365,7 +365,7 @@ const PerItemComments = ({
                     key={index}
                     className={`${getItemClassNames(
                       isSelected,
-                      item.revision_group_id
+                      item.revision_group_id,
                     )} rounded-full w-full cursor-pointer hover:opacity-80
                 flex justify-center
                 `}
@@ -393,7 +393,7 @@ const PerItemComments = ({
                   comment.is_read === false && !isDealerComment;
                 return (
                   <div key={index}>
-                    {index !== 0 && <Divider className="bg-neutralsN30" />}
+                    {index !== 0 && <Divider className="bg-primaryN30" />}
 
                     <div
                       className="mb-6 flex flex-col gap-1"
@@ -435,17 +435,17 @@ const PerItemComments = ({
                     </div>
                   </div>
                 );
-              }
+              },
             )}
           </div>
           {itemComments[selectedItem]?.length !== 0 && (
-            <Divider className="bg-neutralsN30" />
+            <Divider className="bg-primaryN30" />
           )}
           <AddCommentInput
             refreshData={() => {
               fetchAllItemComments(
                 items[selectedItem].revision_group_id,
-                selectedItem
+                selectedItem,
               );
               refreshData();
             }}

@@ -113,7 +113,7 @@ const ChatContainer = () => {
                 />
               </div>
               <div className="pt-0.5">
-                <p className="text-xs font-light italic text-basicGray animate-pulse">
+                <p className="text-xs font-light italic text-grey-normal animate-pulse">
                   Lucius is thinking…
                 </p>
               </div>

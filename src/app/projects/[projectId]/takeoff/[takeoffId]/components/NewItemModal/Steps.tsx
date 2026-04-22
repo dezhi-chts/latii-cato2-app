@@ -29,7 +29,7 @@ const Steps = ({
 }: StepsProps) => {
   const getItemName = (step: Step) => {
     return step.options?.find(
-      (option: { value: string }) => option.value === step.selected_value
+      (option: { value: string }) => option.value === step.selected_value,
     )?.text;
   };
 
@@ -47,8 +47,8 @@ const Steps = ({
               step.is_disabled
                 ? "opacity-60 bg-gray-200 cursor-not-allowed"
                 : step.is_current
-                ? "bg-primaryN900 hover:opacity-90 cursor-pointer"
-                : "bg-white border border-primaryN30 hover:bg-gray-100 cursor-pointer"
+                  ? "bg-primaryN900 hover:opacity-90 cursor-pointer"
+                  : "bg-white border border-primaryN30 hover:bg-gray-100 cursor-pointer"
             } rounded-lg flex items-center gap-2.5 w-44 px-3 py-2`}
             onClick={() => {
               if (step.is_disabled) return;
@@ -66,7 +66,7 @@ const Steps = ({
             </ConfigProvider>
             <div className="flex flex-col gap-1">
               <p
-                className={`${step.completed && "text-accentGreen"} ${
+                className={`${step.completed && "text-green-normal"} ${
                   step.is_current ? "text-white" : "text-lushAqua"
                 } font-semibold`}
               >
@@ -74,7 +74,7 @@ const Steps = ({
               </p>
               <p
                 className={`${
-                  step.is_current ? "text-white" : "text-basicGray"
+                  step.is_current ? "text-white" : "text-grey-normal"
                 }`}
               >
                 {step.selected_value ? getItemName(step) : "Select"}

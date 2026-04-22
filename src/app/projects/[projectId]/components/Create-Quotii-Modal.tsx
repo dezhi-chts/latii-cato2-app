@@ -30,7 +30,7 @@ const CreateQuotiiModal = ({
       title={
         <div className="flex flex-col mb-10 zoomed-container">
           <p className="text-primaryN900 font-bold text-sm">New Quotii</p>
-          <p className="text-basicGray text-xs font-normal">
+          <p className="text-grey-normal text-xs font-normal">
             Create your Quotii using a blank template or our AI agent: CATO.
           </p>
         </div>
