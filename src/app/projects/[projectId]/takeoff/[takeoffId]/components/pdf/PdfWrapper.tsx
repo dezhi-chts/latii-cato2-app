@@ -8,7 +8,7 @@ import React, {
 	useImperativeHandle,
 	useMemo,
 } from "react";
-import { Stage, Layer, Group, Path, Circle, Rect } from "react-konva";
+import { Stage, Layer, Group, Path, Circle, Rect, Text } from "react-konva";
 import {
 	Form,
 	Modal,
@@ -729,7 +729,7 @@ const PdfWrapper = forwardRef(
 			return uploadData;
 		}, [cropSections]);
 
-		const updateEvidence = async (evid: EvidenceType) => {
+		const updateEvidence = async (operationType: string, evid: EvidenceType) => {
 			let polygonStr = evid.polygon;
 			if (typeof polygonStr !== "string") {
 				try {
@@ -747,21 +747,38 @@ const PdfWrapper = forwardRef(
 			const viewport = currentViewportRef.current;
 			const rotateAngle: number = (viewport as any).rotation ?? 0;
 
-			let data = {
-				...evid,
-				id: evid.id,
-				polygon: polygonStr,
-				device_pixel_ratio: window.devicePixelRatio || 1,
-				type: evid.type,
-				scale: viewport.scale,
-				page_width_pdf: viewport.width,
-				page_height_pdf: viewport.height,
-				view_box: JSON.stringify(viewport.viewBox),
-				is_rotate: rotateAngle !== 0,
-				rotation_angle: rotateAngle,
-				sub_text: evid.sub_text,
-			};
-			let res = await evidenceBatchUpdate([data]);
+			let updateData: any = { ...evid };
+
+			switch (operationType) {
+				case 'drag':
+				// 拖动更新位置
+				case 'resize': {
+					// 缩放更新位置
+					updateData.device_pixel_ratio = window.devicePixelRatio || 1;
+					updateData.polygon = polygonStr;
+					updateData.view_box = JSON.stringify(viewport.viewBox);
+				}
+					updateData.scale = viewport.scale;
+					updateData.is_rotate = rotateAngle !== 0;
+					updateData.rotation_angle = rotateAngle;
+					updateData.page_width_pdf = viewport.width;
+					updateData.page_height_pdf = viewport.height;
+					break;
+				case 'changeSubText': {
+					// 修改子文本
+					updateData.sub_text = evid.sub_text;
+				}
+					break;
+				case 'changeType': {
+					// 修改类型
+					updateData.type = evid.type;
+				}
+					break;
+				default:
+					break;
+			}
+
+			let res = await evidenceBatchUpdate([updateData]);
 			if (res.status === "success") {
 				onUpdateEvidence && onUpdateEvidence(res.data);
 			} else {
@@ -2630,39 +2647,51 @@ const PdfWrapper = forwardRef(
 
 					const viewBox = viewPort.viewBox;
 					const offsetX =
-						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+						Array.isArray(viewBox) && viewBox.length > 1 ? Number(viewBox[0]) : 0;
 					const offsetY =
-						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
-					const hasValidViewBox = Array.isArray(viewBox) && viewBox.length >= 4;
-					const minX = hasValidViewBox ? Number(viewBox[0]) : Number.NEGATIVE_INFINITY;
-					const minY = hasValidViewBox ? Number(viewBox[1]) : Number.NEGATIVE_INFINITY;
-					const maxX = hasValidViewBox ? Number(viewBox[2]) : Number.POSITIVE_INFINITY;
-					const maxY = hasValidViewBox ? Number(viewBox[3]) : Number.POSITIVE_INFINITY;
-					const pointsOutOfViewBox = Array.isArray(pdfPolygons)
-						? pdfPolygons.some((p: any) => {
-							const x = Number(p?.x);
-							const y = Number(p?.y);
-							return (
-								Number.isFinite(x) &&
-								Number.isFinite(y) &&
-								(x < minX || x > maxX || y < minY || y > maxY)
-							);
-						})
-						: false;
-					// Some "manual" evidences are still saved in absolute page coords.
-					// If points exceed viewBox, shift by viewBox offset as a fallback.
-					const shouldApplyViewBoxOffset = !item.is_manual || pointsOutOfViewBox;
+						Array.isArray(viewBox) && viewBox.length > 1 ? Number(viewBox[1]) : 0;
+					const hasValidViewBox =
+						Array.isArray(viewBox) &&
+						viewBox.length >= 4 &&
+						viewBox.every((v: any) => Number.isFinite(Number(v)));
 
-					pdfPolygons = pdfPolygons.map((p: any) => {
-						if (shouldApplyViewBoxOffset) {
-							return {
-								x: p.x + offsetX,
-								y: p.y + offsetY,
-							};
-						} else {
-							return p;
+					// 解析 evidence 自身存储的 view_box（可能是 string 或 array）
+					let evidenceViewBox: number[] | null = null;
+					if (Array.isArray(item?.view_box)) {
+						evidenceViewBox = item.view_box.map((v: any) => Number(v));
+					} else if (typeof item?.view_box === "string") {
+						try {
+							const parsedViewBox = JSON.parse(item.view_box);
+							if (Array.isArray(parsedViewBox)) {
+								evidenceViewBox = parsedViewBox.map((v: any) => Number(v));
+							}
+						} catch (_) {
+							// view_box 解析失败，下面会走 fallback
 						}
-					});
+					}
+					const hasValidEvidenceViewBox =
+						Array.isArray(evidenceViewBox) &&
+						evidenceViewBox.length >= 4 &&
+						evidenceViewBox.every((v) => Number.isFinite(v));
+					let shouldApplyViewBoxOffset = false;
+					if (hasValidEvidenceViewBox && hasValidViewBox) {
+						const normalizedEvidenceViewBox = evidenceViewBox as number[];
+						shouldApplyViewBoxOffset = normalizedEvidenceViewBox
+							.slice(0, 4)
+							.some((value, index) => Number(value) !== Number(viewBox[index]));
+					}
+
+					pdfPolygons = Array.isArray(pdfPolygons)
+						? pdfPolygons.map((p: any) => {
+							if (shouldApplyViewBoxOffset) {
+								return {
+									x: Number(p?.x) + offsetX,
+									y: Number(p?.y) + offsetY,
+								};
+							}
+							return p;
+						})
+						: [];
 				} catch (e) {
 					console.error("Failed to parse polygon data:", item.polygon);
 					return item;
@@ -2927,7 +2956,7 @@ const PdfWrapper = forwardRef(
 																(item) => item.id === evid.id,
 															);
 															if (updatedEvid) {
-																updateEvidence(updatedEvid);
+																updateEvidence('drag', updatedEvid);
 															}
 														}, 100);
 													}}
@@ -2962,7 +2991,7 @@ const PdfWrapper = forwardRef(
 																(item) => item.id === evid.id,
 															);
 															if (updatedEvid) {
-																updateEvidence(updatedEvid);
+																updateEvidence('resize', updatedEvid);
 															}
 														}, 100);
 													}}
@@ -3160,7 +3189,7 @@ const PdfWrapper = forwardRef(
 													color={color}
 													onChange={(value: string) => {
 														if (value.trim() !== "") {
-															updateEvidence({
+															updateEvidence('changeSubText', {
 																...item,
 																sub_text: value,
 															});
@@ -3183,7 +3212,7 @@ const PdfWrapper = forwardRef(
 															onChangeType={async (type) => {
 																if (type === item.type) return;
 																setFullLoading(true);
-																await updateEvidence({ ...item, type });
+																await updateEvidence('changeType', { ...item, type });
 																setFullLoading(false);
 															}}
 														/>
