@@ -16,6 +16,10 @@ import {
 } from "@/services/takeOffService";
 
 import {
+  getEvidenceByFileId,
+} from "@/services/evidenceService";
+
+import {
   ProjectFileRecord,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/analyze-new/types";
 import {
@@ -227,6 +231,30 @@ export default function FloorPlanPage() {
       notify.error({
         title: "Error",
         description: "Failed to load schedule evidence data.",
+      });
+    }
+  }, [selectedFileId]);
+
+  // 获取当前文件的evidence，并按照type进行分类
+  const getFileEvidences = useCallback(async () => {
+    if (selectedFileId === -1) return;
+    const file = files.find((file: any) => file.id === selectedFileId);
+    let filterType = "QuoteLabel";
+    if (file && file.operation_type === FileOperationType.ArchitectureDrawing) {
+      filterType = "ArchDrawingLabel";
+    }
+
+    const response = await getEvidenceByFileId(
+      projectId as string,
+      selectedFileId as number,
+      { filter_type: filterType },
+    );
+    if (response.status === "success") {
+      const evidenceList = response?.data ?? [];
+    } else {
+      notify.error({
+        title: "Error",
+        description: "Failed to get file evidence",
       });
     }
   }, [selectedFileId]);
@@ -522,32 +550,6 @@ export default function FloorPlanPage() {
       return;
     }
 
-    setFullLoading(true);
-    const groupedResponse = await getGroupedEvidencesByTakeOffAndFile(
-      takeOffId as string,
-      selectedFileId,
-    );
-    setFullLoading(false);
-    if (groupedResponse.status !== "success") {
-      notify.error({
-        title: "Error",
-        description:
-          groupedResponse?.data?.detail ||
-          "Failed to get grouped evidences by takeoff and file",
-      });
-      return;
-    }
-    const groupedData = groupedResponse?.data || {};
-    const schedule = Array.isArray(groupedData?.schedule)
-      ? groupedData.schedule
-      : [];
-    if (schedule.length === 0) {
-      router.push(
-        `/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`,
-      );
-      return;
-    }
-
     handleAnaylize();
   };
 
@@ -587,6 +589,38 @@ export default function FloorPlanPage() {
     }
   };
 
+  const handleGetGroupedEvidences = useCallback(async () => {
+    const groupedResponse = await getGroupedEvidencesByTakeOffAndFile(
+      takeOffId as string,
+      selectedFileId as any,
+    );
+    setFullLoading(false);
+    if (groupedResponse.status !== "success") {
+      notify.error({
+        title: "Error",
+        description:
+          groupedResponse?.data?.detail ||
+          "Failed to get grouped evidences by takeoff and file",
+      });
+      return;
+    }
+    const groupedData = groupedResponse?.data || {};
+    const schedule = Array.isArray(groupedData?.schedule)
+      ? groupedData.schedule
+      : [];
+    if (schedule.length === 0) {
+      router.push(
+        `/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`,
+      );
+      return;
+    } else {
+      router.push(
+        `/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
+      );
+      return;
+    }
+  }, [takeOffId, selectedFileId]);
+
   const handleAnaylize = useCallback(async () => {
     if (!selectedTemplateId) {
       notify.error({
@@ -613,9 +647,7 @@ export default function FloorPlanPage() {
       onCompleted: (result: any) => {
         console.log("[SSE] Analysis completed:", result);
         eventSourceRef.current = null;
-        router.push(
-          `/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
-        );
+        handleGetGroupedEvidences();
       },
       onError: (error: string) => {
         console.error("[SSE] Analysis error:", error);
