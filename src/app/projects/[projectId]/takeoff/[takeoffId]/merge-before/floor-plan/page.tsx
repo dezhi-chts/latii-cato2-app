@@ -629,12 +629,12 @@ export default function FloorPlanPage() {
       ? groupedData.schedule
       : [];
     if (schedule.length === 0) {
-      router.push(
+      router.replace(
         `/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`,
       );
       return;
     } else {
-      router.push(
+      router.replace(
         `/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
       );
       return;
