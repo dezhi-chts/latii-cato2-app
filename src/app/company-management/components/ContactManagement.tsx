@@ -6,10 +6,10 @@ import {
   Input,
   Modal,
   Select,
+  Switch,
   Table,
   Tooltip,
   Typography,
-  notification,
 } from "antd";
 import {
   DeleteOutlined,
@@ -25,6 +25,14 @@ import {
   getContactListByCompanyId,
   updateCompanyContact,
 } from "@/services/companyService";
+import {
+  bindUserToAdmin,
+  bindUserToSuperAdmin,
+  unbindUserFromSuperAdmin,
+  unbindUserToAdmin,
+} from "@/services/userService";
+import { useUser } from "@/context/UserContext";
+import { notify } from "@/utils/notify";
 import ContactFormModal, { ContactFormValues } from "./ContactFormModal";
 import { CompanyRow } from "./CompanyManagement";
 
@@ -35,6 +43,10 @@ type ContactRow = {
   phone?: string;
   job_title?: string;
   note?: string;
+  is_admin?: boolean;
+  is_super_admin?: boolean;
+  auth_provider_uid?: string;
+  [key: string]: any;
 };
 
 type Props = {
@@ -44,8 +56,11 @@ type Props = {
 
 const { confirm } = Modal;
 const { Text } = Typography;
+const PERMISSION_SWITCH_DISABLED_HINT =
+  "Unable to modify permissions. To avoid accidental loss of feature access, please contact the relevant personnel for assistance.";
 
 const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
+  const { email: currentUserEmail } = useUser();
   const [companyId, setCompanyId] = useState<number | undefined>(
     defaultCompanyId,
   );
@@ -57,6 +72,9 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [editingContact, setEditingContact] = useState<ContactRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [permissionUpdatingKeys, setPermissionUpdatingKeys] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     if (!companyId && companies.length > 0) {
@@ -69,17 +87,18 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
     const res = await getContactListByCompanyId({ companyId: cid });
     if (res.status === "success") {
       const list: ContactRow[] = (res.data || []).map((item: any) => ({
+        ...item,
+        // Keep complete API record, with key fields normalized for UI usage.
         id: item.id,
-        name: item.name,
-        email: item.email,
-        phone: item.phone,
-        job_title: item.job_title,
-        note: item.note,
+        name: item.name || "",
+        email: item.email || "",
+        is_admin: Boolean(item.is_admin),
+        is_super_admin: Boolean(item.is_super_admin),
       }));
       setContacts(list);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to fetch contacts",
       });
     }
@@ -108,7 +127,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
 
   const handleOpenCreate = () => {
     if (!companyId) {
-      notification.warning({ message: "Please select a company first" });
+      notify.warning({ title: "Warning", description: "Please select a company first" });
       return;
     }
     setModalMode("create");
@@ -137,11 +156,11 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
           contactId: contact.id,
         });
         if (res.status === "success") {
-          notification.success({ message: "Contact deleted" });
+          notify.success({ title: "Success", description: "Contact deleted" });
           fetchContacts(companyId);
         } else {
-          notification.error({
-            message: "Error",
+          notify.error({
+            title: "Error",
             description: "Failed to delete contact",
           });
         }
@@ -171,14 +190,15 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
         });
       }
       if (res?.status === "success") {
-        notification.success({
-          message: modalMode === "create" ? "Contact created" : "Contact updated",
+        notify.success({
+          title: "Success",
+          description: modalMode === "create" ? "Contact created" : "Contact updated",
         });
         setModalOpen(false);
         fetchContacts(companyId);
       } else {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description:
             res?.data?.response?.data?.detail ||
             `Failed to ${modalMode === "create" ? "create" : "update"} contact`,
@@ -189,19 +209,97 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
     }
   };
 
+  const isCurrentUser = (record: ContactRow) => {
+    const normalizedCurrentUserEmail = (currentUserEmail || "").trim().toLowerCase();
+    const normalizedContactEmail = (record.email || "").trim().toLowerCase();
+    if (!normalizedCurrentUserEmail || !normalizedContactEmail) return false;
+    return normalizedCurrentUserEmail === normalizedContactEmail;
+  };
+
+  const getPermissionSwitchKey = (
+    contactId: number,
+    role: "admin" | "super_admin",
+  ) => `${contactId}-${role}`;
+
+  const updateContactPermission = (
+    contactId: number,
+    key: "is_admin" | "is_super_admin",
+    value: boolean,
+  ) => {
+    setContacts((prev) =>
+      prev.map((contact) =>
+        contact.id === contactId ? { ...contact, [key]: value } : contact,
+      ),
+    );
+  };
+
+  const handlePermissionSwitchChange = async (
+    record: ContactRow,
+    role: "admin" | "super_admin",
+    checked: boolean,
+  ) => {
+    const permissionKey = role === "admin" ? "is_admin" : "is_super_admin";
+    const previousValue = Boolean(record[permissionKey]);
+    const switchKey = getPermissionSwitchKey(record.id, role);
+    const targetUserId = record.auth_provider_uid;
+
+    updateContactPermission(record.id, permissionKey, checked);
+    setPermissionUpdatingKeys((prev) => ({ ...prev, [switchKey]: true }));
+    if (!targetUserId) {
+      updateContactPermission(record.id, permissionKey, previousValue);
+      setPermissionUpdatingKeys((prev) => ({ ...prev, [switchKey]: false }));
+      notify.error({
+        title: "Error",
+        description: "Failed to update user permissions",
+      });
+      return;
+    }
+
+    let response: any;
+    if (role === "admin") {
+      response = checked
+        ? await bindUserToAdmin(targetUserId)
+        : await unbindUserToAdmin(targetUserId);
+    } else {
+      response = checked
+        ? await bindUserToSuperAdmin(targetUserId)
+        : await unbindUserFromSuperAdmin(targetUserId);
+    }
+
+    const isSuccess = response?.status !== "error";
+    if (!isSuccess) {
+      updateContactPermission(record.id, permissionKey, previousValue);
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to update user permissions",
+      });
+    } else {
+      const roleText = role === "admin" ? "Admin" : "Super Admin";
+      notify.success({
+        title: "Success",
+        description: `${roleText} permission ${checked ? "enabled" : "disabled"} successfully`,
+      });
+    }
+
+    setPermissionUpdatingKeys((prev) => ({
+      ...prev,
+      [switchKey]: false,
+    }));
+  };
+
   const columns: ColumnsType<ContactRow> = [
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      align:"center",
+      align: "center",
       render: (v: string) => <Text strong>{v || "-"}</Text>,
     },
     {
       title: "Email",
       dataIndex: "email",
       key: "email",
-      align:"center",
+      align: "center",
       render: (v: string) =>
         v ? (
           <a
@@ -219,7 +317,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
       dataIndex: "phone",
       key: "phone",
       width: 160,
-      align:"center",
+      align: "center",
       render: (v: string) =>
         v || <span className="text-grey-light-strong">-</span>,
     },
@@ -227,7 +325,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
       title: "Job Title",
       dataIndex: "job_title",
       key: "job_title",
-      align:"center",
+      align: "center",
       render: (v: string) =>
         v || <span className="text-grey-light-strong">-</span>,
     },
@@ -236,7 +334,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
       dataIndex: "note",
       key: "note",
       ellipsis: true,
-      align:"center",
+      align: "center",
       render: (v: string) =>
         v ? (
           <Tooltip title={v} placement="topLeft">
@@ -245,6 +343,64 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
         ) : (
           <span className="text-grey-light-strong">-</span>
         ),
+    },
+    {
+      title: "is_admin",
+      dataIndex: "is_admin",
+      key: "is_admin",
+      align: "center",
+      width: 140,
+      render: (_: boolean, record: ContactRow) => {
+        const disabled = isCurrentUser(record);
+        const switchKey = getPermissionSwitchKey(record.id, "admin");
+        const switchNode = (
+          <Switch
+            checked={Boolean(record.is_admin)}
+            loading={Boolean(permissionUpdatingKeys[switchKey])}
+            disabled={disabled}
+            size="small"
+            onChange={(checked) =>
+              handlePermissionSwitchChange(record, "admin", checked)
+            }
+          />
+        );
+
+        if (!disabled) return switchNode;
+        return (
+          <Tooltip title={PERMISSION_SWITCH_DISABLED_HINT} placement="top">
+            <span>{switchNode}</span>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: "is_super_admin",
+      dataIndex: "is_super_admin",
+      key: "is_super_admin",
+      align: "center",
+      width: 140,
+      render: (_: boolean, record: ContactRow) => {
+        const disabled = isCurrentUser(record);
+        const switchKey = getPermissionSwitchKey(record.id, "super_admin");
+        const switchNode = (
+          <Switch
+            checked={Boolean(record.is_super_admin)}
+            loading={Boolean(permissionUpdatingKeys[switchKey])}
+            disabled={disabled}
+            size="small"
+            onChange={(checked) =>
+              handlePermissionSwitchChange(record, "super_admin", checked)
+            }
+          />
+        );
+
+        if (!disabled) return switchNode;
+        return (
+          <Tooltip title={PERMISSION_SWITCH_DISABLED_HINT} placement="top">
+            <span>{switchNode}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Actions",

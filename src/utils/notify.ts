@@ -12,6 +12,7 @@ interface NotifyOptions {
 
 const DEFAULT_NOTIFICATION_KEY_PREFIX = "global-notification";
 const DEFAULT_MESSAGE_KEY_PREFIX = "global-message";
+const DEFAULT_NOTIFICATION_DURATION = 3;
 
 let isConfigured = false;
 let notificationSeq = 0;
@@ -46,7 +47,7 @@ const open = (type: NotificationType, options: NotifyOptions) => {
     key: options.key || `${DEFAULT_NOTIFICATION_KEY_PREFIX}-${notificationSeq}`,
     message: options.title || getDefaultTitle(type),
     description: options.description,
-    duration: options.duration,
+    duration: options.duration ?? DEFAULT_NOTIFICATION_DURATION,
   });
 };
 

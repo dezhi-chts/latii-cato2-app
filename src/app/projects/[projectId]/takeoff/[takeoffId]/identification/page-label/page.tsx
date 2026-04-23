@@ -496,7 +496,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		debounce(
 			(value: number) => {
 				if (value === zoom) return;
-				if (value < 0.4 || value > 4) return;
+				if (value < 0.5 || value > 4) return;
 				// 四舍五入保留2位小数，避免浮点数精度累积
 				const roundedValue = Math.round(value * 100) / 100;
 				setZoom(roundedValue);
