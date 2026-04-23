@@ -6,7 +6,6 @@ import {
   Divider,
   message,
   Modal,
-  notification,
   Popover,
   Select,
   Spin,
@@ -25,6 +24,7 @@ import {
   FileViewStep,
 } from "@/context/TakeoffContext";
 import LoadingScreen from "@/components/loading-screen";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 
@@ -98,8 +98,8 @@ const PageLabelingContent = () => {
         }
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "No files found in this take off",
       });
     }
@@ -168,14 +168,14 @@ const PageLabelingContent = () => {
           );
         }
       } else {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "No files found in this take off",
         });
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to get take off",
       });
     }

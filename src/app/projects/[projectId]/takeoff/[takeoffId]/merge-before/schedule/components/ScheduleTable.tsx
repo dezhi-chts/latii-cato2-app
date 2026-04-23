@@ -1,15 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Checkbox, Input, Modal, Table, Tooltip, notification } from "antd";
+import { Button, Checkbox, Input, Modal, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	getDisplayValueByField,
 	parseItemResult as parseItemResultUtil,
+	setResultValueByField,
 } from "../../../analyze-new/takeoffUtils";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, CopyOutlined } from "@ant-design/icons";
 import { notify } from "@/utils/notify";
+import {
+	addMultipleTakeOffResultItems,
+	deleteMultipleTakeOffResultItems,
+	updateMultipleTakeOffResultItems,
+} from "@/services/takeOffService";
 
 
 export interface ScheduleFileRow {
@@ -39,6 +45,9 @@ interface ScheduleTableProps {
 	columns: string[];
 	sections: any[];
 	tableLoading: boolean;
+	takeOffId: string;
+	selectedFileId: number | null;
+	pageEvidenceId: number;
 	onUpdateField: (
 		updatedItem: any,
 		fieldName: string,
@@ -47,6 +56,7 @@ interface ScheduleTableProps {
 	) => Promise<boolean>;
 	onDeleteItem: (itemId: number) => Promise<boolean>;
 	onOpenCreateItemModal: () => void;
+	onBatchActionSuccess?: () => Promise<void> | void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -109,9 +119,13 @@ export default function ScheduleTable({
 	columns,
 	sections,
 	tableLoading,
+	takeOffId,
+	selectedFileId,
+	pageEvidenceId,
 	onUpdateField,
 	onDeleteItem,
-	onOpenCreateItemModal
+	onOpenCreateItemModal,
+	onBatchActionSuccess,
 }: ScheduleTableProps) {
 	const [editingCell, setEditingCell] = useState<{
 		id: number;
@@ -120,6 +134,11 @@ export default function ScheduleTable({
 	const [editingValue, setEditingValue] = useState("");
 	const submittingCellKeyRef = useRef<string | null>(null);
 	const [batchSelectedIds, setBatchSelectedIds] = useState<number[]>([]);
+	const [copyModalOpen, setCopyModalOpen] = useState(false);
+	const [editModalOpen, setEditModalOpen] = useState(false);
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [batchSubmitting, setBatchSubmitting] = useState(false);
+	const [batchEditValues, setBatchEditValues] = useState<Record<string, string>>({});
 
 
 	const startEdit = (record: any, fieldName: string) => {
@@ -151,8 +170,8 @@ export default function ScheduleTable({
 			return;
 		}
 		if (fieldName === "Label" && !newValue) {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Label cannot be empty.",
 			});
 			// Exit editing mode and keep previous value from parent state.
@@ -161,12 +180,10 @@ export default function ScheduleTable({
 		}
 
 		const parsedResult = parseItemResultUtil(record?.result as any);
+		const nextResult = setResultValueByField(parsedResult, fieldName, newValue);
 		const updatedItem = {
 			...record,
-			result: {
-				...parsedResult,
-				[fieldName]: newValue,
-			},
+			result: nextResult,
 		};
 
 		// Blur 后立即退出编辑态，避免 Input 长时间停留
@@ -201,6 +218,61 @@ export default function ScheduleTable({
 		});
 	};
 
+	const selectedRows = useMemo(
+		() =>
+			sections.filter((row) => {
+				const rowId = Number(row?.id);
+				return Number.isFinite(rowId) && batchSelectedIds.includes(rowId);
+			}),
+		[batchSelectedIds, sections],
+	);
+
+	const selectedPreviewRows = useMemo(
+		() =>
+			selectedRows.map((row) => ({
+				key: row.id,
+				id: row.id,
+				label: getDisplayValueByField(parseItemResultUtil(row?.result as any), "Label"),
+				subLabel: getDisplayValueByField(parseItemResultUtil(row?.result as any), "Sub Label"),
+			})),
+		[selectedRows],
+	);
+
+	const selectedPreviewColumns: ColumnsType<any> = [
+		{
+			title: "Label",
+			dataIndex: "label",
+			key: "label",
+			width: 180,
+			render: (value: string) => <TruncatedTextCell value={value || "-"} />,
+		},
+		{
+			title: "Sub Label",
+			dataIndex: "subLabel",
+			key: "subLabel",
+			width: 180,
+			render: (value: string) => <TruncatedTextCell value={value || "-"} />,
+		},
+	];
+
+	const resetBatchModals = () => {
+		setCopyModalOpen(false);
+		setEditModalOpen(false);
+		setDeleteModalOpen(false);
+		setBatchEditValues({});
+	};
+
+	const handleBatchCopy = () => {
+		if (!batchSelectedIds.length) {
+			notify.warning({
+				title: "Warning",
+				description: "Please select items to process.",
+			});
+			return;
+		}
+		setCopyModalOpen(true);
+	};
+
 	const handleOpenBatchEdit = () => {
 		if (!batchSelectedIds.length) {
 			notify.warning({
@@ -209,10 +281,8 @@ export default function ScheduleTable({
 			});
 			return;
 		}
-		notify.warning({
-			title: "Warning",
-			description: "Function development is in progress. Please wait.",
-		});
+		setBatchEditValues({});
+		setEditModalOpen(true);
 	};
 
 	const handleBatchDelete = () => {
@@ -223,15 +293,120 @@ export default function ScheduleTable({
 			});
 			return;
 		}
-		notify.warning({
-			title: "Warning",
-			description: "Function development is in progress. Please wait.",
+		setDeleteModalOpen(true);
+	};
+
+	const handleConfirmBatchCopy = async () => {
+		if (!selectedRows.length) return;
+		if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
+			notify.error({
+				title: "Error",
+				description: "Missing takeoff context, unable to copy labels.",
+			});
+			return;
+		}
+
+		const payload = selectedRows.map((row) => ({
+			take_off_id: takeOffId,
+			project_file_id: selectedFileId,
+			evidence_id: pageEvidenceId,
+			result: parseItemResultUtil(row?.result as any),
+		}));
+
+		setBatchSubmitting(true);
+		try {
+			const response = await addMultipleTakeOffResultItems(payload);
+			if (response.status !== "success") {
+				notify.error({
+					title: "Error",
+					description: response?.data?.detail || "Failed to copy labels.",
+				});
+				return;
+			}
+			notify.success({
+				title: "Success",
+				description: "Labels copied successfully.",
+			});
+			resetBatchModals();
+			setBatchSelectedIds([]);
+			await onBatchActionSuccess?.();
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
+
+	const handleConfirmBatchEdit = async () => {
+		if (!selectedRows.length) return;
+		const changedEntries = Object.entries(batchEditValues)
+			.map(([field, value]) => [field, value.trim()] as const)
+			.filter(([, value]) => Boolean(value));
+
+		if (changedEntries.length === 0) {
+			notify.warning({
+				title: "No Updates",
+				description: "Please fill at least one field.",
+			});
+			return;
+		}
+
+		const payload = selectedRows.map((row) => {
+			let nextResult = parseItemResultUtil(row?.result as any) as Record<string, any>;
+			changedEntries.forEach(([field, value]) => {
+				nextResult = setResultValueByField(nextResult, field, value);
+			});
+			return {
+				take_off_result_item_id: row.id,
+				result: nextResult,
+			};
 		});
-		return;
-		const selectedLabels = sections
-			.filter((row) => batchSelectedIds.includes(Number(row.id)))
-			.map((row) => row.label)
-			.filter(Boolean);
+
+		setBatchSubmitting(true);
+		try {
+			const response = await updateMultipleTakeOffResultItems(payload);
+			if (response.status !== "success") {
+				notify.error({
+					title: "Error",
+					description: response?.data?.detail || "Failed to edit labels.",
+				});
+				return;
+			}
+			notify.success({
+				title: "Success",
+				description: "Labels updated successfully.",
+			});
+			resetBatchModals();
+			setBatchSelectedIds([]);
+			await onBatchActionSuccess?.();
+		} finally {
+			setBatchSubmitting(false);
+		}
+	};
+
+	const handleConfirmBatchDelete = async () => {
+		if (!selectedRows.length) return;
+		const ids = selectedRows.map((row) => String(row.id)).filter(Boolean);
+		if (!ids.length) return;
+
+		setBatchSubmitting(true);
+		try {
+			const response = await deleteMultipleTakeOffResultItems(ids.join(","));
+			if (response.status !== "success") {
+				notify.error({
+					title: "Error",
+					description: response?.data?.detail || "Failed to delete labels.",
+				});
+				return;
+			}
+			notify.success({
+				title: "Success",
+				description: "Labels deleted successfully.",
+			});
+			resetBatchModals();
+			setBatchSelectedIds([]);
+			await onBatchActionSuccess?.();
+		} finally {
+			setBatchSubmitting(false);
+		}
 	};
 
 	const tableColumns: ColumnsType<any> = (() => {
@@ -292,7 +467,7 @@ export default function ScheduleTable({
 			title: "",
 			key: "checkbox",
 			width: 36,
-			align: "center",
+			align: "center" as const,
 			render: (_: unknown, record: any) => {
 				const rowId = Number(record.id);
 				return (
@@ -331,60 +506,176 @@ export default function ScheduleTable({
 	})();
 
 	return (
-		<div className="flex-1">
-			<div className="mb-3 flex items-center justify-between">
-				<div className="text-xs text-grey-normal">{sections.length} items</div>
-				<div className="flex items-center gap-2">
-					<Tooltip title="Edit Labels">
-						<div
-							className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-							onClick={() => {
-								handleOpenBatchEdit();
-							}}
-						>
-							<EditOutlined className="text-[12px]" />
-						</div>
-					</Tooltip>
-					<Tooltip title="Delete Labels">
-						<div
-							className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-							onClick={() => {
-								handleBatchDelete();
-							}}
-						>
-							<DeleteOutlined className="text-[12px]" />
-						</div>
-					</Tooltip>
-					<Button
-						className="custom-primary-btn !w-[60px] !text-xs"
-						onClick={() => onOpenCreateItemModal?.()}
-					>
-						+ Item
-					</Button>
-				</div>
-
-			</div>
-			<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
-				<Table<any>
-					rowKey={(record) => record.id}
-					columns={tableColumns}
-					dataSource={sections}
-					pagination={false}
-					loading={tableLoading}
-					scroll={{
-						x: "max-content",
-						y: "calc(100vh - 280px)",
-					}}
-					locale={{
-						emptyText: (
-							<div className="py-10 text-xs text-grey-normal">
-								No labels found for this source.
+		<>
+			<div className="flex-1">
+				<div className="mb-3 flex items-center justify-between">
+					<div className="text-xs text-grey-normal">{sections.length} items</div>
+					<div className="flex items-center gap-2">
+						<Tooltip title="Copy Labels">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									handleBatchCopy();
+								}}
+							>
+								<CopyOutlined className="text-[12px]" />
 							</div>
-						),
-					}}
-					className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
-				/>
+						</Tooltip>
+						<Tooltip title="Edit Labels">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									handleOpenBatchEdit();
+								}}
+							>
+								<EditOutlined className="text-[12px]" />
+							</div>
+						</Tooltip>
+						<Tooltip title="Delete Labels">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									handleBatchDelete();
+								}}
+							>
+								<DeleteOutlined className="text-[12px]" />
+							</div>
+						</Tooltip>
+						<Button
+							className="custom-primary-btn !w-[60px] !text-xs"
+							onClick={() => onOpenCreateItemModal?.()}
+						>
+							+ Item
+						</Button>
+					</div>
+
+				</div>
+				<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
+					<Table<any>
+						rowKey={(record) => record.id}
+						columns={tableColumns}
+						dataSource={sections}
+						pagination={false}
+						loading={tableLoading}
+						scroll={{
+							x: "max-content",
+							y: "calc(100vh - 280px)",
+						}}
+						locale={{
+							emptyText: (
+								<div className="py-10 text-xs text-grey-normal">
+									No labels found for this source.
+								</div>
+							),
+						}}
+						className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
+					/>
+				</div>
 			</div>
-		</div>
+
+			<Modal
+				open={copyModalOpen}
+				title="Copy Labels"
+				okText="Confirm"
+				cancelText="Cancel"
+				onCancel={() => setCopyModalOpen(false)}
+				onOk={handleConfirmBatchCopy}
+				confirmLoading={batchSubmitting}
+			>
+				<div className="mb-2 text-sm text-grey-normal">
+					Please confirm the selected labels to copy:
+				</div>
+				<Table<any>
+					rowKey="key"
+					columns={selectedPreviewColumns}
+					dataSource={selectedPreviewRows}
+					pagination={false}
+					scroll={{ y: 280 }}
+					size="small"
+				/>
+			</Modal>
+
+			<Modal
+				open={editModalOpen}
+				title="Edit Labels"
+				okText="Confirm"
+				cancelText="Cancel"
+				onCancel={() => setEditModalOpen(false)}
+				onOk={handleConfirmBatchEdit}
+				confirmLoading={batchSubmitting}
+				width={900}
+				styles={{
+					body: {
+						maxHeight: "70vh",
+						overflow: "hidden",
+					},
+				}}
+			>
+				<div className="flex max-h-[calc(70vh-24px)] flex-col gap-3">
+					<div>
+						<div className="mb-2 text-sm text-grey-normal">
+							Selected items:
+						</div>
+						<Table<any>
+							rowKey="key"
+							columns={selectedPreviewColumns}
+							dataSource={selectedPreviewRows}
+							pagination={false}
+							scroll={{ y: 220 }}
+							size="small"
+						/>
+					</div>
+					<div>
+						<div className="mb-2 text-sm text-grey-normal">
+							Update fields (fill one or more fields):
+						</div>
+						<div className="max-h-[320px] overflow-y-auto pr-1">
+							<div className="grid grid-cols-2 gap-x-6 gap-y-3">
+								{columns.map((fieldName) => (
+									<div key={`edit-${fieldName}`} className="flex items-center gap-2">
+										<span className="w-[140px] shrink-0 text-xs text-grey-normal">
+											{fieldName}
+										</span>
+										<Input
+											placeholder={`Input ${fieldName}`}
+											value={batchEditValues[fieldName] || ""}
+											onChange={(event) =>
+												setBatchEditValues((prev) => ({
+													...prev,
+													[fieldName]: event.target.value,
+												}))
+											}
+										/>
+									</div>
+								))}
+							</div>
+						</div>
+					</div>
+				</div>
+			</Modal>
+
+			<Modal
+				open={deleteModalOpen}
+				title="Delete Labels"
+				okText="Confirm"
+				cancelText="Cancel"
+				okButtonProps={{ danger: true }}
+				onCancel={() => setDeleteModalOpen(false)}
+				onOk={handleConfirmBatchDelete}
+				confirmLoading={batchSubmitting}
+			>
+				<div className="mb-2 text-sm text-grey-normal">
+					Please confirm the selected labels to delete:
+				</div>
+				<Table<any>
+					rowKey="key"
+					columns={selectedPreviewColumns}
+					dataSource={selectedPreviewRows}
+					pagination={false}
+					scroll={{ y: 280 }}
+					size="small"
+				/>
+			</Modal>
+		</>
 	);
 }

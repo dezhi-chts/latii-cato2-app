@@ -3,7 +3,6 @@
 import {
   Divider,
   Input,
-  notification,
   ConfigProvider,
   Select,
   Popover,
@@ -17,6 +16,7 @@ import { FileOperationType, FileStatus } from "../../types/evidence";
 import { useTakeoff } from "@/context/TakeoffContext";
 import LoadingScreen from "@/components/loading-screen";
 import { getTakeOffById } from "@/services/takeOffService";
+import { notify } from "@/utils/notify";
 const ActiveCircle = ({ number }: any) => {
   return (
     <div className="w-[18px] h-[18px] rounded-full  bg-forumBlue-normal text-white text-xs flex justify-center items-center">
@@ -125,8 +125,8 @@ const Header = ({
         setSelectedFileId(project_files[0].id);
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "No files found in this take off",
       });
     }

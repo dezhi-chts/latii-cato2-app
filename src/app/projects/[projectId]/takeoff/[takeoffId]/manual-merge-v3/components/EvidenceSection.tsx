@@ -1,7 +1,7 @@
 "use client";
 
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
-import { Button, Empty, Modal, Select, Spin, notification } from "antd";
+import { Button, Empty, Modal, Select, Spin } from "antd";
 import { useMemo, useState } from "react";
 
 import {
@@ -9,12 +9,15 @@ import {
   updateSingleFileMergeResultsLabelByEvidenceIds,
 } from "@/services/takeOffService";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
+import { notify } from "@/utils/notify";
+
 
 interface EvidenceSectionProps {
   title: string;
   evidences: Array<{ id: string; url: string }>;
   currentLabel: string;
   allLabels: any[];
+  isLabelMerged: boolean;
   onRefreshItemsAndEvidence: () => Promise<void>;
 }
 
@@ -23,6 +26,7 @@ export default function EvidenceSection({
   evidences,
   currentLabel,
   allLabels,
+  isLabelMerged,
   onRefreshItemsAndEvidence,
 }: EvidenceSectionProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -73,14 +77,14 @@ export default function EvidenceSection({
         try {
           const response = await deleteFileSourceMergeResultsByEvidenceIds(evidenceId);
           if (response.status !== "success") {
-            notification.error({
-              message: "Error",
+            notify.error({
+              title: "Error",
               description: response?.data?.detail || "Failed to delete evidence.",
             });
             return;
           }
-          notification.success({
-            message: "Success",
+          notify.success({
+            title: "Success",
             description: "Evidence deleted successfully.",
           });
           await onRefreshItemsAndEvidence();
@@ -102,8 +106,8 @@ export default function EvidenceSection({
 
   const handleConfirmEdit = async () => {
     if (!targetLabel) {
-      notification.warning({
-        message: "Label Required",
+      notify.warning({
+        title: "Label Required",
         description: "Please select a target label.",
       });
       return;
@@ -113,14 +117,14 @@ export default function EvidenceSection({
     try {
       const response = await updateSingleFileMergeResultsLabelByEvidenceIds(editingEvidenceId, targetLabel);
       if (response.status !== "success") {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: response?.data?.detail || "Failed to update evidence label.",
         });
         return;
       }
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Evidence label updated successfully.",
       });
       setIsEditModalOpen(false);
@@ -148,24 +152,26 @@ export default function EvidenceSection({
                   <div className="absolute left-1 top-1 rounded z-10 flex h-[15px] w-[15px] text-xxs items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
                     {index + 1}
                   </div>
-                  <div className="absolute right-1 top-1 z-10 items-center gap-1  hidden group-hover:flex">
-                    <div
-                      className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                      onClick={() => {
-                        handleOpenEdit(evidence.id, evidence.url);
-                      }}
-                    >
-                      <EditOutlined className="text-[12px]" />
+                  {!isLabelMerged &&
+                    <div className="absolute right-1 top-1 z-10 items-center gap-1  hidden group-hover:flex">
+                      <div
+                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                        onClick={() => {
+                          handleOpenEdit(evidence.id, evidence.url);
+                        }}
+                      >
+                        <EditOutlined className="text-[12px]" />
+                      </div>
+                      <div
+                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                        onClick={() => {
+                          handleDeleteEvidence(evidence.id, evidence.url);
+                        }}
+                      >
+                        <DeleteOutlined className="text-[12px]" />
+                      </div>
                     </div>
-                    <div
-                      className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                      onClick={() => {
-                        handleDeleteEvidence(evidence.id, evidence.url);
-                      }}
-                    >
-                      <DeleteOutlined className="text-[12px]" />
-                    </div>
-                  </div>
+                  }
                   <div className="flex h-full w-full items-center justify-center p-2">
                     <ImagePreviewWithExpand
                       src={evidence.url}

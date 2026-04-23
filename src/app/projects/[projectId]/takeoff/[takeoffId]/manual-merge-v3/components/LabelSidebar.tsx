@@ -57,13 +57,40 @@ export default function LabelSidebar({
   onToggleConflictLabels,
   onSwitchLabel,
 }: LabelSidebarProps) {
+  const labelListRef = useRef<HTMLDivElement>(null);
+  const labelButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useLayoutEffect(() => {
+    if (!selectedLabel) return;
+    const container = labelListRef.current;
+    const activeButton = labelButtonRefs.current[selectedLabel];
+    if (!container || !activeButton) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const buttonRect = activeButton.getBoundingClientRect();
+    const isOutOfView =
+      buttonRect.top < containerRect.top || buttonRect.bottom > containerRect.bottom;
+    if (isOutOfView) {
+      activeButton.scrollIntoView({ block: "nearest" });
+    }
+  }, [
+    autoMergedLabels,
+    collapsedAutoMergedLabels,
+    collapsedConflictLabels,
+    conflictLabels,
+    selectedLabel,
+  ]);
+
   return (
     <div className="w-[220px] shrink-0 rounded-xl border border-primaryN30 bg-white p-3">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-forumBlue-normal">Labels</span>
         <span className="text-xs text-grey-normal">{labels.length} Labels</span>
       </div>
-      <div className="max-h-[calc(100vh-200px)] space-y-3 overflow-y-auto overflow-x-hidden">
+      <div
+        ref={labelListRef}
+        className="max-h-[calc(100vh-200px)] space-y-3 overflow-y-auto overflow-x-hidden"
+      >
         <div>
           <button
             type="button"
@@ -87,6 +114,9 @@ export default function LabelSidebar({
                 return (
                   <button
                     key={item.key}
+                    ref={(node) => {
+                      labelButtonRefs.current[item.label] = node;
+                    }}
                     type="button"
                     onClick={() => onSwitchLabel(item.label)}
                     className={`w-full flex items-center rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"
@@ -132,6 +162,9 @@ export default function LabelSidebar({
                 return (
                   <button
                     key={item.key}
+                    ref={(node) => {
+                      labelButtonRefs.current[item.label] = node;
+                    }}
                     type="button"
                     onClick={() => onSwitchLabel(item.label)}
                     className={`w-full flex items-center rounded-md border px-3 py-2 text-left text-xs transition-all ${active ? "border-forumBlue-normal bg-primaryN30" : "border-primaryN30"

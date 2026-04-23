@@ -19,7 +19,6 @@ import {
 	Popover,
 	Table,
 	Tooltip,
-	notification,
 } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
 import Image from "next/image";
@@ -41,6 +40,7 @@ import {
 	setResultValueByField,
 } from "../takeoffUtils";
 import { TakeoffItemRecord, TemplateField } from "../types";
+import { notify } from "@/utils/notify";
 
 interface TakeoffItemsTableProps {
 	items: TakeoffItemRecord[];
@@ -330,8 +330,8 @@ export default function TakeoffItemsTable({
 
 	const handleCopyItem = async () => {
 		if (!selectedRowKey) {
-			notification.warning({
-				message: "Warning",
+			notify.warning({
+				title: "Warning",
 				description: "Please select an item to copy",
 			});
 			return;
@@ -339,14 +339,16 @@ export default function TakeoffItemsTable({
 
 		const selectedItem = tableData.find((item) => item.id === selectedRowKey);
 		if (!selectedItem) {
-			notification.warning({
-				message: "Warning",
+			notify.warning({
+				title: "Warning",
 				description: "Selected item not found",
 			});
 			return;
 		}
 
-		const originalResult = parseItemResult(selectedItem.result);
+		const originalResult = parseItemResult(
+			(selectedItem as any).originalResult ?? selectedItem.result,
+		);
 		const originalLabel = String(originalResult["Label"] ?? "").trim();
 		const newLabel = generateUniqueCopyLabel(originalLabel);
 
@@ -369,21 +371,21 @@ export default function TakeoffItemsTable({
 		try {
 			const response = await addTakeOffResultItem(requestBody);
 			if (response.status === "success") {
-				notification.success({
-					message: "Success",
+				notify.success({
+					title: "Success",
 					description: "Item copied successfully",
 				});
 				setSelectedRowKey(null);
 				await onRefreshItems?.();
 			} else {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "Failed to copy item",
 				});
 			}
 		} catch (error) {
-			notification.error({
-				message: "Error",
+			notify.error({
+				title: "Error",
 				description: "Failed to copy item",
 			});
 		} finally {
@@ -403,22 +405,22 @@ export default function TakeoffItemsTable({
 				try {
 					const response = await deleteTakeOffResultItem(String(record.id));
 					if (response.status === "success") {
-						notification.success({
-							message: "Success",
+						notify.success({
+							title: "Success",
 							description: "Item deleted successfully",
 						});
 						setTableData((prev) =>
 							prev.filter((item) => item.id !== record.id),
 						);
 					} else {
-						notification.error({
-							message: "Error",
+						notify.error({
+							title: "Error",
 							description: "Failed to delete item",
 						});
 					}
 				} catch (error) {
-					notification.error({
-						message: "Error",
+					notify.error({
+						title: "Error",
 						description: "Failed to delete item",
 					});
 				} finally {
@@ -491,8 +493,8 @@ export default function TakeoffItemsTable({
 									});
 
 									if (isDuplicate) {
-										notification.warning({
-											message: "Warning",
+										notify.warning({
+											title: "Warning",
 											description:
 												"Label already exists, please enter a different value",
 										});
@@ -500,9 +502,11 @@ export default function TakeoffItemsTable({
 									}
 								}
 
-								const originalResult = currentItem.result;
+								const originalResult = parseItemResult(
+									(currentItem as any).originalResult ?? currentItem.result,
+								);
 								const nextResultObject = setResultValueByField(
-									parseItemResult(currentItem.result),
+									originalResult,
 									fieldName,
 									normalizedNextValue,
 								);
@@ -514,6 +518,7 @@ export default function TakeoffItemsTable({
 											return {
 												...item,
 												result: nextResultObject,
+												originalResult: nextResultObject,
 											};
 										}
 
@@ -541,6 +546,7 @@ export default function TakeoffItemsTable({
 											return {
 												...item,
 												result: originalResult,
+												originalResult,
 											};
 										}
 
@@ -548,8 +554,8 @@ export default function TakeoffItemsTable({
 									});
 								});
 
-								notification.error({
-									message: "Error",
+								notify.error({
+									title: "Error",
 									description: "Failed to update field",
 								});
 							}}

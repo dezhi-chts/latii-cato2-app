@@ -1,5 +1,5 @@
 import { updatePageType } from "@/services/drawingIndexService";
-import { Button, Checkbox, Select, notification, Modal } from "antd";
+import { Button, Checkbox, Select, Modal } from "antd";
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 const { confirm } = Modal;
