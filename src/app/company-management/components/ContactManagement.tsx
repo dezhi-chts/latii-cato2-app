@@ -99,7 +99,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to fetch contacts",
+        description: res?.data?.detail || "Failed to fetch contacts",
       });
     }
     setLoading(false);
@@ -161,7 +161,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
         } else {
           notify.error({
             title: "Error",
-            description: "Failed to delete contact",
+            description: res?.data?.detail || "Failed to delete contact",
           });
         }
       },
@@ -200,7 +200,7 @@ const ContactManagement = ({ companies, defaultCompanyId }: Props) => {
         notify.error({
           title: "Error",
           description:
-            res?.data?.response?.data?.detail ||
+            res?.data?.detail ||
             `Failed to ${modalMode === "create" ? "create" : "update"} contact`,
         });
       }
