@@ -75,3 +75,83 @@ export const isUserAdmin = async () => {
     console.error("Error checking if user is admin:", error);
   }
 };
+
+
+/**
+ * 绑定用户为管理员
+ * @param userId 用户ID
+ * @param userId 
+ * @returns 
+ */
+export const bindUserToAdmin = async (userId: number | string) => {
+  const url = `/auth/bind_user_to_admin?user_id=${userId}`;
+  try {
+    const response: any = await http.post(url);
+    return response;
+  } catch (error:any) {
+    console.error("Error binding user to admin:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+};
+
+/**
+ * 解绑用户为管理员
+ * @param userId 用户ID
+ * @param userId 
+ * @returns 
+ */
+export const unbindUserToAdmin = async (userId: number | string) => {
+  const url = `/auth/unbind_user_from_admin?user_id=${userId}`;
+  try {
+    const response: any = await http.post(url);
+    return response;
+  } catch (error:any) {
+    console.error("Error unbinding user from admin:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+};
+
+
+/**
+ * 绑定用户为超级管理员
+ * @param userId 用户ID
+ * @param userId 
+ * @returns 
+ */
+export const bindUserToSuperAdmin = async (userId: number | string) => {
+  const url = `/auth/bind_user_to_super_admin?user_id=${userId}`;
+  try {
+    const response: any = await http.post(url);
+    return response;
+  } catch (error:any) {
+    console.error("Error binding user to super admin:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+};
+
+/**
+ * 解绑用户为超级管理员
+ * @param userId 用户ID
+ * @param userId 
+ * @returns 
+ */
+export const unbindUserFromSuperAdmin = async (userId: number | string) => {
+  const url = `/auth/unbind_user_from_super_admin?user_id=${userId}`;
+  try {
+    const response: any = await http.post(url);
+    return response;
+  } catch (error:any) {
+    console.error("Error unbinding user from super admin:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+export const isUserSuperAdmin = async () => {
+  try {
+    const url = "/auth/is_super_admin";
+    const response: any = await http.get(url);
+    return response?.is_super_admin || false;
+  } catch (error) {
+    console.error("Error checking if user is super admin:", error);
+  }
+}

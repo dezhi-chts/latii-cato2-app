@@ -2,11 +2,14 @@ import {
   deleteContactById,
   updateContactById,
 } from "@/services/contactsService";
+import { bindUserToAdmin, unbindUserToAdmin } from "@/services/userService";
+import { useUser } from "@/context/UserContext";
 import { Contact } from "@/types/user";
-import { Input, notification, Popconfirm } from "antd";
+import { Input, Popconfirm, Switch, Tooltip } from "antd";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NAME_ONLY_REGEX } from "./NewUserForm";
+import { notify } from "@/utils/notify";
 
 type UserTableProps = {
   contacts: Contact[];
@@ -19,6 +22,7 @@ const UserTable = ({
   refreshContacts,
   showActions = true,
 }: UserTableProps) => {
+  const { email: currentUserEmail } = useUser();
   const [editingIndex, setEditingIndex] = useState<number>(-1);
 
   const handleIndexChange = (index: number) => {
@@ -36,6 +40,7 @@ const UserTable = ({
         <p className="w-1/5">Last Name</p>
         <p className="w-1/5">Role</p>
         <p className="w-1/5">Email</p>
+        <p className={`${showActions ? "w-[10%]" : "w-1/5"}`}>is_admin</p>
         <p className={`${showActions ? "w-[10%]" : "w-1/5"}`}>Permits</p>
         {showActions && <p className="w-[10%]">Actions</p>}
       </div>
@@ -53,6 +58,7 @@ const UserTable = ({
                   editingIndex={editingIndex}
                   refreshContacts={refreshContacts}
                   showActions={showActions}
+                  currentUserEmail={currentUserEmail || ""}
                 />
               );
             })
@@ -71,6 +77,7 @@ type RowProps = {
   editingIndex: number;
   refreshContacts: () => void;
   showActions: boolean;
+  currentUserEmail: string;
 };
 
 const Row = ({
@@ -80,19 +87,37 @@ const Row = ({
   editingIndex,
   refreshContacts,
   showActions,
+  currentUserEmail,
 }: RowProps) => {
-  const parts = user.name.split(/[\s-]+/);
-  const firstName = parts[0] || "";
-  const lastName = parts.slice(1).join(" ") || "";
+  const buildContactState = (rawUser: any) => {
+    const parts = String(rawUser?.name || "").split(/[\s-]+/);
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+    return {
+      ...rawUser,
+      first_name: rawUser?.first_name ?? firstName,
+      last_name: rawUser?.last_name ?? lastName,
+      email: rawUser?.email || "",
+      job_title: rawUser?.job_title || "",
+      is_admin: Boolean(rawUser?.is_admin),
+    };
+  };
 
-  const [contact, setContact] = useState<Contact>({
-    first_name: firstName,
-    last_name: lastName,
-    email: user.email,
-    job_title: user.job_title,
-  });
+  const [contact, setContact] = useState<
+    Contact & { is_admin?: boolean; auth_provider_uid?: string; id?: number | string }
+  >(
+    buildContactState(user),
+  );
+  const [adminUpdating, setAdminUpdating] = useState(false);
+
+  useEffect(() => {
+    setContact(buildContactState(user));
+  }, [user]);
 
   const isEditing = editingIndex === index;
+  const isCurrentLoginUser =
+    (currentUserEmail || "").trim().toLowerCase() ===
+    String(user?.email || "").trim().toLowerCase();
 
   const handleDeleteButtonClick = async () => {
     const response = await deleteContactById({
@@ -101,8 +126,9 @@ const Row = ({
     });
     if (response.status === "success") {
       refreshContacts();
-      notification.success({
-        message: "Contact deleted successfully",
+      notify.success({
+        title: "Success",
+        description: "Contact deleted successfully",
       });
     }
   };
@@ -132,17 +158,18 @@ const Row = ({
     });
     if (response.status === "success") {
       refreshContacts();
-      notification.success({
-        message: "Contact updated successfully",
+      notify.success({
+        title: "Success",
+        description: "Contact updated successfully",
       });
     } else {
-      notification.error({
-        message: "Error updating contact",
+      notify.error({
+        title: "Error",
         description: `${
           response?.data?.response?.data?.detail || "Unknown error"
         }`,
       });
-      setContact(user);
+      setContact(buildContactState(user));
     }
   };
 
@@ -152,6 +179,43 @@ const Row = ({
     }
 
     handleIndexChange(index);
+  };
+
+  const handleAdminSwitchChange = async (checked: boolean) => {
+    const previousValue = Boolean(contact?.is_admin);
+    setContact((prev) => ({ ...prev, is_admin: checked }));
+    setAdminUpdating(true);
+    const targetUserId: any =
+      contact?.auth_provider_uid ||
+      contact?.id ||
+      user?.auth_provider_uid ||
+      user?.id;
+    if (!targetUserId) {
+      setContact((prev) => ({ ...prev, is_admin: previousValue }));
+      setAdminUpdating(false);
+      notify.error({
+        title: "Error",
+        description: "Failed to update admin permission",
+      });
+      return;
+    }
+    const response = checked
+      ? await bindUserToAdmin(targetUserId)
+      : await unbindUserToAdmin(targetUserId);
+    const isSuccess = response?.status !== "error";
+    if (!isSuccess) {
+      setContact((prev) => ({ ...prev, is_admin: previousValue }));
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to update admin permission",
+      });
+    } else {
+      notify.success({
+        title: "Success",
+        description: `admin permission ${checked ? "enabled" : "disabled"} successfully`,
+      });
+    }
+    setAdminUpdating(false);
   };
 
   const renderField = (value: string | undefined, name?: any) => {
@@ -175,9 +239,27 @@ const Row = ({
       {renderField(contact.last_name, "last_name")}
       {renderField(contact.job_title, "job_title")}
       {renderField(contact.email, "email")}
+      <div className={`${showActions ? "w-[10%]" : "w-1/5"} flex justify-center`}>
+        {isCurrentLoginUser ? (
+          <Tooltip title="Unable to modify permissions. To avoid accidental loss of feature access, please contact the relevant personnel for assistance.">
+            <span>
+              <Switch checked={Boolean(contact?.is_admin)} disabled loading={adminUpdating} size="small"></Switch>
+            </span>
+          </Tooltip>
+        ) : (
+          <Switch
+            checked={Boolean(contact?.is_admin)}
+            loading={adminUpdating}
+            size="small"
+            disabled={isCurrentLoginUser}
+            onChange={handleAdminSwitchChange}
+          />
+        )}
+      </div>
       <p className={`${showActions ? "w-[10%]" : "w-1/5"} text-grey-normal`}>
         Owner
       </p>
+      
       {showActions && (
         <div className="w-[10%] flex justify-center gap-1.5 items-center">
           <Image
