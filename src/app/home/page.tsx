@@ -58,10 +58,11 @@ const Home = () => {
 
   const { company } = useCompany();
 
-  const dynamicFields = company.project_attributes.map((attr) => ({
+  let dynamicFields = []
+  dynamicFields = company.project_attributes && company.project_attributes.map((attr) => ({
     field_name: attr.uuid,
     Hint_text: attr.label,
-  }));
+  })) || [];
 
   const allFields = [...defaultFields, ...dynamicFields, actionsField];
 

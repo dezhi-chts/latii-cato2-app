@@ -193,7 +193,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
             {project?.project_name || "My Dream House 123"}
           </p>
 
-          <Image
+          {/* <Image
             height={14}
             width={14}
             src={
@@ -218,7 +218,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
             alt="arrow down icon"
             className="cursor-pointer"
             onClick={() => toggleStatus("is_displayed")}
-          />
+          /> */}
         </div>
         {status.is_displayed && (
           <Button
@@ -240,7 +240,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
           />
         )}
       </div>
-      <div
+      {/* <div
         className={`${status.is_displayed ? "max-h-0 opacity-0" : "max-h-6 opacity-100"} transition-all duration-500 ease-in-out overflow-hidden flex gap-20 pt-1`}
       >
         {project?.attributes &&
@@ -275,7 +275,7 @@ const Header = ({ project, refetchProject }: HeaderProps) => {
           } transition-all duration-500 ease-in-out `}
       >
         <ProjectSettings project={project} handleUpdate={handleUpdate} />
-      </div>
+      </div> */}
     </div>
   );
 };
