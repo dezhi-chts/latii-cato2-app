@@ -34,12 +34,10 @@ const TeamMembers = () => {
       if (timedOut) return;
 
       const mappedContacts: Contact[] = response.data.map((item: any) => ({
-        name: item.name,
-        email: item.email,
-        phone: item.phone,
-        job_title: item.job_title,
-        id: item.id,
-        note: item.note,
+        ...item,
+        // Keep full API payload for downstream permission operations.
+        name: item?.name || "",
+        email: item?.email || "",
       }));
 
       clearTimeout(timeoutId);

@@ -8,7 +8,7 @@ import React, {
 	useImperativeHandle,
 	useMemo,
 } from "react";
-import { Stage, Layer, Group, Path, Circle, Rect } from "react-konva";
+import { Stage, Layer, Group, Path, Circle, Rect, Text } from "react-konva";
 import {
 	Form,
 	Modal,
@@ -227,6 +227,7 @@ const PdfWrapper = forwardRef(
 
 		const pdfDoc = useRef<any>(null);
 		const currentViewportRef = useRef<ViewPort | null>(null);
+		const lastCenteredEvidenceIdRef = useRef<string | number | null>(null);
 
 		const [scale, setScale] = useState(1.0);
 		const [totalPages, setTotalPages] = useState<number>(0);
@@ -510,7 +511,7 @@ const PdfWrapper = forwardRef(
 					let evidenceList = [...pageEvidence];
 					if (!isDeleteParentEvidence) {
 						// 不删除父证据，只删除子证据
-						evidenceList = evidenceList.filter((item) => !item.isParentEvidence);
+						evidenceList = evidenceList.filter((item) => !item.isParentEvidence && !item.isOtherParentEvidence);
 					}
 					let deleteIds = evidenceList.map((item) => item.id);
 					batchDelete(deleteIds);
@@ -729,7 +730,7 @@ const PdfWrapper = forwardRef(
 			return uploadData;
 		}, [cropSections]);
 
-		const updateEvidence = async (evid: EvidenceType) => {
+		const updateEvidence = async (operationType: string, evid: EvidenceType) => {
 			let polygonStr = evid.polygon;
 			if (typeof polygonStr !== "string") {
 				try {
@@ -747,21 +748,38 @@ const PdfWrapper = forwardRef(
 			const viewport = currentViewportRef.current;
 			const rotateAngle: number = (viewport as any).rotation ?? 0;
 
-			let data = {
-				...evid,
-				id: evid.id,
-				polygon: polygonStr,
-				device_pixel_ratio: window.devicePixelRatio || 1,
-				type: evid.type,
-				scale: viewport.scale,
-				page_width_pdf: viewport.width,
-				page_height_pdf: viewport.height,
-				view_box: JSON.stringify(viewport.viewBox),
-				is_rotate: rotateAngle !== 0,
-				rotation_angle: rotateAngle,
-				sub_text: evid.sub_text,
-			};
-			let res = await evidenceBatchUpdate([data]);
+			let updateData: any = { ...evid };
+
+			switch (operationType) {
+				case 'drag':
+				// 拖动更新位置
+				case 'resize': {
+					// 缩放更新位置
+					updateData.device_pixel_ratio = window.devicePixelRatio || 1;
+					updateData.polygon = polygonStr;
+					updateData.view_box = JSON.stringify(viewport.viewBox);
+				}
+					updateData.scale = viewport.scale;
+					updateData.is_rotate = rotateAngle !== 0;
+					updateData.rotation_angle = rotateAngle;
+					updateData.page_width_pdf = viewport.width;
+					updateData.page_height_pdf = viewport.height;
+					break;
+				case 'changeSubText': {
+					// 修改子文本
+					updateData.sub_text = evid.sub_text;
+				}
+					break;
+				case 'changeType': {
+					// 修改类型
+					updateData.type = evid.type;
+				}
+					break;
+				default:
+					break;
+			}
+
+			let res = await evidenceBatchUpdate([updateData]);
 			if (res.status === "success") {
 				onUpdateEvidence && onUpdateEvidence(res.data);
 			} else {
@@ -2630,39 +2648,51 @@ const PdfWrapper = forwardRef(
 
 					const viewBox = viewPort.viewBox;
 					const offsetX =
-						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[0] : 0;
+						Array.isArray(viewBox) && viewBox.length > 1 ? Number(viewBox[0]) : 0;
 					const offsetY =
-						Array.isArray(viewBox) && viewBox.length > 1 ? viewBox[1] : 0;
-					const hasValidViewBox = Array.isArray(viewBox) && viewBox.length >= 4;
-					const minX = hasValidViewBox ? Number(viewBox[0]) : Number.NEGATIVE_INFINITY;
-					const minY = hasValidViewBox ? Number(viewBox[1]) : Number.NEGATIVE_INFINITY;
-					const maxX = hasValidViewBox ? Number(viewBox[2]) : Number.POSITIVE_INFINITY;
-					const maxY = hasValidViewBox ? Number(viewBox[3]) : Number.POSITIVE_INFINITY;
-					const pointsOutOfViewBox = Array.isArray(pdfPolygons)
-						? pdfPolygons.some((p: any) => {
-							const x = Number(p?.x);
-							const y = Number(p?.y);
-							return (
-								Number.isFinite(x) &&
-								Number.isFinite(y) &&
-								(x < minX || x > maxX || y < minY || y > maxY)
-							);
-						})
-						: false;
-					// Some "manual" evidences are still saved in absolute page coords.
-					// If points exceed viewBox, shift by viewBox offset as a fallback.
-					const shouldApplyViewBoxOffset = !item.is_manual || pointsOutOfViewBox;
+						Array.isArray(viewBox) && viewBox.length > 1 ? Number(viewBox[1]) : 0;
+					const hasValidViewBox =
+						Array.isArray(viewBox) &&
+						viewBox.length >= 4 &&
+						viewBox.every((v: any) => Number.isFinite(Number(v)));
 
-					pdfPolygons = pdfPolygons.map((p: any) => {
-						if (shouldApplyViewBoxOffset) {
-							return {
-								x: p.x + offsetX,
-								y: p.y + offsetY,
-							};
-						} else {
-							return p;
+					// 解析 evidence 自身存储的 view_box（可能是 string 或 array）
+					let evidenceViewBox: number[] | null = null;
+					if (Array.isArray(item?.view_box)) {
+						evidenceViewBox = item.view_box.map((v: any) => Number(v));
+					} else if (typeof item?.view_box === "string") {
+						try {
+							const parsedViewBox = JSON.parse(item.view_box);
+							if (Array.isArray(parsedViewBox)) {
+								evidenceViewBox = parsedViewBox.map((v: any) => Number(v));
+							}
+						} catch (_) {
+							// view_box 解析失败，下面会走 fallback
 						}
-					});
+					}
+					const hasValidEvidenceViewBox =
+						Array.isArray(evidenceViewBox) &&
+						evidenceViewBox.length >= 4 &&
+						evidenceViewBox.every((v) => Number.isFinite(v));
+					let shouldApplyViewBoxOffset = false;
+					if (hasValidEvidenceViewBox && hasValidViewBox) {
+						const normalizedEvidenceViewBox = evidenceViewBox as number[];
+						shouldApplyViewBoxOffset = normalizedEvidenceViewBox
+							.slice(0, 4)
+							.some((value, index) => Number(value) !== Number(viewBox[index]));
+					}
+
+					pdfPolygons = Array.isArray(pdfPolygons)
+						? pdfPolygons.map((p: any) => {
+							if (shouldApplyViewBoxOffset) {
+								return {
+									x: Number(p?.x) + offsetX,
+									y: Number(p?.y) + offsetY,
+								};
+							}
+							return p;
+						})
+						: [];
 				} catch (e) {
 					console.error("Failed to parse polygon data:", item.polygon);
 					return item;
@@ -2681,18 +2711,29 @@ const PdfWrapper = forwardRef(
 			setPageEvidence(updatedPageEvidence);
 		}, [showEvidence, pageNum, allEvidence, scale]);
 
-		const itemEvidences = useMemo(() => {
-			if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) return [];
+		const centerEvidence = useMemo(() => {
+			if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) {
+				lastCenteredEvidenceIdRef.current = null;
+				return null;
+			}
 
 			const evid = pageEvidence.filter((item: any) =>
 				selectedEvidenceIds.includes(item.id),
 			);
-
-			// 只有在没有拖动时才调整居中，避免拖动时 PDF 跳动
-			if (evid.length > 0 && !draggingShapeId) {
-				adjustToCenter("evidence", evid[0]);
+			const nextCenterEvidence = evid?.[0] ?? null;
+			if (!nextCenterEvidence) {
+				return null;
 			}
-			return evid;
+
+			const nextCenterEvidenceId = nextCenterEvidence.id;
+			if (
+				nextCenterEvidenceId !== lastCenteredEvidenceIdRef.current
+			) {
+				// 如果居中的evidenceId发生了变化，则设置新的evidence居中
+				adjustToCenter("evidence", nextCenterEvidence);
+				lastCenteredEvidenceIdRef.current = nextCenterEvidenceId;
+			}
+			return nextCenterEvidence;
 		}, [pageEvidence, selectedEvidenceIds, draggingShapeId]);
 
 		const savedAreaSelectRect = useMemo(() => {
@@ -2773,7 +2814,7 @@ const PdfWrapper = forwardRef(
 				};
 				return pageEvidence
 					.filter((shape) => {
-						if (shape.isParentEvidence) return false;
+						if (shape.isParentEvidence || shape.isOtherParentEvidence) return false;
 						const shapeBounds = toViewportBounds(shape);
 						return shapeBounds ? intersects(targetRect, shapeBounds) : false;
 					})
@@ -2908,7 +2949,7 @@ const PdfWrapper = forwardRef(
 													shape={evid}
 													selectedShapeId={selectedShapeId}
 													draggingShapeId={draggingShapeId}
-													itemEvidences={itemEvidences}
+													centerEvidence={centerEvidence}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
 													evidenceDraggable={evidenceDraggable}
@@ -2927,7 +2968,7 @@ const PdfWrapper = forwardRef(
 																(item) => item.id === evid.id,
 															);
 															if (updatedEvid) {
-																updateEvidence(updatedEvid);
+																updateEvidence('drag', updatedEvid);
 															}
 														}, 100);
 													}}
@@ -2962,7 +3003,7 @@ const PdfWrapper = forwardRef(
 																(item) => item.id === evid.id,
 															);
 															if (updatedEvid) {
-																updateEvidence(updatedEvid);
+																updateEvidence('resize', updatedEvid);
 															}
 														}, 100);
 													}}
@@ -2978,7 +3019,7 @@ const PdfWrapper = forwardRef(
 													shape={crop}
 													selectedShapeId={selectedShapeId}
 													draggingShapeId={draggingShapeId}
-													itemEvidences={itemEvidences}
+													centerEvidence={centerEvidence}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
 													evidenceDraggable={evidenceDraggable}
@@ -3114,7 +3155,7 @@ const PdfWrapper = forwardRef(
 
 									if (
 										showSelectGroupTypes.includes(type) &&
-										pdfOperationType === FileOperationType.ArchitectureDrawing && !item.isParentEvidence
+										pdfOperationType === FileOperationType.ArchitectureDrawing && !item.isParentEvidence && !item.isOtherParentEvidence
 									) {
 										// ArchDrawing 文件类型，并且框的类型需要按照颜色来显示
 										showSelectGroup = true;
@@ -3136,7 +3177,7 @@ const PdfWrapper = forwardRef(
 										}
 									}
 
-									if (selectedShapeId === item.id && !item.isParentEvidence) {
+									if (selectedShapeId === item.id && !item.isParentEvidence && !item.isOtherParentEvidence) {
 										// 如果当前选中的元素是当前Evidence，那么显示删除按钮
 										showDeleteBtn = true;
 									}
@@ -3160,7 +3201,7 @@ const PdfWrapper = forwardRef(
 													color={color}
 													onChange={(value: string) => {
 														if (value.trim() !== "") {
-															updateEvidence({
+															updateEvidence('changeSubText', {
 																...item,
 																sub_text: value,
 															});
@@ -3183,7 +3224,7 @@ const PdfWrapper = forwardRef(
 															onChangeType={async (type) => {
 																if (type === item.type) return;
 																setFullLoading(true);
-																await updateEvidence({ ...item, type });
+																await updateEvidence('changeType', { ...item, type });
 																setFullLoading(false);
 															}}
 														/>
@@ -3619,7 +3660,7 @@ const ShapeWrapper = ({
 	shape,
 	selectedShapeId,
 	draggingShapeId,
-	itemEvidences,
+	centerEvidence,
 	typeList,
 	pdfOperationType,
 	evidenceDraggable,
@@ -3636,7 +3677,7 @@ const ShapeWrapper = ({
 	shape: GroupFrame | EvidenceType;
 	selectedShapeId: string | null;
 	draggingShapeId: string | null;
-	itemEvidences: EvidenceType[] | null;
+	centerEvidence: {id: string | number} | null;  // 居中显示的evidence
 	typeList?: any[];
 	pdfOperationType: FileOperationType;
 	evidenceDraggable?: boolean; // 是否可拖动evidence
@@ -3706,7 +3747,7 @@ const ShapeWrapper = ({
 
 	let shapeDraggable = evidenceDraggable ?? true;
 	if (type === "evidence") {
-		if (shape?.isParentEvidence) {
+		if (shape?.isParentEvidence || shape?.isOtherParentEvidence) {
 			// 如果是父级红色外框，则不允许点击和移动
 			shapeDraggable = false;
 		}
@@ -3717,7 +3758,7 @@ const ShapeWrapper = ({
 		color = "#FF4500";
 	}
 
-	if (itemEvidences?.find((item) => item.id === shape.id)) {
+	if (centerEvidence?.id === shape.id) {
 		color = "#FF4500";
 	}
 
@@ -3731,21 +3772,34 @@ const ShapeWrapper = ({
 		}
 	}
 
+	const isParentEvidence = shape?.isParentEvidence;
+	const isOtherParentEvidence = shape?.isOtherParentEvidence;
+	let fill: any = color + "30";
+	if (isParentEvidence) {
+		fill = undefined;
+	} else if (isOtherParentEvidence) {
+		//fill = "#717171" + "90";
+		fill = undefined;
+		color = "#717171";
+	}
+
+
+
 	return (
 		<Group key={shape.id} x={minX} y={minY}>
 			{/** 填充区域  */}
 			<Path
 				data={pathData}
-				fill={shape?.isParentEvidence ? undefined : color + "30"}
+				fill={fill}
 				stroke={color}
-				strokeWidth={shape?.isParentEvidence ? 3 : 1}
-				dash={shape?.isParentEvidence ? [10, 5] : undefined}
-				listening={!shape?.isParentEvidence}
+				strokeWidth={isParentEvidence || isOtherParentEvidence ? 3 : 1}
+				dash={isParentEvidence || isOtherParentEvidence ? [10, 5] : undefined}
+				listening={!isParentEvidence && !isOtherParentEvidence}
 				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {
 					const stage = e.target.getStage();
-					if (shape?.isParentEvidence) {
+					if (isParentEvidence || isOtherParentEvidence) {
 						return;
 					}
 					if (stage && operationMode === "edit") {
@@ -3780,7 +3834,7 @@ const ShapeWrapper = ({
 				}}
 				onClick={(e) => {
 					e.cancelBubble = true;
-					if (shape?.isParentEvidence) {
+					if (isParentEvidence || isOtherParentEvidence) {
 						return;
 					}
 					onClick?.();

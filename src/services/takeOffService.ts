@@ -729,6 +729,23 @@ export const deleteMultipleTakeOffResultItems = async (take_off_result_item_ids:
   return deleteTakeOffResultItemByIdList(take_off_result_item_ids);
 }
 
+/**
+ * 获取当前文件是否存在schedule
+ * @param take_off_id 
+ * @param file_id 
+ * @returns 
+ */
+export const getGroupedEvidencesByTakeOffAndFile = async (take_off_id: string | number, file_id: string | number)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/get_grouped_evidences_by_take_off_and_file?take_off_id=${take_off_id}&file_id=${file_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
 

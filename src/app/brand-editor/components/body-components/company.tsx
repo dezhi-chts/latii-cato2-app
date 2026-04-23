@@ -169,14 +169,7 @@ const Company = () => {
   const fetchCompanyContacts = async () => {
     try {
       const response = await getContactsByCompanyId({ company_id: company_id });
-      const mappedContacts: Contact[] = response.data.map((item: any) => ({
-        name: item.name,
-        email: item.email,
-        phone: item.phone,
-        job_title: item.job_title,
-        id: item.id,
-        note: item.note,
-      }));
+      const mappedContacts: Contact[] = response.data || [];
 
       setUsersData(mappedContacts);
     } catch (err) {

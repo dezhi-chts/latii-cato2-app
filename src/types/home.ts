@@ -27,8 +27,9 @@ export type Attribute = {
 export enum TakeOffFileStatus {
   'STATUS_UNPROCESSED' = "未处理",
   'STATUS_ELEVATION_FLOOR_REVIEWING' ="立面图平面图复核中",
-  'STATUS_ELEVATION_FLOOR_REVIEWED' ="立面图平面图已经复核完",
+  'STATUS_ELEVATION_FLOOR_REVIEWED' ="立面图平面图复核完",
   'STATUS_SCHEDULE_REVIEWING' ="schedule复核中",
   'STATUS_SCHEDULE_REVIEWED' ="schedule已经复核完",
+  'STATUS_MERGING' = "合并中",
   'STATUS_MERGED' ="合并完",
 }

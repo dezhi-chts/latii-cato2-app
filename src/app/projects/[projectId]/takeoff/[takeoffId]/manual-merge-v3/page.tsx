@@ -374,6 +374,17 @@ const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boole
   return Array.isArray(sourceNode?.list) ? sourceNode.list : [];
 };
 
+const collectSourceMergedRows = (payload: any, source: SourceKey): any[] => {
+  if (!Array.isArray(payload)) return [];
+
+  const sourceNode = payload.find((node: any) => {
+    const nodeType = normalizeKey(String(node?.source_type || ""));
+    return SOURCE_ALIAS[source].some((alias) => nodeType === normalizeKey(alias));
+  });
+
+  return Array.isArray(sourceNode?.merged_list) ? sourceNode.merged_list : [];
+};
+
 // Evidence ids should always come from API "list" rows,
 // regardless of schedule showing merged_list or list in UI.
 const collectSourceRowsForEvidence = (payload: any, source: SourceKey): any[] => {
@@ -404,6 +415,9 @@ export default function ManualMergeV2Page() {
   const [scheduleRows, setScheduleRows] = useState<any[]>([]);
   const [floorPlanRows, setFloorPlanRows] = useState<any[]>([]);
   const [elevationRows, setElevationRows] = useState<any[]>([]);
+  const [scheduleMergedRows, setScheduleMergedRows] = useState<any[]>([]);
+  const [floorPlanMergedRows, setFloorPlanMergedRows] = useState<any[]>([]);
+  const [elevationMergedRows, setElevationMergedRows] = useState<any[]>([]);
 
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -445,11 +459,41 @@ export default function ManualMergeV2Page() {
   const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
   const elevationEvidences = classifiedEvidenceUrls.elevation;
 
+  const finalItemsSource = useMemo<{ source: SourceKey | null; rows: any[] }>(() => {
+    const sourceScheduleRows = isSelectedLabelMerged ? scheduleMergedRows : scheduleRows;
+    const sourceFloorPlanRows = isSelectedLabelMerged ? floorPlanMergedRows : floorPlanRows;
+    const sourceElevationRows = isSelectedLabelMerged ? elevationMergedRows : elevationRows;
+
+    if (sourceScheduleRows.length > 0) {
+      return { source: "schedule", rows: sourceScheduleRows };
+    }
+    if (sourceFloorPlanRows.length > 0) {
+      return { source: "floorPlan", rows: sourceFloorPlanRows };
+    }
+    if (sourceElevationRows.length > 0) {
+      return { source: "elevation", rows: sourceElevationRows };
+    }
+    return { source: null, rows: [] };
+  }, [
+    elevationMergedRows,
+    elevationRows,
+    floorPlanMergedRows,
+    floorPlanRows,
+    isSelectedLabelMerged,
+    scheduleMergedRows,
+    scheduleRows,
+  ]);
+
   const finalItemsRows = useMemo<FinalItemRow[]>(() => {
-    if (scheduleRows.length === 0) return [];
+    if (finalItemsSource.rows.length === 0) return [];
+    if (finalItemsSource.source !== "schedule") {
+      return finalItemsSource.rows as FinalItemRow[];
+    }
+
+    const sourceRows = finalItemsSource.rows;
 
     const groupedMap = new Map<string, { labelValue: string; rows: any[] }>();
-    scheduleRows.forEach((row, index) => {
+    sourceRows.forEach((row, index) => {
       const labelValue = getDisplayValueByField(row?.result || {}, "Label");
       const normalizedKey = normalizeLabelKey(labelValue || "");
       const groupKey = normalizedKey || `__unknown__${String(row?.id ?? row?.__rowKey ?? index)}`;
@@ -462,7 +506,7 @@ export default function ManualMergeV2Page() {
     const visited = new Set<string>();
     const result: FinalItemRow[] = [];
 
-    scheduleRows.forEach((row, index) => {
+    sourceRows.forEach((row, index) => {
       const labelValue = getDisplayValueByField(row?.result || {}, "Label");
       const normalizedKey = normalizeLabelKey(labelValue || "");
       const groupKey = normalizedKey || `__unknown__${String(row?.id ?? row?.__rowKey ?? index)}`;
@@ -494,7 +538,7 @@ export default function ManualMergeV2Page() {
     });
 
     return result;
-  }, [collapsedSystemLabelMap, scheduleRows]);
+  }, [collapsedSystemLabelMap, finalItemsSource]);
 
   const splitTableColumns = useMemo<ColumnsType<any>>(
     () =>
@@ -590,6 +634,9 @@ export default function ManualMergeV2Page() {
     setScheduleRows([]);
     setFloorPlanRows([]);
     setElevationRows([]);
+    setScheduleMergedRows([]);
+    setFloorPlanMergedRows([]);
+    setElevationMergedRows([]);
     setOriginalScheduleLabelById({});
     setCollapsedSystemLabelMap({});
     try {
@@ -612,6 +659,9 @@ export default function ManualMergeV2Page() {
       const nextScheduleRows = normalizeRows(collectSourceRows(payload, "schedule", isLabelMerged));
       const nextFloorPlanRows = normalizeRows(collectSourceRows(payload, "floorPlan", isLabelMerged));
       const nextElevationRows = normalizeRows(collectSourceRows(payload, "elevation", isLabelMerged));
+      const nextScheduleMergedRows = normalizeRows(collectSourceMergedRows(payload, "schedule"));
+      const nextFloorPlanMergedRows = normalizeRows(collectSourceMergedRows(payload, "floorPlan"));
+      const nextElevationMergedRows = normalizeRows(collectSourceMergedRows(payload, "elevation"));
       const evidenceScheduleRows = normalizeRows(collectSourceRowsForEvidence(payload, "schedule"));
       const evidenceFloorPlanRows = normalizeRows(collectSourceRowsForEvidence(payload, "floorPlan"));
       const evidenceElevationRows = normalizeRows(collectSourceRowsForEvidence(payload, "elevation"));
@@ -633,6 +683,9 @@ export default function ManualMergeV2Page() {
       setScheduleRows(nextScheduleRows);
       setFloorPlanRows(nextFloorPlanRows);
       setElevationRows(nextElevationRows);
+      setScheduleMergedRows(nextScheduleMergedRows);
+      setFloorPlanMergedRows(nextFloorPlanMergedRows);
+      setElevationMergedRows(nextElevationMergedRows);
       setOriginalScheduleLabelById(
         nextScheduleRows.reduce((acc: Record<string, string>, row: any) => {
           if (row?.id !== null && row?.id !== undefined) {
@@ -697,6 +750,9 @@ export default function ManualMergeV2Page() {
         setScheduleRows([]);
         setFloorPlanRows([]);
         setElevationRows([]);
+        setScheduleMergedRows([]);
+        setFloorPlanMergedRows([]);
+        setElevationMergedRows([]);
         setOriginalScheduleLabelById({});
         setScheduleChanges({});
         return;
@@ -776,7 +832,15 @@ export default function ManualMergeV2Page() {
     if (modifiedCount > 0) {
       confirm({
         title: "Unsaved Changes",
-        content: "You have unsaved Schedule edits. Please submit label changes before switching.",
+        content: "You have unsaved Schedule edits. Are you sure you want to continue?.",
+        onCancel: async () => {
+
+        },
+        onOk: async () => {
+          setContentTab("evidences");
+          setSelectedLabel(label);
+          fetchLabelData(label);
+        },
       });
       return;
     }
@@ -806,17 +870,28 @@ export default function ManualMergeV2Page() {
     setEditingValue(currentValue === "-" ? "" : currentValue);
   };
 
-  const submitScheduleRows = useCallback(
+  const submitFinalItemsRows = useCallback(
     async (
-      nextScheduleRows: any[],
+      nextFinalItemsRows: any[],
       options?: {
         silentSuccess?: boolean;
       },
     ) => {
       if (!takeoffId || !fileId) return false;
 
+      const nextScheduleRowsForSubmit =
+        finalItemsSource.source === "schedule" ? nextFinalItemsRows : scheduleRows;
+      const nextFloorPlanRowsForSubmit =
+        finalItemsSource.source === "floorPlan" ? nextFinalItemsRows : floorPlanRows;
+      const nextElevationRowsForSubmit =
+        finalItemsSource.source === "elevation" ? nextFinalItemsRows : elevationRows;
+
       const allItemIds = Array.from(
-        [...nextScheduleRows, ...floorPlanRows, ...elevationRows]
+        [
+          ...nextScheduleRowsForSubmit,
+          ...nextFloorPlanRowsForSubmit,
+          ...nextElevationRowsForSubmit,
+        ]
           .map((item) => toValidItemId(item))
           .filter(Boolean),
       ) as string[];
@@ -833,7 +908,7 @@ export default function ManualMergeV2Page() {
         takeoffId,
         fileId,
         allItemIds.join(","),
-        nextScheduleRows,
+        nextFinalItemsRows,
       );
       setLoading(false);
       if (response.status === "success") {
@@ -841,8 +916,8 @@ export default function ManualMergeV2Page() {
           notify.success({
             title: "Success",
             description:
-              nextScheduleRows.length > 0
-                ? `Merged complete with ${nextScheduleRows.length} schedule rows.`
+              nextFinalItemsRows.length > 0
+                ? `Merged complete with ${nextFinalItemsRows.length} rows.`
                 : "Merged complete.",
           });
         }
@@ -852,11 +927,20 @@ export default function ManualMergeV2Page() {
       } else {
         notify.error({
           title: "Error",
-          description: response?.data?.detail || "Failed to submit modified Schedule rows.",
+          description: response?.data?.detail || "Failed to submit modified rows.",
         });
       }
     },
-    [elevationRows, fileId, floorPlanRows, fetchLabelsAndMaybeLoadData, selectedLabel, takeoffId],
+    [
+      elevationRows,
+      fileId,
+      finalItemsSource.source,
+      floorPlanRows,
+      scheduleRows,
+      fetchLabelsAndMaybeLoadData,
+      selectedLabel,
+      takeoffId,
+    ],
   );
 
   const commitEdit = async (record: any, fieldName: string) => {
@@ -869,7 +953,8 @@ export default function ManualMergeV2Page() {
     setEditingValue("");
     if (oldValue === newValue) return;
 
-    const nextScheduleRows = scheduleRows.map((row) => {
+    const sourceRows = finalItemsSource.rows;
+    const nextSourceRows = sourceRows.map((row) => {
       if (String(row.id) !== id) return row;
       const nextRow = {
         ...row,
@@ -882,14 +967,32 @@ export default function ManualMergeV2Page() {
       return nextRow;
     });
 
-    const changedRow = nextScheduleRows.find((row) => String(row.id) === id);
+    const changedRow = nextSourceRows.find((row) => String(row.id) === id);
     if (changedRow) {
       setScheduleChanges((prevChanges) => ({
         ...prevChanges,
         [id]: changedRow,
       }));
     }
-    setScheduleRows(nextScheduleRows);
+    if (finalItemsSource.source === "schedule") {
+      if (isSelectedLabelMerged) {
+        setScheduleMergedRows(nextSourceRows);
+      } else {
+        setScheduleRows(nextSourceRows);
+      }
+    } else if (finalItemsSource.source === "floorPlan") {
+      if (isSelectedLabelMerged) {
+        setFloorPlanMergedRows(nextSourceRows);
+      } else {
+        setFloorPlanRows(nextSourceRows);
+      }
+    } else if (finalItemsSource.source === "elevation") {
+      if (isSelectedLabelMerged) {
+        setElevationMergedRows(nextSourceRows);
+      } else {
+        setElevationRows(nextSourceRows);
+      }
+    }
   };
 
   const handleSaveChangesForMergedLabel = useCallback(async () => {
@@ -955,10 +1058,30 @@ export default function ManualMergeV2Page() {
   );
 
   const handleSubmitChanges = useCallback(async () => {
-    const normalizedRows = normalizeScheduleRowsForSubmit([...scheduleRows]);
-    setScheduleRows(normalizedRows);
-    await submitScheduleRows(normalizedRows, { silentSuccess: false });
-  }, [normalizeScheduleRowsForSubmit, scheduleRows, submitScheduleRows]);
+    if (!finalItemsSource.source) {
+      notify.warning({
+        title: "No Items",
+        description: "No items found to submit.",
+      });
+      return;
+    }
+
+    const currentRows = finalItemsSource.rows;
+    const normalizedRows =
+      finalItemsSource.source === "schedule"
+        ? normalizeScheduleRowsForSubmit([...currentRows])
+        : [...currentRows];
+
+    if (finalItemsSource.source === "schedule") {
+      setScheduleRows(normalizedRows);
+    } else if (finalItemsSource.source === "floorPlan") {
+      setFloorPlanRows(normalizedRows);
+    } else if (finalItemsSource.source === "elevation") {
+      setElevationRows(normalizedRows);
+    }
+
+    await submitFinalItemsRows(normalizedRows, { silentSuccess: false });
+  }, [finalItemsSource, normalizeScheduleRowsForSubmit, submitFinalItemsRows]);
 
   const handleCreateMergeResult = useCallback(async () => {
     if (!takeoffId) return;
@@ -966,7 +1089,7 @@ export default function ManualMergeV2Page() {
     try {
       const response = await autoCreateMultipleFilesMergeResultByTakeOffId(takeoffId);
       if (response.status === "success") {
-        router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
+        router.replace(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
         return;
       }
       notify.error({
@@ -1039,7 +1162,7 @@ export default function ManualMergeV2Page() {
 
   const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
     const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
-    const payload = scheduleRows
+    const payload = finalItemsSource.rows
       .filter((row) => selectedIdSet.has(String(row.id)))
       .map((row) => ({
         id: row.id,
@@ -1077,7 +1200,7 @@ export default function ManualMergeV2Page() {
     } finally {
       setSplitSubmitting(false);
     }
-  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, scheduleRows, selectedLabel]);
+  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, finalItemsSource.rows, selectedLabel]);
 
   const renderTable = (
     title: string,

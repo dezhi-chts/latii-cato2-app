@@ -16,6 +16,10 @@ import {
 } from "@/services/takeOffService";
 
 import {
+  getEvidenceByFileId,
+} from "@/services/evidenceService";
+
+import {
   ProjectFileRecord,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/analyze-new/types";
 import {
@@ -38,6 +42,7 @@ import {
   getTakeOffById,
   getEvidencesWindowTableQuoteWithUrlByProjectFileId,
   getEvidencesElevationFloorPlanWithUrlByProjectFileId,
+  getGroupedEvidencesByTakeOffAndFile,
 } from "@/services/takeOffService";
 
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
@@ -129,6 +134,7 @@ export default function FloorPlanPage() {
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
   const { username } = useUser();
+  const [evidenceList, setEvidenceList] = useState<EvidenceType[]>([]);
 
   const promptHintText =
     "Customize the fields Cato uses to read your PDF. Create specialized templates to accurately capture data for different takeoff types (e.g., steel vs. aluminum).";
@@ -230,6 +236,31 @@ export default function FloorPlanPage() {
     }
   }, [selectedFileId]);
 
+  // 获取当前文件的evidence，并按照type进行分类
+  const getFileEvidences = useCallback(async () => {
+    if (selectedFileId === -1) return;
+
+    const response = await getEvidenceByFileId(
+      projectId as string,
+      selectedFileId as number,
+      { filter_type: 'ArchDrawingLabel' },
+    );
+    if (response.status === "success") {
+      const evidenceList = response?.data ?? [];
+      if (evidenceList.length > 0) {
+        let filter = evidenceList.filter((item: any) => item?.type === "Floor Plan" || item?.type === "Elevation");
+        setEvidenceList(filter);
+      } else {
+        setEvidenceList([]);
+      }
+    } else {
+      notify.error({
+        title: "Error",
+        description: "Failed to get file evidence",
+      });
+    }
+  }, [selectedFileId]);
+
 
   const confirmItem = useRef<any>(null);
 
@@ -246,18 +277,36 @@ export default function FloorPlanPage() {
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
       if (id) {
+        setItemBoxList([])
         let res = await getEvidenceBySubTextEvidenceIds(id.toString());
         if (res.status === "success" && res.data) {
-          let currentPageEvidence = thumbnailData.find(
+          const removeParentFlags = (item: any) => {
+            if (!item) return item;
+            const { isParentEvidence, isOtherParentEvidence, ...rest } = item;
+            return rest;
+          };
+
+          const currentPageEvidenceRaw = thumbnailData.find(
             (item: any) => item.id === id,
           );
-          if (currentPageEvidence) {
-            currentPageEvidence.isParentEvidence = true;
-          }
+          const currentPageEvidence = currentPageEvidenceRaw
+            ? { ...removeParentFlags(currentPageEvidenceRaw), isParentEvidence: true }
+            : null;
+
+          let otherEvidence = thumbnailData.filter(
+            (item: any) => item.id !== id,
+          );
+          let OtherPageEvidence = otherEvidence.map((item: any) => ({
+            ...removeParentFlags(item),
+            isOtherParentEvidence: true,
+          }));
 
           let list = res.data || [];
           if (currentPageEvidence) {
             list.unshift(currentPageEvidence);
+          }
+          if (OtherPageEvidence.length > 0) {
+            list.unshift(...OtherPageEvidence);
           }
           setItemBoxList(list);
         } else {
@@ -496,7 +545,9 @@ export default function FloorPlanPage() {
     [evidenceType, labelTableData],
   );
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (!selectedFileId) return;
+
     let findLabelEmpty = (data: any) => {
       return data.find((item: any) => {
         try {
@@ -518,6 +569,7 @@ export default function FloorPlanPage() {
       });
       return;
     }
+
     handleAnaylize();
   };
 
@@ -557,6 +609,38 @@ export default function FloorPlanPage() {
     }
   };
 
+  const handleGetGroupedEvidences = useCallback(async () => {
+    const groupedResponse = await getGroupedEvidencesByTakeOffAndFile(
+      takeOffId as string,
+      selectedFileId as any,
+    );
+    setFullLoading(false);
+    if (groupedResponse.status !== "success") {
+      notify.error({
+        title: "Error",
+        description:
+          groupedResponse?.data?.detail ||
+          "Failed to get grouped evidences by takeoff and file",
+      });
+      return;
+    }
+    const groupedData = groupedResponse?.data || {};
+    const schedule = Array.isArray(groupedData?.schedule)
+      ? groupedData.schedule
+      : [];
+    if (schedule.length === 0) {
+      router.replace(
+        `/projects/${projectId}/takeoff/${takeOffId}/manual-merge-v3`,
+      );
+      return;
+    } else {
+      router.replace(
+        `/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
+      );
+      return;
+    }
+  }, [takeOffId, selectedFileId]);
+
   const handleAnaylize = useCallback(async () => {
     if (!selectedTemplateId) {
       notify.error({
@@ -583,9 +667,7 @@ export default function FloorPlanPage() {
       onCompleted: (result: any) => {
         console.log("[SSE] Analysis completed:", result);
         eventSourceRef.current = null;
-        router.push(
-          `/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
-        );
+        handleGetGroupedEvidences();
       },
       onError: (error: string) => {
         console.error("[SSE] Analysis error:", error);

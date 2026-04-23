@@ -352,7 +352,7 @@ export const TemplateList = ({
         {myTemplates.map(renderTemplateItem)}
 
         {otherTemplates.length > 0 && (
-          <div className="text-xs text-forumBlue-normal pt-3">Others' Templates</div>
+          <div className="text-xs text-forumBlue-normal pt-3">Company Templates</div>
         )}
         {otherTemplates.map(renderTemplateItem)}
       </div>
