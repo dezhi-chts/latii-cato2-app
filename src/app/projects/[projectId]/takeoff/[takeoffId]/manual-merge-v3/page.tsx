@@ -1089,7 +1089,7 @@ export default function ManualMergeV2Page() {
     try {
       const response = await autoCreateMultipleFilesMergeResultByTakeOffId(takeoffId);
       if (response.status === "success") {
-        router.push(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
+        router.replace(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
         return;
       }
       notify.error({

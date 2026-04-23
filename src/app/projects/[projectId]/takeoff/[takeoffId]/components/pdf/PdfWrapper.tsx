@@ -227,6 +227,7 @@ const PdfWrapper = forwardRef(
 
 		const pdfDoc = useRef<any>(null);
 		const currentViewportRef = useRef<ViewPort | null>(null);
+		const lastCenteredEvidenceIdRef = useRef<string | number | null>(null);
 
 		const [scale, setScale] = useState(1.0);
 		const [totalPages, setTotalPages] = useState<number>(0);
@@ -2710,18 +2711,29 @@ const PdfWrapper = forwardRef(
 			setPageEvidence(updatedPageEvidence);
 		}, [showEvidence, pageNum, allEvidence, scale]);
 
-		const itemEvidences = useMemo(() => {
-			if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) return [];
+		const centerEvidence = useMemo(() => {
+			if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) {
+				lastCenteredEvidenceIdRef.current = null;
+				return null;
+			}
 
 			const evid = pageEvidence.filter((item: any) =>
 				selectedEvidenceIds.includes(item.id),
 			);
-
-			// 只有在没有拖动时才调整居中，避免拖动时 PDF 跳动
-			if (evid.length > 0 && !draggingShapeId) {
-				adjustToCenter("evidence", evid[0]);
+			const nextCenterEvidence = evid?.[0] ?? null;
+			if (!nextCenterEvidence) {
+				return null;
 			}
-			return evid;
+
+			const nextCenterEvidenceId = nextCenterEvidence.id;
+			if (
+				nextCenterEvidenceId !== lastCenteredEvidenceIdRef.current
+			) {
+				// 如果居中的evidenceId发生了变化，则设置新的evidence居中
+				adjustToCenter("evidence", nextCenterEvidence);
+				lastCenteredEvidenceIdRef.current = nextCenterEvidenceId;
+			}
+			return nextCenterEvidence;
 		}, [pageEvidence, selectedEvidenceIds, draggingShapeId]);
 
 		const savedAreaSelectRect = useMemo(() => {
@@ -2937,7 +2949,7 @@ const PdfWrapper = forwardRef(
 													shape={evid}
 													selectedShapeId={selectedShapeId}
 													draggingShapeId={draggingShapeId}
-													itemEvidences={itemEvidences}
+													centerEvidence={centerEvidence}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
 													evidenceDraggable={evidenceDraggable}
@@ -3007,7 +3019,7 @@ const PdfWrapper = forwardRef(
 													shape={crop}
 													selectedShapeId={selectedShapeId}
 													draggingShapeId={draggingShapeId}
-													itemEvidences={itemEvidences}
+													centerEvidence={centerEvidence}
 													typeList={typeList}
 													pdfOperationType={pdfOperationType}
 													evidenceDraggable={evidenceDraggable}
@@ -3648,7 +3660,7 @@ const ShapeWrapper = ({
 	shape,
 	selectedShapeId,
 	draggingShapeId,
-	itemEvidences,
+	centerEvidence,
 	typeList,
 	pdfOperationType,
 	evidenceDraggable,
@@ -3665,7 +3677,7 @@ const ShapeWrapper = ({
 	shape: GroupFrame | EvidenceType;
 	selectedShapeId: string | null;
 	draggingShapeId: string | null;
-	itemEvidences: EvidenceType[] | null;
+	centerEvidence: {id: string | number} | null;  // 居中显示的evidence
 	typeList?: any[];
 	pdfOperationType: FileOperationType;
 	evidenceDraggable?: boolean; // 是否可拖动evidence
@@ -3746,7 +3758,7 @@ const ShapeWrapper = ({
 		color = "#FF4500";
 	}
 
-	if (itemEvidences?.find((item) => item.id === shape.id)) {
+	if (centerEvidence?.id === shape.id) {
 		color = "#FF4500";
 	}
 
