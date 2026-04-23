@@ -151,7 +151,8 @@ export const isUserSuperAdmin = async () => {
     const url = "/auth/is_super_admin";
     const response: any = await http.get(url);
     return response?.is_super_admin || false;
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error checking if user is super admin:", error);
+    return { data: error?.response?.data, status: "error" };
   }
 }

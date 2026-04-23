@@ -5,9 +5,9 @@ export const fetchCompanyByKeycloakUser = async () => {
 		const url = `/company/get_company_by_keycloak_user/`;
 		const response = await http.get(url);
 		return { data: response.data as any, status: "success" };
-	} catch (error) {
+	} catch (error:any) {
 		console.error("Error fetchCompanyByKeycloakUser:", error);
-		return { data: null, status: "error" };
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 
@@ -21,9 +21,9 @@ export const updateCompanyLogoByCompanyId = async (
 		const url = `/company/${companyId}/photo`;
 		const response = await http.put(url, formData);
 		return { data: response as any, status: "success" };
-	} catch (error) {
-		console.error("Error fetchCompanyByKeycloakUser:", error);
-		return { data: null, status: "error" };
+	} catch (error:any) {
+		console.error("Error updateCompanyLogoByCompanyId:", error);
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 
@@ -43,9 +43,9 @@ export const updateCompanyByCompanyId = async (
 		const url = `/company/${companyId}`;
 		const response = await http.put(url, companyData);
 		return { data: response as any, status: "success" };
-	} catch (error) {
-		console.error("Error fetchCompanyByKeycloakUser:", error);
-		return { data: null, status: "error" };
+	} catch (error:any) {
+		console.error("Error updateCompanyByCompanyId:", error);
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 
@@ -69,9 +69,9 @@ export const getCompanyList = async ({
 		const url = `/company/list?${params.toString()}`;
 		const response = await http.get(url);
 		return { data: response as any, status: "success" };
-	} catch (error) {
+	} catch (error:any) {
 		console.error("Error getCompanyList:", error);
-		return { data: null, status: "error" };
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 
@@ -80,9 +80,9 @@ export const getCompanyById = async (companyId: number) => {
 		const url = `/company/${companyId}`;
 		const response = await http.get(url);
 		return { data: response as any, status: "success" };
-	} catch (error) {
+	} catch (error:any) {
 		console.error("Error getCompanyById:", error);
-		return { data: null, status: "error" };
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 
@@ -114,9 +114,9 @@ export const deleteCompanyByCompanyId = async (
 		const url = `/company/${companyId}`;
 		const response = await http.delete(url);
 		return { data: response as any, status: "success" };
-	} catch (error) {
+	} catch (error:any) {
 		console.error("Error deleteCompanyById:", error);
-		return { data: null, status: "error" };
+		return { data: error?.response?.data || null, status: "error" };
 	}
 };
 

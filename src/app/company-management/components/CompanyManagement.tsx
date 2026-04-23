@@ -7,7 +7,6 @@ import {
   Table,
   Tooltip,
   Typography,
-  notification,
 } from "antd";
 import {
   DeleteOutlined,
@@ -24,6 +23,7 @@ import {
   updateCompanyByCompanyId,
 } from "@/services/companyService";
 import CompanyFormModal, { CompanyFormValues } from "./CompanyFormModal";
+import { notify } from "@/utils/notify";
 
 type CompanyLocation = {
   state: string;
@@ -101,9 +101,9 @@ const CompanyManagement = ({ onChanged }: Props) => {
       );
       const total = Number(
         res.data?.total ??
-          res.data?.count ??
-          res.data?.pagination?.total ??
-          list.length,
+        res.data?.count ??
+        res.data?.pagination?.total ??
+        list.length,
       );
       setCompanies(list);
       setPagination((prev) => ({
@@ -113,9 +113,9 @@ const CompanyManagement = ({ onChanged }: Props) => {
         total,
       }));
     } else {
-      notification.error({
-        message: "Error",
-        description: "Failed to fetch companies",
+      notify.error({
+        title: "Error",
+        description: res?.data?.detail || "Failed to fetch companies",
       });
     }
     setLoading(false);
@@ -165,7 +165,7 @@ const CompanyManagement = ({ onChanged }: Props) => {
       onOk: async () => {
         const res = await deleteCompanyByCompanyId({ companyId: company.id });
         if (res.status === "success") {
-          notification.success({ message: "Company deleted" });
+          notify.success({ title: "Company deleted" });
           fetchCompanies({
             page: pagination.page,
             perPage: pagination.per_page,
@@ -173,9 +173,9 @@ const CompanyManagement = ({ onChanged }: Props) => {
           });
           onChanged();
         } else {
-          notification.error({
-            message: "Error",
-            description: "Failed to delete company",
+          notify.error({
+            title: "Error",
+            description: res?.data?.detail || "Failed to delete company",
           });
         }
       },
@@ -187,20 +187,20 @@ const CompanyManagement = ({ onChanged }: Props) => {
     try {
       let res;
       if (modalMode === "create") {
-        res = await createCompany({ companyData: {...values, auth_provider_uid:null} });
+        res = await createCompany({ companyData: { ...values, auth_provider_uid: null } });
       } else if (editingCompany) {
         res = await updateCompanyByCompanyId({
           companyId: editingCompany.id,
           companyData: {
             ...editingCompany,
             ...values,
-            auth_provider_uid:null
+            auth_provider_uid: null
           },
         });
       }
       if (res?.status === "success") {
-        notification.success({
-          message:
+        notify.success({
+          title:
             modalMode === "create" ? "Company created" : "Company updated",
         });
         setModalOpen(false);
@@ -211,8 +211,8 @@ const CompanyManagement = ({ onChanged }: Props) => {
         });
         onChanged();
       } else {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description:
             res?.data?.detail ||
             `Failed to ${modalMode === "create" ? "create" : "update"} company`,
