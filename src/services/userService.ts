@@ -145,3 +145,13 @@ export const unbindUserFromSuperAdmin = async (userId: number | string) => {
     return { data: error?.response?.data, status: "error" };
   }
 }
+
+export const isUserSuperAdmin = async () => {
+  try {
+    const url = "/auth/is_super_admin";
+    const response: any = await http.get(url);
+    return response?.is_super_admin || false;
+  } catch (error) {
+    console.error("Error checking if user is super admin:", error);
+  }
+}

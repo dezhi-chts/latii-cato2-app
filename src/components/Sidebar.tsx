@@ -11,27 +11,7 @@ import LogoutModal from "./Logout-Modal";
 import { usePathname } from "next/navigation";
 import { UserDataForUpdate } from "@/types/user";
 import { Tooltip } from "antd";
-
-const COMPANY_MANAGEMENT_ALLOWED_GROUPS = new Set([
-  "LatiiCato2SuperAdmin",
-  "LatiiCato2SuperAdmin_DEV",
-  "LatiiCato2SuperAdmin_TEST",
-]);
-
-const hasCompanyManagementPermission = () => {
-  if (typeof window === "undefined") return false;
-  try {
-    const userDataRaw = localStorage.getItem("userData");
-    if (!userDataRaw) return false;
-    const parsed = JSON.parse(userDataRaw);
-    const groups = Array.isArray(parsed?.groups) ? parsed.groups : [];
-    return groups.some((group: string) =>
-      COMPANY_MANAGEMENT_ALLOWED_GROUPS.has(group),
-    );
-  } catch {
-    return false;
-  }
-};
+import { isUserSuperAdmin } from "@/services/userService";
 
 export default function Sidebar() {
   const {
@@ -76,14 +56,18 @@ export default function Sidebar() {
   }, [first_name, email]);
 
   useEffect(() => {
-    const syncPermissionFromLocalStorage = () => {
-      setCanAccessCompanyManagement(hasCompanyManagementPermission());
+    let mounted = true;
+
+    const loadCompanyManagementPermission = async () => {
+      const isSuperAdmin = await isUserSuperAdmin();
+      if (!mounted) return;
+      setCanAccessCompanyManagement(Boolean(isSuperAdmin));
     };
 
-    syncPermissionFromLocalStorage();
-    window.addEventListener("storage", syncPermissionFromLocalStorage);
+    loadCompanyManagementPermission();
+
     return () => {
-      window.removeEventListener("storage", syncPermissionFromLocalStorage);
+      mounted = false;
     };
   }, []);
 
