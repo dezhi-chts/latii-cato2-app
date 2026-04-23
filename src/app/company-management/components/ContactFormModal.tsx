@@ -36,14 +36,17 @@ const ContactFormModal = ({
 
   useEffect(() => {
     if (open) {
-      form.setFieldsValue({
+      let formData: any = {
         name: initialValues?.name || "",
         email: initialValues?.email || "",
         phone: initialValues?.phone || "",
         job_title: initialValues?.job_title || "",
-        password: "",
         note: initialValues?.note || "",
-      });
+      }
+      if (mode === 'create') {
+        formData.password = "";
+      }
+      form.setFieldsValue(formData);
     } else {
       form.resetFields();
     }
@@ -81,7 +84,7 @@ const ContactFormModal = ({
           name="name"
           rules={[{ required: true, message: "Please input contact name" }]}
         >
-          <Input placeholder="Contact name" size="large" />
+          <Input placeholder="Contact name" size="large" disabled={mode === "edit"} />
         </Form.Item>
 
         <Form.Item
@@ -105,12 +108,13 @@ const ContactFormModal = ({
           </Form.Item>
         </div>
 
-        <Form.Item
-          label={mode === "create" ? "Password" : "Password (leave blank to keep unchanged)"}
-          name="password"
-          rules={
-            mode === "create"
-              ? [
+        {mode === "create" &&
+          <Form.Item
+            label={mode === "create" ? "Password" : "Password (leave blank to keep unchanged)"}
+            name="password"
+            rules={
+              mode === "create"
+                ? [
                   { required: true, message: "Please input password" },
                   { min: 8, message: "At least 8 characters" },
                   {
@@ -119,7 +123,7 @@ const ContactFormModal = ({
                       "Password must include uppercase, lowercase and number",
                   },
                 ]
-              : [
+                : [
                   { min: 8, message: "At least 8 characters" },
                   {
                     validator: (_, value) => {
@@ -135,14 +139,15 @@ const ContactFormModal = ({
                     },
                   },
                 ]
-          }
-        >
-          <Input.Password
-            placeholder={mode === "create" ? "Set a password" : "New password"}
-            size="large"
-            autoComplete="new-password"
-          />
-        </Form.Item>
+            }
+          >
+            <Input.Password
+              placeholder={mode === "create" ? "Set a password" : "New password"}
+              size="large"
+              autoComplete="new-password"
+            />
+          </Form.Item>
+        }
 
         <Form.Item label="Note" name="note">
           <TextArea
