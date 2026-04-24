@@ -2607,7 +2607,10 @@ const PdfWrapper = forwardRef(
 				if (item?.viewportPolygons?.length > 0) {
 					item.polygons = item.viewportPolygons;
 					item.bounds = getZoneBounds(item.viewportPolygons);
-					pageEvidenceList.push(item);
+					if (item.isParentEvidence || item.isOtherParentEvidence) {
+					} else {
+						pageEvidenceList.push(item);
+					}
 				}
 			});
 
@@ -2759,6 +2762,14 @@ const PdfWrapper = forwardRef(
 		// - scale > 1: keep original size
 		// With 20x20 base buttons and min scale 0.5, visual min is 10x10.
 		const overlayControlScale = Math.min(1, Math.max(0.5, scale));
+		const getControlScaleForBox = useCallback(
+			(boxWidth: number, boxHeight: number) => {
+				// If either side is large enough, keep original-size controls.
+				// This avoids tiny controls on long-wide rectangles.
+				return boxWidth > 60 || boxHeight > 60 ? 1 : overlayControlScale;
+			},
+			[overlayControlScale],
+		);
 
 		const getEvidenceIdsByAreaRect = useCallback(
 			(targetRect: Bounds | null) => {
@@ -3145,8 +3156,10 @@ const PdfWrapper = forwardRef(
 									let { minX, minY, maxX, maxY, width, height } = getZoneBounds(
 										item.viewportPolygons,
 									);
-									const evidenceControlScale =
-										width > 50 && height > 50 ? 1 : overlayControlScale;
+									const evidenceControlScale = getControlScaleForBox(
+										width,
+										height,
+									);
 									const evidencePlusOffset = -Math.round(26 * evidenceControlScale);
 
 									let type = item.type ?? "";
@@ -3461,8 +3474,10 @@ const PdfWrapper = forwardRef(
 									}
 									const { minX, minY, maxX, maxY, width, height } =
 										group.bounds;
-									const groupControlScale =
-										width > 60 && height > 60 ? 1 : overlayControlScale;
+									const groupControlScale = getControlScaleForBox(
+										width,
+										height,
+									);
 									const groupPlusOffset = -Math.round(26 * groupControlScale);
 									let color: string =
 										allPageTypes[group.type as keyof typeof allPageTypes]
@@ -3552,7 +3567,7 @@ const PdfWrapper = forwardRef(
 
 												{[...showConfirmBtnGroupTypes, ...showItemConfirmBtnTypes].includes(group.type) && (
 													<div
-														className="w-[44px] px-[2px] py-[1px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
+														className="w-[44px] px-[3px] py-[1px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
 														onClick={() => {
 															if (showConfirmBtnGroupTypes.includes(group.type)) {
 																evidencSubmit(group.id);
