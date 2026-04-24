@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import http from "@/lib/http";
 import Image from "next/image";
-import { Button, notification } from "antd";
+import { Button } from "antd";
 import { useRouter } from "next/navigation";
+import { notify } from "@/utils/notify";
 
 enum ConnectionStatus {
   READY = "ready",
@@ -248,8 +249,8 @@ const PdfParse = ({
               (file: FileItem) => file.id === selectedFileId,
             );
             if (completedFile) {
-              notification.success({
-                message: "Success",
+              notify.success({
+                title: "Success",
                 description: `File "${completedFile.name}" has been parsed successfully!`,
               });
             }
@@ -499,8 +500,8 @@ const PdfParse = ({
   // 监听totalFileStatus的变化，触发相应的通知
   useEffect(() => {
     if (totalFileStatus === FileStatus.FAILED) {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "One or more files failed to process.",
       });
     }

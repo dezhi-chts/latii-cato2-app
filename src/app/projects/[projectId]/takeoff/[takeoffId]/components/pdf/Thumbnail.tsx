@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CloseOutlined } from "@ant-design/icons";
-import { notification, Select, Dropdown, Space } from "antd";
+import { Select, Dropdown, Space } from "antd";
 import { DownOutlined } from "@ant-design/icons";
 import LabelTypesSelect from "./Label-Types-Select";
 import { allPageTypes, PageType } from "../../types/evidence";
