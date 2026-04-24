@@ -6,7 +6,6 @@ import {
   Divider,
   message,
   Modal,
-  notification,
   Popover,
   Select,
   Spin,
@@ -35,6 +34,7 @@ import {
   FileViewStep,
 } from "@/context/TakeoffContext";
 import { analyzeItemByGeminiSdk } from "@/services/DrawingAiService";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 
@@ -211,14 +211,14 @@ const PageLabelingContent = () => {
           );
         }
       } else {
-        notification.error({
-          message: "Error",
+        notify.error({
+          title: "Error",
           description: "No files found in this take off",
         });
       }
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to get take off",
       });
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, ConfigProvider, notification, Modal, Upload, message } from "antd";
+import { Button, ConfigProvider, Modal, Upload, message } from "antd";
 import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import Header from "./components/Header";
@@ -21,6 +21,7 @@ import {
 } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
 import { useUser } from "@/context/UserContext";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 const { Dragger } = Upload;
@@ -117,8 +118,8 @@ const Page = () => {
       setTemplateList(list);
       // 找到默认模版ID，设置为当前选中模版ID，如果没找到默认模版，设置为第一个模版
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to fetch templates",
       });
     }
@@ -134,8 +135,8 @@ const Page = () => {
     if (response.status === "success") {
       setTemplateContent(response.data);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to fetch template content",
       });
     }
@@ -187,8 +188,8 @@ const Page = () => {
     const response = await updateTemplate(templateId + '', updatedTemplate);
     if (response.status === "success") {
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to update template name",
       });
     }
@@ -199,14 +200,14 @@ const Page = () => {
     // 发送请求
     const response = await copyTemplate(templateId, company_id, name);
     if (response.status === "success") {
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Copy template successfully",
       });
       fetchTemplates();
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to copy template",
       });
     }
@@ -220,8 +221,8 @@ const Page = () => {
     if (response.status === "success") {
       fetchTemplates();
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to delete template",
       });
     }
@@ -233,13 +234,13 @@ const Page = () => {
     const response = await setTemplateDefault(templateId, company_id as number);
     if (response.status === "success") {
       // 设置默认模版成功
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Set default template successfully",
       });
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to set default template",
       });
     }
@@ -253,15 +254,15 @@ const Page = () => {
     const response = await updateField(templateId, fieldId, fieldData);
     setLoading(false);
     if (response.status === "success") {
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: "Updated successfully",
       });
       // 刷新数据
       fetchTemplateContent(templateId);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: "Failed to update field",
       });
     }
@@ -366,8 +367,8 @@ const Page = () => {
       await fetchTemplates();
       handleCloseImportModal();
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: response?.data?.detail || "Failed to import template",
       });
     }
@@ -396,8 +397,8 @@ const Page = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } else {
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: response?.data?.detail || "Failed to download template",
       });
     }

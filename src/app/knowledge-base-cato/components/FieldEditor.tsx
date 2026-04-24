@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, message, Tag, Modal, notification } from "antd";
+import { Button, Input, message, Tag, Modal } from "antd";
 
 import { updateField, createField } from "@/services/templateService";
 import LoadingScreen from "@/components/loading-screen";
@@ -10,6 +10,7 @@ import Image from "next/image";
 
 // 动态引入ReactQuill防止SSR错误
 import { FieldEvent } from "../page";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 
@@ -112,16 +113,16 @@ export const FieldEditor = ({
     );
     if (res.status === "success") {
       setLoading(false);
-      notification.success({
-        message: "Success",
+      notify.success({
+        title: "Success",
         description: res?.data?.detail || "Field created successfully",
       });
       onClose?.();
       onUpdateField?.(FieldEvent.Create, { template_id: templateId, fieldData: formData });
     } else {
       setLoading(false);
-      notification.error({
-        message: "Error",
+      notify.error({
+        title: "Error",
         description: res?.data?.detail || "Failed to create field",
       });
     }

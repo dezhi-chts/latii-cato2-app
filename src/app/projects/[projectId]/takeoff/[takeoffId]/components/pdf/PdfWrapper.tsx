@@ -12,7 +12,6 @@ import { Stage, Layer, Group, Path, Circle, Rect, Text } from "react-konva";
 import {
 	Form,
 	Modal,
-	notification,
 	Input,
 	Select,
 	Tooltip,
@@ -75,6 +74,7 @@ import { ArchDrawingLabelTypes } from "@/app/projects/[projectId]/takeoff/[takeo
 const { confirm } = Modal;
 
 GlobalWorkerOptions.workerSrc = "/assets/js/pdf.worker.min.js";
+import { notify } from "@/utils/notify";
 
 const getZoneBounds = (polygons: Point[]) => {
 	const xs = polygons.map((p) => p.x);
@@ -450,8 +450,8 @@ const PdfWrapper = forwardRef(
 					console.error("Failed to load PDF:", error.message);
 					setPdfLoading(false);
 					if (error.message !== "Worker was destroyed") {
-						notification.error({
-							message: "Error",
+						notify.error({
+							title: "Error",
 							description: error.message,
 						});
 					}
@@ -592,8 +592,8 @@ const PdfWrapper = forwardRef(
 						if (res.status === "success") {
 							removeCropSectionByIds(filteredCropSections.map((item) => item.id));
 							if (showAlert) {
-								notification.success({
-									message: "Success",
+								notify.success({
+									title: "Success",
 									description: "Evidence submit successfully.",
 								});
 							}
@@ -615,8 +615,8 @@ const PdfWrapper = forwardRef(
 							setFullLoading(false);
 						}
 						console.error("Error submitting evidence:", error);
-						notification.error({
-							message: "Error",
+						notify.error({
+							title: "Error",
 							description: "Evidence submit failed.",
 						});
 						reject(error);
@@ -633,16 +633,16 @@ const PdfWrapper = forwardRef(
 
 			const res = await evidenceBatchDelete(deleteIds ?? []);
 			if (res.status === "success") {
-				notification.success({
-					message: "Success",
+				notify.success({
+					title: "Success",
 					description: "Evidence delete successfully.",
 				});
 
 				onDeleteEvidence &&
 					onDeleteEvidence({ ...res.data, deleteIds: deleteIds ?? [] });
 			} else {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "Evidence delete failed.",
 				});
 			}
@@ -783,8 +783,8 @@ const PdfWrapper = forwardRef(
 			if (res.status === "success") {
 				onUpdateEvidence && onUpdateEvidence(res.data);
 			} else {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description:
 						"Evidence update failed, please delete and re-add the evidence.",
 				});
@@ -920,8 +920,8 @@ const PdfWrapper = forwardRef(
 			}
 
 			if (!pdfDoc.current) {
-				notification.warning({
-					message: "Warning",
+				notify.warning({
+					title: "Warning",
 					description: "Please load the PDF file first.",
 				});
 				return;
@@ -944,8 +944,8 @@ const PdfWrapper = forwardRef(
 
 		const completeDrawing = () => {
 			if (!pdfDoc.current) {
-				notification.warning({
-					message: "Warning",
+				notify.warning({
+					title: "Warning",
 					description: "Please load the PDF file first.",
 				});
 				return;
@@ -998,8 +998,8 @@ const PdfWrapper = forwardRef(
 				}
 			} catch (error) {
 				console.log("######## rotatePDF error", error);
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "Failed to rotate the PDF file.",
 				});
 			} finally {
@@ -1793,13 +1793,13 @@ const PdfWrapper = forwardRef(
 				onSuccessOCRText && onSuccessOCRText?.(res.data.full_text);
 				// 删除当前group
 				deleteCrop(groupId);
-				notification.success({
-					message: "Success",
+				notify.success({
+					title: "Success",
 					description: "OCR recognition successful.",
 				});
 			} else {
-				notification.error({
-					message: "Error",
+				notify.error({
+					title: "Error",
 					description: "OCR recognition failed.",
 				});
 			}
@@ -3677,7 +3677,7 @@ const ShapeWrapper = ({
 	shape: GroupFrame | EvidenceType;
 	selectedShapeId: string | null;
 	draggingShapeId: string | null;
-	centerEvidence: {id: string | number} | null;  // 居中显示的evidence
+	centerEvidence: { id: string | number } | null;  // 居中显示的evidence
 	typeList?: any[];
 	pdfOperationType: FileOperationType;
 	evidenceDraggable?: boolean; // 是否可拖动evidence
