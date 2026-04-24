@@ -536,10 +536,12 @@ export default function EvidenceSidebar({
 			}
 
 			const payload = response.data?.data ?? response.data ?? {};
-			const next = Object.values(payload || {}) as any[] || [];
+
+			let next = Object.values(payload || {}) as any[] || [];
+			next = next.filter((evid) => evid !== null);
 			// 	去重next中id重复的evidence id
 			let uniqueEvidences = next.filter((evid, index, self) => {
-				return index === self.findIndex((t) => t.id === evid.id);
+				return index === self.findIndex((t) => t?.id === evid?.id);
 			});
 
 			setEvidences(uniqueEvidences);
@@ -633,16 +635,24 @@ export default function EvidenceSidebar({
 					</div>
 				) : (
 					<div className="flex flex-col gap-6 pb-6">
-						{pageData.map((entry) => {
-							return (
-								<PageThumbnailCard
-									key={entry.key}
-									entry={entry}
-									imageMetrics={pageImageMetricsMap[entry.key]}
-									onImageRendered={handleImageRendered}
-								/>
-							);
-						})}
+						<>
+							{pageData?.length > 0 ?
+								(pageData.map((entry) => {
+									return (
+										<PageThumbnailCard
+											key={entry.key}
+											entry={entry}
+											imageMetrics={pageImageMetricsMap[entry.key]}
+											onImageRendered={handleImageRendered}
+										/>
+									);
+								})) :
+								(<div>
+									<div className="text-xs font-medium text-forumBlue-normal">
+										No pages found
+									</div>
+								</div>)}
+						</>
 					</div>
 				)}
 			</div>
