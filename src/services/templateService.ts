@@ -1,9 +1,9 @@
 import request, { http } from "@/lib/http";
 import { Field } from "@/types/templates";
 
-export const getTemplates = async (page: number = 1, perPage: number = 1000) => {
+export const getTemplates = async (company_id: number, page: number = 1, perPage: number = 1000) => {
   try {
-    const url = `/prompt-template/list?page=${page}&per_page=${perPage}`;
+    const url = `/prompt-template/list?company_id=${company_id}&page=${page}&per_page=${perPage}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
   } catch (error) {

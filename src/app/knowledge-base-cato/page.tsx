@@ -70,14 +70,14 @@ const Page = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
 
-  // 公司ID - 可以从用户信息或其他地方获取，这里暂时硬编码为1
+  // 公司ID - 可以从用户信息或其他地方获取
   const { company_id, username } = useUser();
-  const userInfo = useUser();
-  const companyId = company_id || 0;
 
   useEffect(() => {
-    fetchTemplates();
-  }, []);
+    if (company_id) {
+      fetchTemplates();
+    }
+  }, [company_id]);
 
   useEffect(() => {
     if (templateId) {
@@ -101,10 +101,19 @@ const Page = () => {
   // 获取模版列表
   const fetchTemplates = async () => {
     setLoading(true);
-    const response = await getTemplates();
+    const response = await getTemplates(company_id as number);
     if (response.status === "success") {
       let list = response.data?.items || [];
+      if (list.length > 0) {
+        list = list.filter((template: any) => template.id !== 1);
+      }
       // 将list中的标准模版放在第一位
+      const standardTemplate = {
+        id: 1,
+        name: "Standard Template",
+        create_user: "System",
+      };
+      list.unshift(standardTemplate);
       setTemplateList(list);
       // 找到默认模版ID，设置为当前选中模版ID，如果没找到默认模版，设置为第一个模版
     } else {
@@ -188,7 +197,7 @@ const Page = () => {
   const handleCopyTemplate = async (templateId: number, name: string) => {
     setLoading(true);
     // 发送请求
-    const response = await copyTemplate(templateId, companyId, name);
+    const response = await copyTemplate(templateId, company_id, name);
     if (response.status === "success") {
       notification.success({
         message: "Success",
@@ -221,7 +230,7 @@ const Page = () => {
   // 设置默认模版
   const handleSetDefaultTemplate = async (templateId: number) => {
     // 同步当前默认状态到服务端
-    const response = await setTemplateDefault(templateId, companyId);
+    const response = await setTemplateDefault(templateId, company_id as number);
     if (response.status === "success") {
       // 设置默认模版成功
       notification.success({
@@ -351,7 +360,7 @@ const Page = () => {
       return;
     }
     setLoading(true);
-    const response = await importTemplate(companyId, file);
+    const response = await importTemplate(company_id as number, file);
     if (response.status === "success") {
       message.success("Template imported successfully");
       await fetchTemplates();

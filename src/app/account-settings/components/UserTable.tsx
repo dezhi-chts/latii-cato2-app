@@ -36,12 +36,12 @@ const UserTable = ({
   return (
     <div className="w-full flex flex-col">
       <div className="w-full rounded-t-xl bg-primaryN20 border-b border-primaryN30 flex text-grey-normal text-xs text-center py-3 gap-2">
-        <p className="w-1/5">First Name</p>
-        <p className="w-1/5">Last Name</p>
-        <p className="w-1/5">Role</p>
-        <p className="w-1/5">Email</p>
-        <p className={`${showActions ? "w-[10%]" : "w-1/5"}`}>is_admin</p>
-        <p className={`${showActions ? "w-[10%]" : "w-1/5"}`}>Permits</p>
+        <p className="w-1/6">First Name</p>
+        <p className="w-1/6">Last Name</p>
+        <p className="w-1/6">Role</p>
+        <p className="w-1/6">Email</p>
+        <p className={`${showActions ? "w-[10%]" : "w-1/6"}`}>is_admin</p>
+        <p className={`${showActions ? "w-[10%]" : "w-1/6"}`}>Permits</p>
         {showActions && <p className="w-[10%]">Actions</p>}
       </div>
       <div
@@ -49,19 +49,19 @@ const UserTable = ({
       >
         {contacts
           ? contacts.map((user, index) => {
-              return (
-                <Row
-                  key={index}
-                  user={user}
-                  index={index}
-                  handleIndexChange={handleIndexChange}
-                  editingIndex={editingIndex}
-                  refreshContacts={refreshContacts}
-                  showActions={showActions}
-                  currentUserEmail={currentUserEmail || ""}
-                />
-              );
-            })
+            return (
+              <Row
+                key={index}
+                user={user}
+                index={index}
+                handleIndexChange={handleIndexChange}
+                editingIndex={editingIndex}
+                refreshContacts={refreshContacts}
+                showActions={showActions}
+                currentUserEmail={currentUserEmail || ""}
+              />
+            );
+          })
           : null}
       </div>
     </div>
@@ -165,9 +165,8 @@ const Row = ({
     } else {
       notify.error({
         title: "Error",
-        description: `${
-          response?.data?.response?.data?.detail || "Unknown error"
-        }`,
+        description: `${response?.data?.response?.data?.detail || "Unknown error"
+          }`,
       });
       setContact(buildContactState(user));
     }
@@ -230,16 +229,16 @@ const Row = ({
       );
     }
 
-    return <p className="w-1/5">{value || "-"}</p>;
+    return <p className="w-1/6 px-[1px] break-words whitespace-pre-wrap">{value || "-"}</p>;
   };
 
   return (
-    <div className="w-full h-14 items-center border-b border-primaryN30 flex text-xs gap-2 text-center">
+    <div className="w-full min-h-14 items-center border-b border-primaryN30 flex text-xs text-center">
       {renderField(contact.first_name, "first_name")}
       {renderField(contact.last_name, "last_name")}
       {renderField(contact.job_title, "job_title")}
       {renderField(contact.email, "email")}
-      <div className={`${showActions ? "w-[10%]" : "w-1/5"} flex justify-center`}>
+      <div className={`${showActions ? "w-[10%]" : "w-1/6"} flex justify-center`}>
         {isCurrentLoginUser ? (
           <Tooltip title="Unable to modify permissions. To avoid accidental loss of feature access, please contact the relevant personnel for assistance.">
             <span>
@@ -259,7 +258,7 @@ const Row = ({
       <p className={`${showActions ? "w-[10%]" : "w-1/5"} text-grey-normal`}>
         Owner
       </p>
-      
+
       {showActions && (
         <div className="w-[10%] flex justify-center gap-1.5 items-center">
           <Image

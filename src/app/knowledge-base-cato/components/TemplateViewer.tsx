@@ -58,10 +58,10 @@ export const TemplateViewer = ({
     return fields;
   }, [templateContent, activeSubTab]);
 
-  useEffect(()=>{
+  useEffect(() => {
     // 模版更改的时候需要清空当前activeSubTab
     setActiveSubTab('');
-  },[templateId])
+  }, [templateId])
 
   useEffect(() => {
     if (activeSubTab === GENERATIONS) {
@@ -123,7 +123,7 @@ export const TemplateViewer = ({
               height={14}
             ></Image>
           </Popover>
-          <span>Template creator: {templateContent?.create_user || ''}</span>
+          <span>Template creator: {templateContent?.id === 1 ? 'System' : templateContent?.create_user || ''}</span>
         </div>
         <SubTabs
           templateId={templateId as number}

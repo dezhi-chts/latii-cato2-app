@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Spin, Modal, Popover, Select, Tooltip } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Spin, Modal, Popover } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -49,7 +49,10 @@ import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { getTemplates } from "@/services/templateService";
 import { useUser } from "@/context/UserContext";
 import { notify } from "@/utils/notify";
-import { div } from "framer-motion/m";
+import PromptTemplateSelect, {
+  resolvePreferredTemplateId,
+  type PromptTemplateItem,
+} from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
 const { confirm } = Modal;
 
 const ZOOM_MIN = 0.5;
@@ -58,49 +61,6 @@ const ZOOM_MAX = 3;
 interface ExtendedProjectFile extends ProjectFileRecord {
   operation_type?: string;
 }
-
-interface PromptTemplateOption {
-  id: number;
-  name: string;
-  description?: string;
-  is_default?: boolean;
-}
-
-const EllipsisTooltipText = ({ text }: { text: string }) => {
-  const textRef = useRef<HTMLSpanElement | null>(null);
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  useEffect(() => {
-    const checkOverflow = () => {
-      const element = textRef.current;
-      if (!element) return;
-      setShowTooltip(element.scrollWidth > element.clientWidth);
-    };
-
-    checkOverflow();
-    window.addEventListener("resize", checkOverflow);
-
-    const observer = new ResizeObserver(() => {
-      checkOverflow();
-    });
-    if (textRef.current) {
-      observer.observe(textRef.current);
-    }
-
-    return () => {
-      window.removeEventListener("resize", checkOverflow);
-      observer.disconnect();
-    };
-  }, [text]);
-
-  return (
-    <Tooltip title={showTooltip ? text : null} placement="topLeft">
-      <span ref={textRef} className="block max-w-full truncate">
-        {text}
-      </span>
-    </Tooltip>
-  );
-};
 
 export default function FloorPlanPage() {
   const router = useRouter();
@@ -125,15 +85,15 @@ export default function FloorPlanPage() {
   const [thumbnailData, setThumbnailData] = useState<any[]>([]);
   const [scheduleList, setScheduleList] = useState<any[]>([]);
   const [itemBoxList, setItemBoxList] = useState<EvidenceType[]>([]);
-  const [promptTemplates, setPromptTemplates] = useState<PromptTemplateOption[]>(
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplateItem[]>(
     [],
   );
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [areaEditModalOpen, setAreaEditModalOpen] = useState(false);
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
-  const { username } = useUser();
+  const { username, company_id } = useUser();
   const [evidenceList, setEvidenceList] = useState<EvidenceType[]>([]);
 
   const promptHintText =
@@ -171,7 +131,9 @@ export default function FloorPlanPage() {
   }, [takeOffId]);
 
   const fetchPromptTemplates = useCallback(async () => {
-    const response = await getTemplates();
+    console.log('####### company_id', company_id, username)
+    if (!company_id) return;
+    const response = await getTemplates(company_id as number);
     if (response.status !== "success") {
       notify.error({
         title: "Error",
@@ -180,21 +142,28 @@ export default function FloorPlanPage() {
       return;
     }
 
-    const list = response.data?.items || [];
+    let list = response.data?.items || [];
+    if (list?.length > 0) {
+      list = list.filter((item: PromptTemplateItem) => item.id !== 1);
+    }
+    let standardTemplate = {
+      id: 1,
+      name: "Standard Template",
+      description: "Standard template for page label identification",
+    }
+    list.unshift(standardTemplate);
     setPromptTemplates(list);
-
-    let myTemplates = list?.filter((template: any) => template.create_user === username);
-
-    const defaultTemplate =
-      myTemplates.find((template: any) => template.is_default);
-    if (defaultTemplate?.id) {
-      setSelectedTemplateId(defaultTemplate.id);
-    } else {
-      if (list.length > 0) {
-        setSelectedTemplateId(list[0].id);
+    console.log('########## list.length', list.length, selectedTemplateId)
+    if (list.length > 0 && !selectedTemplateId) {
+      const preferredId = resolvePreferredTemplateId(list, username);
+      console.log('########## preferredId', preferredId)
+      if (preferredId) {
+        setSelectedTemplateId(preferredId);
+      } else {
+        setSelectedTemplateId(standardTemplate.id);
       }
     }
-  }, [username]);
+  }, [company_id, selectedTemplateId, username]);
 
   const fetchFloorPlanAndElevation = useCallback(async () => {
     if (!selectedFileId) return;
@@ -322,8 +291,13 @@ export default function FloorPlanPage() {
 
   useEffect(() => {
     fetchTakeoffData();
-    fetchPromptTemplates();
-  }, [fetchTakeoffData, fetchPromptTemplates]);
+  }, []);
+
+  useEffect(() => {
+    if (company_id) {
+      fetchPromptTemplates();
+    }
+  }, [company_id])
 
   useEffect(() => {
     if (selectedFileId) {
@@ -811,30 +785,14 @@ export default function FloorPlanPage() {
                 height={14}
               />
             </Popover>
-            <Select
+            <PromptTemplateSelect
               className="w-[200px]"
-              value={selectedTemplateId}
-              onChange={(value: number | string) => {
-                console.log("value", value);
-                setSelectedTemplateId(Number(value));
-              }}
-              options={promptTemplates.map((template) => ({
-                label: <EllipsisTooltipText text={template.name} />,
-                value: template.id,
-              }))}
-              dropdownRender={(menu: ReactNode) => (
-                <div>
-                  {menu}
-                  <div
-                    className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm text-forumBlue-normal hover:bg-primaryN20"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => router.push("/knowledge-base-cato")}
-                  >
-                    <span>Edit Prompts</span>
-                    <span className="text-[18px] leading-none">+</span>
-                  </div>
-                </div>
-              )}
+              templates={promptTemplates}
+              selectedTemplateId={selectedTemplateId}
+              currentUsername={username}
+              placeholder="Please select a template"
+              onChange={(id: number) => setSelectedTemplateId(id)}
+              onEditTemplates={() => router.push("/knowledge-base-cato")}
             />
           </div>
           <Popover
