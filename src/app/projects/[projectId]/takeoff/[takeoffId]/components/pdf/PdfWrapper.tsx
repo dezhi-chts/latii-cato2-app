@@ -2754,6 +2754,11 @@ const PdfWrapper = forwardRef(
 		const visibleAreaSelectRect = enableAreaSelection
 			? areaSelectRect || savedAreaSelectRect
 			: null;
+		// Unified overlay button scaling rule:
+		// - scale in [0.5, 1]: shrink proportionally
+		// - scale > 1: keep original size
+		// With 20x20 base buttons and min scale 0.5, visual min is 10x10.
+		const overlayControlScale = Math.min(1, Math.max(0.5, scale));
 
 		const getEvidenceIdsByAreaRect = useCallback(
 			(targetRect: Bounds | null) => {
@@ -3010,7 +3015,7 @@ const PdfWrapper = forwardRef(
 												></ShapeWrapper>
 											);
 										})}
-										{cropSections.map((crop: any, index: number) => {
+										{showEvidence && cropSections.map((crop: any, index: number) => {
 											return (
 												<ShapeWrapper
 													key={crop.id}
@@ -3140,6 +3145,9 @@ const PdfWrapper = forwardRef(
 									let { minX, minY, maxX, maxY, width, height } = getZoneBounds(
 										item.viewportPolygons,
 									);
+									const evidenceControlScale =
+										width > 50 && height > 50 ? 1 : overlayControlScale;
+									const evidencePlusOffset = -Math.round(26 * evidenceControlScale);
 
 									let type = item.type ?? "";
 									let color: string = colorList["forumBlue-normal"];
@@ -3214,6 +3222,8 @@ const PdfWrapper = forwardRef(
 												style={{
 													right: 2,
 													top: 2,
+													transform: `scale(${evidenceControlScale})`,
+													transformOrigin: "top right",
 												}}
 											>
 												<div className="flex items-center gap-1">
@@ -3271,6 +3281,8 @@ const PdfWrapper = forwardRef(
 																maxY > stageHeight - 10
 																	? height - 30 + "px"
 																	: height + 2 + "px",
+															transform: `scale(${evidenceControlScale})`,
+															transformOrigin: "top left",
 														}}
 													>
 														<div className="flex justify-center items-center gap-1">
@@ -3390,9 +3402,10 @@ const PdfWrapper = forwardRef(
 												<div
 													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														right: -26,
+														right: evidencePlusOffset,
 														top: "50%",
-														transform: "translateY(-50%)",
+														transform: `translateY(-50%) scale(${evidenceControlScale})`,
+														transformOrigin: "center right",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -3414,8 +3427,9 @@ const PdfWrapper = forwardRef(
 													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
 														left: "50%",
-														bottom: -26,
-														transform: "translateX(-50%)",
+														bottom: evidencePlusOffset,
+														transform: `translateX(-50%) scale(${evidenceControlScale})`,
+														transformOrigin: "bottom center",
 														display:
 															selectedShapeId === item.id ? "block" : "none",
 													}}
@@ -3438,7 +3452,7 @@ const PdfWrapper = forwardRef(
 								})}
 
 								{/** 处理图形绘制的按钮相关显示  */}
-								{cropSections.map((group: GroupFrame) => {
+								{showEvidence && cropSections.map((group: GroupFrame) => {
 									if (!group.completed) {
 										return null;
 									}
@@ -3447,6 +3461,9 @@ const PdfWrapper = forwardRef(
 									}
 									const { minX, minY, maxX, maxY, width, height } =
 										group.bounds;
+									const groupControlScale =
+										width > 60 && height > 60 ? 1 : overlayControlScale;
+									const groupPlusOffset = -Math.round(26 * groupControlScale);
 									let color: string =
 										allPageTypes[group.type as keyof typeof allPageTypes]
 											?.color ?? colorList["forumBlue-normal"];
@@ -3497,6 +3514,8 @@ const PdfWrapper = forwardRef(
 												style={{
 													right: 2,
 													top: 2,
+													transform: `scale(${groupControlScale})`,
+													transformOrigin: "top right",
 												}}
 											>
 												{showSelectGroup && (
@@ -3533,7 +3552,7 @@ const PdfWrapper = forwardRef(
 
 												{[...showConfirmBtnGroupTypes, ...showItemConfirmBtnTypes].includes(group.type) && (
 													<div
-														className="w-[64px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
+														className="w-[44px] px-[2px] py-[1px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-lg whitespace-nowrap cursor-pointer"
 														onClick={() => {
 															if (showConfirmBtnGroupTypes.includes(group.type)) {
 																evidencSubmit(group.id);
@@ -3572,9 +3591,10 @@ const PdfWrapper = forwardRef(
 												<div
 													className="absolute flex items-center pointer-events-auto transition-all"
 													style={{
-														right: -26,
+														right: groupPlusOffset,
 														top: "50%",
-														transform: "translateY(-50%)",
+														transform: `translateY(-50%) scale(${groupControlScale})`,
+														transformOrigin: "center right",
 													}}
 												>
 													<div
@@ -3595,8 +3615,9 @@ const PdfWrapper = forwardRef(
 													className="absolute flex justify-center pointer-events-auto transition-all"
 													style={{
 														left: "50%",
-														bottom: -26,
-														transform: "translateX(-50%)",
+														bottom: groupPlusOffset,
+														transform: `translateX(-50%) scale(${groupControlScale})`,
+														transformOrigin: "bottom center",
 													}}
 												>
 													<div
