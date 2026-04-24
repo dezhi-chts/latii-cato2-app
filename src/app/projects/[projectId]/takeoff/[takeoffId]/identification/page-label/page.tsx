@@ -6,7 +6,6 @@ import {
 	Divider,
 	Modal,
 	Popover,
-	Select,
 	Spin,
 } from "antd";
 
@@ -65,6 +64,10 @@ import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
 import { AnalyzeItemBySourceTypeSSE } from "@/services/DrawingAiService";
 import { getTemplates } from "@/services/templateService";
+import PromptTemplateSelect, {
+	resolvePreferredTemplateId,
+	type PromptTemplateItem,
+} from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
 import {
 	enrichElevationFloorPlanByEvidenceIds,
 	generateFileKeysByProjectFileIds,
@@ -82,11 +85,6 @@ const validPageType = [
 	PageType.KeyNotes,
 	PageType.Mix,
 ];
-
-interface PromptTemplateOption {
-	id: number;
-	name: string;
-}
 
 export interface IdentLabelRef {
 	pdfRef: React.RefObject<PdfWrapperRefMethods | null>;
@@ -118,7 +116,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const eventSourceRef = useRef<{ close: () => void } | null>(null);
 	const [showScheduleTemplateModal, setShowScheduleTemplateModal] =
 		useState<boolean>(false);
-	const [promptTemplates, setPromptTemplates] = useState<PromptTemplateOption[]>(
+	const [promptTemplates, setPromptTemplates] = useState<PromptTemplateItem[]>(
 		[],
 	);
 	const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
@@ -137,7 +135,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 	const evidenceIsLoaded = useRef<boolean>(false);
 	const unSavedCropsCount = useRef<number>(0);
-	const { company_id } = useUser();
+	const { company_id, username } = useUser();
 	const [boxTypeList, setBoxTypeList] = useState<any>([]);
 	const {
 		fileList,
@@ -149,6 +147,9 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 	useEffect(() => {
 		getBoxTypeList();
+		if (company_id) {
+			fetchPromptTemplates();
+		}
 	}, [company_id]);
 
 	// Cleanup SSE connection on unmount
@@ -651,8 +652,10 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	};
 
 	const fetchPromptTemplates = useCallback(async () => {
+		console.log('####### label company_id', company_id, username)
+		if (!company_id) return false;
 		setScheduleTemplateLoading(true);
-		const response = await getTemplates();
+		const response = await getTemplates(company_id as number);
 		setScheduleTemplateLoading(false);
 		if (response.status !== "success") {
 			notify.error({
@@ -661,14 +664,26 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			});
 			return false;
 		}
-		const list = response.data?.items || [];
-		setPromptTemplates(list);
-		if (list.length > 0) {
-			const defaultTemplate = list.find((template: any) => template?.is_default);
-			setSelectedTemplateId(defaultTemplate?.id || list[0].id);
+		let list = response.data?.items || [];
+		if (list?.length > 0) {
+			list = list.filter((item: any) => item.id !== 1);
+		}
+		let standardTemplate = {
+			id: 1,
+			name: "Standard Template",
+			description: "Standard template for page label identification",
+		}
+		setPromptTemplates([standardTemplate, ...list]);
+		if (list.length > 0 && !selectedTemplateId) {
+			const preferredId = resolvePreferredTemplateId(list, username);
+			if (preferredId) {
+				setSelectedTemplateId(preferredId);
+			} else {
+				setSelectedTemplateId(1);
+			}
 		}
 		return true;
-	}, []);
+	}, [company_id, selectedTemplateId, username]);
 
 	const handleScheduleAnalyze = useCallback(async () => {
 		if (!selectedTemplateId) {
@@ -806,9 +821,6 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			});
 			return;
 		}
-
-		const loaded = await fetchPromptTemplates();
-		if (!loaded) return;
 		setShowScheduleTemplateModal(true);
 	}, [fetchPromptTemplates, handleFileKeys, selectedFileId, takeOffId]);
 
@@ -1162,18 +1174,14 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				destroyOnClose
 			>
 				<div className="mt-3">
-					<Select
+					<PromptTemplateSelect
 						className="w-full"
-						placeholder="Please select a template"
+						templates={promptTemplates}
+						selectedTemplateId={selectedTemplateId}
+						currentUsername={username}
 						loading={scheduleTemplateLoading}
-						value={selectedTemplateId}
-						onChange={(value: number | string) => {
-							setSelectedTemplateId(Number(value));
-						}}
-						options={promptTemplates.map((template) => ({
-							label: template.name,
-							value: template.id,
-						}))}
+						placeholder="Please select a template"
+						onChange={(id: number) => setSelectedTemplateId(id)}
 					/>
 				</div>
 			</Modal>
