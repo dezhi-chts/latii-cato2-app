@@ -66,7 +66,7 @@ const Home = () => {
 
   const allFields = [...defaultFields, ...dynamicFields, actionsField];
 
-  const { first_name } = useUser();
+  const { first_name, name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] =
     useState<boolean>(false);
   const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] =
@@ -218,7 +218,7 @@ const Home = () => {
         <div className="flex flex-col gap-2">
           <p className="text-grey-light-strong text-sm ">{formatUserDate()}</p>
           <p className="text-forumBlue-normal text-[22px]">
-            {getGreetingByTime()}, {first_name || "User"}
+            {getGreetingByTime()}, {name || "User"}
           </p>
         </div>
         <div className="flex flex-col gap-4 w-full">
