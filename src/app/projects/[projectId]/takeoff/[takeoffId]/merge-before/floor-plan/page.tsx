@@ -583,10 +583,10 @@ export default function FloorPlanPage() {
     }
   };
 
-  const handleGetGroupedEvidences = useCallback(async () => {
+  const handleGetGroupedEvidences = useCallback(async (fileId: number) => {
     const groupedResponse = await getGroupedEvidencesByTakeOffAndFile(
       takeOffId as string,
-      selectedFileId as any,
+      fileId,
     );
     setFullLoading(false);
     if (groupedResponse.status !== "success") {
@@ -613,7 +613,7 @@ export default function FloorPlanPage() {
       );
       return;
     }
-  }, [takeOffId, selectedFileId]);
+  }, [projectId, router, takeOffId]);
 
   const handleAnaylize = useCallback(async () => {
     if (!selectedTemplateId) {
@@ -623,6 +623,15 @@ export default function FloorPlanPage() {
       });
       return;
     }
+    if (!selectedFileId) {
+      notify.error({
+        title: "Error",
+        description: "No file selected for analysis.",
+      });
+      return;
+    }
+
+    const fileIdAtAnalyze = selectedFileId;
 
     setBuildLoading(true);
     // Close existing SSE connection if any
@@ -641,7 +650,7 @@ export default function FloorPlanPage() {
       onCompleted: (result: any) => {
         console.log("[SSE] Analysis completed:", result);
         eventSourceRef.current = null;
-        handleGetGroupedEvidences();
+        handleGetGroupedEvidences(fileIdAtAnalyze);
       },
       onError: (error: string) => {
         console.error("[SSE] Analysis error:", error);
@@ -656,7 +665,7 @@ export default function FloorPlanPage() {
     });
 
     eventSourceRef.current = sseConnection;
-  }, [selectedTemplateId, takeOffId, projectId, router, formatAnalyzeErrorMessage]);
+  }, [selectedTemplateId, selectedFileId, takeOffId, formatAnalyzeErrorMessage, handleGetGroupedEvidences]);
 
   const handleBack = () => {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);

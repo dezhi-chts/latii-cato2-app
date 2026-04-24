@@ -20,7 +20,7 @@ export default function SidebarSettings({
 }: SidebarSettingsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { first_name, last_name, email } = useUser();
+  const { first_name, last_name, username, name, email } = useUser();
 
   const handleSignoutClick = () => {
     if (expanded) toggleExpand("sidebar");
@@ -57,7 +57,8 @@ export default function SidebarSettings({
         }}
       >
         <p className="text-sm truncate">
-          {first_name} {last_name}
+          {/* {first_name} {last_name} */}
+          {name}
         </p>
         <p className="text-xs text-grey-normal truncate">{email}</p>
       </div>

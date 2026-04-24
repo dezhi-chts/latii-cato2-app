@@ -12,6 +12,7 @@ import {
 type UserContextType = {
   id?: string;
   username?: string;
+  name?: string;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -40,8 +41,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     company_contact: null,
     company_id: 0,
     force_logout: false,
-    changeUser: () => {},
-    clearLocalStorage: () => {},
+    changeUser: () => { },
+    clearLocalStorage: () => { },
     isAdmin: false,
     project_attributes: [],
   });
@@ -65,7 +66,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         name: `${updatedUser.first_name} ${updatedUser.last_name}`,
       };
       localStorage.setItem("userData", JSON.stringify(newUser));
-    } catch (error) {}
+    } catch (error) { }
   };
 
   const clearLocalStorage = () => {
@@ -100,6 +101,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setUser({
       id: "",
       username: savedUser.username,
+      name: savedUser.name,
       first_name: first_name,
       last_name: last_name,
       email: savedUser.email,
@@ -107,8 +109,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       company_contact: null,
       company_id: companyId,
       force_logout: false,
-      changeUser: () => {},
-      clearLocalStorage: () => {},
+      changeUser: () => { },
+      clearLocalStorage: () => { },
       isAdmin: isAdmin,
       job_title: savedUser.job_title,
       project_attributes: projectAttributes,
