@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import SidebarSettings from "./SidebarSettings";
-import CreateProjectModal from "@/app/projects/[projectId]/components/Create-Project-Modal";
 import { useUser } from "@/context/UserContext";
 import { signOut } from "next-auth/react";
 import LogoutModal from "./Logout-Modal";
@@ -12,6 +11,7 @@ import { usePathname } from "next/navigation";
 import { UserDataForUpdate } from "@/types/user";
 import { Tooltip } from "antd";
 import { isUserSuperAdmin } from "@/services/userService";
+import CreateProjectFlowModal from "./CreateProjectFlowModal";
 
 export default function Sidebar() {
   const {
@@ -487,9 +487,9 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
-      <CreateProjectModal
+      <CreateProjectFlowModal
         isOpen={showModal.createProject}
-        closeModal={() => {
+        onClose={() => {
           setShowModal((prev) => ({ ...prev, createProject: false }));
         }}
       />

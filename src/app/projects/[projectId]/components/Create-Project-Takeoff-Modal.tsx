@@ -247,6 +247,8 @@ const CreateProjectTakeoffModal = ({
         message: "Success",
         description: "Project updated successfully.",
       });
+      closeModal();
+      onSuccess?.();
       // 跳转到下一页
       router.push(
         `/projects/${projectId}/takeoff/${takeOffId}/identification`,

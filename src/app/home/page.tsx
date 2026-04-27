@@ -1,8 +1,7 @@
 "use client";
 
 import { useUser } from "@/context/UserContext";
-import { useEffect, useRef, useState } from "react";
-import CreateProjectModal from "../projects/[projectId]/components/Create-Project-Modal";
+import { useEffect, useState } from "react";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
 import { Input, Segmented, Modal, notification } from "antd";
 import Image from "next/image";
@@ -10,10 +9,6 @@ import Button from "@/components/Button";
 import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
-import CreateProjectTakeoffModal from "../projects/[projectId]/components/Create-Project-Takeoff-Modal";
-import UploadFilesProgress from "../projects/[projectId]/components/Upload-Files-Progress";
-import PdfParseModal from "../projects/[projectId]/components/Pdf-Parse-Modal";
-import { useRouter } from "next/navigation";
 import {
   fetchProjects,
   deleteProject,
@@ -27,6 +22,7 @@ import {
 
 import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
 import { useCompany } from "@/context/CompanyContext";
+import CreateProjectFlowModal from "@/components/CreateProjectFlowModal";
 
 const { confirm } = Modal;
 
@@ -54,8 +50,6 @@ type Category = "Projects" | "Take Offs";
 // })();
 
 const Home = () => {
-  const router = useRouter();
-
   const { company } = useCompany();
 
   let dynamicFields = []
@@ -69,15 +63,11 @@ const Home = () => {
   const { first_name, name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] =
     useState<boolean>(false);
-  const [showCreateProjectTakeOffModal, setShowCreateProjectTakeOffModal] =
-    useState<boolean>(false);
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
   const [category, setCategory] = useState<Category>("Projects");
   const [filterValue, setFilterValue] = useState<string>("");
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
-  const [showUploadProgess, setShowUploadProgess] = useState<boolean>(false);
-  const [showPdfParseModal, setShowPdfParseModal] = useState<boolean>(false);
   const [projectLoading, setProjectLoading] = useState<boolean>(false);
   const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
 
@@ -89,9 +79,6 @@ const Home = () => {
   const [takeoffsCache, setTakeoffsCache] = useState<any>([]);
   const [currentTakeoffsPage, setCurrentTakeoffsPage] = useState(1);
   const [totalTakeoffsPages, setTotalTakeoffsPages] = useState(1);
-
-  const uploadFiles = useRef<any>(null);
-  const projectInfo = useRef<any>(null);
 
   function handleValueChange(value: string) {
     setFilterValue(value);
@@ -289,22 +276,11 @@ const Home = () => {
           )}
         </div>
 
-        {showCreateProjectModal && (
-          <CreateProjectModal
-            isOpen={showCreateProjectModal}
-            closeModal={closeModal}
-            refreshProjects={getProjects}
-            onHandleUpload={(data: any) => {
-              // 关闭Create-Project-Modal弹窗
-              //closeModal();
-              uploadFiles.current = data;
-              // 打开Upload-Files-Progress弹窗
-              setShowUploadProgess(true);
-              //setShowCreateProjectTakeOffModal(true);
-              //setShowPdfParseModal(true);
-            }}
-          />
-        )}
+        <CreateProjectFlowModal
+          isOpen={showCreateProjectModal}
+          onClose={closeModal}
+          refreshProjects={getProjects}
+        />
 
         {showColumnView && (
           <ColumnView
@@ -313,58 +289,6 @@ const Home = () => {
             columns={allFields}
             onColumnsChange={handleColumnsChange}
             selectedColumns={selectedColumns}
-          />
-        )}
-        {showUploadProgess && (
-          <UploadFilesProgress
-            isOpen={showUploadProgess}
-            closeModal={() => setShowUploadProgess(false)}
-            uploadFilesData={uploadFiles.current}
-            onSuccess={(data: any) => {
-              // 关闭Upload-Files-Progress弹窗
-              setShowUploadProgess(false);
-              // 打开Pdf-Parse-Modal弹窗
-              projectInfo.current = data;
-              setShowPdfParseModal(true);
-            }}
-          />
-        )}
-        {showPdfParseModal && (
-          <PdfParseModal
-            isOpen={showPdfParseModal}
-            closeModal={() => setShowPdfParseModal(false)}
-            data={projectInfo.current}
-            handleNext={(type: "takeoffModal" | "pageIndex") => {
-              // 关闭Pdf-Parse-Modal弹窗
-              setShowPdfParseModal(false);
-              if (type === "takeoffModal") {
-                // 打开Create-Project-Takeoff-Modal弹窗
-                setShowCreateProjectTakeOffModal(true);
-              } else if (type === "pageIndex") {
-                // 跳转到Page-Index页面
-                //router.push(`/projects/38/takeoff/15/identification`);
-                router.push(
-                  `/projects/${projectInfo.current.project_id}/takeoff/${projectInfo.current.take_off_id}/identification`,
-                );
-              }
-            }}
-            handleCancel={() => {
-              // 关闭Pdf-Parse-Modal弹窗
-              setShowPdfParseModal(false);
-            }}
-          />
-        )}
-        {showCreateProjectTakeOffModal && (
-          <CreateProjectTakeoffModal
-            isOpen={showCreateProjectTakeOffModal}
-            closeModal={() => {
-              // 关闭Create-Project-Takeoff-Modal弹窗
-              setShowCreateProjectTakeOffModal(false);
-            }}
-            projectId={projectInfo.current?.project_id ?? null}
-            takeOffId={projectInfo.current?.take_off_id ?? null}
-          //projectId={'01KJCBT5ATKTMR3ZXPJGQBKBV4'}
-          //takeOffId={'156'}
           />
         )}
       </div>
