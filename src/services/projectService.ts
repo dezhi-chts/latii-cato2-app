@@ -8,13 +8,29 @@ export const fetchProjects = async (filterParams?: {
   const url = "/project/all?order_by=update_time&order=desc";
 
   try {
-    const response = await http.get(url, { params: filterParams });
+    const response = await http.get(url, filterParams);
     return response as unknown as ProjectSettings[];
   } catch (error) {
     console.error("Error getting projects:", error);
     return [];
   }
 };
+
+export const fetchProjectList = async (filterParams?: {}) => {
+  const url = `/project/list`;
+  try {
+    const response = await http.get(
+      url,
+      filterParams ? { ...filterParams } : {},
+    );
+    return { data: response, status: "success" };
+  } catch (error:any) {
+    console.error("Error getting projects:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+};
+
+
 
 export const fetchProject = async (id: string) => {
   try {
@@ -79,21 +95,24 @@ export const toggleFavoriteProject = async (project: any) => {
 export const updateProject = async (project: any) => {
   try {
     const response = await http.put(`/project/${project.project_id}`, project);
-    return response;
-  } catch (error) {
+    return {
+      data: response,
+      status: "success",
+    };
+  } catch (error:any) {
     console.error("Error updating project:", error);
-    throw error;
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
 export const deleteProject = async (projectId: number | string) => {
-  if (!projectId) return;
   try {
     const url = `/project/${projectId}`;
     const response = await http.delete(url);
-    return response;
-  } catch (error) {
+    return { data: response, status: "success" };
+  } catch (error:any) {
     console.error("Error deleting project:", error);
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 

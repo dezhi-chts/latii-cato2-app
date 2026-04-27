@@ -2,19 +2,21 @@
 
 import { Attribute, ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { ConfigProvider, Tooltip } from "antd";
+import { Modal, Tooltip, notification } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import dayjs from "dayjs";
 import "dayjs/locale/en";
 import { useCompany } from "@/context/CompanyContext";
+import { deleteProject, updateProject } from "@/services/projectService";
+import EditProjectModal from "./EditProjectModal";
+import { notify } from "@/utils/notify";
 
 dayjs.locale("en");
 
-const DEFAULT_TABLE_HEIGHT = 560;
-const TABLE_HEADER_HEIGHT = 40;
-const ROW_HEIGHT = 40;
+const DEFAULT_PAGE_SIZE = 30;
+
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
   const ref = useRef<HTMLDivElement>(null);
@@ -45,77 +47,33 @@ const TextCell = ({ value }: { value: unknown }) => {
 type HomeProjectsTableProps = {
   tableLoading: boolean;
   projects: ProjectRow[];
+  totalProjects: number;
+  totalProjectPages: number;
   selectedColumns: string[];
   currentPage: number;
-  setCurrentPage: (page: number) => void;
-  handleFavoriteClick: (record: ProjectRow) => void;
+  sortOrder: "ascend" | "descend" | null;
+  onPageChange: (page: number) => void;
+  onSortOrderChange: (order: "ascend" | "descend" | null) => void;
+  onRefreshProjects: () => Promise<void> | void;
 };
 
 const HomeProjectsTable = ({
   tableLoading,
   projects,
+  totalProjects,
+  totalProjectPages,
   selectedColumns,
   currentPage,
-  setCurrentPage,
-  handleFavoriteClick,
+  sortOrder,
+  onPageChange,
+  onSortOrderChange,
+  onRefreshProjects,
 }: HomeProjectsTableProps) => {
   const router = useRouter();
   const { company } = useCompany();
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  const [tableHeight, setTableHeight] = useState(DEFAULT_TABLE_HEIGHT);
-  const [hasTableBeenResized, setHasTableBeenResized] = useState(false);
-
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      setTableHeight(entry.contentRect.height * 0.8);
-      setHasTableBeenResized(true);
-    });
-
-    resizeObserver.observe(node);
-
-    return () => resizeObserver.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (hasTableBeenResized) {
-      if (!containerRef.current) return;
-
-      const currentHeight = containerRef.current.getBoundingClientRect().height;
-
-      const unzoomedHeight = currentHeight / 0.8;
-
-      const newHeight = Math.floor(unzoomedHeight / 40) * 40;
-
-      containerRef.current.style.height = `${newHeight}px`;
-    }
-  }, [hasTableBeenResized]);
-
-  const pageSize = useMemo(() => {
-    const bodyHeight = tableHeight - TABLE_HEADER_HEIGHT;
-    return Math.max(1, Math.floor(bodyHeight / ROW_HEIGHT)) + 1;
-  }, [tableHeight]);
-
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(projects.length / pageSize));
-  }, [projects.length, pageSize]);
-
-  const paginatedProjects = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    return projects.slice(start, end);
-  }, [projects, currentPage, pageSize]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, setCurrentPage]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectRow | null>(null);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
 
   const dynamicColumns: ColumnsType<ProjectRow> = useMemo(() => {
     const attributeIds = [
@@ -153,7 +111,7 @@ const HomeProjectsTable = ({
               if (Array.isArray(parsed)) {
                 return <TextCell value={parsed.join(", ")} />;
               }
-            } catch {}
+            } catch { }
           }
 
           return <TextCell value={value} />;
@@ -172,8 +130,10 @@ const HomeProjectsTable = ({
         ),
         dataIndex: "project_name",
         key: "project_name",
+        className: "project-name-column",
         align: "center",
-        sorter: (a, b) => a.project_name.localeCompare(b.project_name),
+        sorter: true,
+        sortOrder,
         render: (value) => <TextCell value={value} />,
       },
       {
@@ -190,38 +150,68 @@ const HomeProjectsTable = ({
         ),
       },
       {
-        title: <span className="text-xs font-semibold text-grey-normal"></span>,
+        title: (
+          <span className="text-xs font-semibold text-grey-normal">Actions</span>
+        ),
         dataIndex: "actions",
         key: "actions",
         align: "center",
-        width: 160,
+        width: 120,
         render: (_: unknown, record: ProjectRow) => {
-          const isFavorite = record.is_favorite;
-          const imgSrc = isFavorite
-            ? "/assets/icons/favorite-filled.svg"
-            : "/assets/icons/favorite.svg";
-
           return (
-            <div
-              className="flex w-full cursor-pointer items-center justify-center"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleFavoriteClick(record);
-              }}
-            >
+            <div className="flex w-full items-center justify-center gap-3">
               <Image
-                src={imgSrc}
-                alt="Favorite Icon"
-                width={20}
-                height={20}
-                className="h-6 w-6"
+                src="/assets/icons/edit.svg"
+                alt="Edit project"
+                width={16}
+                height={16}
+                className="cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setEditingProject(record);
+                  setEditModalOpen(true);
+                }}
+              />
+              <Image
+                src="/assets/icons/delete.svg"
+                alt="Delete project"
+                width={16}
+                height={16}
+                className="cursor-pointer"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  Modal.confirm({
+                    title: "Delete Project",
+                    content: `Are you sure you want to delete "${String(record.project_name || "")}"?`,
+                    okText: "Delete",
+                    cancelText: "Cancel",
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                      const projectId = String((record as any).project_id || "");
+                      if (!projectId) return;
+                      let res = await deleteProject(projectId);
+                      if (res.status === 'success') {
+                        notify.success({
+                          title: "Success",
+                          description: "Project deleted successfully",
+                        });
+                        await onRefreshProjects();
+                      } else {
+                        notify.error({
+                          title: "Error",
+                          description: res?.data?.detail || "Failed to delete project",
+                        });
+                      }
+                    },
+                  });
+                }}
               />
             </div>
           );
         },
       },
     ],
-    [handleFavoriteClick],
+    [onRefreshProjects],
   );
 
   const allColumns = useMemo(() => {
@@ -250,74 +240,87 @@ const HomeProjectsTable = ({
   return (
     <div className="w-full my-4">
       <div
-        ref={containerRef}
-        className={`overflow-hidden rounded-lg border border-primaryN30 [&_.ant-table-tbody>tr>td]:border-b-primaryN30 ${paginatedProjects.length === pageSize ? "border-b-0" : ""}`}
-        style={{ height: "90vh" }}
+        className="overflow-hidden rounded-lg border border-primaryN30 [&_.ant-table-tbody>tr>td]:border-b-primaryN30"
       >
-        <ConfigProvider
-          theme={{
-            components: {
-              Table: {
-                headerBg: "#427CCE1A",
-              },
-            },
+        <Table<ProjectRow>
+          rowKey={(record: any) => String(record.project_id || record.key)}
+          columns={columns}
+          dataSource={projects}
+          onRow={handleRowClick}
+          loading={tableLoading}
+          onChange={(pagination, _filters, sorter, extra) => {
+            if (extra?.action === "paginate") {
+              const nextPage = Number(pagination?.current || 1);
+              onPageChange(nextPage);
+              return;
+            }
+            if (extra?.action === "sort") {
+              if (Array.isArray(sorter)) return;
+              if (sorter?.columnKey !== "project_name") return;
+              onSortOrderChange(
+                (sorter.order as "ascend" | "descend" | null) || null,
+              );
+            }
           }}
-        >
-          <Table<ProjectRow>
-            rowKey={(r: any, index) => `${r.project_id}-${index}`}
-            columns={columns}
-            dataSource={paginatedProjects}
-            onRow={handleRowClick}
-            loading={tableLoading}
-            pagination={false}
-            size="middle"
-            sticky
-            rowClassName="cursor-pointer hover:bg-gray-50"
-          />
-        </ConfigProvider>
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <Pagination
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-          totalPages={totalPages}
+          pagination={{
+            current: currentPage,
+            pageSize: DEFAULT_PAGE_SIZE,
+            total: totalProjects,
+            showSizeChanger: false,
+            hideOnSinglePage: false,
+            position: ["bottomRight"],
+            showTotal: () =>
+              `Page ${currentPage} of ${Math.max(
+                1,
+                Math.ceil((totalProjects || 0) / DEFAULT_PAGE_SIZE),
+              )}`,
+          }}
+          size="middle"
+          sticky
+          scroll={{ y: 'calc(100vh - 150px)' }}
+          className="[&_.project-name-column.ant-table-column-sort]:!bg-transparent [&_.project-name-column]:!bg-transparent [&_.ant-table-thead>tr>th]:!bg-white"
+          rowClassName="cursor-pointer hover:bg-gray-50"
         />
       </div>
+      <EditProjectModal
+        open={editModalOpen}
+        loading={submittingEdit}
+        projectName={String(editingProject?.project_name || "")}
+        projectDescription={String(
+          (editingProject as any)?.project_description ??
+          (editingProject as any)?.project_desc ??
+          "",
+        )}
+        onCancel={() => {
+          setEditModalOpen(false);
+          setEditingProject(null);
+        }}
+        onConfirm={async ({ projectName, projectDescription }) => {
+          if (!editingProject) return;
+          const projectId = String((editingProject as any).project_id || "");
+          if (!projectId || !projectName.trim()) return;
+          setSubmittingEdit(true);
+          try {
+            await updateProject({
+              project_id: projectId,
+              project_name: projectName.trim(),
+              project_description: projectDescription.trim(),
+              is_favorite: false,
+              attributes: {},
+            });
+            setEditModalOpen(false);
+            setEditingProject(null);
+            await onRefreshProjects();
+            notification.success({
+              message: "Project updated successfully",
+            });
+          } finally {
+            setSubmittingEdit(false);
+          }
+        }}
+      />
     </div>
   );
 };
 
 export default HomeProjectsTable;
-
-type PaginationProps = {
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-  totalPages: number;
-};
-
-const Pagination = ({
-  currentPage,
-  setCurrentPage,
-  totalPages,
-}: PaginationProps) => {
-  return (
-    <div className="flex items-center gap-2 text-sm text-gray-600">
-      <span>Page</span>
-
-      <select
-        value={currentPage}
-        onChange={(e) => setCurrentPage(Number(e.target.value))}
-        className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
-      >
-        {Array.from({ length: totalPages }).map((_, i) => (
-          <option key={i + 1} value={i + 1}>
-            {i + 1}
-          </option>
-        ))}
-      </select>
-
-      <span>of {totalPages}</span>
-    </div>
-  );
-};

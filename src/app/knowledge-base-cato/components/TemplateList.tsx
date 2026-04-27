@@ -86,7 +86,7 @@ export const TemplateList = ({
   onConsumeCreateTemplateSignal,
   onDownloadTemplate,
 }: TemplateListProps) => {
-  const { username } = useUser();
+  const { username, isAdmin } = useUser();
   const [isNewTemplateModalOpen, setIsNewTemplateModalOpen] = useState(false);
   const [isNewFieldModalOpen, setIsNewFieldModalOpen] = useState(false);
   // 当前正在编辑的 template id
@@ -189,9 +189,13 @@ export const TemplateList = ({
 
   const renderTemplateItem = (template: Template) => {
     const isMyTemplate = template.create_user === username;
+    const isCompanyTemplate = !isMyTemplate && template.id !== 1;
     const canDefault = template.id !== 1 && template.is_edit === true && isMyTemplate;
     const canEditName = template.id !== 1 && template.is_edit === true && isMyTemplate;
-    const canDelete = template.id !== 1 && template.is_edit === true && isMyTemplate;
+    const canDelete =
+      template.id !== 1 &&
+      ((template.is_edit === true && isMyTemplate) ||
+        (isCompanyTemplate && isAdmin));
     return (
       <div
         key={template.id}
@@ -352,7 +356,27 @@ export const TemplateList = ({
         {myTemplates.map(renderTemplateItem)}
 
         {otherTemplates.length > 0 && (
-          <div className="text-xs text-forumBlue-normal pt-3">Company Templates</div>
+          <div className="text-xs text-forumBlue-normal pt-3 flex items-center gap-2">
+            <span>Company Templates</span>
+            <Popover
+              placement="rightTop"
+              title={null}
+              content={
+                <div className="py-1 w-[240px] text-xs text-grey-normal leading-relaxed">
+                  Only company administrators can delete templates.
+                </div>
+              }
+              trigger="hover"
+            >
+              <Image
+                src="/assets/icons/info-forum-blue.svg"
+                alt="company template delete permission"
+                width={12}
+                height={12}
+                className="cursor-pointer"
+              />
+            </Popover>
+          </div>
         )}
         {otherTemplates.map(renderTemplateItem)}
       </div>
