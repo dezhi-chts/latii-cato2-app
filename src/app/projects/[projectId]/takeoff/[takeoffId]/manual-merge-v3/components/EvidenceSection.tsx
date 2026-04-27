@@ -226,6 +226,13 @@ export default function EvidenceSection({
               onChange={(value) => setTargetLabel(value)}
               placeholder="Select target label"
               className="flex-1"
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) =>
+                String(option?.label || "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
               options={availableTargetLabels.map((label) => ({
                 label,
                 value: label,
