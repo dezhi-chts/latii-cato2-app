@@ -3,17 +3,14 @@
 import { useUser } from "@/context/UserContext";
 import { useEffect, useState } from "react";
 import { formatUserDate, getGreetingByTime } from "@/lib/functions";
-import { Input, Segmented, Modal, notification } from "antd";
+import { Input, Segmented, Modal } from "antd";
 import Image from "next/image";
 import Button from "@/components/Button";
 import HomeProjectsTable from "./components/Home-Projects-Table";
 import { ColumnView } from "./components/Column-View";
 import { ProjectRow } from "@/types/home";
 import {
-  fetchProjects,
-  deleteProject,
-  getAllProjects,
-  toggleFavoriteProject,
+  fetchProjectList,
 } from "@/services/projectService";
 import {
   deleteTakeOffById,
@@ -23,6 +20,7 @@ import {
 import HomeTakeoffsTable from "./components/Home-Takeoffs-Table";
 import { useCompany } from "@/context/CompanyContext";
 import CreateProjectFlowModal from "@/components/CreateProjectFlowModal";
+import { notify } from "@/utils/notify";
 
 const { confirm } = Modal;
 
@@ -40,6 +38,7 @@ const actionsField = {
   field_name: "actions",
   Hint_text: "Actions",
 };
+const PROJECT_PAGE_SIZE = 30;
 
 type Category = "Projects" | "Take Offs";
 
@@ -60,7 +59,7 @@ const Home = () => {
 
   const allFields = [...defaultFields, ...dynamicFields, actionsField];
 
-  const { first_name, name } = useUser();
+  const { name } = useUser();
   const [showCreateProjectModal, setShowCreateProjectModal] =
     useState<boolean>(false);
   const [showColumnView, setShowColumnView] = useState<boolean>(false);
@@ -72,8 +71,13 @@ const Home = () => {
   const [takeOffLoading, setTakeOffLoading] = useState<boolean>(false);
 
   const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<ProjectRow[]>([]);
+  const [totalProjects, setTotalProjects] = useState(0);
+  const [totalProjectPages, setTotalProjectPages] = useState(1);
   const [currentProjectsPage, setCurrentProjectsPage] = useState(1);
+  const [projectNameFilter, setProjectNameFilter] = useState("");
+  const [projectSortOrder, setProjectSortOrder] = useState<
+    "ascend" | "descend" | null
+  >("ascend");
 
   //const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
   const [takeoffsCache, setTakeoffsCache] = useState<any>([]);
@@ -82,12 +86,14 @@ const Home = () => {
 
   function handleValueChange(value: string) {
     setFilterValue(value);
+    setCurrentProjectsPage(1);
+    setProjectNameFilter(value);
   }
 
   function handleSegmentChange(category: Category) {
     setCategory(category);
     if (category === "Projects") {
-      fetchProjects();
+      getProjects();
     } else if (category === "Take Offs") {
       getTakeoffs(currentTakeoffsPage);
     }
@@ -105,12 +111,38 @@ const Home = () => {
     setSelectedColumns(columns);
   }
 
-  const getProjects = async () => {
+  const getProjects = async (
+    params?: {
+      page?: number;
+      projectName?: string;
+      sortOrder?: "ascend" | "descend" | null;
+    },
+  ) => {
+    const page = params?.page ?? currentProjectsPage;
+    const projectName = params?.projectName ?? projectNameFilter;
+    const sortOrder = params?.sortOrder ?? projectSortOrder;
     setProjectLoading(true);
-    const response: any = await getAllProjects();
-    const projects = response;
-    setProjectLoading(false);
-    setProjects(projects);
+    try {
+      const response: any = await fetchProjectList({
+        per_page: PROJECT_PAGE_SIZE,
+        page,
+        project_name: projectName?.trim() || undefined,
+        order_by: "project_name",
+        order: sortOrder === "descend" ? "desc" : "asc",
+      });
+      if (response?.status == "success") {
+        setProjects(response?.data?.items || []);
+        setTotalProjects(response?.data?.total_count || 0);
+        setTotalProjectPages(response?.data?.total_pages || 0);
+      } else {
+        notify.error({
+          title: "Error",
+          description: response?.data?.message || "Failed to get projects",
+        })
+      }
+    } finally {
+      setProjectLoading(false);
+    }
   };
 
   const getTakeoffs = async (page: number) => {
@@ -119,7 +151,7 @@ const Home = () => {
     // }
     const params = {
       per_page: 10,
-      page: currentTakeoffsPage,
+      page,
     };
 
     setTakeOffLoading(true);
@@ -129,10 +161,10 @@ const Home = () => {
     setTakeOffLoading(false);
     if (res?.status === "success") {
       //setTakeoffsCache((prev) => ({ ...prev, [page]: takeoffs }));
-      setTakeoffsCache((prev) => takeoffs);
+      setTakeoffsCache(takeoffs);
     } else {
       //setTakeoffsCache((prev) => ({ ...prev, [page]: [] }));
-      setTakeoffsCache((prev) => []);
+      setTakeoffsCache([]);
     }
   };
 
@@ -141,17 +173,6 @@ const Home = () => {
       getTakeoffs(currentTakeoffsPage);
     }
   }, [currentTakeoffsPage]);
-
-  const handleRemoveProject = async (record: ProjectRow) => {
-    confirm({
-      title: `Are you sure to delete this project: ${record.project_name}?`,
-      okText: "Yes",
-      onOk: async () => {
-        const res = await deleteProject(record.project_id as string);
-        getProjects();
-      },
-    });
-  };
 
   const handleRemoveTakeoff = async (takeoff: any) => {
     confirm({
@@ -164,40 +185,14 @@ const Home = () => {
     });
   };
 
-  const handleFavoriteClick = async (project: any) => {
-    const response: any = await toggleFavoriteProject(project);
-    if (response.status === "success") {
-      await getProjects();
-    } else {
-      const errorMessage = response.data.response.data.detail;
-      const isRequiredAttributeError =
-        /^Attribute [0-9a-fA-F-]+ is required$/.test(errorMessage);
-
-      notification.error({
-        message: "Error toggling favorite",
-        description: isRequiredAttributeError
-          ? "This project has empty required fields. Please fill them first."
-          : "",
-        duration: 5,
-      });
-    }
-  };
-
   useEffect(() => {
     setSelectedColumns(allFields.map((field) => field.field_name));
   }, [company.project_attributes]);
 
   useEffect(() => {
+    if (category !== "Projects") return;
     getProjects();
-  }, []);
-
-  useEffect(() => {
-    setFilteredProjects(
-      projects.filter((project) =>
-        project.project_name.toLowerCase().includes(filterValue.toLowerCase()),
-      ),
-    );
-  }, [projects, filterValue]);
+  }, [category, currentProjectsPage, projectNameFilter, projectSortOrder]);
 
   return (
     <div className="w-full h-full">
@@ -255,12 +250,25 @@ const Home = () => {
 
           {category === "Projects" ? (
             <HomeProjectsTable
-              projects={filteredProjects}
+              projects={projects}
+              totalProjects={totalProjects}
+              totalProjectPages={totalProjectPages}
               selectedColumns={selectedColumns}
               tableLoading={projectLoading}
               currentPage={currentProjectsPage}
-              setCurrentPage={setCurrentProjectsPage}
-              handleFavoriteClick={handleFavoriteClick}
+              sortOrder={projectSortOrder}
+              onPageChange={(page) => setCurrentProjectsPage(page)}
+              onSortOrderChange={(order) => {
+                setCurrentProjectsPage(1);
+                setProjectSortOrder(order);
+              }}
+              onRefreshProjects={() =>
+                getProjects({
+                  page: currentProjectsPage,
+                  projectName: projectNameFilter,
+                  sortOrder: projectSortOrder,
+                })
+              }
             />
           ) : (
             <HomeTakeoffsTable
