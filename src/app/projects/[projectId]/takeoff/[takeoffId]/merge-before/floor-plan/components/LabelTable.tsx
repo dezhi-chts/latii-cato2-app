@@ -491,7 +491,7 @@ export default function LabelTable({
 					size="small"
 					columns={columns}
 					dataSource={rows}
-					rowClassName={(record) => (record.hasMissingLabel ? "bg-red-50" : "")}
+					rowClassName={(record) => (record.hasMissingLabel ? "bg-red-100" : "")}
 					pagination={false}
 					rowKey="id"
 					scroll={{ y: "calc(100vh - 240px)" }}

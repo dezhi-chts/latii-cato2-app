@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Spin, Modal, Popover } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
 import { useParams, useRouter } from "next/navigation";
 
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -76,7 +77,7 @@ export default function FloorPlanPage() {
   const [showThumbnail, setShowThumbnail] = useState(true);
 
 
-  const [pageEvidenceId, setPageElevationId] = useState<number>(-1);
+  const [pageEvidenceId, setPageEvidenceId] = useState<number>(-1);
   const [selectedEvidenceIds, setSelectedEvidenceIds] = useState<any>(null);
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -89,6 +90,7 @@ export default function FloorPlanPage() {
     [],
   );
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
+  const [isSwitchingEvidence, setIsSwitchingEvidence] = useState(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [areaEditModalOpen, setAreaEditModalOpen] = useState(false);
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
@@ -180,7 +182,7 @@ export default function FloorPlanPage() {
       setThumbnailData(data);
       if (data.length > 0) {
         setCurrentPage(data[0].project_file_page_number || 0);
-        setPageElevationId(data[0].id);
+        setPageEvidenceId(data[0].id);
       }
     } else {
       notify.error({
@@ -246,43 +248,48 @@ export default function FloorPlanPage() {
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
       if (id) {
+        setIsSwitchingEvidence(true);
         setItemBoxList([])
-        let res = await getEvidenceBySubTextEvidenceIds(id.toString());
-        if (res.status === "success" && res.data) {
-          const removeParentFlags = (item: any) => {
-            if (!item) return item;
-            const { isParentEvidence, isOtherParentEvidence, ...rest } = item;
-            return rest;
-          };
+        try {
+          let res = await getEvidenceBySubTextEvidenceIds(id.toString());
+          if (res.status === "success" && res.data) {
+            const removeParentFlags = (item: any) => {
+              if (!item) return item;
+              const { isParentEvidence, isOtherParentEvidence, ...rest } = item;
+              return rest;
+            };
 
-          const currentPageEvidenceRaw = thumbnailData.find(
-            (item: any) => item.id === id,
-          );
-          const currentPageEvidence = currentPageEvidenceRaw
-            ? { ...removeParentFlags(currentPageEvidenceRaw), isParentEvidence: true }
-            : null;
+            const currentPageEvidenceRaw = thumbnailData.find(
+              (item: any) => item.id === id,
+            );
+            const currentPageEvidence = currentPageEvidenceRaw
+              ? { ...removeParentFlags(currentPageEvidenceRaw), isParentEvidence: true }
+              : null;
 
-          let otherEvidence = thumbnailData.filter(
-            (item: any) => item.id !== id,
-          );
-          let OtherPageEvidence = otherEvidence.map((item: any) => ({
-            ...removeParentFlags(item),
-            isOtherParentEvidence: true,
-          }));
+            let otherEvidence = thumbnailData.filter(
+              (item: any) => item.id !== id,
+            );
+            let OtherPageEvidence = otherEvidence.map((item: any) => ({
+              ...removeParentFlags(item),
+              isOtherParentEvidence: true,
+            }));
 
-          let list = res.data || [];
-          if (currentPageEvidence) {
-            list.unshift(currentPageEvidence);
+            let list = res.data || [];
+            if (currentPageEvidence) {
+              list.unshift(currentPageEvidence);
+            }
+            if (OtherPageEvidence.length > 0) {
+              list.unshift(...OtherPageEvidence);
+            }
+            setItemBoxList(list);
+          } else {
+            notify.error({
+              title: "Error",
+              description: res?.data?.detail || "Failed to load evidence data.",
+            });
           }
-          if (OtherPageEvidence.length > 0) {
-            list.unshift(...OtherPageEvidence);
-          }
-          setItemBoxList(list);
-        } else {
-          notify.error({
-            title: "Error",
-            description: "Failed to load evidence data.",
-          });
+        } finally {
+          setIsSwitchingEvidence(false);
         }
       }
     },
@@ -322,7 +329,7 @@ export default function FloorPlanPage() {
 
   useEffect(() => {
     if (thumbnailData.length > 0 && pageEvidenceId === -1) {
-      setPageElevationId(thumbnailData[0].id);
+      setPageEvidenceId(thumbnailData[0].id);
     }
   }, [thumbnailData]);
 
@@ -350,7 +357,7 @@ export default function FloorPlanPage() {
 
   const handlePageEvidenceChange = useCallback(
     (evidenceId: any) => {
-      setPageElevationId(evidenceId);
+      setPageEvidenceId(evidenceId);
       let currentPage =
         thumbnailData.find((item) => item.id === evidenceId)
           ?.project_file_page_number || 0;
@@ -519,8 +526,35 @@ export default function FloorPlanPage() {
     [evidenceType, labelTableData],
   );
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     if (!selectedFileId) return;
+    // 检测所有的空标签是否已经处理完
+    let pageList = [...thumbnailData].map((item, index) => {
+      return {
+        ...item,
+        pageNum: index + 1,
+      }
+    })
+    let existEmptyLabel = pageList.filter((item, index) => {
+      return item?.has_empty_label;
+    });
+    if (existEmptyLabel.length > 0) {
+      let numbers = existEmptyLabel.map((item) => item?.pageNum).join(', ');
+      let firstEmptyLabelEvidence = existEmptyLabel[0]?.id;
+      confirm({
+        title: 'Warning',
+        icon: <WarningOutlined />,
+        content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
+        okText: 'Yes',
+        cancelText: 'No',
+        okType: 'primary',
+        onOk: () => {
+          // 跳转到第一个存在空标签的页面
+          setPageEvidenceId(firstEmptyLabelEvidence);
+        },
+      })
+      return;
+    }
 
     let findLabelEmpty = (data: any) => {
       return data.find((item: any) => {
@@ -545,7 +579,7 @@ export default function FloorPlanPage() {
     }
 
     handleAnaylize();
-  };
+  }, [thumbnailData]);
 
   const formatAnalyzeErrorMessage = useCallback((error: unknown) => {
     if (!error) return "Failed to analyze the file.";
@@ -835,9 +869,30 @@ export default function FloorPlanPage() {
       <div className="pl-6 pr-14 py-2 flex-1 flex flex-row overflow-hidden">
         {/* Left: Thumbnail */}
         <div
-          className={`h-full shrink-0 transition-all duration-200 z-999 overflow-y-auto ${showThumbnail ? "w-[250px]" : "w-0"
+          className={`h-full shrink-0 transition-all duration-200 overflow-hidden ${showThumbnail ? "w-[250px]" : "w-0"
             }`}
         >
+          <div className={`flex items-center gap-2`}>
+            <Popover
+              placement="bottomLeft"
+              title={null}
+              content={
+                <div className="w-[240px] rounded-2xl p-1 text-xs">
+                  The red box on the thumbnail indicates the presence of an empty label.
+                </div>
+              }
+              trigger="hover"
+            >
+              <Image
+                src="/assets/icons/info-forum-blue.svg"
+                alt="prompt hint"
+                className="cursor-pointer"
+                width={14}
+                height={14}
+              />
+            </Popover>
+            <span className="text-sm text-forumBlue-normal">Evidences</span>
+          </div>
           <EvidenceThumbailList
             pdfRef={pdfWrapperRef}
             data={thumbnailData}
@@ -962,7 +1017,9 @@ export default function FloorPlanPage() {
         onCancel={handleCancelAreaEditModal}
         onSuccess={handleAreaEditSuccess}
       />
-      {fullLoading && <LoadingScreen isLoading={fullLoading} />}
+      {(fullLoading || isSwitchingEvidence) && (
+        <LoadingScreen isLoading={fullLoading || isSwitchingEvidence} />
+      )}
       {buildLoading && (
         <BuildingBackground step={"page-merge"} durationSeconds={20 * 60} />
       )}
