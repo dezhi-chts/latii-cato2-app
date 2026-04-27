@@ -3,6 +3,7 @@
 interface TableSectionProps {
   title: string;
   rows: any[];
+  itemCount?: number;
   editable: boolean;
   withEvidenceAction: boolean;
   extra?: React.ReactNode;
@@ -20,6 +21,7 @@ interface TableSectionProps {
 export default function TableSection({
   title,
   rows,
+  itemCount,
   editable,
   withEvidenceAction,
   extra,
@@ -35,7 +37,7 @@ export default function TableSection({
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-          <span className="text-xs text-grey-normal">{rows.length} items</span>
+          <span className="text-xs text-grey-normal">{itemCount ?? rows.length} items</span>
           {extra}
         </div>
       </div>

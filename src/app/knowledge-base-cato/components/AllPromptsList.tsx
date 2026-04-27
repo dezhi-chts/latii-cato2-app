@@ -175,7 +175,7 @@ export const AllPromptsList = ({
     }
   };
 
-  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity'];
+  const disbaleFileName = ['Generations', 'Label', 'Sub Label', 'Product', 'Quantity'];
 
   return (
     <div className="w-[350px] h-full flex flex-col">
@@ -255,13 +255,14 @@ export const AllPromptsList = ({
                       : "opacity-0 group-hover:opacity-100"
                       }`}
                   >
-                    <button
+                    {field.name !== 'Generations' && <button
                       className="p-1 rounded hover:bg-white/50 transition-colors"
                       onClick={(e) => handleCopyField(e, field.id)}
                       title="Copy"
                     >
                       <Image src="/assets/icons/copy.svg" alt="plus icon" width={15} height={15} ></Image>
                     </button>
+                    }
                     {!disbaleFileName.includes(field.name) && (
                       <button
                         className="p-1 rounded hover:bg-white/50 transition-colors"

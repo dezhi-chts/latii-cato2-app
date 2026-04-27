@@ -161,10 +161,11 @@ const EvidenceThumbailList = ({
 		}
 	}, [evidenceId]);
 
-	const onClickEvidenceId = async (evidenceId: number) => {
+	const onClickEvidenceId = async (nextEvidenceId: number) => {
+		if (nextEvidenceId === evidenceId) return;
 		let unSaved = await pdfRef?.current?.checkAndHandleUnsavedCrops?.();
 		if (!pdfRef?.current || unSaved) {
-			onChangeEvidenceId(evidenceId);
+			onChangeEvidenceId(nextEvidenceId);
 		}
 	};
 
@@ -215,6 +216,7 @@ const EvidenceThumbailList = ({
 							const pageType = pageTypeInfo(info) as { color?: string; icon?: string };
 							const color = pageType?.color || allPageTypes[PageType.NotUsed].color;
 							const icon = pageType?.icon || allPageTypes[PageType.NotUsed].icon;
+
 							return (
 								<div
 									id={`thumbnail-evidence-${info.id}`}
@@ -228,8 +230,8 @@ const EvidenceThumbailList = ({
 									}}
 									onClick={() => onClickEvidenceId(info.id)}
 								>
-									<div className={`${info?.has_empty_label ? 'border border-red-600 rounded-2xl' : ''}`}>
-										<div className="p-[10px] pb-1">
+									<div className={`rounded-2xl ${info?.has_empty_label ? 'border border-red-500 shadow-[0_0_5px_rgba(239,68,68,1)]' : ''}`}>
+										<div className="p-[10px] pb-[5px]">
 											<div className="h-[30px] flex flex-row justify-between group">
 												<div className="overflow-hidden">
 													<PageTextWithTooltip text={itemPageNum} />
