@@ -52,6 +52,12 @@ interface FinalItemRow extends Record<string, any> {
   __systemGroupKey?: string;
 }
 
+interface GroupedSummaryRow extends Record<string, any> {
+  __isGroupedSummary?: boolean;
+  __groupKey?: string;
+  __rowKey?: string;
+}
+
 interface EvidenceInfo {
   evidenceId: string;
   url: string;
@@ -177,8 +183,32 @@ const normalizeRows = (rows: any[]) =>
     result: parseItemResultUtil(row?.result as any),
   }));
 
+const normalizeGroupFieldValue = (value: string) => {
+  if (isEmptyDisplayValue(value || "")) return "";
+  return normalizeLabelKey(value || "");
+};
+
+const parseQuantityNumber = (value: string) => {
+  if (!value) return 0;
+  const normalized = value.replace(/,/g, "").trim();
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatQuantityNumber = (value: number) => {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 10000) / 10000;
+  const hasDecimal = !Number.isInteger(rounded);
+  return hasDecimal ? String(rounded) : String(Math.trunc(rounded));
+};
+
 const toValidItemId = (item: any): string | null => {
   return item.id || null;
+};
+
+const isOriginalItemRow = (item: any): boolean => {
+  const validId = toValidItemId(item);
+  return Boolean(validId);
 };
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -426,6 +456,8 @@ export default function ManualMergeV2Page() {
   const [collapsedSystemLabelMap, setCollapsedSystemLabelMap] = useState<Record<string, boolean>>({});
   const [collapsedAutoMergedLabels, setCollapsedAutoMergedLabels] = useState(false);
   const [collapsedConflictLabels, setCollapsedConflictLabels] = useState(false);
+  const [collapsedFloorPlanGroupMap, setCollapsedFloorPlanGroupMap] = useState<Record<string, boolean>>({});
+  const [collapsedElevationGroupMap, setCollapsedElevationGroupMap] = useState<Record<string, boolean>>({});
 
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -458,6 +490,123 @@ export default function ManualMergeV2Page() {
   const scheduleEvidences = classifiedEvidenceUrls.schedule;
   const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
   const elevationEvidences = classifiedEvidenceUrls.elevation;
+
+  const groupedFloorPlanRows = useMemo(() => {
+    const groupedMap = new Map<string, { label: string; subLabel: string; rows: any[] }>();
+    floorPlanRows.forEach((row) => {
+      const label = getDisplayValueByField(row?.result || {}, "Label");
+      const subLabel = getDisplayValueByField(row?.result || {}, "Sub Label");
+      const groupKey = `${normalizeGroupFieldValue(label)}||${normalizeGroupFieldValue(subLabel)}`;
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, { label, subLabel, rows: [] });
+      }
+      groupedMap.get(groupKey)?.rows.push(row);
+    });
+    return groupedMap;
+  }, [floorPlanRows]);
+
+  const groupedElevationRows = useMemo(() => {
+    const groupedMap = new Map<string, { label: string; subLabel: string; rows: any[] }>();
+    elevationRows.forEach((row) => {
+      const label = getDisplayValueByField(row?.result || {}, "Label");
+      const subLabel = getDisplayValueByField(row?.result || {}, "Sub Label");
+      const groupKey = `${normalizeGroupFieldValue(label)}||${normalizeGroupFieldValue(subLabel)}`;
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, { label, subLabel, rows: [] });
+      }
+      groupedMap.get(groupKey)?.rows.push(row);
+    });
+    return groupedMap;
+  }, [elevationRows]);
+
+  useEffect(() => {
+    setCollapsedFloorPlanGroupMap((prev) => {
+      const next: Record<string, boolean> = {};
+      groupedFloorPlanRows.forEach((_, groupKey) => {
+        next[groupKey] = prev[groupKey] ?? true;
+      });
+      return next;
+    });
+  }, [groupedFloorPlanRows]);
+
+  useEffect(() => {
+    setCollapsedElevationGroupMap((prev) => {
+      const next: Record<string, boolean> = {};
+      groupedElevationRows.forEach((_, groupKey) => {
+        next[groupKey] = prev[groupKey] ?? true;
+      });
+      return next;
+    });
+  }, [groupedElevationRows]);
+
+  const displayFloorPlanRows = useMemo<GroupedSummaryRow[]>(() => {
+    const result: GroupedSummaryRow[] = [];
+    groupedFloorPlanRows.forEach((groupData, groupKey) => {
+      if (groupData.rows.length < 2) {
+        result.push(...groupData.rows);
+        return;
+      }
+      const quantitySum = groupData.rows.reduce((sum, row) => {
+        const quantity = getDisplayValueByField(row?.result || {}, "Quantity");
+        return sum + parseQuantityNumber(quantity || "");
+      }, 0);
+      const summaryLabel = `${groupData.label || "-"} / ${groupData.subLabel || "-"}`;
+      const summaryRow: GroupedSummaryRow = {
+        id: `group-floorPlan-${groupKey}`,
+        __rowKey: `group-floorPlan-${groupKey}`,
+        __isGroupedSummary: true,
+        __groupKey: groupKey,
+        result: {
+          Label: summaryLabel,
+          Quantity: formatQuantityNumber(quantitySum),
+        },
+      };
+      result.push(summaryRow);
+      if (!collapsedFloorPlanGroupMap[groupKey]) {
+        result.push(...groupData.rows);
+      }
+    });
+    return result;
+  }, [collapsedFloorPlanGroupMap, groupedFloorPlanRows]);
+
+  const displayElevationRows = useMemo<GroupedSummaryRow[]>(() => {
+    const result: GroupedSummaryRow[] = [];
+    groupedElevationRows.forEach((groupData, groupKey) => {
+      if (groupData.rows.length < 2) {
+        result.push(...groupData.rows);
+        return;
+      }
+      const quantitySum = groupData.rows.reduce((sum, row) => {
+        const quantity = getDisplayValueByField(row?.result || {}, "Quantity");
+        return sum + parseQuantityNumber(quantity || "");
+      }, 0);
+      const summaryLabel = `${groupData.label || "-"} / ${groupData.subLabel || "-"}`;
+      const summaryRow: GroupedSummaryRow = {
+        id: `group-elevation-${groupKey}`,
+        __rowKey: `group-elevation-${groupKey}`,
+        __isGroupedSummary: true,
+        __groupKey: groupKey,
+        result: {
+          Label: summaryLabel,
+          Quantity: formatQuantityNumber(quantitySum),
+        },
+      };
+      result.push(summaryRow);
+      if (!collapsedElevationGroupMap[groupKey]) {
+        result.push(...groupData.rows);
+      }
+    });
+    return result;
+  }, [collapsedElevationGroupMap, groupedElevationRows]);
+
+  const floorPlanItemCount = useMemo(
+    () => floorPlanRows.filter(isOriginalItemRow).length,
+    [floorPlanRows],
+  );
+  const elevationItemCount = useMemo(
+    () => elevationRows.filter(isOriginalItemRow).length,
+    [elevationRows],
+  );
 
   const finalItemsSource = useMemo<{ source: SourceKey | null; rows: any[] }>(() => {
     const sourceScheduleRows = isSelectedLabelMerged ? scheduleMergedRows : scheduleRows;
@@ -1223,6 +1372,7 @@ export default function ManualMergeV2Page() {
       fixed: fieldName === "Label" || fieldName === "Sub Label" ? ("left" as const) : undefined,
       align: "center" as const,
       render: (_: unknown, record: any) => {
+        const isGroupedSummary = Boolean(record?.__isGroupedSummary);
         const value = getDisplayValueByField(record?.result || {}, fieldName);
         const isEditing = editable && editingCell?.id === String(record.id) && editingCell?.field === fieldName;
         let conflicting_fields = record?.conflicting_fields || [];
@@ -1250,6 +1400,7 @@ export default function ManualMergeV2Page() {
             className={`mx-auto w-full h-full max-w-[300px] overflow-hidden text-xs ${editable ? "cursor-text" : ""
               } ${isConflicting ? 'bg-[#FFFF00]' : ''} `}
             onClick={() => {
+              if (isGroupedSummary) return;
               if (editable) startEdit(record, fieldName);
             }}
           >
@@ -1278,8 +1429,51 @@ export default function ManualMergeV2Page() {
                   )}
                 </Button>
               </div>
+            ) : fieldName === "Label" &&
+              isGroupedSummary &&
+              (title === "Floor Plan" || title === "Elevation") &&
+              record?.__groupKey ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <TruncatedTextCell value={value || "-"} />
+                </div>
+                <Button
+                  type="text"
+                  size="small"
+                  className="!h-5 !w-5 !min-w-5 !p-0"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const groupKey = String(record.__groupKey);
+                    if (title === "Floor Plan") {
+                      setCollapsedFloorPlanGroupMap((prev) => ({
+                        ...prev,
+                        [groupKey]: !(prev[groupKey] ?? true),
+                      }));
+                      return;
+                    }
+                    setCollapsedElevationGroupMap((prev) => ({
+                      ...prev,
+                      [groupKey]: !(prev[groupKey] ?? true),
+                    }));
+                  }}
+                >
+                  {title === "Floor Plan"
+                    ? (collapsedFloorPlanGroupMap[String(record.__groupKey)] ?? true)
+                      ? <DownOutlined className="text-[10px] text-grey-normal" />
+                      : <UpOutlined className="text-[10px] text-grey-normal" />
+                    : (collapsedElevationGroupMap[String(record.__groupKey)] ?? true)
+                      ? <DownOutlined className="text-[10px] text-grey-normal" />
+                      : <UpOutlined className="text-[10px] text-grey-normal" />}
+                </Button>
+              </div>
             ) : (
-              <TruncatedTextCell value={value || "-"} />
+              <TruncatedTextCell
+                value={
+                  isGroupedSummary && fieldName !== "Label" && fieldName !== "Quantity"
+                    ? "-"
+                    : (value || "-")
+                }
+              />
             )}
           </div>
         );
@@ -1295,6 +1489,8 @@ export default function ManualMergeV2Page() {
       render: (_: unknown, record: any) =>
       (
         <div>
+          {record?.__isGroupedSummary ? null : (
+            <>
           <Button
             type="link"
             size="small"
@@ -1336,6 +1532,8 @@ export default function ManualMergeV2Page() {
               </Button>
             )
           }
+            </>
+          )}
         </div>
       ),
     };
@@ -1441,7 +1639,8 @@ export default function ManualMergeV2Page() {
                     <div className="shrink-0">
                       <TableSection
                         title="Floor Plan"
-                        rows={floorPlanRows}
+                        rows={displayFloorPlanRows}
+                        itemCount={floorPlanItemCount}
                         editable={false}
                         withEvidenceAction={true}
                         extra={null}
@@ -1453,7 +1652,8 @@ export default function ManualMergeV2Page() {
                     <div className="shrink-0">
                       <TableSection
                         title="Elevation"
-                        rows={elevationRows}
+                        rows={displayElevationRows}
+                        itemCount={elevationItemCount}
                         editable={false}
                         withEvidenceAction={true}
                         extra={null}
