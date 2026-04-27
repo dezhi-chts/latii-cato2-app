@@ -8,9 +8,9 @@ export const getAllTakeoffList = async (filterParams?: {
     const url = `/project/take_off/list?page=${filterParams?.page || 1}&per_page=${filterParams?.per_page || 10}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error getting take off:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 export const getTakeOffById = async (takeOffId: string) => {
@@ -18,9 +18,9 @@ export const getTakeOffById = async (takeOffId: string) => {
     const url = `/project/take_off/take_off_id?take_off_id=${takeOffId}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error getting take off:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 

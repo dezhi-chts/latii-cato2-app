@@ -2,7 +2,7 @@
 
 import { Attribute, ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { Modal, Tooltip, notification } from "antd";
+import { ConfigProvider, Modal, Tooltip, notification } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -123,14 +123,11 @@ const HomeProjectsTable = ({
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
       {
-        title: (
-          <span className="text-xs font-semibold text-grey-normal">
-            Project Name
-          </span>
-        ),
+        title: <span className="text-xs font-semibold text-grey-normal">
+          Project Name
+        </span>,
         dataIndex: "project_name",
         key: "project_name",
-        className: "project-name-column",
         align: "center",
         sorter: true,
         sortOrder,
@@ -242,45 +239,59 @@ const HomeProjectsTable = ({
       <div
         className="overflow-hidden rounded-lg border border-primaryN30 [&_.ant-table-tbody>tr>td]:border-b-primaryN30"
       >
-        <Table<ProjectRow>
-          rowKey={(record: any) => String(record.project_id || record.key)}
-          columns={columns}
-          dataSource={projects}
-          onRow={handleRowClick}
-          loading={tableLoading}
-          onChange={(pagination, _filters, sorter, extra) => {
-            if (extra?.action === "paginate") {
-              const nextPage = Number(pagination?.current || 1);
-              onPageChange(nextPage);
-              return;
-            }
-            if (extra?.action === "sort") {
-              if (Array.isArray(sorter)) return;
-              if (sorter?.columnKey !== "project_name") return;
+        <ConfigProvider
+          theme={{
+            components: {
+              Table: {
+                headerBg: "#427CCE1A",
+              },
+            },
+          }}
+        >
+          <Table<ProjectRow>
+            rowKey={(record: any) => String(record.project_id || record.key)}
+            columns={columns}
+            dataSource={projects}
+            onRow={handleRowClick}
+            loading={tableLoading}
+            onChange={(pagination, _filters, sorter, extra) => {
+              if (extra?.action === "paginate") {
+                const nextPage = Number(pagination?.current || 1);
+                onPageChange(nextPage);
+                return;
+              }
+              if (extra?.action === "sort") {
+              if (Array.isArray(sorter)) {
+                const firstSorter = sorter[0];
+                onSortOrderChange(
+                  (firstSorter?.order as "ascend" | "descend" | null) || null,
+                );
+                return;
+              }
               onSortOrderChange(
-                (sorter.order as "ascend" | "descend" | null) || null,
+                (sorter?.order as "ascend" | "descend" | null) || null,
               );
-            }
-          }}
-          pagination={{
-            current: currentPage,
-            pageSize: DEFAULT_PAGE_SIZE,
-            total: totalProjects,
-            showSizeChanger: false,
-            hideOnSinglePage: false,
-            position: ["bottomRight"],
-            showTotal: () =>
-              `Page ${currentPage} of ${Math.max(
-                1,
-                Math.ceil((totalProjects || 0) / DEFAULT_PAGE_SIZE),
-              )}`,
-          }}
-          size="middle"
-          sticky
-          scroll={{ y: 'calc(100vh - 150px)' }}
-          className="[&_.project-name-column.ant-table-column-sort]:!bg-transparent [&_.project-name-column]:!bg-transparent [&_.ant-table-thead>tr>th]:!bg-white"
-          rowClassName="cursor-pointer hover:bg-gray-50"
-        />
+              }
+            }}
+            pagination={{
+              current: currentPage,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: totalProjects,
+              showSizeChanger: false,
+              hideOnSinglePage: false,
+              position: ["bottomRight"],
+              showTotal: () =>
+                `Page ${currentPage} of ${Math.max(
+                  1,
+                  Math.ceil((totalProjects || 0) / DEFAULT_PAGE_SIZE),
+                )}`,
+            }}
+            size="middle"
+            sticky
+            scroll={{ y: 'calc(100vh - 150px)' }}
+            rowClassName="cursor-pointer hover:bg-gray-50"
+          />
+        </ConfigProvider>
       </div>
       <EditProjectModal
         open={editModalOpen}

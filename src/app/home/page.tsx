@@ -77,11 +77,12 @@ const Home = () => {
   const [projectNameFilter, setProjectNameFilter] = useState("");
   const [projectSortOrder, setProjectSortOrder] = useState<
     "ascend" | "descend" | null
-  >("ascend");
+  >(null);
 
   //const [takeoffsCache, setTakeoffsCache] = useState<Record<number, any[]>>({});
   const [takeoffsCache, setTakeoffsCache] = useState<any>([]);
   const [currentTakeoffsPage, setCurrentTakeoffsPage] = useState(1);
+  const [totalTakeoffs, setTotalTakeoffs] = useState(0);
   const [totalTakeoffsPages, setTotalTakeoffsPages] = useState(1);
 
   function handleValueChange(value: string) {
@@ -127,8 +128,13 @@ const Home = () => {
         per_page: PROJECT_PAGE_SIZE,
         page,
         project_name: projectName?.trim() || undefined,
-        order_by: "project_name",
-        order: sortOrder === "descend" ? "desc" : "asc",
+        order_by: sortOrder ? "project_name" : undefined,
+        order:
+          sortOrder === "ascend"
+            ? "asc"
+            : sortOrder === "descend"
+              ? "desc"
+              : undefined,
       });
       if (response?.status == "success") {
         setProjects(response?.data?.items || []);
@@ -150,13 +156,19 @@ const Home = () => {
     //   return;
     // }
     const params = {
-      per_page: 10,
+      per_page: 30,
       page,
     };
 
     setTakeOffLoading(true);
     const res = await getAllTakeoffList(params);
     const takeoffs = res?.data?.items ?? [];
+    const total =
+      Number(res?.data?.total_count) ||
+      Number(res?.data?.total_items) ||
+      Number(res?.data?.count) ||
+      takeoffs.length;
+    setTotalTakeoffs(total);
     setTotalTakeoffsPages(res?.data?.total_pages ?? 1);
     setTakeOffLoading(false);
     if (res?.status === "success") {
@@ -279,6 +291,7 @@ const Home = () => {
               handleRemoveTakeoff={handleRemoveTakeoff}
               currentPage={currentTakeoffsPage}
               setCurrentPage={setCurrentTakeoffsPage}
+              totalTakeoffs={totalTakeoffs}
               totalPages={totalTakeoffsPages}
             />
           )}

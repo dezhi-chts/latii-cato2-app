@@ -44,6 +44,7 @@ type HomeTakeoffsTableProps = {
   handleRemoveTakeoff: (takeoff: any) => void;
   currentPage: number;
   setCurrentPage: (page: number) => void;
+  totalTakeoffs: number;
   totalPages: number;
 };
 
@@ -54,6 +55,7 @@ const HomeTakeoffsTable = ({
   handleRemoveTakeoff,
   currentPage,
   setCurrentPage,
+  totalTakeoffs,
   totalPages,
 }: HomeTakeoffsTableProps) => {
   const router = useRouter();
@@ -130,8 +132,7 @@ const HomeTakeoffsTable = ({
       },
       {
         title: (
-          <span className="text-xs font-semibold text-grey-normal">
-            Operation
+          <span className="text-xs font-semibold text-grey-normal">Actions
           </span>
         ),
         dataIndex: "operation",
@@ -191,10 +192,10 @@ const HomeTakeoffsTable = ({
               `/projects/${record.project_id}/takeoff/${record.id}/analyze-new`,
             );
           } else {
-            const labelList = Object.values(mergeResult.data?.files || {});
+            const labelList: any[] = Object.values(mergeResult.data?.files || {});
             if (!labelList || labelList.length === 0) return;
 
-            let firstFile = labelList[0];
+            let firstFile: any = labelList[0];
             switch (firstFile?.status) {
               case TakeOffFileStatus.STATUS_UNPROCESSED:
                 router.push(identificationUrl);
@@ -232,64 +233,53 @@ const HomeTakeoffsTable = ({
   );
 
   return (
-    <>
-      {mounted &&
-        pageLoading &&
-        createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70">
-            <Spin spinning size="large" />
-          </div>,
-          document.body,
-        )}
-      <ConfigProvider
-        theme={{
-          components: {
-            Table: {
-              headerBg: "#427CCE1A",
-            },
-          },
-        }}
+    <div className="w-full my-4">
+      <div
+        className="overflow-hidden rounded-lg border border-primaryN30 [&_.ant-table-tbody>tr>td]:border-b-primaryN30"
       >
-        <Table<ProjectRow>
-          rowKey={(r: any) => r.id}
-          columns={columns}
-          dataSource={takeoffs}
-          onRow={handleRowClick}
-          loading={tableLoading}
-          pagination={{
-            current: currentPage,
-            pageSize: 10,
-            showSizeChanger: false,
-            showQuickJumper: false,
-            itemRender: () => null,
-            position: ["bottomRight"],
-            showTotal: () => {
-              return (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>Page</span>
-                  <select
-                    value={currentPage}
-                    onChange={(e) => setCurrentPage(Number(e.target.value))}
-                    className="rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none"
-                  >
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}
-                      </option>
-                    ))}
-                  </select>
-                  <span>of {totalPages}</span>
-                </div>
-              );
+        {mounted &&
+          pageLoading &&
+          createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/70">
+              <Spin spinning size="large" />
+            </div>,
+            document.body,
+          )}
+        <ConfigProvider
+          theme={{
+            components: {
+              Table: {
+                headerBg: "#427CCE1A",
+              },
             },
           }}
-          size="middle"
-          sticky
-          className="rounded-lg"
-          rowClassName={() => "cursor-pointer transition-colors hover:bg-gray-50"}
-        />
-      </ConfigProvider>
-    </>
+        >
+          <Table<ProjectRow>
+            rowKey={(r: any) => r.id}
+            columns={columns}
+            dataSource={takeoffs}
+            onRow={handleRowClick}
+            loading={tableLoading}
+            pagination={{
+              current: currentPage,
+              pageSize: 30,
+              total: totalTakeoffs,
+              showSizeChanger: false,
+              showQuickJumper: false,
+              hideOnSinglePage: false,
+              position: ["bottomRight"],
+              onChange: (page) => setCurrentPage(page),
+              showTotal: () => `Page ${currentPage} of ${Math.max(totalPages, 1)}`,
+            }}
+            size="middle"
+            sticky
+            className="rounded-lg"
+            scroll={{ y: 'calc(100vh - 150px)' }}
+            rowClassName={() => "cursor-pointer transition-colors hover:bg-gray-50"}
+          />
+        </ConfigProvider>
+      </div>
+    </div>
   );
 };
 
