@@ -649,6 +649,12 @@ export default function ManualMergeV2Page() {
         return;
       }
 
+      if (response.data?.length === 0) {
+        // 该Label下无任何item数据，，需要刷新label列表
+        fetchLabelsAndMaybeLoadData(fileId);
+        return;
+      }
+
       const payload = response.data?.data ?? response.data ?? [];
       const labelMeta = labels.find((item) => item.label === label);
       const isLabelMerged =
