@@ -148,54 +148,56 @@ function PageThumbnailCard({
 			mode === "thumbnail" ? thumbnailImageLoaded : modalImageLoaded;
 
 		return (
-			<div className={`py-3 relative w-full`}>
-				<img
-					ref={(element) => {
-						if (mode === "thumbnail") {
-							thumbnailImageRef.current = element;
-						} else {
-							modalImageRef.current = element;
-						}
-					}}
-					src={entry.imageUrl}
-					alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
-					className="block h-auto w-full"
-					loading="lazy"
-					onLoad={(event) => {
-						syncImageReadyState(event.currentTarget, mode, shouldCaptureMetrics);
-					}}
-				/>
-				{shouldRenderBoxes &&
-					entry.pageEvidences.map((evidence) => {
-						const bounds = getEvidenceBounds(evidence);
-						if (!bounds) {
-							return null;
-						}
-						const sourceWidth = Number(bounds.source_width || evidence?.page_width_pdf || 0);
-						const sourceHeight = Number(bounds.source_height || evidence?.page_height_pdf || 0);
-						if (!sourceWidth || !sourceHeight) {
-							return null;
-						}
-						const leftPercent = (bounds.left / sourceWidth) * 100;
-						const topPercent = (bounds.top / sourceHeight) * 100;
-						const widthPercent = (bounds.width / sourceWidth) * 100;
-						const heightPercent = (bounds.height / sourceHeight) * 100;
+			<div className="w-full py-3">
+				<div className="relative w-full">
+					<img
+						ref={(element) => {
+							if (mode === "thumbnail") {
+								thumbnailImageRef.current = element;
+							} else {
+								modalImageRef.current = element;
+							}
+						}}
+						src={entry.imageUrl}
+						alt={`${entry.file?.file_name || "File"} page ${entry.pageNumber}`}
+						className="block h-auto w-full"
+						loading="lazy"
+						onLoad={(event) => {
+							syncImageReadyState(event.currentTarget, mode, shouldCaptureMetrics);
+						}}
+					/>
+					{shouldRenderBoxes &&
+						entry.pageEvidences.map((evidence) => {
+							const bounds = getEvidenceBounds(evidence);
+							if (!bounds) {
+								return null;
+							}
+							const sourceWidth = Number(bounds.source_width || evidence?.page_width_pdf || 0);
+							const sourceHeight = Number(bounds.source_height || evidence?.page_height_pdf || 0);
+							if (!sourceWidth || !sourceHeight) {
+								return null;
+							}
+							const leftPercent = (bounds.left / sourceWidth) * 100;
+							const topPercent = (bounds.top / sourceHeight) * 100;
+							const widthPercent = (bounds.width / sourceWidth) * 100;
+							const heightPercent = (bounds.height / sourceHeight) * 100;
 
-						return (
-							<div
-								key={evidence?.id}
-								className="absolute border-red-500"
-								style={{
-									borderStyle: "solid",
-									borderWidth: `${evidenceBorderWidth}px`,
-									left: `${leftPercent}%`,
-									top: `${topPercent}%`,
-									width: `${widthPercent}%`,
-									height: `${heightPercent}%`,
-								}}
-							/>
-						);
-					})}
+							return (
+								<div
+									key={evidence?.id}
+									className="absolute border-red-500"
+									style={{
+										borderStyle: "solid",
+										borderWidth: `${evidenceBorderWidth}px`,
+										left: `${leftPercent}%`,
+										top: `${topPercent}%`,
+										width: `${widthPercent}%`,
+										height: `${heightPercent}%`,
+									}}
+								/>
+							);
+						})}
+				</div>
 			</div>
 		);
 	};

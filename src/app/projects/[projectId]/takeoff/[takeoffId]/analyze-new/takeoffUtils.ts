@@ -515,6 +515,71 @@ const pdfjsToImageCoords = (
 	}
 };
 
+const isRangeWithin = (
+	minValue: number,
+	maxValue: number,
+	rangeMin: number,
+	rangeMax: number,
+	tolerance = 1,
+) => {
+	return minValue >= rangeMin - tolerance && maxValue <= rangeMax + tolerance;
+};
+
+const shouldApplyViewBoxOffset = (
+	polygon: EvidencePoint[],
+	viewBox: number[] | null,
+	pageWidth: number,
+	pageHeight: number,
+) => {
+	if (!viewBox || viewBox.length < 4 || polygon.length === 0) {
+		return false;
+	}
+
+	const offsetX = Number(viewBox[0] || 0);
+	const offsetY = Number(viewBox[1] || 0);
+	const hasOffset = Math.abs(offsetX) > 0.5 || Math.abs(offsetY) > 0.5;
+	if (!hasOffset) {
+		return false;
+	}
+
+	const viewBoxWidth = Math.abs(Number(viewBox[2] || 0) - Number(viewBox[0] || 0));
+	const viewBoxHeight = Math.abs(Number(viewBox[3] || 0) - Number(viewBox[1] || 0));
+	if (!viewBoxWidth || !viewBoxHeight) {
+		return false;
+	}
+
+	const xValues = polygon.map((point) => Number(point?.x || 0));
+	const yValues = polygon.map((point) => Number(point?.y || 0));
+	const minX = Math.min(...xValues);
+	const maxX = Math.max(...xValues);
+	const minY = Math.min(...yValues);
+	const maxY = Math.max(...yValues);
+
+	const basePageWidth = pageWidth || viewBoxWidth;
+	const basePageHeight = pageHeight || viewBoxHeight;
+
+	const currentWithinPage =
+		isRangeWithin(minX, maxX, 0, basePageWidth) &&
+		isRangeWithin(minY, maxY, 0, basePageHeight);
+	const shiftedWithinPage =
+		isRangeWithin(minX + offsetX, maxX + offsetX, 0, basePageWidth) &&
+		isRangeWithin(minY + offsetY, maxY + offsetY, 0, basePageHeight);
+	const currentWithinLocalViewBox =
+		isRangeWithin(minX, maxX, 0, viewBoxWidth) &&
+		isRangeWithin(minY, maxY, 0, viewBoxHeight);
+
+	// Prefer offset when polygon looks local to view_box
+	// or when current coords are out-of-page but shifted coords are valid.
+	if (currentWithinLocalViewBox && shiftedWithinPage) {
+		return true;
+	}
+	if (!currentWithinPage && shiftedWithinPage) {
+		return true;
+	}
+
+	return false;
+};
+
 export const getEvidenceBounds = (
 	evidence?: EvidenceRecord,
 ): EvidenceBoxBounds | null => {
@@ -534,20 +599,23 @@ export const getEvidenceBounds = (
 		return null;
 	}
 
+	const applyOffset = shouldApplyViewBoxOffset(
+		polygon,
+		viewBox,
+		pageWidth,
+		pageHeight,
+	);
+
 	const imagePoints = polygon.map((point) => {
 		const normalizedPoint = {
 			x: Number(point?.x || 0),
 			y: Number(point?.y || 0),
 		};
 
-		if (!viewBox || viewBox.length < 4) {
-			return normalizedPoint;
-		}
-
-		const adjustedPoint = !evidence?.is_manual
+		const adjustedPoint = applyOffset
 			? {
-					x: normalizedPoint.x + Number(viewBox[0] || 0),
-					y: normalizedPoint.y + Number(viewBox[1] || 0),
+					x: normalizedPoint.x + Number(viewBox?.[0] || 0),
+					y: normalizedPoint.y + Number(viewBox?.[1] || 0),
 				}
 			: normalizedPoint;
 
