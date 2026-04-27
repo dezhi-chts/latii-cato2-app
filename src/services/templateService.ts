@@ -50,9 +50,9 @@ export const updateTemplate = async (templateId: string, settings: any) => {
     const url = `/prompt-template/${templateId}`;
     const response = await http.put(url, settings);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error updating template:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data, status: "error" };
   }
 };
 

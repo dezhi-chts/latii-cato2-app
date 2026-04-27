@@ -468,6 +468,7 @@ const Page = () => {
             openCreateTemplateSignal={openCreateTemplateSignal}
             onConsumeCreateTemplateSignal={handleConsumeCreateTemplateSignal}
             onDownloadTemplate={handleDownloadTemplate}
+            onRefreshTemplateContent={fetchTemplateContent}
           />
         ) : (
           <PromptEditor
