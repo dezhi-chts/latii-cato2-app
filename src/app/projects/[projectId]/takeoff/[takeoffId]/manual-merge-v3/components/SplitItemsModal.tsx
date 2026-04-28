@@ -3,7 +3,6 @@
 import { Input, Modal, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
-import { notify } from "@/utils/notify";
 
 interface SplitItemsModalProps {
   open: boolean;
@@ -15,6 +14,25 @@ interface SplitItemsModalProps {
   onCancel: () => void;
   onSave: (selectedRowKeys: React.Key[], targetLabel: string) => Promise<void>;
 }
+
+const getDefaultSplitLabel = (currentLabel: string, allLabels: string[]) => {
+  const baseLabel = `${String(currentLabel || "").trim()} split`.trim();
+  if (!baseLabel) return "split";
+
+  const normalizedExistingLabels = new Set(
+    (allLabels || []).map((label) => String(label || "").trim().toLowerCase()),
+  );
+
+  if (!normalizedExistingLabels.has(baseLabel.toLowerCase())) {
+    return baseLabel;
+  }
+
+  let suffix = 2;
+  while (normalizedExistingLabels.has(`${baseLabel} ${suffix}`.toLowerCase())) {
+    suffix += 1;
+  }
+  return `${baseLabel} ${suffix}`;
+};
 
 export default function SplitItemsModal({
   open,
@@ -28,37 +46,34 @@ export default function SplitItemsModal({
 }: SplitItemsModalProps) {
   const [targetLabel, setTargetLabel] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    if (!open) {
-      setTargetLabel("");
+    if (open) {
+      setTargetLabel(getDefaultSplitLabel(currentLabel, allLabels));
       setSelectedRowKeys([]);
+      setErrorMessage("");
+      return;
     }
-  }, [open]);
+    setTargetLabel("");
+    setSelectedRowKeys([]);
+    setErrorMessage("");
+  }, [allLabels, currentLabel, open]);
 
   const handleSubmit = async () => {
     if (selectedRowKeys.length === 0) {
-      notify.warning({
-        title: "No Items Selected",
-        description: "Please select at least one item.",
-      });
+      setErrorMessage("Please select at least one item.");
       return;
     }
 
     const normalizedTargetLabel = targetLabel.trim();
     if (!normalizedTargetLabel) {
-      notify.warning({
-        title: "Label Required",
-        description: "Please input a new label name.",
-      });
+      setErrorMessage("Please input a new label name.");
       return;
     }
 
     if (normalizedTargetLabel === currentLabel) {
-      notify.warning({
-        title: "Invalid Label",
-        description: "Please input a different label name.",
-      });
+      setErrorMessage("Please input a different label name.");
       return;
     }
 
@@ -67,13 +82,11 @@ export default function SplitItemsModal({
       (label) => String(label || "").trim().toLowerCase() === normalizedInputLabel,
     );
     if (duplicated) {
-      notify.warning({
-        title: "Duplicate Label",
-        description: "This label already exists. Please input a new label name.",
-      });
+      setErrorMessage("This label already exists. Please input a new label name.");
       return;
     }
 
+    setErrorMessage("");
     await onSave(selectedRowKeys, normalizedTargetLabel);
   };
 
@@ -104,12 +117,20 @@ export default function SplitItemsModal({
 
         <div className="flex items-center gap-3">
           <span className="w-[60px] text-sm text-grey-normal">Label</span>
-          <Input
-            value={targetLabel}
-            onChange={(event) => setTargetLabel(event.target.value)}
-            placeholder="Input new label"
-            maxLength={200}
-          />
+          <div className="flex-1">
+            <Input
+              value={targetLabel}
+              onChange={(event) => {
+                setTargetLabel(event.target.value);
+                if (errorMessage) setErrorMessage("");
+              }}
+              placeholder="Input new label"
+              maxLength={200}
+            />
+            {errorMessage ? (
+              <div className="mt-1 text-xs text-[#ff4d4f]">{errorMessage}</div>
+            ) : null}
+          </div>
         </div>
       </div>
     </Modal>

@@ -37,6 +37,8 @@ import {
 	SelectPagesControls,
 	ClearAllControls,
 	AddRectBoxControls,
+	ZOOM_MIN,
+	ZOOM_MAX,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import DrawingTagsView from "./components/DrawingTagsView";
 import BuildingBackground, {
@@ -492,27 +494,9 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		[page, thumbnailList],
 	);
 
-	// 使用 lodash 的防抖函数来处理缩放
-	const debouncedZoomChange = useCallback(
-		debounce(
-			(value: number) => {
-				if (value === zoom) return;
-				if (value < 0.5 || value > 4) return;
-				// 四舍五入保留2位小数，避免浮点数精度累积
-				const roundedValue = Math.round(value * 100) / 100;
-				setZoom(roundedValue);
-			},
-			500,
-			{
-				leading: true, // 立即执行第一次调用
-				trailing: true, // 也执行 trailing 调用
-			},
-		),
-		[zoom],
-	);
-
 	const handleZoomChange = (value: number) => {
-		debouncedZoomChange(value);
+		const clampedValue = Math.max(ZOOM_MIN, Math.min(value, ZOOM_MAX));
+    setZoom(clampedValue);
 	};
 
 	const handlePageChange = async (value: number) => {
@@ -1154,7 +1138,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 								onDeleteEvidence={handleDeleteEvidence}
 								onUpdateEvidence={handleUpdateEvidence}
 								onCropSectionsCount={handleCropsCount}
-								onChangeZoom={debouncedZoomChange}
+								onChangeZoom={handleZoomChange}
 							></PdfWrapper>
 						</div>
 					</div>

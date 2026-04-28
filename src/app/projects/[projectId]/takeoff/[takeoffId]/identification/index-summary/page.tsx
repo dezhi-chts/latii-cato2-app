@@ -37,6 +37,8 @@ import {
   ZoomControls,
   SelectPagesControls,
   ThumbnailControls,
+  ZOOM_MIN,
+  ZOOM_MAX,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ContentView from "./components/ContentView";
 import Header from "../components/Header";
@@ -226,7 +228,8 @@ const IdentSummary = () => {
   );
 
   const handleZoomChange = (value: number) => {
-    debouncedZoomChange(value);
+    const clampedValue = Math.max(ZOOM_MIN, Math.min(value, ZOOM_MAX));
+    setZoom(clampedValue);
   };
 
   const handlePageChange = (value: number) => {
@@ -420,7 +423,7 @@ const IdentSummary = () => {
               allEvidence={fileEvidence}
               onTotalPages={setTotalPage}
               onCropSectionsCount={handleCropsCount}
-              onChangeZoom={debouncedZoomChange}
+              onChangeZoom={handleZoomChange}
             ></PdfWrapper>
           </div>
         </div>
