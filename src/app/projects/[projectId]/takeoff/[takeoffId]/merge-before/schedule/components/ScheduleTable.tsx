@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Button, Checkbox, Input, Modal, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	getDisplayValueByField,
 	parseItemResult as parseItemResultUtil,
@@ -238,6 +238,22 @@ export default function ScheduleTable({
 		[selectedRows],
 	);
 
+	useEffect(() => {
+		// Clear stale selections when switching source/image context.
+		setBatchSelectedIds([]);
+		resetBatchModals();
+	}, [selectedFileId, pageEvidenceId]);
+
+	useEffect(() => {
+		// Data refresh can invalidate previously selected ids.
+		const validIds = new Set(
+			sections
+				.map((row) => Number(row?.id))
+				.filter((rowId) => Number.isFinite(rowId)),
+		);
+		setBatchSelectedIds((prev) => prev.filter((id) => validIds.has(id)));
+	}, [sections]);
+
 	const selectedPreviewColumns: ColumnsType<any> = [
 		{
 			title: "Label",
@@ -263,7 +279,7 @@ export default function ScheduleTable({
 	};
 
 	const handleBatchCopy = () => {
-		if (!batchSelectedIds.length) {
+		if (!selectedRows.length) {
 			notify.warning({
 				title: "Warning",
 				description: "Please select items to process.",
@@ -274,7 +290,7 @@ export default function ScheduleTable({
 	};
 
 	const handleOpenBatchEdit = () => {
-		if (!batchSelectedIds.length) {
+		if (!selectedRows.length) {
 			notify.warning({
 				title: "Warning",
 				description: "Please select items to process.",
@@ -286,7 +302,7 @@ export default function ScheduleTable({
 	};
 
 	const handleBatchDelete = () => {
-		if (!batchSelectedIds.length) {
+		if (!selectedRows.length) {
 			notify.warning({
 				title: "Warning",
 				description: "Please select items to process.",
@@ -467,6 +483,7 @@ export default function ScheduleTable({
 			title: "",
 			key: "checkbox",
 			width: 36,
+			fixed: "left" as const,
 			align: "center" as const,
 			render: (_: unknown, record: any) => {
 				const rowId = Number(record.id);
