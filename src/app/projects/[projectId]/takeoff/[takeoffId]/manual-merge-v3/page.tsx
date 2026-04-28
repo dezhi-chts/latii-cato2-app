@@ -470,6 +470,9 @@ export default function ManualMergeV2Page() {
   );
   const [splitModalOpen, setSplitModalOpen] = useState(false);
   const [splitSubmitting, setSplitSubmitting] = useState(false);
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copySubmitting, setCopySubmitting] = useState(false);
+  const [copySelectedRowKeys, setCopySelectedRowKeys] = useState<React.Key[]>([]);
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
   const selectedLabelMeta = useMemo(
@@ -1315,6 +1318,36 @@ export default function ManualMergeV2Page() {
     setSplitModalOpen(false);
   }, []);
 
+  const openCopyModal = useCallback(() => {
+    setCopySelectedRowKeys([]);
+    setCopyModalOpen(true);
+  }, []);
+
+  const closeCopyModal = useCallback(() => {
+    setCopySelectedRowKeys([]);
+    setCopyModalOpen(false);
+  }, []);
+
+  const handleConfirmCopyItems = useCallback(async () => {
+    if (copySelectedRowKeys.length === 0) {
+      notify.warning({
+        title: "No Items Selected",
+        description: "Please select at least one item.",
+      });
+      return;
+    }
+    setCopySubmitting(true);
+    try {
+      notify.info({
+        title: "Coming Soon",
+        description: `Copy API is not ready yet. Selected ${copySelectedRowKeys.length} item(s).`,
+      });
+      closeCopyModal();
+    } finally {
+      setCopySubmitting(false);
+    }
+  }, [closeCopyModal, copySelectedRowKeys.length]);
+
   const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
     const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
     const payload = finalItemsSource.rows
@@ -1597,10 +1630,15 @@ export default function ManualMergeV2Page() {
                       {isSelectedLabelMerged ? "Save" : "Merge Complete"}
                     </Button>
                     {!isSelectedLabelMerged && (
-                      <Button className="custom-primary-btn !w-[60px]" onClick={openSplitModal}>
-                        Split
-                      </Button>
+                      finalItemsRows.length > 1 && (
+                        <Button className="custom-primary-btn !w-[60px]" onClick={openSplitModal}>
+                          Split
+                        </Button>
+                      )
                     )}
+                    <Button className="custom-primary-btn !w-[60px]" onClick={openCopyModal}>
+                      Copy
+                    </Button>
                   </div>
                 )}
                 renderTable={renderTable}
@@ -1715,6 +1753,30 @@ export default function ManualMergeV2Page() {
         onCancel={closeSplitModal}
         onSave={handleSubmitSplit}
       />
+
+      <Modal
+        open={copyModalOpen}
+        title="Copy Items"
+        width={1100}
+        onCancel={closeCopyModal}
+        onOk={handleConfirmCopyItems}
+        okText="Confirm"
+        cancelText="Cancel"
+        confirmLoading={copySubmitting}
+      >
+        <Table<any>
+          rowKey={(record) => record.id ?? record.__rowKey}
+          columns={splitTableColumns}
+          dataSource={finalItemsRows}
+          pagination={false}
+          rowSelection={{
+            selectedRowKeys: copySelectedRowKeys,
+            onChange: (nextRowKeys) => setCopySelectedRowKeys(nextRowKeys),
+          }}
+          scroll={{ x: "max-content", y: 380 }}
+          className="h-full [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
+        />
+      </Modal>
 
       {loading && (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40">
