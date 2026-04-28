@@ -479,7 +479,7 @@ export default function FloorPlanPage() {
       let ocr_text = {
         result: {
           Label: formData.Label,
-          "Sub Label": formData["Sub Label"],
+          //"Sub Label": formData["Sub Label"],
         },
       };
 

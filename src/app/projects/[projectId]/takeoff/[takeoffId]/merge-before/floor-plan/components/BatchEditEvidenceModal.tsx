@@ -150,7 +150,7 @@ export default function BatchEditEvidenceModal({
             maxLength={120}
           />
         </div>
-        <div>
+        {/* <div>
           <div className="mb-1 text-sm text-grey-normal">Sub Label</div>
           <Input
             value={subLabelInput}
@@ -158,7 +158,7 @@ export default function BatchEditEvidenceModal({
             onChange={(event) => setSubLabelInput(event.target.value)}
             maxLength={120}
           />
-        </div>
+        </div> */}
       </div>
     </Modal>
   );

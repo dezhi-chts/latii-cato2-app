@@ -17,7 +17,7 @@ const LabelConfirmModal = ({
 }: LabelConfirmModalProps) => {
   const [formData, setFormData] = useState<any>({
     Label: '',
-    'Sub Label': '',
+    //'Sub Label': '',
   });
 
   const handleSubmit = () => {
@@ -48,10 +48,10 @@ const LabelConfirmModal = ({
               <div className="w-[100px] text-sm">Label:</div>
               <Input className="flex-1" value={formData?.Label} onChange={(e) => { setFormData({ ...formData, Label: e.target.value }) }} type="text" />
             </div>
-            <div className="my-2 flex flex-row">
+            {/* <div className="my-2 flex flex-row">
               <div className="w-[100px] text-sm">Sub Label:</div>
               <Input className="flex-1" value={formData?.['Sub Label']} onChange={(e) => { setFormData({ ...formData, ['Sub Label']: e.target.value }) }} type="text" />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">

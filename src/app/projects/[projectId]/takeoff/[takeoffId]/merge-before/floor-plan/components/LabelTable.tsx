@@ -85,7 +85,7 @@ export default function LabelTable({
 			return {
 				id: item?.id,
 				label: String(result?.Label || "-"),
-				subLabel: String(result?.["Sub Label"] || "-"),
+				//	subLabel: String(result?.["Sub Label"] || "-"),
 				hasMissingLabel: !rawLabelValue,
 				evidenceId,
 				sourceItem: item,
@@ -393,36 +393,36 @@ export default function LabelTable({
 						</span>
 					),
 			},
-			{
-				title: <div className="text-xs text-grey-normal">Sub Label</div>,
-				key: "subLabel",
-				dataIndex: "subLabel",
-				align: "center",
-				render: (text: string, record: LabelItem) =>
-					isEditingCell(record, "subLabel") ? (
-						<Input
-							autoFocus
-							size="small"
-							value={editingValue}
-							disabled={savingCell?.id === record.id && savingCell?.field === "subLabel"}
-							onChange={(e) => setEditingValue(e.target.value)}
-							onPressEnter={() => handleSubmitEdit(record, "subLabel")}
-							onBlur={() => handleSubmitEdit(record, "subLabel")}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") {
-									handleCancelEdit();
-								}
-							}}
-						/>
-					) : (
-						<span
-							className="text-xs text-grey-dark cursor-text"
-							onClick={() => handleStartEdit(record, "subLabel")}
-						>
-							{text}
-						</span>
-					),
-			},
+			// {
+			// 	title: <div className="text-xs text-grey-normal">Sub Label</div>,
+			// 	key: "subLabel",
+			// 	dataIndex: "subLabel",
+			// 	align: "center",
+			// 	render: (text: string, record: LabelItem) =>
+			// 		isEditingCell(record, "subLabel") ? (
+			// 			<Input
+			// 				autoFocus
+			// 				size="small"
+			// 				value={editingValue}
+			// 				disabled={savingCell?.id === record.id && savingCell?.field === "subLabel"}
+			// 				onChange={(e) => setEditingValue(e.target.value)}
+			// 				onPressEnter={() => handleSubmitEdit(record, "subLabel")}
+			// 				onBlur={() => handleSubmitEdit(record, "subLabel")}
+			// 				onKeyDown={(e) => {
+			// 					if (e.key === "Escape") {
+			// 						handleCancelEdit();
+			// 					}
+			// 				}}
+			// 			/>
+			// 		) : (
+			// 			<span
+			// 				className="text-xs text-grey-dark cursor-text"
+			// 				onClick={() => handleStartEdit(record, "subLabel")}
+			// 			>
+			// 				{text}
+			// 			</span>
+			// 		),
+			// },
 			{
 				title: "",
 				key: "action",
