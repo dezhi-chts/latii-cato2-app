@@ -10,20 +10,45 @@ import {
 } from "@/services/takeOffService";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 import { notify } from "@/utils/notify";
+import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
+import { EvidenceRecord } from "../../analyze-new/types";
 
 
 interface EvidenceSectionProps {
   title: string;
-  evidences: Array<{ id: string; url: string }>;
+  evidences: Array<{
+    id: string;
+    url: string;
+    project_file_id?: number;
+    project_file_page_number?: number;
+    page_width_pdf?: number;
+    page_height_pdf?: number;
+    polygon?: any;
+  }>;
+  files: any[];
   currentLabel: string;
   allLabels: any[];
   isLabelMerged: boolean;
   onRefreshItemsAndEvidence: () => Promise<void>;
 }
 
+type PreviewEvidenceMode = "single" | "samePage";
+
+const resolvePreviewEvidences = (
+  mode: PreviewEvidenceMode,
+  singleEvidence: EvidenceRecord,
+  samePageEvidences: EvidenceRecord[],
+) => {
+  if (mode === "samePage") {
+    return samePageEvidences.length > 0 ? samePageEvidences : [singleEvidence];
+  }
+  return [singleEvidence];
+};
+
 export default function EvidenceSection({
   title,
   evidences,
+  files,
   currentLabel,
   allLabels,
   isLabelMerged,
@@ -33,6 +58,22 @@ export default function EvidenceSection({
   const [editingEvidenceUrl, setEditingEvidenceUrl] = useState("");
   const [targetLabel, setTargetLabel] = useState<string>();
   const [apiLoading, setApiLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPayload, setPreviewPayload] = useState<{
+    fileName?: string;
+    pageNumber: number;
+    imageUrl: string;
+    pageEvidences: EvidenceRecord[];
+  }>({
+    fileName: "",
+    pageNumber: 1,
+    imageUrl: "",
+    pageEvidences: [],
+  });
+  // Keep this mode switch for future requirement:
+  // - "single": only highlight clicked evidence (current behavior)
+  // - "samePage": highlight all evidences on the same page
+  const previewEvidenceMode = "single" as PreviewEvidenceMode;
 
   const availableTargetLabels = useMemo(() => {
     const seen = new Set<string>();
@@ -97,6 +138,67 @@ export default function EvidenceSection({
 
   const [editingEvidenceId, setEditingEvidenceId] = useState("");
 
+  const handleOpenEnvironmentPreview = (evidence: {
+    id: string;
+    url: string;
+    project_file_id?: number;
+    project_file_page_number?: number;
+    page_width_pdf?: number;
+    page_height_pdf?: number;
+    polygon?: any;
+  }) => {
+    const fileId = Number(evidence?.project_file_id || 0);
+    const pageNumber = Number(evidence?.project_file_page_number || 1) || 1;
+    const matchedFile = (files || []).find((item) => Number(item?.id) === fileId);
+    const pageInfos = matchedFile?.parse_detail?.image_page_infos || [];
+    const matchedPageInfo =
+      pageInfos.find(
+        (pageInfo: any, pageIndex: number) =>
+          Number(pageInfo?.project_file_page_number || pageInfo?.page_number || pageIndex + 1) ===
+          pageNumber,
+      ) || null;
+    const imageUrl = matchedPageInfo?.s3_url || evidence?.url || "";
+    const samePageEvidences = evidences
+      .filter(
+        (item) =>
+          Number(item?.project_file_id || 0) === fileId &&
+          Number(item?.project_file_page_number || 1) === pageNumber,
+      )
+      .map(
+        (item) =>
+          ({
+            id: Number(item.id || 0),
+            project_file_id: item.project_file_id,
+            project_file_page_number: item.project_file_page_number,
+            page_width_pdf: item.page_width_pdf,
+            page_height_pdf: item.page_height_pdf,
+            polygon: item.polygon,
+          }) as EvidenceRecord,
+      );
+    const clickedEvidence: EvidenceRecord = {
+      id: Number(evidence.id || 0),
+      project_file_id: evidence.project_file_id,
+      project_file_page_number: evidence.project_file_page_number,
+      page_width_pdf: evidence.page_width_pdf,
+      page_height_pdf: evidence.page_height_pdf,
+      polygon: evidence.polygon,
+    } as EvidenceRecord;
+
+    const previewEvidences = resolvePreviewEvidences(
+      previewEvidenceMode,
+      clickedEvidence,
+      samePageEvidences,
+    );
+
+    setPreviewPayload({
+      fileName: matchedFile?.file_name || "Unnamed file",
+      pageNumber,
+      imageUrl,
+      pageEvidences: previewEvidences,
+    });
+    setPreviewOpen(true);
+  };
+
   const handleOpenEdit = (evidenceId: string, evidenceUrl: string) => {
     setEditingEvidenceId(evidenceId);
     setEditingEvidenceUrl(evidenceUrl);
@@ -152,32 +254,45 @@ export default function EvidenceSection({
                   <div className="absolute left-1 top-1 rounded z-10 flex h-[15px] w-[15px] text-xxs items-center justify-center bg-forumBlue-light-active text-xs font-medium text-white shadow-sm">
                     {index + 1}
                   </div>
-                  {!isLabelMerged &&
-                    <div className="absolute right-1 top-1 z-10 items-center gap-1  hidden group-hover:flex">
-                      <div
-                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                        onClick={() => {
-                          handleOpenEdit(evidence.id, evidence.url);
-                        }}
-                      >
-                        <EditOutlined className="text-[12px]" />
-                      </div>
-                      <div
-                        className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
-                        onClick={() => {
-                          handleDeleteEvidence(evidence.id, evidence.url);
-                        }}
-                      >
-                        <DeleteOutlined className="text-[12px]" />
-                      </div>
-                    </div>
-                  }
-                  <div className="flex h-full w-full items-center justify-center p-2">
-                    <ImagePreviewWithExpand
+                  <div className="absolute right-1 top-1 z-10 items-center gap-1 hidden group-hover:flex">
+                    {!isLabelMerged && (
+                      <>
+                        <div
+                          className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                          onClick={() => {
+                            handleOpenEdit(evidence.id, evidence.url);
+                          }}
+                        >
+                          <EditOutlined className="text-[12px]" />
+                        </div>
+                        <div
+                          className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                          onClick={() => {
+                            handleDeleteEvidence(evidence.id, evidence.url);
+                          }}
+                        >
+                          <DeleteOutlined className="text-[12px]" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div
+                    className="flex h-full w-full items-center justify-center p-2"
+                    onClick={() => {
+                      handleOpenEnvironmentPreview(evidence);
+                    }}
+                  >
+                    {/* <ImagePreviewWithExpand
                       src={evidence.url}
                       alt={`${title} Evidence`}
                       className="h-full w-full"
                       imageClassName="max-h-full max-w-full object-contain"
+                    /> */}
+                    <img
+                      src={evidence.url}
+                      alt={`${title} Evidence`}
+                      className="block max-h-full max-w-full cursor-zoom-in object-contain"
+                      loading="lazy"
                     />
                   </div>
                 </div>
@@ -241,6 +356,15 @@ export default function EvidenceSection({
           </div>
         </div>
       </Modal>
+
+      <EvidenceImagePreviewModal
+        open={previewOpen}
+        fileName={previewPayload.fileName}
+        pageNumber={previewPayload.pageNumber}
+        imageUrl={previewPayload.imageUrl}
+        pageEvidences={previewPayload.pageEvidences}
+        onCancel={() => setPreviewOpen(false)}
+      />
     </>
   );
 }

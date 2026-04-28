@@ -63,10 +63,20 @@ interface EvidenceInfo {
   url: string;
 }
 
+interface ClassifiedEvidenceItem {
+  id: string;
+  url: string;
+  project_file_id?: number;
+  project_file_page_number?: number;
+  page_width_pdf?: number;
+  page_height_pdf?: number;
+  polygon?: any;
+}
+
 interface ClassifiedEvidenceUrls {
-  schedule: Array<{ id: string; url: string }>;
-  floorPlan: Array<{ id: string; url: string }>;
-  elevation: Array<{ id: string; url: string }>;
+  schedule: ClassifiedEvidenceItem[];
+  floorPlan: ClassifiedEvidenceItem[];
+  elevation: ClassifiedEvidenceItem[];
 }
 
 const SOURCE_ALIAS: Record<SourceKey, string[]> = {
@@ -111,9 +121,9 @@ const getEvidenceUniqueId = (evidence: any, fallbackUrl: string): string => {
 };
 
 const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
-  const scheduleList: Array<{ id: string; url: string }> = [];
-  const floorPlanList: Array<{ id: string; url: string }> = [];
-  const elevationList: Array<{ id: string; url: string }> = [];
+  const scheduleList: ClassifiedEvidenceItem[] = [];
+  const floorPlanList: ClassifiedEvidenceItem[] = [];
+  const elevationList: ClassifiedEvidenceItem[] = [];
   const seenEvidenceIds = new Set<string>();
 
   const normalizeType = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -128,15 +138,39 @@ const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
 
     const evidenceType = normalizeType(evidence?.evidence_type ?? evidence?.type);
     if (evidenceType === "window door unit" || evidenceType === "table") {
-      scheduleList.push({ id: evidenceId, url });
+      scheduleList.push({
+        id: evidenceId,
+        url,
+        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
+        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
+        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
+        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
+        polygon: evidence?.polygon,
+      });
       return;
     }
     if (evidenceType === "floor plan item") {
-      floorPlanList.push({ id: evidenceId, url });
+      floorPlanList.push({
+        id: evidenceId,
+        url,
+        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
+        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
+        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
+        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
+        polygon: evidence?.polygon,
+      });
       return;
     }
     if (evidenceType === "elevation item") {
-      elevationList.push({ id: evidenceId, url });
+      elevationList.push({
+        id: evidenceId,
+        url,
+        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
+        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
+        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
+        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
+        polygon: evidence?.polygon,
+      });
     }
   });
 
@@ -1708,6 +1742,7 @@ export default function ManualMergeV2Page() {
                     <EvidenceSection
                       title="Schedule"
                       evidences={scheduleEvidences}
+                      files={files}
                       currentLabel={selectedLabel}
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
@@ -1716,6 +1751,7 @@ export default function ManualMergeV2Page() {
                     <EvidenceSection
                       title="Floor Plan"
                       evidences={floorPlanEvidences}
+                      files={files}
                       currentLabel={selectedLabel}
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
@@ -1724,6 +1760,7 @@ export default function ManualMergeV2Page() {
                     <EvidenceSection
                       title="Elevation"
                       evidences={elevationEvidences}
+                      files={files}
                       currentLabel={selectedLabel}
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
