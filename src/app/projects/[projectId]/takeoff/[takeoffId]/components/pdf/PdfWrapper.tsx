@@ -896,7 +896,6 @@ const PdfWrapper = forwardRef(
 						setIsRendering(false);
 						return;
 					}
-					console.log('$$$$$$$$$$$$$$$ fitScale', fitScale);
 					if (Math.abs(fitScale - scale) > 0.001) {
 						// 自动缩放比例与当前缩放比例差异大于0.001, 则应用自动缩放比例
 						setShowEvidence(false);
@@ -2954,6 +2953,41 @@ const PdfWrapper = forwardRef(
 				savedAreaSelectRect,
 			],
 		);
+
+		useEffect(() => {
+			const handleAreaSelectionDeleteByKeyboard = (event: KeyboardEvent) => {
+				const isDeleteKey =
+					event.key === "Delete" || event.key === "Backspace";
+				if (!isDeleteKey || event.repeat) return;
+				if (!enableAreaSelection || isAreaSelecting) return;
+				if (!savedAreaSelectRect && !areaSelectRect) return;
+
+				const target = event.target as HTMLElement | null;
+				if (target) {
+					const tagName = target.tagName?.toLowerCase();
+					const isTypingTarget =
+						tagName === "input" ||
+						tagName === "textarea" ||
+						tagName === "select" ||
+						target.isContentEditable;
+					if (isTypingTarget) return;
+				}
+
+				event.preventDefault();
+				handleAreaSelectionOperation("delete");
+			};
+
+			window.addEventListener("keydown", handleAreaSelectionDeleteByKeyboard);
+			return () => {
+				window.removeEventListener("keydown", handleAreaSelectionDeleteByKeyboard);
+			};
+		}, [
+			areaSelectRect,
+			enableAreaSelection,
+			handleAreaSelectionOperation,
+			isAreaSelecting,
+			savedAreaSelectRect,
+		]);
 
 		return (
 			<div className="w-full h-full flex relative">
