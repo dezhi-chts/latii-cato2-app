@@ -46,10 +46,10 @@ const Project = () => {
 	const createQuotiiButton = (
 		<Button
 			backgroundColor="forumBlue-normal"
-			className="rounded-md w-32"
+			className="rounded-md"
 			onClick={() => setShowCreateTakeOffModal(true)}
 		>
-			Create Quote
+			Create Take Off
 		</Button>
 	);
 

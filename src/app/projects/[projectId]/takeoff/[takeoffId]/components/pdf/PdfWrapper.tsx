@@ -207,6 +207,8 @@ const PdfWrapper = forwardRef(
 		//  const pdfPageText = useRef<TextContent>({} as TextContent);
 		const MIN_SCALE = 0.5;
 		const MAX_SCALE = 3;
+		const AUTO_FIT_MIN_SCALE = 0.1;
+		const AUTO_FIT_PADDING = 0;
 		const WHEEL_ZOOM_STEP = 0.1;
 		const AREA_SELECT_MIN_SIZE = 10;
 
@@ -237,6 +239,10 @@ const PdfWrapper = forwardRef(
 
 		const [stageWidth, setStageWidth] = useState(0);
 		const [stageHeight, setStageHeight] = useState(0);
+		const [initialContainerSize, setInitialContainerSize] = useState({
+			width: 0,
+			height: 0,
+		});
 		const zoomModifierPressedRef = useRef(false);
 		const zoomAnchorRef = useRef<{
 			pdfX: number;
@@ -245,6 +251,9 @@ const PdfWrapper = forwardRef(
 			mouseY: number;
 			targetScale: number;
 		} | null>(null);
+		const shouldAutoFitPageRef = useRef(true);
+		const minZoomScaleRef = useRef(MIN_SCALE);
+		const autoFitAppliedAtRef = useRef(0);
 
 		const [showEvidence, setShowEvidence] = useState<boolean>(true);
 
@@ -337,16 +346,26 @@ const PdfWrapper = forwardRef(
 				page !== pageNum
 			) {
 				resetInfoByPageNum();
+				shouldAutoFitPageRef.current = true;
 				setPageNum(page);
 			}
 		}, [page, totalPages, pageNum]);
 
 		useEffect(() => {
-			if (zoom) {
+			if (typeof zoom === "number" && Number.isFinite(zoom)) {
+				const nextZoom = Number(zoom.toFixed(2));
+				// Guard against stale parent zoom echoing back right after auto-fit.
+				if (
+					Date.now() - autoFitAppliedAtRef.current < 500 &&
+					Math.abs(nextZoom - minZoomScaleRef.current) > 0.001
+				) {
+					return;
+				}
+				if (Math.abs(nextZoom - scale) <= 0.001) return;
 				setShowEvidence(false);
-				setScale(zoom);
+				setScale(nextZoom);
 			}
-		}, [zoom]);
+		}, [zoom, scale]);
 
 		useEffect(() => {
 			if (pdfCanvas.current) {
@@ -357,6 +376,23 @@ const PdfWrapper = forwardRef(
 					console.error("Failed to get canvas context");
 				}
 			}
+		}, []);
+
+		useEffect(() => {
+			let rafId = 0;
+			const measureOnce = () => {
+				const container = scrollRef.current;
+				if (!container) return;
+				const width = container.clientWidth;
+				const height = container.clientHeight;
+				if (width > 0 && height > 0) {
+					setInitialContainerSize({ width, height });
+				}
+			};
+			rafId = requestAnimationFrame(measureOnce);
+			return () => {
+				if (rafId) cancelAnimationFrame(rafId);
+			};
 		}, []);
 
 		useEffect(() => {
@@ -441,6 +477,7 @@ const PdfWrapper = forwardRef(
 					onTotalPages?.(pdf.numPages);
 
 					const targetPage = page > 0 && page <= pdf.numPages ? page : 1;
+					shouldAutoFitPageRef.current = true;
 					setPageNum(targetPage);
 					setPdfLoading(false);
 					// 加载成功后清空引用
@@ -817,9 +854,64 @@ const PdfWrapper = forwardRef(
 				setIsRendering(true);
 				const page = await pdfDoc.current.getPage(pageNum);
 				const pageOriginalRotation = page.rotate;
+				const targetRotation = isAdjustRotateRef.current ? rotate : pageOriginalRotation;
+				const shouldAutoFit = shouldAutoFitPageRef.current;
+				const container = scrollRef.current;
+				let fitScale: number | null = null;
+				if (container) {
+					// 计算自动缩放的基准宽度和高度
+					const fitBaseWidth =
+						initialContainerSize.width > 0
+							? initialContainerSize.width
+							: container.clientWidth;
+					const fitBaseHeight =
+						initialContainerSize.height > 0
+							? initialContainerSize.height
+							: container.clientHeight;
+					const availableWidth = fitBaseWidth - AUTO_FIT_PADDING;
+					const availableHeight = fitBaseHeight - AUTO_FIT_PADDING;
+					if (availableWidth > 0 && availableHeight > 0) {
+						// 计算自动缩放比例
+						const baseViewport: ViewPort = page.getViewport({
+							scale: 1,
+							rotation: targetRotation,
+						});
+						const rawFitScale = Math.min(
+							availableWidth / baseViewport.width,
+							availableHeight / baseViewport.height,
+						);
+						// 限制缩放比例在最小和最大值之间
+						fitScale = Number(
+							Math.min(
+								MAX_SCALE,
+								Math.max(AUTO_FIT_MIN_SCALE, rawFitScale),
+							).toFixed(2),
+						);
+						minZoomScaleRef.current = fitScale;
+					}
+				}
+				if (shouldAutoFit) {
+					// 自动缩放
+					if (!fitScale || !Number.isFinite(fitScale)) {
+						setIsRendering(false);
+						return;
+					}
+					console.log('$$$$$$$$$$$$$$$ fitScale', fitScale);
+					if (Math.abs(fitScale - scale) > 0.001) {
+						// 自动缩放比例与当前缩放比例差异大于0.001, 则应用自动缩放比例
+						setShowEvidence(false);
+						autoFitAppliedAtRef.current = Date.now();
+						setScale(fitScale);
+						onChangeZoom?.(fitScale);
+						setIsRendering(false);
+						return;
+					}
+					shouldAutoFitPageRef.current = false;
+				}
+
 				let viewPointsOptions = {
 					scale,
-					rotation: isAdjustRotateRef.current ? rotate : pageOriginalRotation,
+					rotation: targetRotation,
 				};
 
 				const viewport: ViewPort = page.getViewport(viewPointsOptions);
@@ -906,7 +998,7 @@ const PdfWrapper = forwardRef(
 			return () => {
 				renderTaskRef.current?.cancel?.();
 			};
-		}, [pageNum, scale, rotate]);
+		}, [pageNum, scale, rotate, initialContainerSize.width, initialContainerSize.height]);
 
 		const resetInfoByPageNum = () => {
 			setShowEvidence(false);
@@ -2296,9 +2388,12 @@ const PdfWrapper = forwardRef(
 
 			const direction = e.deltaY < 0 ? 1 : -1;
 			const prevScale = Number(scale.toFixed(2));
+			const dynamicMinScale = Number(
+				Math.max(AUTO_FIT_MIN_SCALE, minZoomScaleRef.current || MIN_SCALE).toFixed(2),
+			);
 			const next = Math.min(
 				MAX_SCALE,
-				Math.max(MIN_SCALE, scale + direction * WHEEL_ZOOM_STEP),
+				Math.max(dynamicMinScale, scale + direction * WHEEL_ZOOM_STEP),
 			);
 			const nextScale = Number(next.toFixed(2));
 			onUpdateSafeZoom?.(nextScale);

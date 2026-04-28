@@ -22,6 +22,8 @@ import PdfWrapper from "../takeoff/[takeoffId]/components/pdf/PdfWrapper";
 import {
   PageControls,
   ZoomControls,
+  ZOOM_MIN,
+  ZOOM_MAX,
 } from "../takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ProjectFormTakeoff from "./Project-Form-Takeoff";
 
@@ -207,7 +209,8 @@ const CreateProjectTakeoffModal = ({
   );
 
   const handleZoomChange = (value: number) => {
-    debouncedZoomChange(value);
+    const clampedValue = Math.max(ZOOM_MIN, Math.min(value, ZOOM_MAX));
+    setZoom(clampedValue);
   };
 
   const handleSafeZoomChange = (value: number) => {
@@ -421,7 +424,7 @@ const CreateProjectTakeoffModal = ({
                 onTotalPages={setTotalPage}
                 onUpdateSafeZoom={handleSafeZoomChange}
                 onSuccessOCRText={handleOCRText}
-                onChangeZoom={debouncedZoomChange}
+                onChangeZoom={handleZoomChange}
               />
             </div>
           </div>

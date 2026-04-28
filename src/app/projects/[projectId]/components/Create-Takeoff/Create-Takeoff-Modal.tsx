@@ -39,9 +39,9 @@ const CreateTakeOffModal = ({
       onCancel={() => setIsOpen(false)}
       title={
         <div className="pt-4 flex flex-col gap-2 font-nunito">
-          <div className="text-forumBlue-normal text-lg">Create a Quotii</div>
+          <div className="text-forumBlue-normal text-lg">Create a Take Off</div>
           <div className="text-sm text-grey-normal">
-            Use our AI Agent to create your quote, save time and prevent errors.
+            Use our AI Agent to create your Take Off…
           </div>
           {/* <div className="mt-4 text-xs">
             Name <span>project name</span>

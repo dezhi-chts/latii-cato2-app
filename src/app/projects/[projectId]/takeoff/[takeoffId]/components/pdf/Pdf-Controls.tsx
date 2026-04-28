@@ -1,6 +1,9 @@
 import { Select } from "antd";
 import Image from "next/image";
 
+export const ZOOM_MIN = 0.2;
+export const ZOOM_MAX = 3;
+
 // 缩放控件
 export const ZoomControls = ({
   zoom,

@@ -223,7 +223,7 @@ export const QuoteUpload = ({
           style={{ width: "100%", height: "auto" }}
         ></Image>
       </div>}
-      <div className="text-forumBlue-normal my-2 text-base">Quote Lists</div>
+      <div className="text-forumBlue-normal my-2 text-base">Take Off Lists</div>
       <UploadBox files={files} setFiles={setFiles} />
       {files.length > 0 && (
         <HingeMode

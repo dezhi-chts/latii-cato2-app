@@ -1491,47 +1491,47 @@ export default function ManualMergeV2Page() {
         <div>
           {record?.__isGroupedSummary ? null : (
             <>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => {
-              const urls = extractEvidenceUrls(record, evidenceByResultItemId);
-              if (urls.length === 0) {
-                notify.info({
-                  title: "No Evidence",
-                  description: "No evidence image found for this row.",
-                });
-                return;
-              }
-              setPreviewUrls(urls);
-              setPreviewOpen(true);
-            }}
-          >
-            <Image
-              src="/assets/icons/file-refrence.svg"
-              alt=""
-              width={14}
-              height={14}
-              preview={false}
-            />
-          </Button>
-          {
-            title === 'Final Items' && (
               <Button
                 type="link"
                 size="small"
-                onClick={() => handleDeleteFinalItem(record)}
+                onClick={() => {
+                  const urls = extractEvidenceUrls(record, evidenceByResultItemId);
+                  if (urls.length === 0) {
+                    notify.info({
+                      title: "No Evidence",
+                      description: "No evidence image found for this row.",
+                    });
+                    return;
+                  }
+                  setPreviewUrls(urls);
+                  setPreviewOpen(true);
+                }}
               >
                 <Image
-                  src="/assets/icons/delete.svg"
+                  src="/assets/icons/file-refrence.svg"
                   alt=""
-                  width={15}
-                  height={15}
+                  width={14}
+                  height={14}
                   preview={false}
                 />
               </Button>
-            )
-          }
+              {
+                title === 'Final Items' && (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => handleDeleteFinalItem(record)}
+                  >
+                    <Image
+                      src="/assets/icons/delete.svg"
+                      alt=""
+                      width={15}
+                      height={15}
+                      preview={false}
+                    />
+                  </Button>
+                )
+              }
             </>
           )}
         </div>
@@ -1616,7 +1616,7 @@ export default function ManualMergeV2Page() {
                   onChange={(value) => setContentTab(value as ContentTab)}
                   options={[
                     { label: "Items", value: "items" },
-                    { label: "Evidences", value: "evidences" },
+                    { label: "Evidence", value: "evidences" },
                   ]}
                 />
               </div>

@@ -10,7 +10,9 @@ import {
   ZoomControls,
   SelectPagesControls,
   AddRectBoxControls,
-  ClearAllControls
+  ClearAllControls,
+  ZOOM_MIN,
+  ZOOM_MAX,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import {
   getEvidenceBySubTextEvidenceIds,
@@ -55,9 +57,6 @@ import PromptTemplateSelect, {
   type PromptTemplateItem,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
 const { confirm } = Modal;
-
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 3;
 
 interface ExtendedProjectFile extends ProjectFileRecord {
   operation_type?: string;
