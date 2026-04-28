@@ -1528,8 +1528,44 @@ const PdfWrapper = forwardRef(
 
 			let scrollTop = scrollRef.current?.scrollTop || 0;
 			let scrollLeft = scrollRef.current?.scrollLeft || 0;
-			const left = 60 + scrollLeft;
-			const top = 60 + scrollTop;
+			let left = 60 + scrollLeft;
+			let top = 60 + scrollTop;
+
+			const selectedEvidence = pageEvidence.find((item: any) => {
+				if (selectedShapeId === null || selectedShapeId === undefined) return false;
+				return String(item.id) === String(selectedShapeId);
+			});
+			let selectedBounds: Bounds | null = null;
+			if (
+				selectedEvidence &&
+				Array.isArray(selectedEvidence.viewportPolygons) &&
+				selectedEvidence.viewportPolygons.length > 0
+			) {
+				selectedBounds = getZoneBounds(selectedEvidence.viewportPolygons);
+			} else {
+				const selectedCrop = cropSections.find((item: any) => {
+					if (selectedShapeId === null || selectedShapeId === undefined) return false;
+					return String(item.id) === String(selectedShapeId);
+				});
+				if (
+					selectedCrop &&
+					Array.isArray(selectedCrop.polygons) &&
+					selectedCrop.polygons.length > 0
+				) {
+					selectedBounds = getZoneBounds(selectedCrop.polygons);
+				}
+			}
+			if (selectedBounds) {
+				width = selectedBounds.width;
+				height = selectedBounds.height;
+				left = selectedBounds.minX + selectedBounds.width + 10;
+				top = selectedBounds.minY;
+			}
+
+			// Keep newly added box inside current viewport area.
+			left = Math.max(0, Math.min(left, Math.max(0, pdfWidth - width)));
+			top = Math.max(0, Math.min(top, Math.max(0, pdfHeight - height)));
+
 			const p1 = { x: left, y: top };
 			const p2 = { x: left + width, y: top };
 			const p3 = { x: left + width, y: top + height };
