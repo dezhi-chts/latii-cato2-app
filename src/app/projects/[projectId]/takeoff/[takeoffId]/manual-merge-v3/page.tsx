@@ -21,14 +21,16 @@ import {
 import { getTemplateById } from "@/services/templateService";
 import {
   getDisplayValueByField,
+  getEvidenceBounds,
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
   setResultValueByField,
 } from "../analyze-new/takeoffUtils";
+import { EvidenceRecord } from "../analyze-new/types";
 import BuildingBackground from "../identification/components/BuildingBackground";
 import FileHeader from "./components/FileHeader";
 import LabelSidebar from "./components/LabelSidebar";
-import EvidencePreviewModal from "./components/EvidencePreviewModal";
+import EvidenceImagePreviewModal from "../analyze-new/components/EvidenceImagePreviewModal";
 import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
@@ -71,6 +73,7 @@ interface ClassifiedEvidenceItem {
   page_width_pdf?: number;
   page_height_pdf?: number;
   polygon?: any;
+  [key: string]: any;
 }
 
 interface ClassifiedEvidenceUrls {
@@ -137,37 +140,25 @@ const classifyEvidenceUrls = (evidences: any[]): ClassifiedEvidenceUrls => {
     const evidenceType = normalizeType(evidence?.evidence_type ?? evidence?.type);
     if (evidenceType === "window door unit" || evidenceType === "table") {
       scheduleList.push({
+        ...(evidence || {}),
         id: evidenceId,
         url,
-        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
-        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
-        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
-        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
-        polygon: evidence?.polygon,
       });
       return;
     }
     if (evidenceType === "floor plan item") {
       floorPlanList.push({
+        ...(evidence || {}),
         id: evidenceId,
         url,
-        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
-        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
-        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
-        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
-        polygon: evidence?.polygon,
       });
       return;
     }
     if (evidenceType === "elevation item") {
       elevationList.push({
+        ...(evidence || {}),
         id: evidenceId,
         url,
-        project_file_id: Number(evidence?.project_file_id || 0) || undefined,
-        project_file_page_number: Number(evidence?.project_file_page_number || 0) || undefined,
-        page_width_pdf: Number(evidence?.page_width_pdf || 0) || undefined,
-        page_height_pdf: Number(evidence?.page_height_pdf || 0) || undefined,
-        polygon: evidence?.polygon,
       });
     }
   });
@@ -305,6 +296,13 @@ const getEvidenceId = (evidence: any, fallback: string = ""): string =>
     evidence?.id ??
     fallback,
   );
+
+const toEvidenceRecord = (evidence: any): EvidenceRecord => {
+  return {
+    ...(evidence || {}),
+    id: Number(evidence?.id || 0),
+  } as EvidenceRecord;
+};
 
 const extractEvidenceUrls = (
   item: any,
@@ -488,8 +486,18 @@ export default function ManualMergeV2Page() {
   const [collapsedElevationGroupMap, setCollapsedElevationGroupMap] = useState<Record<string, boolean>>({});
 
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPayload, setPreviewPayload] = useState<{
+    fileName?: string;
+    pageNumber: number;
+    imageUrl: string;
+    pageEvidences: EvidenceRecord[];
+  }>({
+    fileName: "",
+    pageNumber: 1,
+    imageUrl: "",
+    pageEvidences: [],
+  });
   const [evidenceByResultItemId, setEvidenceByResultItemId] = useState<
     Record<string, EvidenceInfo>
   >({});
@@ -521,6 +529,61 @@ export default function ManualMergeV2Page() {
   const scheduleEvidences = classifiedEvidenceUrls.schedule;
   const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
   const elevationEvidences = classifiedEvidenceUrls.elevation;
+  const allClassifiedEvidences = useMemo(
+    () => [...scheduleEvidences, ...floorPlanEvidences, ...elevationEvidences],
+    [elevationEvidences, floorPlanEvidences, scheduleEvidences],
+  );
+
+  const handleOpenEvidencePreview = useCallback(
+    (urls: string[]) => {
+      if (!urls.length) {
+        return;
+      }
+
+      const firstUrl = urls[0];
+      const firstMatchedEvidence = allClassifiedEvidences.find((evidence) => evidence?.url === firstUrl);
+
+      if (!firstMatchedEvidence) {
+        setPreviewPayload({
+          fileName: "Unnamed file",
+          pageNumber: 1,
+          imageUrl: firstUrl,
+          pageEvidences: [],
+        });
+        setPreviewOpen(true);
+        return;
+      }
+
+      const fileId = Number(firstMatchedEvidence?.project_file_id || 0);
+      const pageNumber = Number(firstMatchedEvidence?.project_file_page_number || 1) || 1;
+      const matchedFile = files.find((item) => Number(item?.id) === fileId);
+      const pageInfos = matchedFile?.parse_detail?.image_page_infos || [];
+      const matchedPageInfo =
+        pageInfos.find(
+          (pageInfo: any, pageIndex: number) =>
+            Number(pageInfo?.project_file_page_number || pageInfo?.page_number || pageIndex + 1) ===
+            pageNumber,
+        ) || null;
+      const imageUrl = matchedPageInfo?.s3_url || firstUrl;
+      const pageEvidences = allClassifiedEvidences
+        .filter(
+          (evidence) =>
+            Number(evidence?.project_file_id || 0) === fileId &&
+            Number(evidence?.project_file_page_number || 1) === pageNumber,
+        )
+        .map((evidence) => toEvidenceRecord(evidence))
+        .filter((evidence) => Boolean(getEvidenceBounds(evidence)));
+
+      setPreviewPayload({
+        fileName: matchedFile?.file_name || "Unnamed file",
+        pageNumber,
+        imageUrl,
+        pageEvidences,
+      });
+      setPreviewOpen(true);
+    },
+    [allClassifiedEvidences, files],
+  );
 
   const groupedFloorPlanRows = useMemo(() => {
     const groupedMap = new Map<
@@ -1593,8 +1656,7 @@ export default function ManualMergeV2Page() {
                     });
                     return;
                   }
-                  setPreviewUrls(urls);
-                  setPreviewOpen(true);
+                  handleOpenEvidencePreview(urls);
                 }}
               >
                 <Image
@@ -1797,9 +1859,12 @@ export default function ManualMergeV2Page() {
         </div>
       </div>
 
-      <EvidencePreviewModal
+      <EvidenceImagePreviewModal
         open={previewOpen}
-        previewUrls={previewUrls}
+        fileName={previewPayload.fileName}
+        pageNumber={previewPayload.pageNumber}
+        imageUrl={previewPayload.imageUrl}
+        pageEvidences={previewPayload.pageEvidences}
         onCancel={() => setPreviewOpen(false)}
       />
 

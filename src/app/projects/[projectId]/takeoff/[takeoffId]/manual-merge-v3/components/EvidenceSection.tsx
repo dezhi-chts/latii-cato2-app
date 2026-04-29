@@ -24,6 +24,7 @@ interface EvidenceSectionProps {
     page_width_pdf?: number;
     page_height_pdf?: number;
     polygon?: any;
+    [key: string]: any;
   }>;
   files: any[];
   currentLabel: string;
@@ -43,6 +44,13 @@ const resolvePreviewEvidences = (
     return samePageEvidences.length > 0 ? samePageEvidences : [singleEvidence];
   }
   return [singleEvidence];
+};
+
+const toEvidenceRecord = (evidence: any): EvidenceRecord => {
+  return {
+    ...(evidence || {}),
+    id: Number(evidence?.id || 0),
+  } as EvidenceRecord;
 };
 
 export default function EvidenceSection({
@@ -164,25 +172,8 @@ export default function EvidenceSection({
           Number(item?.project_file_id || 0) === fileId &&
           Number(item?.project_file_page_number || 1) === pageNumber,
       )
-      .map(
-        (item) =>
-          ({
-            id: Number(item.id || 0),
-            project_file_id: item.project_file_id,
-            project_file_page_number: item.project_file_page_number,
-            page_width_pdf: item.page_width_pdf,
-            page_height_pdf: item.page_height_pdf,
-            polygon: item.polygon,
-          }) as EvidenceRecord,
-      );
-    const clickedEvidence: EvidenceRecord = {
-      id: Number(evidence.id || 0),
-      project_file_id: evidence.project_file_id,
-      project_file_page_number: evidence.project_file_page_number,
-      page_width_pdf: evidence.page_width_pdf,
-      page_height_pdf: evidence.page_height_pdf,
-      polygon: evidence.polygon,
-    } as EvidenceRecord;
+      .map((item) => toEvidenceRecord(item));
+    const clickedEvidence = toEvidenceRecord(evidence);
 
     const previewEvidences = resolvePreviewEvidences(
       previewEvidenceMode,
