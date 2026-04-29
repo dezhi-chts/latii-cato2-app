@@ -109,36 +109,31 @@ export default function FloorPlanPage() {
     if (!takeOffId) return;
 
     setFullLoading(true);
-    try {
-      const response = await getTakeOffById(takeOffId as string);
-      if (response.status === "success" && response.data) {
-        const projectFiles: ExtendedProjectFile[] =
-          response.data.project_files || [];
-        setFiles(projectFiles);
+    const response = await getTakeOffById(takeOffId as string);
+    setFullLoading(false);
+    if (response.status === "success" && response.data) {
+      const projectFiles: ExtendedProjectFile[] =
+        response.data.project_files || [];
+      setFiles(projectFiles);
 
-        if (projectFiles.length > 0) {
-          setSelectedFileId(projectFiles[0].id);
-        }
+      if (projectFiles.length > 0) {
+        setSelectedFileId(projectFiles[0].id);
       }
-    } catch (error) {
-      console.error("Error fetching takeoff data:", error);
+    } else {
       notify.error({
         title: "Error",
-        description: "Failed to load takeoff data.",
+        description: response?.data?.detail || "Failed to load takeoff data.",
       });
-    } finally {
-      setFullLoading(false);
     }
   }, [takeOffId]);
 
   const fetchPromptTemplates = useCallback(async () => {
-    console.log('####### company_id', company_id, username)
     if (!company_id) return;
     const response = await getTemplates(company_id as number);
     if (response.status !== "success") {
       notify.error({
         title: "Error",
-        description: "Failed to load prompt templates.",
+        description: response?.data?.detail || "Failed to load prompt templates.",
       });
       return;
     }
@@ -154,10 +149,8 @@ export default function FloorPlanPage() {
     }
     list.unshift(standardTemplate);
     setPromptTemplates(list);
-    console.log('########## list.length', list.length, selectedTemplateId)
     if (list.length > 0 && !selectedTemplateId) {
       const preferredId = resolvePreferredTemplateId(list, username);
-      console.log('########## preferredId', preferredId)
       if (preferredId) {
         setSelectedTemplateId(preferredId);
       } else {
@@ -186,7 +179,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load floor plan and elevation data.",
+        description: response?.data?.detail || "Failed to load floor plan and elevation data.",
       });
     }
   }, [selectedFileId]);
@@ -201,7 +194,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load schedule evidence data.",
+        description: response?.data?.detail || "Failed to load schedule source data.",
       });
     }
   }, [selectedFileId]);
@@ -226,7 +219,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to get file evidence",
+        description: response?.data?.detail || "Failed to get file source",
       });
     }
   }, [selectedFileId]);
@@ -284,7 +277,7 @@ export default function FloorPlanPage() {
           } else {
             notify.error({
               title: "Error",
-              description: res?.data?.detail || "Failed to load evidence data.",
+              description: res?.data?.detail || "Failed to load source data.",
             });
           }
         } finally {
@@ -627,7 +620,7 @@ export default function FloorPlanPage() {
         title: "Error",
         description:
           groupedResponse?.data?.detail ||
-          "Failed to get grouped evidences by takeoff and file",
+          "Failed to get grouped source by takeoff and file",
       });
       return;
     }
@@ -890,7 +883,7 @@ export default function FloorPlanPage() {
                 height={14}
               />
             </Popover>
-            <span className="text-sm text-forumBlue-normal">Evidences</span>
+            <span className="text-sm text-forumBlue-normal">Source</span>
           </div>
           <EvidenceThumbailList
             pdfRef={pdfWrapperRef}

@@ -93,13 +93,13 @@ const LabelTypesSelect = ({
         }}
       >
         <div
-          className="w-[42px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
+          className="w-[30px] h-[15px] flex items-center justify-center rounded text-xxs text-white"
           style={{ backgroundColor: bgColor }}
         >
           <span className="ml-1">{icon}</span>
           <DownOutlined
-            className="ml-2"
-            style={{ color: "white", fontSize: "10px" }}
+            className="ml-1"
+            style={{ color: "white", fontSize: "10px", }}
           />
         </div>
       </Dropdown>

@@ -132,7 +132,7 @@ const IdentIndex = forwardRef<IdentIndexRef, {
       evidenceIsLoaded.current = false;
       notify.error({
         title: "Error",
-        description: "Failed to get file evidence",
+        description: "Failed to get file source",
       });
     }
   }, [selectedFileId, takeOff]);
@@ -274,7 +274,7 @@ const IdentIndex = forwardRef<IdentIndexRef, {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to delete evidence",
+        description: "Failed to delete source",
       });
     }
     setFullLoading(false);

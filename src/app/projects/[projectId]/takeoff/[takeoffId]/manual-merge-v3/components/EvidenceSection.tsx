@@ -128,13 +128,13 @@ export default function EvidenceSection({
           if (response.status !== "success") {
             notify.error({
               title: "Error",
-              description: response?.data?.detail || "Failed to delete evidence.",
+              description: response?.data?.detail || "Failed to delete source.",
             });
             return;
           }
           notify.success({
             title: "Success",
-            description: "Evidence deleted successfully.",
+            description: "Source deleted successfully.",
           });
           await onRefreshItemsAndEvidence();
         } finally {
@@ -212,13 +212,13 @@ export default function EvidenceSection({
       if (response.status !== "success") {
         notify.error({
           title: "Error",
-          description: response?.data?.detail || "Failed to update evidence label.",
+          description: response?.data?.detail || "Failed to update source label.",
         });
         return;
       }
       notify.success({
         title: "Success",
-        description: "Evidence label updated successfully.",
+        description: "Source label updated successfully.",
       });
       setIsEditModalOpen(false);
       await onRefreshItemsAndEvidence();

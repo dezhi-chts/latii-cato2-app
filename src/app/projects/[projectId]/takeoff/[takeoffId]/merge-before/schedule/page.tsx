@@ -64,25 +64,21 @@ export default function SchedulePage() {
     if (!takeOffId) return;
 
     setFullLoading(true);
-    try {
-      const response = await getTakeOffById(takeOffId as string);
-      if (response.status === "success" && response.data) {
-        const projectFiles: any[] =
-          response.data.project_files || [];
-        setFiles(projectFiles);
-        if (projectFiles.length > 0) {
-          setSelectedFileId(projectFiles[0].id);
-        }
-        resolveColumnNames(response.data?.take_off_result?.template_id || 1);
+    const response = await getTakeOffById(takeOffId as string);
+    setFullLoading(false);
+    if (response.status === "success") {
+      const projectFiles: any[] =
+        response.data?.project_files || [];
+      setFiles(projectFiles);
+      if (projectFiles?.length > 0) {
+        setSelectedFileId(projectFiles[0].id);
       }
-    } catch (error) {
-      console.error("Error fetching takeoff data:", error);
+      resolveColumnNames(response.data?.take_off_result?.template_id || 1);
+    } else {
       notify.error({
         title: "Error",
-        description: "Failed to load takeoff data.",
+        description: response?.data?.detail || "Failed to load takeoff data.",
       });
-    } finally {
-      setFullLoading(false);
     }
   }, [takeOffId]);
 
@@ -106,7 +102,7 @@ export default function SchedulePage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load schedule evidence data.",
+        description: response?.data?.detail || "Failed to load schedule source data.",
       });
     }
   }, [pageEvidenceId]);
@@ -127,7 +123,7 @@ export default function SchedulePage() {
           setItemBoxEvidenceId(id);
           notify.error({
             title: "Error",
-            description: "Failed to load evidence data.",
+            description: res?.data?.detail || "Failed to load source data.",
           });
         }
       }
@@ -327,7 +323,7 @@ export default function SchedulePage() {
       );
       notify.error({
         title: "Error",
-        description: "Failed to update item. Changes have been reverted.",
+        description: updateRes?.data?.detail || "Failed to update item. Changes have been reverted.",
       });
       return false;
     },
@@ -388,7 +384,7 @@ export default function SchedulePage() {
       if (deleteRes.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to delete item.",
+          description: deleteRes?.data?.detail || "Failed to delete item.",
         });
         return false;
       }
@@ -416,7 +412,7 @@ export default function SchedulePage() {
           if (res.status === "success") {
             notify.success({
               title: "Success",
-              description: "Evidence deleted successfully.",
+              description: "source deleted successfully.",
             });
             // 刷新take off result items
             if (selectedFileId) {
@@ -425,7 +421,7 @@ export default function SchedulePage() {
           } else {
             notify.error({
               title: "Error",
-              description: "Failed to delete evidence.",
+              description: res?.data?.detail || "Failed to delete source.",
             });
           }
         }
@@ -564,7 +560,7 @@ export default function SchedulePage() {
           className={`h-full shrink-0 transition-all duration-200 z-999 w-[250px]`}
         >
           <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-xs font-medium text-grey-dark">Schedules</span>
+            <span className="text-xs font-medium text-grey-dark">Source</span>
             <span className="text-xs text-grey-normal">{scheduleList.length} items</span>
           </div>
           <EvidenceThumbailList

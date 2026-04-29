@@ -129,7 +129,7 @@ export default function AddBoxModal({
 
 		notify.error({
 			title: "Error",
-			description: "Failed to load box types",
+			description: response?.data?.detail || "Failed to load box types",
 		});
 	}, [company_id]);
 

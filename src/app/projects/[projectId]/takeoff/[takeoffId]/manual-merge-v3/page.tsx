@@ -337,83 +337,6 @@ const extractEvidenceUrls = (
   return Array.from(new Set(urls));
 };
 
-const extractEvidenceEntries = (
-  item: any,
-  evidenceByResultItemId: Record<string, EvidenceInfo>,
-): EvidenceInfo[] => {
-  const entries: EvidenceInfo[] = [];
-
-  getTakeOffResultItemIds(item).forEach((resultItemId) => {
-    const mappedEvidence = evidenceByResultItemId[resultItemId];
-    if (mappedEvidence?.url) {
-      entries.push({
-        evidenceId: mappedEvidence.evidenceId || resultItemId,
-        url: mappedEvidence.url,
-      });
-    }
-  });
-
-  if (typeof item?.evidence_url === "string" && item.evidence_url) {
-    entries.push({ evidenceId: getEvidenceId(item, item.evidence_url), url: item.evidence_url });
-  }
-  if (typeof item?.s3_url === "string" && item.s3_url) {
-    entries.push({ evidenceId: getEvidenceId(item, item.s3_url), url: item.s3_url });
-  }
-  if (typeof item?.evidence_msg?.s3_url === "string" && item.evidence_msg.s3_url) {
-    entries.push({
-      evidenceId: getEvidenceId(item?.evidence_msg, item.evidence_msg.s3_url),
-      url: item.evidence_msg.s3_url,
-    });
-  }
-  if (Array.isArray(item?.evidence_urls)) {
-    item.evidence_urls.forEach((url: any, index: number) => {
-      if (typeof url === "string" && url) {
-        entries.push({ evidenceId: getEvidenceId(item, `${url}-${index}`), url });
-      }
-    });
-  }
-  if (Array.isArray(item?.evidence_msg)) {
-    item.evidence_msg.forEach((msg: any, index: number) => {
-      if (typeof msg?.s3_url === "string" && msg.s3_url) {
-        entries.push({
-          evidenceId: getEvidenceId(msg, `${msg.s3_url}-${index}`),
-          url: msg.s3_url,
-        });
-      }
-    });
-  }
-  if (Array.isArray(item?.evidences)) {
-    item.evidences.forEach((ev: any, index: number) => {
-      if (typeof ev?.s3_url === "string" && ev.s3_url) {
-        entries.push({
-          evidenceId: getEvidenceId(ev, `${ev.s3_url}-${index}`),
-          url: ev.s3_url,
-        });
-      }
-      if (typeof ev?.evidence_url === "string" && ev.evidence_url) {
-        entries.push({
-          evidenceId: getEvidenceId(ev, `${ev.evidence_url}-${index}`),
-          url: ev.evidence_url,
-        });
-      }
-    });
-  }
-
-  const dedupMap = new Map<string, string>();
-  entries.forEach((entry) => {
-    if (!entry.url) return;
-    const dedupeKey = entry.evidenceId || entry.url;
-    if (!dedupMap.has(dedupeKey)) {
-      dedupMap.set(dedupeKey, entry.url);
-    }
-  });
-
-  return Array.from(dedupMap.entries()).map(([evidenceId, url]) => ({
-    evidenceId,
-    url,
-  }));
-};
-
 const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boolean): any[] => {
   if (!Array.isArray(payload)) return [];
 
@@ -898,7 +821,7 @@ export default function ManualMergeV2Page() {
       if (response.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to load merge rows by label.",
+          description: response?.data?.detail || "Failed to load merge rows by label.",
         });
         return;
       }
@@ -985,7 +908,7 @@ export default function ManualMergeV2Page() {
       if (labelsRes.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to load grouped labels.",
+          description: labelsRes?.data?.detail || "Failed to load grouped labels.",
         });
         return;
       }
@@ -1068,7 +991,7 @@ export default function ManualMergeV2Page() {
       if (takeoffRes.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to load takeoff data.",
+          description: takeoffRes?.data?.detail || "Failed to load takeoff data.",
         });
         return;
       }
@@ -1773,7 +1696,7 @@ export default function ManualMergeV2Page() {
                   onChange={(value) => setContentTab(value as ContentTab)}
                   options={[
                     { label: "Items", value: "items" },
-                    { label: "Evidence", value: "evidences" },
+                    { label: "Source", value: "evidences" },
                   ]}
                 />
               </div>

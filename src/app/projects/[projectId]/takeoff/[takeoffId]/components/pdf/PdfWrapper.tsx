@@ -631,7 +631,7 @@ const PdfWrapper = forwardRef(
 							if (showAlert) {
 								notify.success({
 									title: "Success",
-									description: "Evidence submit successfully.",
+									description: "Source submit successfully.",
 								});
 							}
 
@@ -644,7 +644,7 @@ const PdfWrapper = forwardRef(
 							}
 							resolve("success");
 						} else {
-							reject(new Error("Evidence submit failed"));
+							reject(new Error("Source submit failed"));
 						}
 					})
 					.catch((error) => {
@@ -654,7 +654,7 @@ const PdfWrapper = forwardRef(
 						console.error("Error submitting evidence:", error);
 						notify.error({
 							title: "Error",
-							description: "Evidence submit failed.",
+							description: error?.message || "Source submit failed.",
 						});
 						reject(error);
 					});
@@ -672,7 +672,7 @@ const PdfWrapper = forwardRef(
 			if (res.status === "success") {
 				notify.success({
 					title: "Success",
-					description: "Evidence delete successfully.",
+					description: "Source delete successfully.",
 				});
 
 				onDeleteEvidence &&
@@ -680,7 +680,7 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description: "Evidence delete failed.",
+					description: res?.data?.detail || "Source delete failed.",
 				});
 			}
 			setFullLoading(false);
@@ -822,8 +822,8 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description:
-						"Evidence update failed, please delete and re-add the evidence.",
+					description: res?.data?.detail ||
+						"Source update failed, please delete and re-add the source.",
 				});
 			}
 		};
@@ -1081,17 +1081,22 @@ const PdfWrapper = forwardRef(
 			try {
 				let isRotate = nextAngle > 0 ? true : false;
 
-				let res = await rotateChange(project_file_id, isRotate, nextAngle);
+				let res: any = await rotateChange(project_file_id, isRotate, nextAngle);
 				if (res === "success") {
 					clearCropSections();
 					isAdjustRotateRef.current = true;
 					setRotate(nextAngle);
+				} else {
+					notify.error({
+						title: "Error",
+						description: res?.data?.detail || "Failed to rotate the PDF file.",
+					});
 				}
-			} catch (error) {
+			} catch (error: any) {
 				console.log("######## rotatePDF error", error);
 				notify.error({
 					title: "Error",
-					description: "Failed to rotate the PDF file.",
+					description: error?.message || "Failed to rotate the PDF file.",
 				});
 			} finally {
 				setFullLoading(false);
@@ -1927,7 +1932,7 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description: "OCR recognition failed.",
+					description: res?.data?.detail || "OCR recognition failed.",
 				});
 			}
 			setFullLoading(false);

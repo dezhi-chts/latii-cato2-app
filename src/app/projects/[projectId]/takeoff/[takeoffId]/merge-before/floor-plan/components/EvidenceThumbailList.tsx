@@ -239,20 +239,20 @@ const EvidenceThumbailList = ({
 												{
 													showDownload && (
 														<div
-															onClick={(e) => {
-																e.stopPropagation();
-																if (info.evidence_url) {
-																	const link = document.createElement('a');
-																	link.href = info.evidence_url;
-																	link.download = `evidence_${info.id}.png`;
-																	document.body.appendChild(link);
-																	link.click();
-																	document.body.removeChild(link);
-																}
-															}}
 															className="pl-1 pr-2 mt-[-8px] flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
 														>
-															<VerticalAlignBottomOutlined className="text-forumBlue-normal" />
+															<VerticalAlignBottomOutlined className="text-forumBlue-normal"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	if (info.evidence_url) {
+																		const link = document.createElement('a');
+																		link.href = info.evidence_url;
+																		link.download = `evidence_${info.id}.png`;
+																		document.body.appendChild(link);
+																		link.click();
+																		document.body.removeChild(link);
+																	}
+																}} />
 														</div>
 													)
 												}

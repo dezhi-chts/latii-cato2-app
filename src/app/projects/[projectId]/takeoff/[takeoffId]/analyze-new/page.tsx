@@ -326,7 +326,7 @@ export default function TakeoffListPage() {
 			setDynamicFields(getFallbackDynamicFields(fallbackItems));
 			notify.error({
 				title: "Error",
-				description: "Failed to get template fields",
+				description: response?.data?.detail || "Failed to get template fields",
 			});
 			return [];
 		},
@@ -386,7 +386,7 @@ export default function TakeoffListPage() {
 			if (takeoffResponse.status !== "success" || !takeoffResponse.data) {
 				notify.error({
 					title: "Error",
-					description: "Failed to get takeoff details",
+					description: takeoffResponse?.data?.detail || "Failed to get takeoff details",
 				});
 				setLoading(false);
 				return;
@@ -430,11 +430,11 @@ export default function TakeoffListPage() {
 
 			// Fetch evidences
 			//await fetchAllFileEvidences(projectFiles);
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Error fetching takeoff:", error);
 			notify.error({
 				title: "Error",
-				description: "Failed to get takeoff details",
+				description: error?.message || "Failed to get takeoff details",
 			});
 		} finally {
 			setLoading(false);
@@ -536,7 +536,7 @@ export default function TakeoffListPage() {
 			};
 		});
 
-		const response = await changeCheckedItem(String(item?.id), checked);
+		const response: any = await changeCheckedItem(String(item?.id), checked);
 		if (response) {
 			return;
 		}
@@ -566,7 +566,7 @@ export default function TakeoffListPage() {
 
 		notify.error({
 			title: "Error",
-			description: "Failed to update item status",
+			description: response?.data?.detail || "Failed to update item status",
 		});
 	};
 
@@ -594,7 +594,7 @@ export default function TakeoffListPage() {
 				} else {
 					notify.error({
 						title: "Error",
-						description: "Failed to reset take off",
+						description: response?.data?.detail || "Failed to reset take off",
 					});
 				}
 			},
@@ -632,11 +632,11 @@ export default function TakeoffListPage() {
 						response?.data?.detail || "Failed to download take off result",
 				});
 			}
-		} catch (error) {
+		} catch (error: any) {
 			console.error("Download error:", error);
 			notify.error({
 				title: "Error",
-				description: "Failed to download take off result",
+				description: error?.message || "Failed to download take off result",
 			});
 		} finally {
 			setDownloadLoading(false);
