@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Image, Popover, Modal, Tooltip, Checkbox } from "antd";
+import { Button, Image, Popover, Modal, Tooltip } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -30,8 +30,12 @@ import {
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import CreateItemModal from "./components/CreateItemModal";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
+import DisplayColumnsModal from "./components/DisplayColumnsModal";
 import { notify } from "@/utils/notify";
 const { confirm } = Modal;
+
+const REQUIRED_VISIBLE_COLUMNS = ["Label", "Sub Label", "Product", "Quantity"] as const;
+
 export default function SchedulePage() {
   const router = useRouter();
   const projectId = useParams().projectId;
@@ -52,6 +56,9 @@ export default function SchedulePage() {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
+  const [templateColumns, setTemplateColumns] = useState<string[]>([]);
+  const [columnModalOpen, setColumnModalOpen] = useState(false);
+  const [columnDraft, setColumnDraft] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
@@ -220,6 +227,22 @@ export default function SchedulePage() {
     return result;
   };
 
+  const normalizeVisibleColumns = useCallback(
+    (candidateColumns: string[], allTemplateColumns: string[]) => {
+      const allSet = new Set(allTemplateColumns);
+      const requiredColumnSet = new Set<string>(
+        REQUIRED_VISIBLE_COLUMNS as readonly string[],
+      );
+      const requiredColumns = allTemplateColumns.filter((field) =>
+        requiredColumnSet.has(field),
+      );
+      const candidateSet = new Set(candidateColumns);
+      const mergedSet = new Set([...requiredColumns, ...Array.from(candidateSet)]);
+      return allTemplateColumns.filter((field) => mergedSet.has(field));
+    },
+    [],
+  );
+
   const resolveColumnNames = useCallback(
     async (templateId: number, forceRefresh: boolean = false) => {
       try {
@@ -236,7 +259,13 @@ export default function SchedulePage() {
           if (fieldNames.length > 0) {
             // Ensure Label and Sub Label are first
             const orderedFields = ensureLabelFieldsFirst(fieldNames);
-            setColumns(orderedFields);
+            setTemplateColumns(orderedFields);
+            setColumns((prev) => {
+              if (prev.length === 0) {
+                return normalizeVisibleColumns([], orderedFields);
+              }
+              return normalizeVisibleColumns(prev, orderedFields);
+            });
             return orderedFields;
           }
         }
@@ -265,11 +294,53 @@ export default function SchedulePage() {
         "Location",
         "Source Type",
       ];
-      setColumns(defaultFields);
+      setTemplateColumns(defaultFields);
+      setColumns((prev) => {
+        if (prev.length === 0) {
+          return normalizeVisibleColumns([], defaultFields);
+        }
+        return normalizeVisibleColumns(prev, defaultFields);
+      });
       return defaultFields;
     },
-    [],
+    [normalizeVisibleColumns],
   );
+
+  const handleOpenColumnModal = useCallback(() => {
+    setColumnDraft(columns);
+    setColumnModalOpen(true);
+  }, [columns]);
+
+  const handleCancelColumnModal = useCallback(() => {
+    setColumnModalOpen(false);
+    setColumnDraft([]);
+  }, []);
+
+  const handleToggleColumnDraft = useCallback((fieldName: string, checked: boolean) => {
+    setColumnDraft((prev) => {
+      const requiredSet = new Set<string>(
+        REQUIRED_VISIBLE_COLUMNS as readonly string[],
+      );
+      if (requiredSet.has(fieldName)) {
+        return prev;
+      }
+      const nextSet = new Set(prev);
+      if (checked) {
+        nextSet.add(fieldName);
+      } else {
+        nextSet.delete(fieldName);
+      }
+      REQUIRED_VISIBLE_COLUMNS.forEach((requiredField) => nextSet.add(requiredField));
+      return templateColumns.filter((field) => nextSet.has(field));
+    });
+  }, [templateColumns]);
+
+  const handleConfirmColumnModal = useCallback(() => {
+    const nextColumns = normalizeVisibleColumns(columnDraft, templateColumns);
+    setColumns(nextColumns);
+    setColumnModalOpen(false);
+    setColumnDraft([]);
+  }, [columnDraft, normalizeVisibleColumns, templateColumns]);
 
   const handleSelectFile = (fileId: number) => {
     // Implement logic to select a file
@@ -612,6 +683,7 @@ export default function SchedulePage() {
             pageEvidenceId={pageEvidenceId}
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
+            onOpenColumnSelector={handleOpenColumnModal}
             onOpenCreateItemModal={handleOpenCreateItemModal}
             onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
           />
@@ -629,6 +701,15 @@ export default function SchedulePage() {
       />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildingLoading && <BuildingBackground step={'page-merge'} />}
+      <DisplayColumnsModal
+        open={columnModalOpen}
+        templateColumns={templateColumns}
+        selectedColumns={columnDraft}
+        requiredColumns={REQUIRED_VISIBLE_COLUMNS}
+        onToggleColumn={handleToggleColumnDraft}
+        onCancel={handleCancelColumnModal}
+        onConfirm={handleConfirmColumnModal}
+      />
     </div>
   );
 }

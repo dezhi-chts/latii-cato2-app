@@ -9,7 +9,12 @@ import {
 	parseItemResult as parseItemResultUtil,
 	setResultValueByField,
 } from "../../../analyze-new/takeoffUtils";
-import { EditOutlined, DeleteOutlined, CopyOutlined } from "@ant-design/icons";
+import {
+	EditOutlined,
+	DeleteOutlined,
+	CopyOutlined,
+	ColumnWidthOutlined,
+} from "@ant-design/icons";
 import { notify } from "@/utils/notify";
 import {
 	addMultipleTakeOffResultItems,
@@ -56,6 +61,7 @@ interface ScheduleTableProps {
 	) => Promise<boolean>;
 	onDeleteItem: (itemId: number) => Promise<boolean>;
 	onOpenCreateItemModal: () => void;
+	onOpenColumnSelector?: () => void;
 	onBatchActionSuccess?: () => Promise<void> | void;
 }
 
@@ -125,6 +131,7 @@ export default function ScheduleTable({
 	onUpdateField,
 	onDeleteItem,
 	onOpenCreateItemModal,
+	onOpenColumnSelector,
 	onBatchActionSuccess,
 }: ScheduleTableProps) {
 	const [editingCell, setEditingCell] = useState<{
@@ -556,6 +563,16 @@ export default function ScheduleTable({
 								}}
 							>
 								<DeleteOutlined className="text-[12px]" />
+							</div>
+						</Tooltip>
+						<Tooltip title="Columns">
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => {
+									onOpenColumnSelector?.();
+								}}
+							>
+								<ColumnWidthOutlined className="text-[12px]" />
 							</div>
 						</Tooltip>
 						<Button
