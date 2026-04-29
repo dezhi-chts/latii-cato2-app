@@ -2996,12 +2996,36 @@ const PdfWrapper = forwardRef(
 		);
 
 		useEffect(() => {
+			const toNumericEvidenceId = (value: unknown): number | null => {
+				const numericId = Number(value);
+				if (!Number.isFinite(numericId)) {
+					return null;
+				}
+				return numericId;
+			};
+
+			const triggerEvidenceDeleteAction = (rawIds: unknown[]) => {
+				const evidenceIds = Array.from(
+					new Set(
+						rawIds
+							.map((id) => toNumericEvidenceId(id))
+							.filter((id): id is number => id !== null),
+					),
+				);
+				if (evidenceIds.length === 0) {
+					return;
+				}
+				onAreaSelectionAction?.({
+					action: "delete",
+					evidenceIds,
+				});
+			};
+
 			const handleAreaSelectionDeleteByKeyboard = (event: KeyboardEvent) => {
 				const isDeleteKey =
 					event.key === "Delete" || event.key === "Backspace";
 				if (!isDeleteKey || event.repeat) return;
 				if (!enableAreaSelection || isAreaSelecting) return;
-				if (!savedAreaSelectRect && !areaSelectRect) return;
 
 				const target = event.target as HTMLElement | null;
 				if (target) {
@@ -3014,8 +3038,59 @@ const PdfWrapper = forwardRef(
 					if (isTypingTarget) return;
 				}
 
+				const currentRect = savedAreaSelectRect || areaSelectRect;
+				if (currentRect) {
+					event.preventDefault();
+					handleAreaSelectionOperation("delete");
+					return;
+				}
+
+				const selectedId = selectedShapeId;
+				const selectedEvidence = pageEvidence.find((item: any) => {
+					if (selectedId === null || selectedId === undefined) return false;
+					return String(item?.id) === String(selectedId);
+				});
+				const selectedCrop = cropSections.find((item: any) => {
+					if (selectedId === null || selectedId === undefined) return false;
+					return String(item?.id) === String(selectedId);
+				});
+				const centerEvidenceId = centerEvidence?.id;
+
+				const hasCenterEvidence = centerEvidenceId !== null && centerEvidenceId !== undefined;
+				const hasSelectedEvidence = Boolean(selectedEvidence);
+				const hasSelectedCrop = Boolean(selectedCrop);
+
+				if (!hasCenterEvidence && !hasSelectedEvidence && !hasSelectedCrop) {
+					return;
+				}
+
 				event.preventDefault();
-				handleAreaSelectionOperation("delete");
+
+				// Only centerEvidence exists -> delete it via parent callback
+				if (hasCenterEvidence && !selectedId) {
+					triggerEvidenceDeleteAction([centerEvidenceId]);
+					return;
+				}
+
+				// selectedShapeId is page evidence -> delete selected evidence (and center if both exist)
+				if (hasSelectedEvidence) {
+					const idsToDelete = hasCenterEvidence
+						? [centerEvidenceId, selectedEvidence?.id]
+						: [selectedEvidence?.id];
+					triggerEvidenceDeleteAction(idsToDelete);
+					return;
+				}
+
+				// selectedShapeId is crop -> delete local crop, and pass center evidence if present
+				if (hasSelectedCrop) {
+					if (hasCenterEvidence) {
+						triggerEvidenceDeleteAction([centerEvidenceId]);
+					}
+					removeCropSectionByIds([String(selectedCrop?.id)]);
+					if (String(selectedShapeId) === String(selectedCrop?.id)) {
+						setSelectedShapeId(null);
+					}
+				}
 			};
 
 			window.addEventListener("keydown", handleAreaSelectionDeleteByKeyboard);
@@ -3027,7 +3102,13 @@ const PdfWrapper = forwardRef(
 			enableAreaSelection,
 			handleAreaSelectionOperation,
 			isAreaSelecting,
+			centerEvidence,
+			cropSections,
+			pageEvidence,
+			selectedShapeId,
 			savedAreaSelectRect,
+			removeCropSectionByIds,
+			onAreaSelectionAction,
 		]);
 
 		return (

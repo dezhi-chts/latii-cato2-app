@@ -52,6 +52,12 @@ export enum FieldEvent {
   Delete = "delete",
 }
 
+// 将list中的标准模版放在第一位
+const standardTemplate = {
+  id: 1,
+  name: "Standard Template",
+  create_user: "System",
+};
 
 const Page = () => {
   const [activeMainTab, setActiveMainTab] = useState<MainTab>(
@@ -59,7 +65,7 @@ const Page = () => {
   );
 
   // 模版列表
-  const [templateList, setTemplateList] = useState<any[]>([]);
+  const [templateList, setTemplateList] = useState<any[]>([standardTemplate]);
   // 当前选中模版ID
   const [templateId, setTemplateId] = useState<number | null>(null);
   // 当前选中模版的内容
@@ -108,12 +114,6 @@ const Page = () => {
       if (list.length > 0) {
         list = list.filter((template: any) => template.id !== 1);
       }
-      // 将list中的标准模版放在第一位
-      const standardTemplate = {
-        id: 1,
-        name: "Standard Template",
-        create_user: "System",
-      };
       list.unshift(standardTemplate);
       setTemplateList(list);
       // 找到默认模版ID，设置为当前选中模版ID，如果没找到默认模版，设置为第一个模版

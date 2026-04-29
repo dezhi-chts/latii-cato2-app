@@ -15,7 +15,7 @@ import { notify } from "@/utils/notify";
 import { useUser } from "@/context/UserContext";
 
 
-const GENERATIONS = 'Generations';
+const GENERATIONS = 'Generalities';
 
 interface TemplateViewerProps {
   templateList: any[];
@@ -132,13 +132,13 @@ export const TemplateViewer = ({
       if (response.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to update GENERATIONS content.",
+          description: "Failed to update Generalities content.",
         });
         return;
       }
       notify.success({
         title: "Success",
-        description: "GENERATIONS content updated successfully.",
+        description: "Generalities content updated successfully.",
       });
       setIsGenerationsEditModalOpen(false);
       await onRefreshTemplateContent(templateId);
@@ -212,7 +212,7 @@ export const TemplateViewer = ({
             {activeSubTab === GENERATIONS ? (
               <div className={`text-sm ${canEditGenerations ? "pt-10" : ""}`}>
                 <ReactMarkdown>
-                  {templateContent?.analysis_ai_prompt || "No GENERATIONS content."}
+                  {templateContent?.analysis_ai_prompt || "No Generalities content."}
                 </ReactMarkdown>
               </div>
             ) : (
@@ -228,7 +228,7 @@ export const TemplateViewer = ({
       </div>
       <Modal
         open={isGenerationsEditModalOpen}
-        title="Edit GENERATIONS"
+        title="Edit Generalities"
         onCancel={() => setIsGenerationsEditModalOpen(false)}
         onOk={handleSaveGenerations}
         okText="Save"
@@ -239,7 +239,7 @@ export const TemplateViewer = ({
           rows={14}
           value={generationsDraft}
           onChange={(e) => setGenerationsDraft(e.target.value)}
-          placeholder="Input GENERATIONS markdown content"
+          placeholder="Input Generalities markdown content"
         />
       </Modal>
     </div>

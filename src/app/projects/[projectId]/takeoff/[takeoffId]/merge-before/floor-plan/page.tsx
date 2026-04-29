@@ -734,6 +734,13 @@ export default function FloorPlanPage() {
   }, []);
 
   const handleDeleteByEvidenceIds = useCallback((evidenceIds: number[]) => {
+    if (evidenceIds.length === 0) {
+      notify.error({
+        title: "Error",
+        description: "Please select labels to delete.",
+      });
+      return;
+    }
     const labels = getLabelsByEvidenceIds(evidenceIds);
     confirm({
       title: <div>Are you sure you want to delete labels:<br /> {labels.join(', ') + "?"} </div>,
