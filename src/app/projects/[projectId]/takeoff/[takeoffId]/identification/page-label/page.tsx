@@ -130,6 +130,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const [currentType, setCurrentType] = useState<string>(
 		ArchDrawingAllPageTags[0].type,
 	);
+	const pendingSelectFirstPageTypeRef = useRef<string>(ArchDrawingAllPageTags[0].type);
 
 	const [showNewLogicBoxModal, setShowNewLogicBoxModal] =
 		useState<boolean>(false);
@@ -313,7 +314,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			evidenceIsLoaded.current = false;
 			notify.error({
 				title: "Error",
-				description: "Failed to get file evidence",
+				description: "Failed to get file source",
 			});
 		}
 	}, [selectedFileId]);
@@ -370,40 +371,57 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		}
 	}, [selectedFileId]);
 
-	const filterThumbnailList = useMemo(() => {
-		const file = fileList.find((file: any) => file.id === selectedFileId);
-		if (!file) return [];
-
-		if (file && file.operation_type === FileOperationType.Quote)
-			return [...thumbnailList];
-
-		if (currentType === PageType.All) return [...thumbnailList];
-		else if (currentType === PageType.ActivePages) {
-			return [...thumbnailList].filter(
-				(item: any) => item.type && validPageType.includes(item.type),
-			);
-		}
-		else if (currentType === PageType.NotUsed) {
-			return [...thumbnailList].filter(
-				(item: any) => item.type === PageType.NotUsed || item.type === PageType.Unknown,
-			);
-		} else {
-			return [...thumbnailList].filter((item: any) => item.type === currentType);
-		}
-	}, [selectedFileId, fileList, currentType, thumbnailList]);
-
-	const getItemPage = (item: any, index: number) => {
+	const getItemPage = (item: any) => {
 		if (typeof item.file_name === "string") {
 			let pageArr = item.file_name?.split(".")[0];
 			return parseInt(pageArr) + 1;
 		}
-		return index + 1;
+		return 1;
 	};
+
+	const filterThumbnailList = useMemo(() => {
+		let list: any = [];
+		const file = fileList.find((file: any) => file.id === selectedFileId);
+		if (!file) return list;
+
+		if (file && file.operation_type === FileOperationType.Quote)
+			list = [...thumbnailList];
+
+		if (currentType === PageType.All) {
+			list = [...thumbnailList];
+		} else if (currentType === PageType.ActivePages) {
+			list = [...thumbnailList].filter(
+				(item: any) => item.type && validPageType.includes(item.type),
+			);
+		} else if (currentType === PageType.NotUsed) {
+			list = [...thumbnailList].filter(
+				(item: any) => item.type === PageType.NotUsed || item.type === PageType.Unknown,
+			);
+		} else {
+			list = [...thumbnailList].filter((item: any) => item.type === currentType);
+		}
+		return list;
+	}, [selectedFileId, fileList, currentType, thumbnailList]);
+
+	useEffect(() => {
+		pendingSelectFirstPageTypeRef.current = currentType;
+	}, [currentType]);
+
+	useEffect(() => {
+		if (pendingSelectFirstPageTypeRef.current !== currentType) {
+			return;
+		}
+		if (filterThumbnailList.length === 0) {
+			return;
+		}
+		setPage(getItemPage(filterThumbnailList[0]));
+		pendingSelectFirstPageTypeRef.current = "";
+	}, [currentType, filterThumbnailList]);
 
 	const updateThumbnailPageType = (page: number, type: string) => {
 		setThumbnailList((prev: any) => {
 			return prev.map((item: any, index: number) => {
-				let itemPageNum = getItemPage(item, index);
+				let itemPageNum = getItemPage(item);
 				if (itemPageNum === page) {
 					return {
 						...item,
@@ -437,7 +455,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			// 获取当前页旧的type
 			let oldType =
 				thumbnailList.find((item: any, index: number) => {
-					let itemPageNum = getItemPage(item, index);
+					let itemPageNum = getItemPage(item);
 					return itemPageNum === page;
 				})?.type || "";
 
@@ -496,7 +514,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 	const handleZoomChange = (value: number) => {
 		const clampedValue = Math.max(ZOOM_MIN, Math.min(value, ZOOM_MAX));
-    setZoom(clampedValue);
+		setZoom(clampedValue);
 	};
 
 	const handlePageChange = async (value: number) => {
@@ -763,7 +781,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		} else {
 			notify.error({
 				title: "Error",
-				description: res?.data?.detail || "Failed to get evidence items",
+				description: res?.data?.detail || "Failed to get items source",
 			});
 		}
 		setFullLoading(false);
@@ -782,7 +800,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				title: "Error",
 				description:
 					response?.data?.detail ||
-					"Failed to get grouped evidences by takeoff and file",
+					"Failed to get grouped source by takeoff and file",
 			});
 			return;
 		}
@@ -801,7 +819,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		if (schedule.length === 0) {
 			notify.error({
 				title: "Error",
-				description: "No valid evidence detected.",
+				description: "No valid source detected.",
 			});
 			return;
 		}

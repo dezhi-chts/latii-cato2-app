@@ -28,7 +28,7 @@ export default function ImageList({
 	return (
 		<div className="mb-2 flex h-full min-h-0 flex-col">
 			<div className="mb-2 text-sm font-medium text-forumBlue-normal">
-				Schedule Images ({images.length})
+				Schedule Source ({images.length})
 			</div>
 			<div className="flex-1 min-h-0 overflow-y-auto pr-1">
 				<div className="grid grid-cols-2 gap-4">

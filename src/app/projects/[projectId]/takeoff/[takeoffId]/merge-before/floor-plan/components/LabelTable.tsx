@@ -222,7 +222,7 @@ export default function LabelTable({
 		setRows(prevRows);
 		notify.error({
 			title: "Error",
-			description: "Failed to update label info. The table has been restored.",
+			description: response?.data?.detail || "Failed to update label info. The table has been restored.",
 		});
 	};
 
@@ -231,7 +231,7 @@ export default function LabelTable({
 		if (!Number.isFinite(rowId)) {
 			notify.error({
 				title: "Error",
-				description: "Invalid evidence id, unable to delete.",
+				description: "Invalid source id, unable to delete.",
 			});
 			return;
 		}
@@ -253,7 +253,7 @@ export default function LabelTable({
 
 		notify.error({
 			title: "Error",
-			description: "Failed to delete item. The table has been restored.",
+			description: response?.data?.detail || "Failed to delete item. The table has been restored.",
 		});
 
 		// confirm({
@@ -483,7 +483,7 @@ export default function LabelTable({
 							</div>
 						</Tooltip>
 					</div>
-					<div className="underline cursor-pointer" onClick={() => setShowScheduleModal(true)}>Schedule Images</div>
+					<div className="underline cursor-pointer" onClick={() => setShowScheduleModal(true)}>Schedule Source</div>
 				</div>
 			</div>
 			<div ref={tableRef} className="overflow-auto">

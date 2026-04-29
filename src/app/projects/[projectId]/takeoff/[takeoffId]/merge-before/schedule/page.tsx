@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Image, Popover, Modal, Tooltip, Checkbox } from "antd";
+import { Button, Image, Popover, Modal, Tooltip } from "antd";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -30,8 +30,12 @@ import {
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import CreateItemModal from "./components/CreateItemModal";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
+import DisplayColumnsModal from "./components/DisplayColumnsModal";
 import { notify } from "@/utils/notify";
 const { confirm } = Modal;
+
+const REQUIRED_VISIBLE_COLUMNS = ["Label", "Sub Label", "Product", "Quantity"] as const;
+
 export default function SchedulePage() {
   const router = useRouter();
   const projectId = useParams().projectId;
@@ -52,6 +56,9 @@ export default function SchedulePage() {
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
+  const [templateColumns, setTemplateColumns] = useState<string[]>([]);
+  const [columnModalOpen, setColumnModalOpen] = useState(false);
+  const [columnDraft, setColumnDraft] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
@@ -64,25 +71,21 @@ export default function SchedulePage() {
     if (!takeOffId) return;
 
     setFullLoading(true);
-    try {
-      const response = await getTakeOffById(takeOffId as string);
-      if (response.status === "success" && response.data) {
-        const projectFiles: any[] =
-          response.data.project_files || [];
-        setFiles(projectFiles);
-        if (projectFiles.length > 0) {
-          setSelectedFileId(projectFiles[0].id);
-        }
-        resolveColumnNames(response.data?.take_off_result?.template_id || 1);
+    const response = await getTakeOffById(takeOffId as string);
+    setFullLoading(false);
+    if (response.status === "success") {
+      const projectFiles: any[] =
+        response.data?.project_files || [];
+      setFiles(projectFiles);
+      if (projectFiles?.length > 0) {
+        setSelectedFileId(projectFiles[0].id);
       }
-    } catch (error) {
-      console.error("Error fetching takeoff data:", error);
+      resolveColumnNames(response.data?.take_off_result?.template_id || 1);
+    } else {
       notify.error({
         title: "Error",
-        description: "Failed to load takeoff data.",
+        description: response?.data?.detail || "Failed to load takeoff data.",
       });
-    } finally {
-      setFullLoading(false);
     }
   }, [takeOffId]);
 
@@ -106,7 +109,7 @@ export default function SchedulePage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load schedule evidence data.",
+        description: response?.data?.detail || "Failed to load schedule source data.",
       });
     }
   }, [pageEvidenceId]);
@@ -127,7 +130,7 @@ export default function SchedulePage() {
           setItemBoxEvidenceId(id);
           notify.error({
             title: "Error",
-            description: "Failed to load evidence data.",
+            description: res?.data?.detail || "Failed to load source data.",
           });
         }
       }
@@ -224,6 +227,22 @@ export default function SchedulePage() {
     return result;
   };
 
+  const normalizeVisibleColumns = useCallback(
+    (candidateColumns: string[], allTemplateColumns: string[]) => {
+      const allSet = new Set(allTemplateColumns);
+      const requiredColumnSet = new Set<string>(
+        REQUIRED_VISIBLE_COLUMNS as readonly string[],
+      );
+      const requiredColumns = allTemplateColumns.filter((field) =>
+        requiredColumnSet.has(field),
+      );
+      const candidateSet = new Set(candidateColumns);
+      const mergedSet = new Set([...requiredColumns, ...Array.from(candidateSet)]);
+      return allTemplateColumns.filter((field) => mergedSet.has(field));
+    },
+    [],
+  );
+
   const resolveColumnNames = useCallback(
     async (templateId: number, forceRefresh: boolean = false) => {
       try {
@@ -240,7 +259,13 @@ export default function SchedulePage() {
           if (fieldNames.length > 0) {
             // Ensure Label and Sub Label are first
             const orderedFields = ensureLabelFieldsFirst(fieldNames);
-            setColumns(orderedFields);
+            setTemplateColumns(orderedFields);
+            setColumns((prev) => {
+              if (prev.length === 0) {
+                return normalizeVisibleColumns([], orderedFields);
+              }
+              return normalizeVisibleColumns(prev, orderedFields);
+            });
             return orderedFields;
           }
         }
@@ -269,11 +294,53 @@ export default function SchedulePage() {
         "Location",
         "Source Type",
       ];
-      setColumns(defaultFields);
+      setTemplateColumns(defaultFields);
+      setColumns((prev) => {
+        if (prev.length === 0) {
+          return normalizeVisibleColumns([], defaultFields);
+        }
+        return normalizeVisibleColumns(prev, defaultFields);
+      });
       return defaultFields;
     },
-    [],
+    [normalizeVisibleColumns],
   );
+
+  const handleOpenColumnModal = useCallback(() => {
+    setColumnDraft(columns);
+    setColumnModalOpen(true);
+  }, [columns]);
+
+  const handleCancelColumnModal = useCallback(() => {
+    setColumnModalOpen(false);
+    setColumnDraft([]);
+  }, []);
+
+  const handleToggleColumnDraft = useCallback((fieldName: string, checked: boolean) => {
+    setColumnDraft((prev) => {
+      const requiredSet = new Set<string>(
+        REQUIRED_VISIBLE_COLUMNS as readonly string[],
+      );
+      if (requiredSet.has(fieldName)) {
+        return prev;
+      }
+      const nextSet = new Set(prev);
+      if (checked) {
+        nextSet.add(fieldName);
+      } else {
+        nextSet.delete(fieldName);
+      }
+      REQUIRED_VISIBLE_COLUMNS.forEach((requiredField) => nextSet.add(requiredField));
+      return templateColumns.filter((field) => nextSet.has(field));
+    });
+  }, [templateColumns]);
+
+  const handleConfirmColumnModal = useCallback(() => {
+    const nextColumns = normalizeVisibleColumns(columnDraft, templateColumns);
+    setColumns(nextColumns);
+    setColumnModalOpen(false);
+    setColumnDraft([]);
+  }, [columnDraft, normalizeVisibleColumns, templateColumns]);
 
   const handleSelectFile = (fileId: number) => {
     // Implement logic to select a file
@@ -327,7 +394,7 @@ export default function SchedulePage() {
       );
       notify.error({
         title: "Error",
-        description: "Failed to update item. Changes have been reverted.",
+        description: updateRes?.data?.detail || "Failed to update item. Changes have been reverted.",
       });
       return false;
     },
@@ -388,7 +455,7 @@ export default function SchedulePage() {
       if (deleteRes.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to delete item.",
+          description: deleteRes?.data?.detail || "Failed to delete item.",
         });
         return false;
       }
@@ -416,7 +483,7 @@ export default function SchedulePage() {
           if (res.status === "success") {
             notify.success({
               title: "Success",
-              description: "Evidence deleted successfully.",
+              description: "source deleted successfully.",
             });
             // 刷新take off result items
             if (selectedFileId) {
@@ -425,7 +492,7 @@ export default function SchedulePage() {
           } else {
             notify.error({
               title: "Error",
-              description: "Failed to delete evidence.",
+              description: res?.data?.detail || "Failed to delete source.",
             });
           }
         }
@@ -535,8 +602,19 @@ export default function SchedulePage() {
             placement="rightBottom"
             title={null}
             content={
-              <div className="py-1 w-[240px] flex flex-col">
-                Please make sure all labels are not empty.
+              <div className="py-1 w-[300px] flex flex-col gap-1 text-xs text-grey-normal">
+                <div>1.Please make sure all labels are not empty.</div>
+                <div>2.System: <br></br>
+                  If there are multiple pieces of data, it indicates that it is a system. Here, it refers to the components of the reviewed system.<br></br>
+                  Example: If this system is composed of two types of windows, then there should only be two pieces of data here.<br></br>
+                  If it is not "system", the "Sub Label" must be empty. <br></br>
+                  If it is "system", the "Sub Label" cannot be empty.
+                </div>
+                <div>
+                  3.Sub Label Naming Convention Suggestions：<br></br>
+                  Example: Label_suffix。 <br></br>
+                  suffix = “L”, “R”, “1”, “2”, or based on reading order
+                </div>
               </div>
             }
             trigger="hover"
@@ -564,7 +642,7 @@ export default function SchedulePage() {
           className={`h-full shrink-0 transition-all duration-200 z-999 w-[250px]`}
         >
           <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-xs font-medium text-grey-dark">Schedules</span>
+            <span className="text-xs font-medium text-grey-dark">Source</span>
             <span className="text-xs text-grey-normal">{scheduleList.length} items</span>
           </div>
           <EvidenceThumbailList
@@ -605,6 +683,7 @@ export default function SchedulePage() {
             pageEvidenceId={pageEvidenceId}
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
+            onOpenColumnSelector={handleOpenColumnModal}
             onOpenCreateItemModal={handleOpenCreateItemModal}
             onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
           />
@@ -622,6 +701,15 @@ export default function SchedulePage() {
       />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildingLoading && <BuildingBackground step={'page-merge'} />}
+      <DisplayColumnsModal
+        open={columnModalOpen}
+        templateColumns={templateColumns}
+        selectedColumns={columnDraft}
+        requiredColumns={REQUIRED_VISIBLE_COLUMNS}
+        onToggleColumn={handleToggleColumnDraft}
+        onCancel={handleCancelColumnModal}
+        onConfirm={handleConfirmColumnModal}
+      />
     </div>
   );
 }

@@ -29,9 +29,9 @@ export const getTakeOffsByProjectId = async (projectId: string) => {
     const url = `/project/take_off/project_id?project_id=${projectId}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error getting take offs:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -40,9 +40,9 @@ export const getTakeOffsDetails = async (takeOffId: string) => {
     const url = `/project/take_off/${takeOffId}/details`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error getting take offs detail:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -55,9 +55,9 @@ export const updateTakeOffName = async (name: string, takeOffId: number) => {
     };
     const response = await http.put(url, body);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error updating take off name:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -66,9 +66,9 @@ export const deleteTakeOffById = async (takeOffId: string) => {
     const url = `/project/take_off/delete/take_off_id?take_off_id=${takeOffId}`;
     const response = await http.delete(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error deleting take off:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -79,12 +79,12 @@ export const getTakeOffResultItemWithEvidenceUrlsById = async (
     const url = `/drawing-ai/drawing_ai/get_take_off_result_item_with_evidence_urls_by_id?result_item_id=${result_item_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -93,12 +93,12 @@ export const getFileSourceMergeResultDetailById = async (result_id: number) => {
     const url = `/drawing-ai/drawing_ai/get_file_source_merge_result_detail_by_id?result_id=${result_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -109,12 +109,12 @@ export const getSignalFileSourceMergeResultDetailById = async (
     const url = `/drawing-ai/drawing_ai/get_single_file_merge_result_detail_by_id?result_id=${result_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -125,12 +125,12 @@ export const getMultipleFilesMergeResultDetailById = async (
     const url = `/drawing-ai/drawing_ai/get_multiple_files_merge_result_detail_by_id?result_id=${result_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -139,12 +139,12 @@ export const getMergeStatusByTakeOffId = async (take_off_id: number) => {
     const url = `/drawing-ai/drawing_ai/get_merge_status_by_take_off_id?take_off_id=${take_off_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -153,12 +153,12 @@ export const getTakeOffEvidenceUrlsByIds = async (result_item_ids: string) => {
     const url = `/drawing-ai/drawing_ai/get_evidence_urls_by_take_off_result_item_ids?take_off_result_item_ids=${result_item_ids}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error rolling back merge results by take off and file:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -178,12 +178,12 @@ export const resetTakeOff = async (take_off_id: string, file_ids: string) => {
     const url = `/drawing-ai/drawing_ai/reset_take_off_and_hard_delete_by_take_off_and_files?take_off_id=${take_off_id}&file_ids=${file_ids}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error(
       "Error resetting take off and hard deleting by take off and files:",
       error,
     );
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -192,9 +192,9 @@ export const updateTakeOffResultItem = async (result_id: string, data: any) => {
     const url = `/drawing-ai/drawing_ai/update_multiple_files_merge_result_by_id?result_id=${result_id}`;
     const response = await http.post(url, data);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error updating take off result item:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -203,9 +203,9 @@ export const addTakeOffResultItem = async (data: any) => {
     const url = `/drawing-ai/drawing_ai/create_multiple_files_merge_result`;
     const response = await http.post(url, data);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error adding take off result item:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -214,9 +214,9 @@ export const deleteTakeOffResultItem = async (result_id: string) => {
     const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id?result_id=${result_id}`;
     const response = await http.delete(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error deleting take off result item:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -225,9 +225,9 @@ export const getTakeOffSummaryStats = async (take_off_id: any) => {
     const url = `/project/take_off_result/stats?take_off_id=${take_off_id}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
-    console.error("Error copying take off result item:", error);
-    return { data: null, status: "error" };
+  } catch (error:any) {
+    console.error("Error getting take off summary stats:", error);
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -239,9 +239,9 @@ export const getEvidenceByProjectFileAndPage = async (
     const url = `/drawing-ai/drawing_ai/get_evidence_by_project_file_and_page?project_file_id=${project_file_id}&project_file_page_number=${project_file_page_number}`;
     const response = await http.get(url);
     return { data: response as any, status: "success" };
-  } catch (error) {
+  } catch (error:any) {
     console.error("Error getting evidence by project file and page:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 
@@ -256,7 +256,7 @@ export const analyzeNewEvidencesByProjectFile = async (
     return { data: response as any, status: "success" };
   } catch (error) {
     console.error("Error analyze new evidences by project file:", error);
-    return { data: null, status: "error" };
+    return { data: error?.response?.data || null, status: "error" };
   }
 };
 

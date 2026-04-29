@@ -631,7 +631,7 @@ const PdfWrapper = forwardRef(
 							if (showAlert) {
 								notify.success({
 									title: "Success",
-									description: "Evidence submit successfully.",
+									description: "Source submit successfully.",
 								});
 							}
 
@@ -644,7 +644,7 @@ const PdfWrapper = forwardRef(
 							}
 							resolve("success");
 						} else {
-							reject(new Error("Evidence submit failed"));
+							reject(new Error("Source submit failed"));
 						}
 					})
 					.catch((error) => {
@@ -654,7 +654,7 @@ const PdfWrapper = forwardRef(
 						console.error("Error submitting evidence:", error);
 						notify.error({
 							title: "Error",
-							description: "Evidence submit failed.",
+							description: error?.message || "Source submit failed.",
 						});
 						reject(error);
 					});
@@ -672,7 +672,7 @@ const PdfWrapper = forwardRef(
 			if (res.status === "success") {
 				notify.success({
 					title: "Success",
-					description: "Evidence delete successfully.",
+					description: "Source delete successfully.",
 				});
 
 				onDeleteEvidence &&
@@ -680,7 +680,7 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description: "Evidence delete failed.",
+					description: res?.data?.detail || "Source delete failed.",
 				});
 			}
 			setFullLoading(false);
@@ -822,8 +822,8 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description:
-						"Evidence update failed, please delete and re-add the evidence.",
+					description: res?.data?.detail ||
+						"Source update failed, please delete and re-add the source.",
 				});
 			}
 		};
@@ -1081,17 +1081,22 @@ const PdfWrapper = forwardRef(
 			try {
 				let isRotate = nextAngle > 0 ? true : false;
 
-				let res = await rotateChange(project_file_id, isRotate, nextAngle);
+				let res: any = await rotateChange(project_file_id, isRotate, nextAngle);
 				if (res === "success") {
 					clearCropSections();
 					isAdjustRotateRef.current = true;
 					setRotate(nextAngle);
+				} else {
+					notify.error({
+						title: "Error",
+						description: res?.data?.detail || "Failed to rotate the PDF file.",
+					});
 				}
-			} catch (error) {
+			} catch (error: any) {
 				console.log("######## rotatePDF error", error);
 				notify.error({
 					title: "Error",
-					description: "Failed to rotate the PDF file.",
+					description: error?.message || "Failed to rotate the PDF file.",
 				});
 			} finally {
 				setFullLoading(false);
@@ -1927,7 +1932,7 @@ const PdfWrapper = forwardRef(
 			} else {
 				notify.error({
 					title: "Error",
-					description: "OCR recognition failed.",
+					description: res?.data?.detail || "OCR recognition failed.",
 				});
 			}
 			setFullLoading(false);
@@ -2578,7 +2583,7 @@ const PdfWrapper = forwardRef(
 		const handleCopyShape = (
 			sections: GroupFrame[],
 			group: GroupFrame,
-			direction: "right" | "bottom",
+			direction: "right" | "bottom" | "left" | "top",
 		) => {
 			let groupObj = sections.find((e: any) => e.id === group.id);
 			if (!groupObj) return;
@@ -2597,6 +2602,8 @@ const PdfWrapper = forwardRef(
 
 			let maxXRight = baseMaxX;
 			let maxYBottom = baseMaxY;
+			let minXLeft = baseMinX;
+			let minYTop = baseMinY;
 
 			if (direction === "right") {
 				let rightShapes = sections
@@ -2664,10 +2671,82 @@ const PdfWrapper = forwardRef(
 				} else {
 					maxYBottom = bottomShapes[canPutIndex].bounds.maxY;
 				}
+			} else if (direction === "left") {
+				let leftShapes = sections
+					.filter((section) => {
+						const cropBounds = section.bounds;
+						if (cropBounds.maxX > baseMaxX) return false;
+
+						if (cropBounds.minY > baseMaxY || cropBounds.maxY < baseMinY) {
+							return false;
+						}
+						return true;
+					})
+					.sort((a, b) => b.bounds.maxX - a.bounds.maxX);
+
+				let canPutIndex = -1;
+				for (let i = 0; i < leftShapes.length; i++) {
+					if (i === leftShapes.length - 1) break;
+					const cropBounds = leftShapes[i].bounds;
+					const nextCropBounds = leftShapes[i + 1].bounds;
+					if (cropBounds.minX - nextCropBounds.maxX > baseWidth + gapX * 2) {
+						canPutIndex = i;
+						break;
+					}
+				}
+
+				if (canPutIndex === -1) {
+					if (leftShapes.length >= 2) {
+						gapX = leftShapes[0].bounds.minX - leftShapes[1].bounds.maxX;
+					}
+					minXLeft = leftShapes[leftShapes.length - 1].bounds.minX;
+				} else {
+					minXLeft = leftShapes[canPutIndex].bounds.minX;
+				}
+			} else if (direction === "top") {
+				let topShapes = sections
+					.filter((section) => {
+						const cropBounds = section.bounds;
+						if (cropBounds.maxY > baseMaxY) return false;
+
+						if (cropBounds.minX > baseMaxX || cropBounds.maxX < baseMinX) {
+							return false;
+						}
+						return true;
+					})
+					.sort((a, b) => b.bounds.maxY - a.bounds.maxY);
+				let canPutIndex = -1;
+				for (let i = 0; i < topShapes.length; i++) {
+					if (i === topShapes.length - 1) break;
+					const cropBounds = topShapes[i].bounds;
+					const nextCropBounds = topShapes[i + 1].bounds;
+					if (cropBounds.minY - nextCropBounds.maxY > baseHeight + gapY * 2) {
+						canPutIndex = i;
+						break;
+					}
+				}
+				if (canPutIndex === -1) {
+					if (topShapes.length >= 2) {
+						gapY = topShapes[0].bounds.minY - topShapes[1].bounds.maxY;
+					}
+					minYTop = topShapes[topShapes.length - 1].bounds.minY;
+				} else {
+					minYTop = topShapes[canPutIndex].bounds.minY;
+				}
 			}
 
-			let targetLeft = direction === "right" ? maxXRight + gapX : baseMinX;
-			let targetTop = direction === "bottom" ? maxYBottom + gapY : baseMinY;
+			let targetLeft =
+				direction === "right"
+					? maxXRight + gapX
+					: direction === "left"
+						? minXLeft - gapX - baseWidth
+						: baseMinX;
+			let targetTop =
+				direction === "bottom"
+					? maxYBottom + gapY
+					: direction === "top"
+						? minYTop - gapY - baseHeight
+						: baseMinY;
 
 			if (direction === "right") {
 				if (maxXRight + gapX + baseWidth > stageWidth - 10) {
@@ -2676,6 +2755,16 @@ const PdfWrapper = forwardRef(
 				}
 			} else if (direction === "bottom") {
 				if (maxYBottom + gapY + baseHeight > stageHeight - 10) {
+					message.error("The shape cannot be placed outside the stage");
+					return null;
+				}
+			} else if (direction === "left") {
+				if (targetLeft < 10) {
+					message.error("The shape cannot be placed outside the stage");
+					return null;
+				}
+			} else if (direction === "top") {
+				if (targetTop < 10) {
 					message.error("The shape cannot be placed outside the stage");
 					return null;
 				}
@@ -2722,7 +2811,7 @@ const PdfWrapper = forwardRef(
 		const copyGroupShape = useCallback((
 			type: string, //类型 group || evidence
 			group: GroupFrame,
-			direction: "right" | "bottom",
+			direction: "right" | "bottom" | "left" | "top",
 		) => {
 			let groupFrame: any = { ...group };
 			if (type === 'evidence') {
@@ -2991,12 +3080,36 @@ const PdfWrapper = forwardRef(
 		);
 
 		useEffect(() => {
+			const toNumericEvidenceId = (value: unknown): number | null => {
+				const numericId = Number(value);
+				if (!Number.isFinite(numericId)) {
+					return null;
+				}
+				return numericId;
+			};
+
+			const triggerEvidenceDeleteAction = (rawIds: unknown[]) => {
+				const evidenceIds = Array.from(
+					new Set(
+						rawIds
+							.map((id) => toNumericEvidenceId(id))
+							.filter((id): id is number => id !== null),
+					),
+				);
+				if (evidenceIds.length === 0) {
+					return;
+				}
+				onAreaSelectionAction?.({
+					action: "delete",
+					evidenceIds,
+				});
+			};
+
 			const handleAreaSelectionDeleteByKeyboard = (event: KeyboardEvent) => {
 				const isDeleteKey =
 					event.key === "Delete" || event.key === "Backspace";
 				if (!isDeleteKey || event.repeat) return;
 				if (!enableAreaSelection || isAreaSelecting) return;
-				if (!savedAreaSelectRect && !areaSelectRect) return;
 
 				const target = event.target as HTMLElement | null;
 				if (target) {
@@ -3009,8 +3122,59 @@ const PdfWrapper = forwardRef(
 					if (isTypingTarget) return;
 				}
 
+				const currentRect = savedAreaSelectRect || areaSelectRect;
+				if (currentRect) {
+					event.preventDefault();
+					handleAreaSelectionOperation("delete");
+					return;
+				}
+
+				const selectedId = selectedShapeId;
+				const selectedEvidence = pageEvidence.find((item: any) => {
+					if (selectedId === null || selectedId === undefined) return false;
+					return String(item?.id) === String(selectedId);
+				});
+				const selectedCrop = cropSections.find((item: any) => {
+					if (selectedId === null || selectedId === undefined) return false;
+					return String(item?.id) === String(selectedId);
+				});
+				const centerEvidenceId = centerEvidence?.id;
+
+				const hasCenterEvidence = centerEvidenceId !== null && centerEvidenceId !== undefined;
+				const hasSelectedEvidence = Boolean(selectedEvidence);
+				const hasSelectedCrop = Boolean(selectedCrop);
+
+				if (!hasCenterEvidence && !hasSelectedEvidence && !hasSelectedCrop) {
+					return;
+				}
+
 				event.preventDefault();
-				handleAreaSelectionOperation("delete");
+
+				// Only centerEvidence exists -> delete it via parent callback
+				if (hasCenterEvidence && !selectedId) {
+					triggerEvidenceDeleteAction([centerEvidenceId]);
+					return;
+				}
+
+				// selectedShapeId is page evidence -> delete selected evidence (and center if both exist)
+				if (hasSelectedEvidence) {
+					const idsToDelete = hasCenterEvidence
+						? [centerEvidenceId, selectedEvidence?.id]
+						: [selectedEvidence?.id];
+					triggerEvidenceDeleteAction(idsToDelete);
+					return;
+				}
+
+				// selectedShapeId is crop -> delete local crop, and pass center evidence if present
+				if (hasSelectedCrop) {
+					if (hasCenterEvidence) {
+						triggerEvidenceDeleteAction([centerEvidenceId]);
+					}
+					removeCropSectionByIds([String(selectedCrop?.id)]);
+					if (String(selectedShapeId) === String(selectedCrop?.id)) {
+						setSelectedShapeId(null);
+					}
+				}
 			};
 
 			window.addEventListener("keydown", handleAreaSelectionDeleteByKeyboard);
@@ -3022,7 +3186,13 @@ const PdfWrapper = forwardRef(
 			enableAreaSelection,
 			handleAreaSelectionOperation,
 			isAreaSelecting,
+			centerEvidence,
+			cropSections,
+			pageEvidence,
+			selectedShapeId,
 			savedAreaSelectRect,
+			removeCropSectionByIds,
+			onAreaSelectionAction,
 		]);
 
 		return (
@@ -3600,6 +3770,30 @@ const PdfWrapper = forwardRef(
 														<span className="">+</span>
 													</div>
 												</div>}
+											{showAddBtnOnBox &&
+												<div
+													className="absolute flex items-center pointer-events-auto transition-all"
+													style={{
+														left: evidencePlusOffset,
+														top: "50%",
+														transform: `translateY(-50%) scale(${evidenceControlScale})`,
+														transformOrigin: "center left",
+														display:
+															selectedShapeId === item.id ? "block" : "none",
+													}}
+												>
+													<div
+														className={`w-[20px] h-[20px]  flex justify-center items-center text-white rounded-full cursor-pointer`}
+														style={{
+															backgroundColor: color,
+														}}
+														onClick={() => {
+															copyGroupShape('evidence', item, "left");
+														}}
+													>
+														<span className="">+</span>
+													</div>
+												</div>}
 											{
 												showAddBtnOnBox && <div
 													className="absolute flex items-center pointer-events-auto transition-all"
@@ -3619,6 +3813,31 @@ const PdfWrapper = forwardRef(
 														}}
 														onClick={() => {
 															copyGroupShape('evidence', item, "bottom");
+														}}
+													>
+														<span className="inline-block">+</span>
+													</div>
+												</div>
+											}
+											{
+												showAddBtnOnBox && <div
+													className="absolute flex items-center pointer-events-auto transition-all"
+													style={{
+														left: "50%",
+														top: evidencePlusOffset,
+														transform: `translateX(-50%) scale(${evidenceControlScale})`,
+														transformOrigin: "top center",
+														display:
+															selectedShapeId === item.id ? "block" : "none",
+													}}
+												>
+													<div
+														className={`w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer`}
+														style={{
+															backgroundColor: color,
+														}}
+														onClick={() => {
+															copyGroupShape('evidence', item, "top");
 														}}
 													>
 														<span className="inline-block">+</span>
@@ -3788,6 +4007,27 @@ const PdfWrapper = forwardRef(
 													</div>
 												</div>
 											)}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
+												<div
+													className="absolute flex items-center pointer-events-auto transition-all"
+													style={{
+														left: groupPlusOffset,
+														top: "50%",
+														transform: `translateY(-50%) scale(${groupControlScale})`,
+														transformOrigin: "center left",
+													}}
+												>
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
+														onClick={() => {
+															copyGroupShape('group', group, "left");
+														}}
+													>
+														<span>+</span>
+													</div>
+												</div>
+											)}
 
 											{/* 底部复制按钮 */}
 											{showAddBtnOnBox && selectedShapeId === group.id && (
@@ -3805,6 +4045,27 @@ const PdfWrapper = forwardRef(
 														style={{ backgroundColor: color }}
 														onClick={() => {
 															copyGroupShape('group', group, "bottom");
+														}}
+													>
+														<span>+</span>
+													</div>
+												</div>
+											)}
+											{showAddBtnOnBox && selectedShapeId === group.id && (
+												<div
+													className="absolute flex justify-center pointer-events-auto transition-all"
+													style={{
+														left: "50%",
+														top: groupPlusOffset,
+														transform: `translateX(-50%) scale(${groupControlScale})`,
+														transformOrigin: "top center",
+													}}
+												>
+													<div
+														className="w-[20px] h-[20px] flex justify-center items-center text-white rounded-full cursor-pointer"
+														style={{ backgroundColor: color }}
+														onClick={() => {
+															copyGroupShape('group', group, "top");
 														}}
 													>
 														<span>+</span>

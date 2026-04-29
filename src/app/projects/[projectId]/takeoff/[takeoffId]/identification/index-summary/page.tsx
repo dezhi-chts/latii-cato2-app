@@ -128,7 +128,7 @@ const IdentSummary = () => {
       evidenceIsLoaded.current = false;
       notify.error({
         title: "Error",
-        description: "Failed to get file evidence",
+        description: "Failed to get file source",
       });
     }
   }, [selectedFileId, takeOff]);

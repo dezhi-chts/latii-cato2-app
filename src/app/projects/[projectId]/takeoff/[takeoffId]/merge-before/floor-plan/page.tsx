@@ -109,36 +109,31 @@ export default function FloorPlanPage() {
     if (!takeOffId) return;
 
     setFullLoading(true);
-    try {
-      const response = await getTakeOffById(takeOffId as string);
-      if (response.status === "success" && response.data) {
-        const projectFiles: ExtendedProjectFile[] =
-          response.data.project_files || [];
-        setFiles(projectFiles);
+    const response = await getTakeOffById(takeOffId as string);
+    setFullLoading(false);
+    if (response.status === "success" && response.data) {
+      const projectFiles: ExtendedProjectFile[] =
+        response.data.project_files || [];
+      setFiles(projectFiles);
 
-        if (projectFiles.length > 0) {
-          setSelectedFileId(projectFiles[0].id);
-        }
+      if (projectFiles.length > 0) {
+        setSelectedFileId(projectFiles[0].id);
       }
-    } catch (error) {
-      console.error("Error fetching takeoff data:", error);
+    } else {
       notify.error({
         title: "Error",
-        description: "Failed to load takeoff data.",
+        description: response?.data?.detail || "Failed to load takeoff data.",
       });
-    } finally {
-      setFullLoading(false);
     }
   }, [takeOffId]);
 
   const fetchPromptTemplates = useCallback(async () => {
-    console.log('####### company_id', company_id, username)
     if (!company_id) return;
     const response = await getTemplates(company_id as number);
     if (response.status !== "success") {
       notify.error({
         title: "Error",
-        description: "Failed to load prompt templates.",
+        description: response?.data?.detail || "Failed to load prompt templates.",
       });
       return;
     }
@@ -154,10 +149,8 @@ export default function FloorPlanPage() {
     }
     list.unshift(standardTemplate);
     setPromptTemplates(list);
-    console.log('########## list.length', list.length, selectedTemplateId)
     if (list.length > 0 && !selectedTemplateId) {
       const preferredId = resolvePreferredTemplateId(list, username);
-      console.log('########## preferredId', preferredId)
       if (preferredId) {
         setSelectedTemplateId(preferredId);
       } else {
@@ -186,7 +179,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load floor plan and elevation data.",
+        description: response?.data?.detail || "Failed to load floor plan and elevation data.",
       });
     }
   }, [selectedFileId]);
@@ -201,7 +194,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to load schedule evidence data.",
+        description: response?.data?.detail || "Failed to load schedule source data.",
       });
     }
   }, [selectedFileId]);
@@ -226,7 +219,7 @@ export default function FloorPlanPage() {
     } else {
       notify.error({
         title: "Error",
-        description: "Failed to get file evidence",
+        description: response?.data?.detail || "Failed to get file source",
       });
     }
   }, [selectedFileId]);
@@ -284,7 +277,7 @@ export default function FloorPlanPage() {
           } else {
             notify.error({
               title: "Error",
-              description: res?.data?.detail || "Failed to load evidence data.",
+              description: res?.data?.detail || "Failed to load source data.",
             });
           }
         } finally {
@@ -525,61 +518,6 @@ export default function FloorPlanPage() {
     [evidenceType, labelTableData],
   );
 
-  const handleNext = useCallback(async () => {
-    if (!selectedFileId) return;
-    // 检测所有的空标签是否已经处理完
-    let pageList = [...thumbnailData].map((item, index) => {
-      return {
-        ...item,
-        pageNum: index + 1,
-      }
-    })
-    let existEmptyLabel = pageList.filter((item, index) => {
-      return item?.has_empty_label;
-    });
-    if (existEmptyLabel.length > 0) {
-      let numbers = existEmptyLabel.map((item) => item?.pageNum).join(', ');
-      let firstEmptyLabelEvidence = existEmptyLabel[0]?.id;
-      confirm({
-        title: 'Warning',
-        icon: <WarningOutlined />,
-        content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
-        okText: 'Yes',
-        cancelText: 'No',
-        okType: 'primary',
-        onOk: () => {
-          // 跳转到第一个存在空标签的页面
-          setPageEvidenceId(firstEmptyLabelEvidence);
-        },
-      })
-      return;
-    }
-
-    let findLabelEmpty = (data: any) => {
-      return data.find((item: any) => {
-        try {
-          let label = JSON.parse(item?.ocr_text)?.result?.Label;
-          return label === "" || label === null;
-        } catch (error) {
-          console.log('error', error);
-          return false;
-        }
-      });
-    };
-    if (
-      (evidenceType === PageType.FloorPlan || evidenceType === PageType.Elevation) &&
-      labelTableData?.length > 0 &&
-      findLabelEmpty(labelTableData)
-    ) {
-      notify.error({
-        title: "Please fill in all the labels.",
-      });
-      return;
-    }
-
-    handleAnaylize();
-  }, [thumbnailData]);
-
   const formatAnalyzeErrorMessage = useCallback((error: unknown) => {
     if (!error) return "Failed to analyze the file.";
 
@@ -627,7 +565,7 @@ export default function FloorPlanPage() {
         title: "Error",
         description:
           groupedResponse?.data?.detail ||
-          "Failed to get grouped evidences by takeoff and file",
+          "Failed to get grouped source by takeoff and file",
       });
       return;
     }
@@ -700,6 +638,67 @@ export default function FloorPlanPage() {
     eventSourceRef.current = sseConnection;
   }, [selectedTemplateId, selectedFileId, takeOffId, formatAnalyzeErrorMessage, handleGetGroupedEvidences]);
 
+  const handleNext = useCallback(async () => {
+    if (!selectedFileId) return;
+    // 检测所有的空标签是否已经处理完
+    let pageList = [...thumbnailData].map((item, index) => {
+      return {
+        ...item,
+        pageNum: index + 1,
+      }
+    })
+    let existEmptyLabel = pageList.filter((item, index) => {
+      return item?.has_empty_label;
+    });
+    if (existEmptyLabel.length > 0) {
+      let numbers = existEmptyLabel.map((item) => item?.pageNum).join(', ');
+      let firstEmptyLabelEvidence = existEmptyLabel[0]?.id;
+      confirm({
+        title: 'Warning',
+        icon: <WarningOutlined />,
+        content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
+        okText: 'Yes',
+        cancelText: 'No',
+        okType: 'primary',
+        onOk: () => {
+          // 跳转到第一个存在空标签的页面
+          setPageEvidenceId(firstEmptyLabelEvidence);
+        },
+      })
+      return;
+    }
+
+    let findLabelEmpty = (data: any) => {
+      return data.find((item: any) => {
+        try {
+          let label = JSON.parse(item?.ocr_text)?.result?.Label;
+          return label === "" || label === null;
+        } catch (error) {
+          console.log('error', error);
+          return false;
+        }
+      });
+    };
+    if (
+      (evidenceType === PageType.FloorPlan || evidenceType === PageType.Elevation) &&
+      labelTableData?.length > 0 &&
+      findLabelEmpty(labelTableData)
+    ) {
+      notify.error({
+        title: "Please fill in all the labels.",
+      });
+      return;
+    }
+
+    handleAnaylize();
+  }, [
+    selectedFileId,
+    thumbnailData,
+    evidenceType,
+    labelTableData,
+    handleAnaylize,
+  ]);
+  
   const handleBack = () => {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };
@@ -741,6 +740,13 @@ export default function FloorPlanPage() {
   }, []);
 
   const handleDeleteByEvidenceIds = useCallback((evidenceIds: number[]) => {
+    if (evidenceIds.length === 0) {
+      notify.error({
+        title: "Error",
+        description: "Please select labels to delete.",
+      });
+      return;
+    }
     const labels = getLabelsByEvidenceIds(evidenceIds);
     confirm({
       title: <div>Are you sure you want to delete labels:<br /> {labels.join(', ') + "?"} </div>,
@@ -890,7 +896,7 @@ export default function FloorPlanPage() {
                 height={14}
               />
             </Popover>
-            <span className="text-sm text-forumBlue-normal">Evidences</span>
+            <span className="text-sm text-forumBlue-normal">Source</span>
           </div>
           <EvidenceThumbailList
             pdfRef={pdfWrapperRef}

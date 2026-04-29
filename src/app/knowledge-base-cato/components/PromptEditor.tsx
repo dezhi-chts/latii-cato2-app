@@ -25,7 +25,7 @@ interface PromptField {
   name: string;
 }
 
-const GENERATIONS = "Generations";
+const GENERATIONS = "Generalities";
 const GENERATIONS_FIELD_ID = "__generations__";
 
 interface PromptEditorProps {
@@ -150,13 +150,13 @@ export const PromptEditor = ({
       if (response.status !== "success") {
         notify.error({
           title: "Error",
-          description: response?.data?.detail || "Failed to update GENERATIONS content.",
+          description: response?.data?.detail || "Failed to update Generalities content.",
         });
         return;
       }
       notify.success({
         title: "Success",
-        description: "GENERATIONS content updated successfully.",
+        description: "Generalities content updated successfully.",
       });
       setIsGenerationsEditModalOpen(false);
       onRefreshTemplatePrompt?.();
@@ -242,7 +242,7 @@ export const PromptEditor = ({
           {selectedFieldId === GENERATIONS ? (
             <div className={`text-sm ${canEditGenerations ? "pt-10" : ""}`}>
               <ReactMarkdown>
-                {templateContent?.analysis_ai_prompt || "No GENERATIONS content."}
+                {templateContent?.analysis_ai_prompt || "No Generalities content."}
               </ReactMarkdown>
             </div>
           ) : (
@@ -269,7 +269,7 @@ export const PromptEditor = ({
       />
       <Modal
         open={isGenerationsEditModalOpen}
-        title="Edit GENERATIONS"
+        title="Edit Generalities"
         onCancel={() => setIsGenerationsEditModalOpen(false)}
         onOk={handleSaveGenerations}
         okText="Save"
@@ -280,7 +280,7 @@ export const PromptEditor = ({
           rows={14}
           value={generationsDraft}
           onChange={(e) => setGenerationsDraft(e.target.value)}
-          placeholder="Input GENERATIONS markdown content"
+          placeholder="Input Generalities markdown content"
         />
       </Modal>
     </div>

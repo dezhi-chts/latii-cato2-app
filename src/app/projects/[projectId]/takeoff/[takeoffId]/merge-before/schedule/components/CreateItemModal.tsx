@@ -74,7 +74,7 @@ export default function CreateItemModal({
       if (response.status !== "success") {
         notify.error({
           title: "Error",
-          description: "Failed to create item.",
+          description: response?.data?.detail || "Failed to create item.",
         });
         return;
       }
@@ -91,7 +91,7 @@ export default function CreateItemModal({
       if (error?.errorFields?.length) return;
       notify.error({
         title: "Error",
-        description: "Failed to create item.",
+        description: error?.message || "Failed to create item.",
       });
     }
   };

@@ -231,28 +231,32 @@ const EvidenceThumbailList = ({
 									onClick={() => onClickEvidenceId(info.id)}
 								>
 									<div className={`rounded-2xl ${info?.has_empty_label ? 'border border-red-500 shadow-[0_0_5px_rgba(239,68,68,1)]' : ''}`}>
-										<div className="p-[10px] pb-[5px]">
-											<div className="h-[30px] flex flex-row justify-between group">
+										<div className="p-[10px] pt-[5px] pb-[5px]">
+											<div className="h-[30px] flex flex-row justify-between items-center group">
 												<div className="overflow-hidden">
 													<PageTextWithTooltip text={itemPageNum} />
 												</div>
 												{
 													showDownload && (
 														<div
-															onClick={(e) => {
-																e.stopPropagation();
-																if (info.evidence_url) {
-																	const link = document.createElement('a');
-																	link.href = info.evidence_url;
-																	link.download = `evidence_${info.id}.png`;
-																	document.body.appendChild(link);
-																	link.click();
-																	document.body.removeChild(link);
-																}
-															}}
-															className="pl-1 pr-2 mt-[-8px] flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
+															className="pl-1 pr-2 flex-1 flex-row justify-end cursor-pointer hidden group-hover:flex"
 														>
-															<VerticalAlignBottomOutlined className="text-forumBlue-normal" />
+															<div className="px-[3px] rounded-md hover:bg-forumBlue-normal-active/30 transition-colors cursor-pointer"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	if (info.evidence_url) {
+																		const link = document.createElement('a');
+																		link.href = info.evidence_url;
+																		link.download = `evidence_${info.id}.png`;
+																		document.body.appendChild(link);
+																		link.click();
+																		document.body.removeChild(link);
+																	}
+																}}
+															>
+																<VerticalAlignBottomOutlined className="text-forumBlue-normal"
+																/>
+															</div>
 														</div>
 													)
 												}

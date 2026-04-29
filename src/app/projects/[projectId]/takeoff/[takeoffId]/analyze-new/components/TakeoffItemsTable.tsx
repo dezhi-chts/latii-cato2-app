@@ -380,13 +380,13 @@ export default function TakeoffItemsTable({
 			} else {
 				notify.error({
 					title: "Error",
-					description: "Failed to copy item",
+					description: response?.data?.detail || "Failed to copy item",
 				});
 			}
-		} catch (error) {
+		} catch (error: any) {
 			notify.error({
 				title: "Error",
-				description: "Failed to copy item",
+				description: error?.message || "Failed to copy item",
 			});
 		} finally {
 			setCopyLoading(false);
@@ -415,13 +415,13 @@ export default function TakeoffItemsTable({
 					} else {
 						notify.error({
 							title: "Error",
-							description: "Failed to delete item",
+							description: response?.data?.detail || "Failed to delete item",
 						});
 					}
-				} catch (error) {
+				} catch (error: any) {
 					notify.error({
 						title: "Error",
-						description: "Failed to delete item",
+						description: error?.message || "Failed to delete item",
 					});
 				} finally {
 					setDeleteLoading(false);
@@ -556,7 +556,7 @@ export default function TakeoffItemsTable({
 
 								notify.error({
 									title: "Error",
-									description: "Failed to update field",
+									description: response?.data?.detail || "Failed to update field",
 								});
 							}}
 						/>
