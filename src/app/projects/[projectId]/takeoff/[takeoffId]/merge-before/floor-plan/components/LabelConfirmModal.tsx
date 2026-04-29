@@ -1,5 +1,6 @@
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useEffect, useRef } from "react";
 import { Modal, Input, Button } from "antd";
+import type { InputRef } from "antd";
 import { notify } from "@/utils/notify";
 
 interface LabelConfirmModalProps {
@@ -15,10 +16,23 @@ const LabelConfirmModal = ({
   onSubmit,
   children,
 }: LabelConfirmModalProps) => {
+  const labelInputRef = useRef<InputRef>(null);
   const [formData, setFormData] = useState<any>({
     Label: '',
     //'Sub Label': '',
   });
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      labelInputRef.current?.focus({
+        cursor: "end",
+      });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [open]);
 
   const handleSubmit = () => {
     // 检验表单数据
@@ -46,7 +60,7 @@ const LabelConfirmModal = ({
           <div className="flex-1 flex flex-col">
             <div className="mt-6 flex flex-row">
               <div className="w-[100px] text-sm">Label:</div>
-              <Input className="flex-1" value={formData?.Label} onChange={(e) => { setFormData({ ...formData, Label: e.target.value }) }} type="text" />
+              <Input ref={labelInputRef} className="flex-1" value={formData?.Label} autoFocus onChange={(e) => { setFormData({ ...formData, Label: e.target.value }) }} type="text" />
             </div>
             {/* <div className="my-2 flex flex-row">
               <div className="w-[100px] text-sm">Sub Label:</div>

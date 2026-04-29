@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, Modal } from "antd";
+import type { InputRef } from "antd";
 
 import { evidenceBatchUpdate } from "@/services/evidenceService";
 import { notify } from "@/utils/notify";
@@ -21,6 +22,7 @@ export default function BatchEditEvidenceModal({
   onCancel,
   onSuccess,
 }: BatchEditEvidenceModalProps) {
+  const labelInputRef = useRef<InputRef>(null);
   const [labelInput, setLabelInput] = useState("");
   const [subLabelInput, setSubLabelInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +49,18 @@ export default function BatchEditEvidenceModal({
       setSubLabelInput("");
       setSubmitting(false);
     }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      labelInputRef.current?.focus({
+        cursor: "end",
+      });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [open]);
 
   const handleConfirm = async () => {
@@ -144,6 +158,7 @@ export default function BatchEditEvidenceModal({
         <div>
           <div className="mb-1 text-sm text-grey-normal">Label</div>
           <Input
+            ref={labelInputRef}
             value={labelInput}
             placeholder="Input Label"
             onChange={(event) => setLabelInput(event.target.value)}
