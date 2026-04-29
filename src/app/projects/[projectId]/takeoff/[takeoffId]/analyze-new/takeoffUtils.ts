@@ -515,132 +515,74 @@ const pdfjsToImageCoords = (
 	}
 };
 
-const isRangeWithin = (
-	minValue: number,
-	maxValue: number,
-	rangeMin: number,
-	rangeMax: number,
-	tolerance = 1,
-) => {
-	return minValue >= rangeMin - tolerance && maxValue <= rangeMax + tolerance;
-};
-
-const shouldApplyViewBoxOffset = (
-	polygon: EvidencePoint[],
-	viewBox: number[] | null,
-	pageWidth: number,
-	pageHeight: number,
-) => {
-	if (!viewBox || viewBox.length < 4 || polygon.length === 0) {
-		return false;
-	}
-
-	const offsetX = Number(viewBox[0] || 0);
-	const offsetY = Number(viewBox[1] || 0);
-	const hasOffset = Math.abs(offsetX) > 0.5 || Math.abs(offsetY) > 0.5;
-	if (!hasOffset) {
-		return false;
-	}
-
-	const viewBoxWidth = Math.abs(Number(viewBox[2] || 0) - Number(viewBox[0] || 0));
-	const viewBoxHeight = Math.abs(Number(viewBox[3] || 0) - Number(viewBox[1] || 0));
-	if (!viewBoxWidth || !viewBoxHeight) {
-		return false;
-	}
-
-	const xValues = polygon.map((point) => Number(point?.x || 0));
-	const yValues = polygon.map((point) => Number(point?.y || 0));
-	const minX = Math.min(...xValues);
-	const maxX = Math.max(...xValues);
-	const minY = Math.min(...yValues);
-	const maxY = Math.max(...yValues);
-
-	const basePageWidth = pageWidth || viewBoxWidth;
-	const basePageHeight = pageHeight || viewBoxHeight;
-
-	const currentWithinPage =
-		isRangeWithin(minX, maxX, 0, basePageWidth) &&
-		isRangeWithin(minY, maxY, 0, basePageHeight);
-	const shiftedWithinPage =
-		isRangeWithin(minX + offsetX, maxX + offsetX, 0, basePageWidth) &&
-		isRangeWithin(minY + offsetY, maxY + offsetY, 0, basePageHeight);
-	const currentWithinLocalViewBox =
-		isRangeWithin(minX, maxX, 0, viewBoxWidth) &&
-		isRangeWithin(minY, maxY, 0, viewBoxHeight);
-
-	// Prefer offset when polygon looks local to view_box
-	// or when current coords are out-of-page but shifted coords are valid.
-	if (currentWithinLocalViewBox && shiftedWithinPage) {
-		return true;
-	}
-	if (!currentWithinPage && shiftedWithinPage) {
-		return true;
-	}
-
-	return false;
-};
-
 export const getEvidenceBounds = (
 	evidence?: EvidenceRecord,
 ): EvidenceBoxBounds | null => {
-	const polygon = parsePolygon(evidence?.polygon);
+	const polygon = parsePolygon(evidence?.polygon).map((point) => ({
+		x: Number(point?.x || 0),
+		y: Number(point?.y || 0),
+	}));
 	const pageWidth = Number(evidence?.page_width_pdf || 0);
 	const pageHeight = Number(evidence?.page_height_pdf || 0);
 	const viewBox = parseViewBox(evidence?.view_box);
 	const rotationAngle = Number(evidence?.rotation_angle || 0);
-	const viewport = getPdfjsViewportDimensions(
-		viewBox,
-		pageWidth,
-		pageHeight,
-		rotationAngle,
-	);
-
-	if (!polygon.length || !pageWidth || !pageHeight) {
+	if (!polygon.length) {
 		return null;
 	}
 
-	const applyOffset = shouldApplyViewBoxOffset(
-		polygon,
-		viewBox,
-		pageWidth,
-		pageHeight,
+	const viewBoxMinX = Number(viewBox?.[0] || 0);
+	const viewBoxMinY = Number(viewBox?.[1] || 0);
+	const viewBoxMaxX = Number(viewBox?.[2] || 0);
+	const viewBoxMaxY = Number(viewBox?.[3] || 0);
+	const viewBoxWidth = Math.abs(viewBoxMaxX - viewBoxMinX);
+	const viewBoxHeight = Math.abs(viewBoxMaxY - viewBoxMinY);
+	const hasValidViewBox = Boolean(viewBox && viewBoxWidth > 0 && viewBoxHeight > 0);
+
+	// Normalize all polygons to a unified page-local coordinate system whose origin is (0, 0).
+	const normalizedPolygon = polygon.map((point) => ({
+		x: hasValidViewBox ? point.x - viewBoxMinX : point.x,
+		y: hasValidViewBox ? point.y - viewBoxMinY : point.y,
+	}));
+
+	const normalizedPageWidth = hasValidViewBox ? viewBoxWidth : pageWidth;
+	const normalizedPageHeight = hasValidViewBox ? viewBoxHeight : pageHeight;
+	if (!normalizedPageWidth || !normalizedPageHeight) {
+		return null;
+	}
+
+	const viewport = getPdfjsViewportDimensions(
+		[0, 0, normalizedPageWidth, normalizedPageHeight],
+		normalizedPageWidth,
+		normalizedPageHeight,
+		rotationAngle,
 	);
 
-	const imagePoints = polygon.map((point) => {
-		const normalizedPoint = {
-			x: Number(point?.x || 0),
-			y: Number(point?.y || 0),
-		};
-
-		const adjustedPoint = applyOffset
-			? {
-					x: normalizedPoint.x + Number(viewBox?.[0] || 0),
-					y: normalizedPoint.y + Number(viewBox?.[1] || 0),
-				}
-			: normalizedPoint;
-
-		return pdfjsToImageCoords(
-			adjustedPoint.x,
-			adjustedPoint.y,
+	const imagePoints = normalizedPolygon.map((point) =>
+		pdfjsToImageCoords(
+			Number(point?.x || 0),
+			Number(point?.y || 0),
 			viewport.width,
 			viewport.height,
 			rotationAngle,
-		);
-	});
-
+		),
+	);
 	const xValues = imagePoints.map((point) => point?.x || 0);
 	const yValues = imagePoints.map((point) => point?.y || 0);
 	const left = Math.min(...xValues);
 	const top = Math.min(...yValues);
 	const right = Math.max(...xValues);
 	const bottom = Math.max(...yValues);
+	const clampedLeft = Math.max(0, left);
+	const clampedTop = Math.max(0, top);
+	const clampedRight = Math.min(viewport.width, right);
+	const clampedBottom = Math.min(viewport.height, bottom);
 
 	return {
 		id: evidence?.id || 0,
-		left: Math.max(0, left),
-		top: Math.max(0, top),
-		width: Math.max(0, right - left),
-		height: Math.max(0, bottom - top),
+		left: clampedLeft,
+		top: clampedTop,
+		width: Math.max(0, clampedRight - clampedLeft),
+		height: Math.max(0, clampedBottom - clampedTop),
 		source_width: viewport.width,
 		source_height: viewport.height,
 	};
