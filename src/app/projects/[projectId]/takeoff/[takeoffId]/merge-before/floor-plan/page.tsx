@@ -518,61 +518,6 @@ export default function FloorPlanPage() {
     [evidenceType, labelTableData],
   );
 
-  const handleNext = useCallback(async () => {
-    if (!selectedFileId) return;
-    // 检测所有的空标签是否已经处理完
-    let pageList = [...thumbnailData].map((item, index) => {
-      return {
-        ...item,
-        pageNum: index + 1,
-      }
-    })
-    let existEmptyLabel = pageList.filter((item, index) => {
-      return item?.has_empty_label;
-    });
-    if (existEmptyLabel.length > 0) {
-      let numbers = existEmptyLabel.map((item) => item?.pageNum).join(', ');
-      let firstEmptyLabelEvidence = existEmptyLabel[0]?.id;
-      confirm({
-        title: 'Warning',
-        icon: <WarningOutlined />,
-        content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
-        okText: 'Yes',
-        cancelText: 'No',
-        okType: 'primary',
-        onOk: () => {
-          // 跳转到第一个存在空标签的页面
-          setPageEvidenceId(firstEmptyLabelEvidence);
-        },
-      })
-      return;
-    }
-
-    let findLabelEmpty = (data: any) => {
-      return data.find((item: any) => {
-        try {
-          let label = JSON.parse(item?.ocr_text)?.result?.Label;
-          return label === "" || label === null;
-        } catch (error) {
-          console.log('error', error);
-          return false;
-        }
-      });
-    };
-    if (
-      (evidenceType === PageType.FloorPlan || evidenceType === PageType.Elevation) &&
-      labelTableData?.length > 0 &&
-      findLabelEmpty(labelTableData)
-    ) {
-      notify.error({
-        title: "Please fill in all the labels.",
-      });
-      return;
-    }
-
-    handleAnaylize();
-  }, [thumbnailData]);
-
   const formatAnalyzeErrorMessage = useCallback((error: unknown) => {
     if (!error) return "Failed to analyze the file.";
 
@@ -693,6 +638,67 @@ export default function FloorPlanPage() {
     eventSourceRef.current = sseConnection;
   }, [selectedTemplateId, selectedFileId, takeOffId, formatAnalyzeErrorMessage, handleGetGroupedEvidences]);
 
+  const handleNext = useCallback(async () => {
+    if (!selectedFileId) return;
+    // 检测所有的空标签是否已经处理完
+    let pageList = [...thumbnailData].map((item, index) => {
+      return {
+        ...item,
+        pageNum: index + 1,
+      }
+    })
+    let existEmptyLabel = pageList.filter((item, index) => {
+      return item?.has_empty_label;
+    });
+    if (existEmptyLabel.length > 0) {
+      let numbers = existEmptyLabel.map((item) => item?.pageNum).join(', ');
+      let firstEmptyLabelEvidence = existEmptyLabel[0]?.id;
+      confirm({
+        title: 'Warning',
+        icon: <WarningOutlined />,
+        content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
+        okText: 'Yes',
+        cancelText: 'No',
+        okType: 'primary',
+        onOk: () => {
+          // 跳转到第一个存在空标签的页面
+          setPageEvidenceId(firstEmptyLabelEvidence);
+        },
+      })
+      return;
+    }
+
+    let findLabelEmpty = (data: any) => {
+      return data.find((item: any) => {
+        try {
+          let label = JSON.parse(item?.ocr_text)?.result?.Label;
+          return label === "" || label === null;
+        } catch (error) {
+          console.log('error', error);
+          return false;
+        }
+      });
+    };
+    if (
+      (evidenceType === PageType.FloorPlan || evidenceType === PageType.Elevation) &&
+      labelTableData?.length > 0 &&
+      findLabelEmpty(labelTableData)
+    ) {
+      notify.error({
+        title: "Please fill in all the labels.",
+      });
+      return;
+    }
+
+    handleAnaylize();
+  }, [
+    selectedFileId,
+    thumbnailData,
+    evidenceType,
+    labelTableData,
+    handleAnaylize,
+  ]);
+  
   const handleBack = () => {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };

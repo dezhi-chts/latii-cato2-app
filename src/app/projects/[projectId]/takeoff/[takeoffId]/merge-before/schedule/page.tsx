@@ -531,8 +531,19 @@ export default function SchedulePage() {
             placement="rightBottom"
             title={null}
             content={
-              <div className="py-1 w-[240px] flex flex-col">
-                Please make sure all labels are not empty.
+              <div className="py-1 w-[300px] flex flex-col gap-1 text-xs text-grey-normal">
+                <div>1.Please make sure all labels are not empty.</div>
+                <div>2.System: <br></br>
+                  If there are multiple pieces of data, it indicates that it is a system. Here, it refers to the components of the reviewed system.<br></br>
+                  Example: If this system is composed of two types of windows, then there should only be two pieces of data here.<br></br>
+                  If it is not "system", the "Sub Label" must be empty. <br></br>
+                  If it is "system", the "Sub Label" cannot be empty.
+                </div>
+                <div>
+                  3.Sub Label Naming Convention Suggestions：<br></br>
+                  Example: Label_suffix。 <br></br>
+                  suffix = “L”, “R”, “1”, “2”, or based on reading order
+                </div>
               </div>
             }
             trigger="hover"

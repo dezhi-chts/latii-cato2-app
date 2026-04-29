@@ -292,7 +292,7 @@ export default function EvidenceSection({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 items-center justify-center">
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No evidence images." />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`No ${title} Source.`} />
           </div>
         )}
 
