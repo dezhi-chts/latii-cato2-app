@@ -21,6 +21,7 @@ import {
 	Tooltip,
 } from "antd";
 import type { ColumnsType, TableProps } from "antd/es/table";
+import type { SortOrder } from "antd/es/table/interface";
 import Image from "next/image";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -118,6 +119,10 @@ export default function TakeoffItemsTable({
 	const [copyLoading, setCopyLoading] = useState(false);
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [collapsedGroupMap, setCollapsedGroupMap] = useState<Record<string, boolean>>({});
+	const [sortState, setSortState] = useState<SortState>({
+		field: null,
+		order: null,
+	});
 	const selectedRowKeyRef = useRef<number | null>(null);
 
 	useEffect(() => {
@@ -150,6 +155,11 @@ export default function TakeoffItemsTable({
 		__isSystemParent?: boolean;
 		__isSystemChild?: boolean;
 		__groupKey?: string;
+	};
+
+	type SortState = {
+		field: string | null;
+		order: SortOrder;
 	};
 
 	const labelGroups = useMemo<LabelGroup[]>(() => {
@@ -201,6 +211,36 @@ export default function TakeoffItemsTable({
 		return groups;
 	}, [tableData]);
 
+	const compareByParentField = useMemo(
+		() => (left: LabelGroup, right: LabelGroup, fieldName: string) => {
+			const leftValue = formatCellValue(getResultValue(left.parent, fieldName)).trim();
+			const rightValue = formatCellValue(getResultValue(right.parent, fieldName)).trim();
+			const leftNumber = Number(leftValue.replace(/,/g, ""));
+			const rightNumber = Number(rightValue.replace(/,/g, ""));
+			const leftIsNumber = leftValue !== "" && Number.isFinite(leftNumber);
+			const rightIsNumber = rightValue !== "" && Number.isFinite(rightNumber);
+
+			if (leftIsNumber && rightIsNumber) {
+				return leftNumber - rightNumber;
+			}
+			return leftValue.localeCompare(rightValue, undefined, {
+				sensitivity: "base",
+				numeric: true,
+			});
+		},
+		[],
+	);
+
+	const sortedLabelGroups = useMemo(() => {
+		if (!sortState.field || !sortState.order) {
+			return labelGroups;
+		}
+		const direction = sortState.order === "ascend" ? 1 : -1;
+		return [...labelGroups].sort((left, right) => {
+			return compareByParentField(left, right, sortState.field!) * direction;
+		});
+	}, [compareByParentField, labelGroups, sortState.field, sortState.order]);
+
 	useEffect(() => {
 		setCollapsedGroupMap((prev) => {
 			const next: Record<string, boolean> = {};
@@ -217,7 +257,7 @@ export default function TakeoffItemsTable({
 		const hasKeyword = keyword.length > 0;
 		const result: DisplayRow[] = [];
 
-		labelGroups.forEach((group) => {
+		sortedLabelGroups.forEach((group) => {
 			const parentMatched =
 				!hasKeyword || group.labelText.toLowerCase().includes(keyword);
 			if (!group.isSystemGroup) {
@@ -250,7 +290,7 @@ export default function TakeoffItemsTable({
 		});
 
 		return result;
-	}, [collapsedGroupMap, labelGroups, searchValue]);
+	}, [collapsedGroupMap, searchValue, sortedLabelGroups]);
 
 	const hasSystemGroups = useMemo(
 		() => labelGroups.some((group) => group.isSystemGroup),
@@ -622,6 +662,8 @@ export default function TakeoffItemsTable({
 			minWidth: 100,
 			fixed: "left",
 			align: "center",
+			sorter: true,
+			sortOrder: sortState.field === "Label" ? sortState.order : null,
 			render: (_: unknown, record: TakeoffItemRecord) => {
 				const row = record as DisplayRow;
 				if (!row.__isSystemParent || !row.__groupKey) {
@@ -682,6 +724,8 @@ export default function TakeoffItemsTable({
 					width: columnWidth,
 					fixed: isSubLabelColumn ? "left" : undefined,
 					align: "center",
+					sorter: true,
+					sortOrder: sortState.field === field?.name ? sortState.order : null,
 					render: (_: unknown, record: TakeoffItemRecord) => {
 						return renderField(record, field?.name);
 					},
@@ -787,6 +831,8 @@ export default function TakeoffItemsTable({
 		onOpenReferencePanel,
 		onRefreshItems,
 		onToggleStatus,
+		sortState.field,
+		sortState.order,
 		tableData,
 	]);
 
@@ -838,6 +884,15 @@ export default function TakeoffItemsTable({
 						// 暂时取消分页，后续需求可能恢复。
 						pagination={false}
 						scroll={{ x: "max-content", y: "calc(100vh - 300px)" }}
+						onChange={(_, __, sorter) => {
+							const nextSorter = Array.isArray(sorter) ? sorter[0] : sorter;
+							const nextField =
+								(nextSorter?.columnKey as string) || (nextSorter?.field as string) || null;
+							setSortState({
+								field: nextField,
+								order: nextSorter?.order || null,
+							});
+						}}
 						onRow={(record) => ({
 							onClick: () => {
 								if (selectedRowKeyRef.current === record.id) {
