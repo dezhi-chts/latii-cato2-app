@@ -419,6 +419,7 @@ export default function EvidenceSection({
       />
 
       <EvidencePdfPreviewModal
+        selectLabel={currentLabel}
         open={pdfPreviewOpen}
         fileInfo={pdfPreviewFile}
         panelType={title}
