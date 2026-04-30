@@ -20,7 +20,8 @@ import {
   deleteTakeOffResultItemById,
   reconcileTakeOffResultItemsByTakeOffAndFile,
   deleteTakeOffResultItemByEvidenceId,
-  validateScheduleSubLabelsByTakeOffAndFile
+  validateScheduleSubLabelsByTakeOffAndFile,
+  addTakeOffResultItemByEvidenceId,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -30,7 +31,6 @@ import {
 } from "../../analyze-new/takeoffUtils";
 import { EvidenceRecord } from "../../analyze-new/types";
 import BuildingBackground from "../../identification/components/BuildingBackground";
-import CreateItemModal from "./components/CreateItemModal";
 import DisplayColumnsModal from "./components/DisplayColumnsModal";
 import ScheduleEvidenceImage from "./components/ScheduleEvidenceImage";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
@@ -65,7 +65,6 @@ export default function SchedulePage() {
   const [columnDraft, setColumnDraft] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
-  const [createItemOpen, setCreateItemOpen] = useState(false);
   const [focusedItemId, setFocusedItemId] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -510,35 +509,52 @@ export default function SchedulePage() {
     [getItemsByPageEvidences, pageEvidenceId],
   );
 
-  const getDefaultNextLabel = useCallback(() => {
-    const lastItem = itemBoxList[itemBoxList.length - 1] as any;
-    const lastLabel = String(
-      getDisplayValueByField(lastItem?.result || {}, "Label") || "",
-    )
-      .replace(/^-$/, "")
-      .trim();
-
-    if (!lastLabel) return "Label 1";
-
-    const trailingNumberMatch = lastLabel.match(/^(.*?)(\d+)$/);
-    if (trailingNumberMatch) {
-      const prefix = trailingNumberMatch[1];
-      const number = Number(trailingNumberMatch[2]);
-      if (Number.isFinite(number)) {
-        return `${prefix}${number + 1}`.trim();
-      }
+  const handleCreateItem = useCallback(async () => {
+    if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
+      notify.error({
+        title: "Error",
+        description: "Missing takeoff context, unable to create item.",
+      });
+      return;
+    }
+    if (!itemBoxList.length) {
+      notify.error({
+        title: "Error",
+        description: "No reference label found in current item list.",
+      });
+      return;
     }
 
-    return `${lastLabel} 1`;
-  }, [itemBoxList]);
+    const firstItem = itemBoxList[0] as any;
+    const firstLabel = String(getDisplayValueByField(firstItem?.result || {}, "Label") || "")
+      .replace(/^-$/, "")
+      .trim();
+    if (!firstLabel) {
+      notify.error({
+        title: "Error",
+        description: "The first item's Label is empty. Unable to create item.",
+      });
+      return;
+    }
 
-  const handleOpenCreateItemModal = useCallback(() => {
-    setCreateItemOpen(true);
-  }, []);
+    setFullLoading(true);
+    const response = await addTakeOffResultItemByEvidenceId(
+      String(takeOffId),
+      String(selectedFileId),
+      String(pageEvidenceId),
+      { Label: firstLabel },
+    );
+    setFullLoading(false);
+    if (response.status !== "success") {
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to create item.",
+      });
+      return;
+    }
 
-  const handleCancelCreateItem = useCallback(() => {
-    setCreateItemOpen(false);
-  }, []);
+    await getItemsByPageEvidences(pageEvidenceId);
+  }, [getItemsByPageEvidences, itemBoxList, pageEvidenceId, selectedFileId, takeOffId]);
 
   const handleReconcileTakeOff = async () => {
     setBuildingLoading(true);
@@ -752,23 +768,13 @@ export default function SchedulePage() {
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
             onOpenColumnSelector={handleOpenColumnModal}
-            onOpenCreateItemModal={handleOpenCreateItemModal}
+            onCreateItem={handleCreateItem}
             onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
             focusedItemId={focusedItemId}
             onFocusItemChange={handleFocusItemFromTable}
           />
         </div>
       </div>
-      <CreateItemModal
-        open={createItemOpen}
-        columns={columns}
-        takeOffId={String(takeOffId || "")}
-        selectedFileId={selectedFileId}
-        pageEvidenceId={pageEvidenceId}
-        defaultLabel={getDefaultNextLabel()}
-        onCancel={handleCancelCreateItem}
-        onSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
-      />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildingLoading && <BuildingBackground step={'page-merge'} />}
       <DisplayColumnsModal

@@ -60,7 +60,7 @@ interface ScheduleTableProps {
 		newValue: string,
 	) => Promise<boolean>;
 	onDeleteItem: (itemId: number) => Promise<boolean>;
-	onOpenCreateItemModal: () => void;
+	onCreateItem: () => Promise<void> | void;
 	onOpenColumnSelector?: () => void;
 	onBatchActionSuccess?: () => Promise<void> | void;
   focusedItemId?: number | null;
@@ -132,7 +132,7 @@ export default function ScheduleTable({
 	pageEvidenceId,
 	onUpdateField,
 	onDeleteItem,
-	onOpenCreateItemModal,
+	onCreateItem,
 	onOpenColumnSelector,
 	onBatchActionSuccess,
   focusedItemId = null,
@@ -631,7 +631,7 @@ export default function ScheduleTable({
 						</Tooltip>
 						<Button
 							className="custom-primary-btn !w-[60px] !text-xs"
-							onClick={() => onOpenCreateItemModal?.()}
+							onClick={() => onCreateItem?.()}
 						>
 							+ Item
 						</Button>
