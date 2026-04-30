@@ -18,7 +18,7 @@ interface ScheduleEvidenceImageProps {
   imageUrl: string;
   items: any[];
   activeItemId?: number | null;
-  onSelectItem?: (itemId: number, label: string) => void;
+  onSelectItem?: (itemId: number) => void;
   renderAtNaturalSize?: boolean;
 }
 
@@ -30,6 +30,7 @@ export default function ScheduleEvidenceImage({
   renderAtNaturalSize = false,
 }: ScheduleEvidenceImageProps) {
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const [imageReady, setImageReady] = useState(false);
   const [imageMetrics, setImageMetrics] = useState({
     renderedWidth: 0,
     renderedHeight: 0,
@@ -38,8 +39,30 @@ export default function ScheduleEvidenceImage({
   });
 
   useEffect(() => {
+    // Clear stale overlays before the next image finishes loading.
+    setImageReady(false);
+    setImageMetrics({
+      renderedWidth: 0,
+      renderedHeight: 0,
+      naturalWidth: 0,
+      naturalHeight: 0,
+    });
+  }, [imageUrl]);
+
+  useEffect(() => {
     const imageElement = imageRef.current;
     if (!imageElement) return;
+
+    const syncLoadedMetrics = () => {
+      const rect = imageElement.getBoundingClientRect();
+      setImageMetrics({
+        renderedWidth: rect.width,
+        renderedHeight: rect.height,
+        naturalWidth: imageElement.naturalWidth || 0,
+        naturalHeight: imageElement.naturalHeight || 0,
+      });
+      setImageReady(true);
+    };
 
     const syncRenderedSize = () => {
       const rect = imageElement.getBoundingClientRect();
@@ -51,6 +74,10 @@ export default function ScheduleEvidenceImage({
     };
 
     syncRenderedSize();
+    if (imageElement.complete && imageElement.naturalWidth > 0) {
+      // Cached images may skip onLoad, so mark ready proactively.
+      syncLoadedMetrics();
+    }
     const observer = new ResizeObserver(syncRenderedSize);
     observer.observe(imageElement);
     return () => {
@@ -82,6 +109,7 @@ export default function ScheduleEvidenceImage({
 
   const overlayRects = useMemo(() => {
     if (
+      !imageReady ||
       !imageMetrics.renderedWidth ||
       !imageMetrics.renderedHeight ||
       !imageMetrics.naturalWidth ||
@@ -98,10 +126,8 @@ export default function ScheduleEvidenceImage({
       .map((item) => {
         const id = Number(item?.id);
         if (!Number.isFinite(id)) return null;
-        const parsedResult = parseItemResultUtil((item as any)?.result as any);
-        const coordinates = parseCoordinates(parsedResult?.coordinates);
+        const coordinates = parseCoordinates(item?.coordinates);
         if (!coordinates) return null;
-        const label = String(getDisplayValueByField(parsedResult, "Label") || "").trim();
         const { x1, y1, x2, y2 } = coordinates;
         const leftX = Math.min(x1, x2);
         const topY = Math.min(y1, y2);
@@ -115,7 +141,6 @@ export default function ScheduleEvidenceImage({
         const heightNatural = (bottomY - topY) * imageMetrics.naturalHeight;
         return {
           id,
-          label,
           left: leftNatural * scaleX,
           top: topNatural * scaleY,
           width: widthNatural * scaleX,
@@ -124,13 +149,12 @@ export default function ScheduleEvidenceImage({
       })
       .filter(Boolean) as Array<{
         id: number;
-        label: string;
         left: number;
         top: number;
         width: number;
         height: number;
       }>;
-  }, [imageMetrics, items]);
+  }, [imageMetrics, imageReady, items]);
 
   if (!hasImage) {
     return (
@@ -162,6 +186,7 @@ export default function ScheduleEvidenceImage({
                 naturalWidth: element.naturalWidth || 0,
                 naturalHeight: element.naturalHeight || 0,
               });
+              setImageReady(true);
             }}
             style={
               renderAtNaturalSize && imageMetrics.naturalWidth && imageMetrics.naturalHeight
@@ -187,8 +212,7 @@ export default function ScheduleEvidenceImage({
                   borderColor: isActive ? "#FF450030" : "#427CCE",
                   backgroundColor: isActive ? "#FF450030" : "#427CCE30",
                 }}
-                onClick={() => onSelectItem?.(rect.id, rect.label)}
-                title={rect.label || "Label"}
+                onClick={() => onSelectItem?.(rect.id)}
               />
             );
           })}

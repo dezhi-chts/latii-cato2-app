@@ -209,7 +209,7 @@ export default function SchedulePage() {
     [scheduleList],
   );
 
-  const handleSelectOverlayItem = useCallback((itemId: number, _label: string) => {
+  const handleSelectOverlayItem = useCallback((itemId: number) => {
     setFocusedItemId(itemId);
   }, []);
 
