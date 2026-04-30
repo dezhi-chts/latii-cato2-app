@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Header from "./components/Header";
 import { Input, Spin, Modal } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
 import EmptyProject from "./components/Empty-Project";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +12,7 @@ import {
 	getTakeOffsByProjectId,
 	deleteTakeOffById,
 	getMergeStatusByTakeOffId,
+	updateTakeOffInfo,
 } from "@/services/takeOffService";
 import { useParams, useRouter } from "next/navigation";
 import UploadFilesProgress from "./components/Upload-Files-Progress";
@@ -34,6 +36,10 @@ const Project = () => {
 	const [showUploadProgess, setShowUploadProgess] = useState(false);
 	const [showPdfParseModal, setShowPdfParseModal] = useState(false);
 	const [selectedType, setSelectedType] = useState(["All"]);
+	const [editModalOpen, setEditModalOpen] = useState(false);
+	const [editingTakeoff, setEditingTakeoff] = useState<any>(null);
+	const [editingTakeoffName, setEditingTakeoffName] = useState("");
+	const [editSubmitting, setEditSubmitting] = useState(false);
 
 	const uploadFiles = useRef<any>(null);
 	const projectInfo = useRef<any>(null);
@@ -112,6 +118,47 @@ const Project = () => {
 				getProjectTakeoffs();
 			},
 		});
+	};
+
+	const handleOpenEditTakeoff = (takeoff: any) => {
+		setEditingTakeoff(takeoff);
+		setEditingTakeoffName(String(takeoff?.name || "").trim());
+		setEditModalOpen(true);
+	};
+
+	const handleCloseEditTakeoff = () => {
+		if (editSubmitting) return;
+		setEditModalOpen(false);
+		setEditingTakeoff(null);
+		setEditingTakeoffName("");
+	};
+
+	const handleSaveEditTakeoff = async () => {
+		if (!editingTakeoff?.id) return;
+		const nextName = editingTakeoffName.trim();
+		if (!nextName) {
+			Modal.error({
+				title: "Error",
+				content: "Take Off Name cannot be empty.",
+			});
+			return;
+		}
+		setEditSubmitting(true);
+		const response = await updateTakeOffInfo(Number(editingTakeoff.id), {
+			name: nextName,
+		});
+		setEditSubmitting(false);
+		if (response.status !== "success") {
+			Modal.error({
+				title: "Error",
+				content: response?.data?.detail || "Failed to update takeoff info.",
+			});
+			return;
+		}
+		setEditModalOpen(false);
+		setEditingTakeoff(null);
+		setEditingTakeoffName("");
+		await getProjectTakeoffs();
 	};
 
 	const filterTypeList = [
@@ -281,6 +328,15 @@ const Project = () => {
 												className="flex justify-center items-center cursor-pointer"
 												onClick={(e) => {
 													e.stopPropagation();
+													handleOpenEditTakeoff(takeOff.take_off_result);
+												}}
+											>
+												<EditOutlined className="text-[15px] text-grey-light-strong" />
+											</div>
+											<div
+												className="ml-3 flex justify-center items-center cursor-pointer"
+												onClick={(e) => {
+													e.stopPropagation();
 													handleRemoveTakeoff(takeOff.take_off_result);
 												}}
 											>
@@ -344,6 +400,23 @@ const Project = () => {
 				/>
 			)}
 			{fullLoading && <Spin fullscreen />}
+			<Modal
+				open={editModalOpen}
+				title="Edit Take Off"
+				okText="Save"
+				cancelText="Cancel"
+				onCancel={handleCloseEditTakeoff}
+				onOk={handleSaveEditTakeoff}
+				confirmLoading={editSubmitting}
+			>
+				<div className="text-xs text-grey-normal mb-2">Take Off Name</div>
+				<Input
+					value={editingTakeoffName}
+					onChange={(e) => setEditingTakeoffName(e.target.value)}
+					placeholder="Enter take off name"
+					maxLength={120}
+				/>
+			</Modal>
 			{/* {loadingCato && (
         <BuildingBackground
           isDone={isCreateTakeOffDone}

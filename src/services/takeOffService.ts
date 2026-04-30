@@ -46,17 +46,17 @@ export const getTakeOffsDetails = async (takeOffId: string) => {
   }
 };
 
-export const updateTakeOffName = async (name: string, takeOffId: number) => {
+export const updateTakeOffInfo = async (takeOffId: number, updateParams: {name: string}) => {
   try {
     const url = `/project/take_off/edit/take_off_id`;
     const body = {
       id: takeOffId,
-      name: name,
+      ...updateParams,
     };
     const response = await http.put(url, body);
     return { data: response as any, status: "success" };
   } catch (error:any) {
-    console.error("Error updating take off name:", error);
+    console.error("Error updating take off info:", error);
     return { data: error?.response?.data || null, status: "error" };
   }
 };

@@ -3,6 +3,7 @@
 import { Attribute, ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
 import { ConfigProvider, Modal, Tooltip, notification } from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -157,18 +158,14 @@ const HomeProjectsTable = ({
         render: (_: unknown, record: ProjectRow) => {
           return (
             <div className="flex w-full items-center justify-center gap-3">
-              <Image
-                src="/assets/icons/edit.svg"
-                alt="Edit project"
-                width={16}
-                height={16}
-                className="cursor-pointer"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setEditingProject(record);
-                  setEditModalOpen(true);
-                }}
-              />
+              <EditOutlined
+              className="cursor-pointer text-[15px] text-grey-light-strong"
+              onClick={(event) => {
+                event.stopPropagation();
+                setEditingProject(record);
+                setEditModalOpen(true);
+              }}
+            />
               <Image
                 src="/assets/icons/delete.svg"
                 alt="Delete project"

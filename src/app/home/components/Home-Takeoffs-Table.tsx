@@ -1,6 +1,6 @@
 import { ProjectRow } from "@/types/home";
 import Table, { ColumnsType } from "antd/es/table";
-import { ConfigProvider, Spin, Tooltip } from "antd";
+import { ConfigProvider, Modal, Spin, Tooltip, Input } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,8 @@ import dayjs from "dayjs";
 import { getMergeStatusByTakeOffId } from "@/services/takeOffService";
 import { TakeOffFileStatus } from "@/types/home";
 import { notify } from "@/utils/notify";
+import { EditOutlined } from "@ant-design/icons";
+import { updateTakeOffInfo } from "@/services/takeOffService";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -42,6 +44,7 @@ type HomeTakeoffsTableProps = {
   takeoffs: any[];
   selectedColumns: string[];
   handleRemoveTakeoff: (takeoff: any) => void;
+  onRefreshTakeoffs: () => Promise<void> | void;
   currentPage: number;
   setCurrentPage: (page: number) => void;
   totalTakeoffs: number;
@@ -53,6 +56,7 @@ const HomeTakeoffsTable = ({
   takeoffs,
   selectedColumns,
   handleRemoveTakeoff,
+  onRefreshTakeoffs,
   currentPage,
   setCurrentPage,
   totalTakeoffs,
@@ -62,10 +66,55 @@ const HomeTakeoffsTable = ({
   const [mounted, setMounted] = useState(false);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageLoadingText, setPageLoadingText] = useState("Loading...");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingTakeoff, setEditingTakeoff] = useState<any>(null);
+  const [editingName, setEditingName] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleOpenEditModal = useCallback((takeoff: any) => {
+    setEditingTakeoff(takeoff);
+    setEditingName(String(takeoff?.name || "").trim());
+    setEditModalOpen(true);
+  }, []);
+
+  const handleCloseEditModal = useCallback(() => {
+    if (editSubmitting) return;
+    setEditModalOpen(false);
+    setEditingTakeoff(null);
+    setEditingName("");
+  }, [editSubmitting]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingTakeoff?.id) return;
+    const nextName = editingName.trim();
+    if (!nextName) {
+      notify.error({
+        title: "Error",
+        description: "Take Off Name cannot be empty.",
+      });
+      return;
+    }
+    setEditSubmitting(true);
+    const response = await updateTakeOffInfo(Number(editingTakeoff.id), {
+      name: nextName,
+    });
+    setEditSubmitting(false);
+    if (response.status !== "success") {
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to update takeoff info.",
+      });
+      return;
+    }
+    setEditModalOpen(false);
+    setEditingTakeoff(null);
+    setEditingName("");
+    await onRefreshTakeoffs?.();
+  }, [editingName, editingTakeoff, onRefreshTakeoffs]);
 
   const defaultColumns: ColumnsType<ProjectRow> = useMemo(
     () => [
@@ -140,24 +189,33 @@ const HomeTakeoffsTable = ({
         align: "center",
         width: 160,
         render: (value, record) => (
-          <div
-            className="w-full flex justify-center items-center cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveTakeoff(record);
-            }}
-          >
-            <Image
-              src="/assets/icons/delete.svg"
-              alt="Delete"
-              width={20}
-              height={20}
+          <div className="w-full flex justify-center items-center gap-3">
+            <EditOutlined
+              className="cursor-pointer text-[15px] text-grey-light-strong"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenEditModal(record);
+              }}
             />
+            <div
+              className="cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveTakeoff(record);
+              }}
+            >
+              <Image
+                src="/assets/icons/delete.svg"
+                alt="Delete"
+                width={20}
+                height={20}
+              />
+            </div>
           </div>
         ),
       },
     ],
-    [],
+    [handleOpenEditModal, handleRemoveTakeoff],
   );
 
   const allColumns = useMemo(() => [...defaultColumns], [defaultColumns]);
@@ -279,6 +337,23 @@ const HomeTakeoffsTable = ({
           />
         </ConfigProvider>
       </div>
+      <Modal
+        open={editModalOpen}
+        title="Edit Take Off"
+        okText="Save"
+        cancelText="Cancel"
+        onCancel={handleCloseEditModal}
+        onOk={handleSaveEdit}
+        confirmLoading={editSubmitting}
+      >
+        <div className="text-xs text-grey-normal mb-2">Take Off Name</div>
+        <Input
+          value={editingName}
+          onChange={(e) => setEditingName(e.target.value)}
+          placeholder="Enter take off name"
+          maxLength={120}
+        />
+      </Modal>
     </div>
   );
 };
