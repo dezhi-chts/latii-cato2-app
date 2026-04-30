@@ -24,6 +24,7 @@ import {
 import { saveNewListAndSyncFileSourceMergeResult } from "@/services/takeOffService";
 
 interface EvidencePdfPreviewModalProps {
+  selectLabel: string;
   open: boolean;
   fileInfo: any | null;
   panelType: string;
@@ -42,6 +43,7 @@ const getPageNumber = (pageInfo: any, index: number): number => {
 };
 
 export default function EvidencePdfPreviewModal({
+  selectLabel,
   open,
   fileInfo,
   panelType,
@@ -97,8 +99,17 @@ export default function EvidencePdfPreviewModal({
     console.log(evidence);
     if (!evidence) return;
 
+    let newEvidence = {
+      ...evidence,
+      ocr_text: JSON.stringify({
+        result: {
+          Label: selectLabel
+        }
+      })
+    }
+
     setLoading(true);
-    let res = await saveNewListAndSyncFileSourceMergeResult(takeoffId, fileInfo?.id, panelType, [evidence]);
+    let res = await saveNewListAndSyncFileSourceMergeResult(takeoffId, fileInfo?.id, panelType, [newEvidence]);
     setLoading(false);
     if (res.status === "success") {
       notify.success({
