@@ -761,7 +761,7 @@ const PdfWrapper = forwardRef(
 					view_box: JSON.stringify(viewport.viewBox),
 					is_rotate: rotateAngle !== 0,
 					rotation_angle: rotateAngle,
-					sub_text: "",
+					sub_text: '',
 				};
 			});
 			return uploadData;
@@ -2226,9 +2226,33 @@ const PdfWrapper = forwardRef(
 		const moveShapeByOffset = (polygons: Point[], dx: number, dy: number) => {
 			if (!dx && !dy) return polygons;
 
+			const currentBounds = getZoneBounds(polygons);
+			let clampedDx = dx;
+			let clampedDy = dy;
+
+			// Keep dragging strictly inside current PDF page viewport.
+			if (stageWidth > 0) {
+				const minDx = -currentBounds.minX;
+				const maxDx = stageWidth - currentBounds.maxX;
+				if (maxDx < minDx) {
+					clampedDx = 0;
+				} else {
+					clampedDx = Math.max(minDx, Math.min(maxDx, dx));
+				}
+			}
+			if (stageHeight > 0) {
+				const minDy = -currentBounds.minY;
+				const maxDy = stageHeight - currentBounds.maxY;
+				if (maxDy < minDy) {
+					clampedDy = 0;
+				} else {
+					clampedDy = Math.max(minDy, Math.min(maxDy, dy));
+				}
+			}
+
 			let newPolygons = polygons.map((p: any) => ({
-				x: p.x + dx,
-				y: p.y + dy,
+				x: p.x + clampedDx,
+				y: p.y + clampedDy,
 			}));
 			// let scrollPolygons = [...polygons];
 
@@ -3557,7 +3581,7 @@ const PdfWrapper = forwardRef(
 										}
 									}
 
-									if (selectedShapeId === item.id && !item.isParentEvidence && !item.isOtherParentEvidence) {
+									if (selectedShapeId === item.id && !item.isParentEvidence && !item.isOtherParentEvidence && evidenceDraggable) {
 										// 如果当前选中的元素是当前Evidence，那么显示删除按钮
 										showDeleteBtn = true;
 									}
@@ -4231,7 +4255,7 @@ const ShapeWrapper = ({
 		}
 	}
 
-	let shapeDraggable = evidenceDraggable ?? true;
+	let shapeDraggable = type === "evidence" ? evidenceDraggable ?? true : true;
 	if (type === "evidence") {
 		if (shape?.isParentEvidence || shape?.isOtherParentEvidence) {
 			// 如果是父级红色外框，则不允许点击和移动

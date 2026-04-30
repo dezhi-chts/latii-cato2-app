@@ -839,4 +839,26 @@ export const validateScheduleSubLabelsByTakeOffAndFile = async (take_off_id: str
 }
 
 
+/**
+ * 保存新的take source merge result
+ * @param data 
+ * @returns 
+ */
+export const saveNewListAndSyncFileSourceMergeResult = async (
+  take_off_id: string | number, 
+  file_id: string | number, 
+  source_type: string, 
+  data: any
+) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/save_new_list_and_sync_file_source_merge_result?take_off_id=${take_off_id}&file_id=${file_id}&source_type=${source_type}`;
+    const response = await http.post(url, data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error saving new list and sync file source merge result:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
 

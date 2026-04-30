@@ -602,8 +602,6 @@ export default function SchedulePage() {
       return;
     }
 
-    return;
-
     let res = await reconcileTakeOffResultItemsByTakeOffAndFile(takeOffId as string, selectedFileId as any)
     setBuildingLoading(false);
     if (res.status === "success") {

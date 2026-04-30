@@ -86,6 +86,7 @@ interface ThumbnailProps {
   showShadow?: boolean; // 是否显示阴影
   size?: "default" | "larger"; // 缩略图大小
   categoryList?: { type: string, color: string, icon: string }[]; // 页面分类
+  warningPages?: number[]; // warning page numbers
 }
 
 const Thumbnail = ({
@@ -100,8 +101,14 @@ const Thumbnail = ({
   size = "default", // 缩略图大小
   categoryList = [], // 页面分类
   showShadow = true, // 是否显示阴影
+  warningPages = [],
 }: ThumbnailProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const warningPageSet = new Set(
+    (warningPages || [])
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0),
+  );
 
   useEffect(() => {
     if (showThumbnail) {
@@ -190,7 +197,7 @@ const Thumbnail = ({
                 <div
                   id={`thumbnail-page-${itemPageNum}`}
                   key={info.s3_key}
-                  className={`w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
+                  className={`relative w-[170px] rounded-md bg-primaryN20 shadow-md cursor-pointer border-[2px] ${itemPageNum === page
                     ? "border-forumBlue-normal"
                     : "border-transparent hover:border-forumBlue-normal/50"
                     }`}
@@ -199,6 +206,9 @@ const Thumbnail = ({
                   }}
                   onClick={() => onChangePage(itemPageNum)}
                 >
+                  {warningPageSet.has(itemPageNum) && (
+                    <div className="absolute right-1 top-1 z-20 h-2.5 w-2.5 rounded-full bg-red-500" />
+                  )}
                   <div className="p-[10px]">
                     <div className="h-[30px] flex flex-row justify-between">
                       <p className="mb-3 text-xxs text-grey-normal">
