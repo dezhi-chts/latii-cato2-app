@@ -747,5 +747,22 @@ export const getGroupedEvidencesByTakeOffAndFile = async (take_off_id: string | 
 }
 
 
+/**
+ * 验证当前文件是否存在schedule sub label
+ * @param take_off_id 
+ * @param file_id 
+ * @returns 
+ */
+export const validateScheduleSubLabelsByTakeOffAndFile = async (take_off_id: string | number, file_id: string | number)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/validate_schedule_sub_labels_by_take_off_and_file?take_off_id=${take_off_id}&file_id=${file_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error validating schedule sub labels by take off and file:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 

@@ -262,7 +262,7 @@ const EvidenceThumbailList = ({
 												}
 												{showCategory && (
 													<div
-														className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white"
+														className="w-[30px] h-[18px] flex items-center justify-center rounded text-xxs text-white flex-shrink-0"
 														style={{ backgroundColor: color }}
 													>
 														<span>{icon}</span>

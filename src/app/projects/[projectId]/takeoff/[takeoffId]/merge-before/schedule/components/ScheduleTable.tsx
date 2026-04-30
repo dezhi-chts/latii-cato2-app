@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Checkbox, Input, Modal, Table, Tooltip } from "antd";
+import { Button, Checkbox, Input, Modal, Radio, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -63,6 +63,8 @@ interface ScheduleTableProps {
 	onOpenCreateItemModal: () => void;
 	onOpenColumnSelector?: () => void;
 	onBatchActionSuccess?: () => Promise<void> | void;
+  focusedItemId?: number | null;
+  onFocusItemChange?: (itemId: number) => void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -133,7 +135,10 @@ export default function ScheduleTable({
 	onOpenCreateItemModal,
 	onOpenColumnSelector,
 	onBatchActionSuccess,
+  focusedItemId = null,
+  onFocusItemChange,
 }: ScheduleTableProps) {
+	const tableContainerRef = useRef<HTMLDivElement | null>(null);
 	const [editingCell, setEditingCell] = useState<{
 		id: number;
 		field: string;
@@ -146,6 +151,7 @@ export default function ScheduleTable({
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [batchSubmitting, setBatchSubmitting] = useState(false);
 	const [batchEditValues, setBatchEditValues] = useState<Record<string, string>>({});
+	const hasRows = sections.length > 0;
 
 
 	const startEdit = (record: any, fieldName: string) => {
@@ -260,6 +266,30 @@ export default function ScheduleTable({
 		);
 		setBatchSelectedIds((prev) => prev.filter((id) => validIds.has(id)));
 	}, [sections]);
+
+	useEffect(() => {
+		if (focusedItemId === null) return;
+		const container = tableContainerRef.current;
+		if (!container) return;
+
+		const body = container.querySelector(".ant-table-body") as HTMLElement | null;
+		const row = container.querySelector(
+			`.ant-table-tbody tr[data-row-key="${focusedItemId}"]`,
+		) as HTMLElement | null;
+		if (!body || !row) return;
+
+		const bodyRect = body.getBoundingClientRect();
+		const rowRect = row.getBoundingClientRect();
+		const padding = 8;
+
+		if (rowRect.top < bodyRect.top) {
+			body.scrollTop -= bodyRect.top - rowRect.top + padding;
+			return;
+		}
+		if (rowRect.bottom > bodyRect.bottom) {
+			body.scrollTop += rowRect.bottom - bodyRect.bottom + padding;
+		}
+	}, [focusedItemId, sections]);
 
 	const selectedPreviewColumns: ColumnsType<any> = [
 		{
@@ -450,7 +480,9 @@ export default function ScheduleTable({
 						? 120
 						: getColumnWidth(fieldName),
 				fixed:
-					isLabelColumn || isSubLabelColumn ? ("left" as const) : undefined,
+					hasRows && (isLabelColumn || isSubLabelColumn)
+						? ("left" as const)
+						: undefined,
 				align: "center" as const,
 				render: (_: unknown, record: any) => {
 					const displayValue = getDisplayValueByField(record?.result, fieldName);
@@ -505,11 +537,31 @@ export default function ScheduleTable({
 			}
 		};
 
+		const focusColumn = {
+			title: "",
+			key: "focus",
+			width: 36,
+			align: "center" as const,
+			render: (_: unknown, record: any) => {
+				const rowId = Number(record.id);
+				const checked = Number.isFinite(rowId) && focusedItemId === rowId;
+				return (
+					<Radio
+						checked={checked}
+						onChange={() => {
+							if (!Number.isFinite(rowId)) return;
+							onFocusItemChange?.(rowId);
+						}}
+					/>
+				);
+			},
+		};
+
 		const actionColumn: ColumnsType<any>[number] = {
 			title: <div className="text-center text-xs text-grey-normal">Action</div>,
 			key: "action",
 			width: 80,
-			fixed: "right",
+			fixed: hasRows ? "right" : undefined,
 			align: "center",
 			render: (_: unknown, record: any) => (
 				<Button
@@ -526,7 +578,9 @@ export default function ScheduleTable({
 			),
 		};
 
-		return [checkedColumn, ...dataColumns, actionColumn];
+		return hasRows
+			? [checkedColumn, focusColumn, ...dataColumns, actionColumn]
+			: [...dataColumns, actionColumn];
 	})();
 
 	return (
@@ -584,17 +638,23 @@ export default function ScheduleTable({
 					</div>
 
 				</div>
-				<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
+				<div
+					ref={tableContainerRef}
+					className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white"
+				>
 					<Table<any>
 						rowKey={(record) => record.id}
 						columns={tableColumns}
 						dataSource={sections}
 						pagination={false}
 						loading={tableLoading}
-						scroll={{
-							x: "max-content",
-							y: "calc(100vh - 280px)",
-						}}
+						scroll={
+							sections.length > 0 ? {
+								x: "max-content",
+								y: "calc(100vh - 280px)",
+							} : {
+								y: "calc(100vh - 280px)",
+							}}
 						locale={{
 							emptyText: (
 								<div className="py-10 text-xs text-grey-normal">
@@ -603,6 +663,7 @@ export default function ScheduleTable({
 							),
 						}}
 						className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
+						tableLayout="fixed"
 					/>
 				</div>
 			</div>
