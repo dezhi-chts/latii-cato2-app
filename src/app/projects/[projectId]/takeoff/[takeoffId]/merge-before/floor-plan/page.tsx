@@ -456,7 +456,10 @@ export default function FloorPlanPage() {
   const handleItemEvidenceConfirm = useCallback((item: any) => {
     console.log("item", item);
     // show confirm modal
-    confirmItem.current = item;
+    confirmItem.current = {
+      ...item,
+      sub_text: `${pageEvidenceId}:${itemBoxList?.length + 1}`,
+    };
     setShowLabelModal(true);
   }, []);
 
@@ -698,7 +701,7 @@ export default function FloorPlanPage() {
     labelTableData,
     handleAnaylize,
   ]);
-  
+
   const handleBack = () => {
     router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };

@@ -1,6 +1,6 @@
 "use client";
 
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { Button, Empty, Modal, Select, Spin } from "antd";
 import { useMemo, useState } from "react";
 
@@ -12,6 +12,7 @@ import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 import { notify } from "@/utils/notify";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { EvidenceRecord } from "../../analyze-new/types";
+import EvidencePdfPreviewModal from "./EvidencePdfPreviewModal";
 
 
 interface EvidenceSectionProps {
@@ -67,6 +68,9 @@ export default function EvidenceSection({
   const [targetLabel, setTargetLabel] = useState<string>();
   const [apiLoading, setApiLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPreviewFile, setPdfPreviewFile] = useState<any | null>(null);
+  const [pdfPreviewInitialPage, setPdfPreviewInitialPage] = useState(1);
   const [previewPayload, setPreviewPayload] = useState<{
     fileName?: string;
     pageNumber: number;
@@ -94,6 +98,17 @@ export default function EvidenceSection({
         return true;
       });
   }, [allLabels, currentLabel]);
+  const showPanelPreviewButton =
+    !isLabelMerged && (title === "Floor Plan" || title === "Elevation");
+  const warningPages = useMemo(() => {
+    return Array.from(
+      new Set(
+        (evidences || [])
+          .map((item) => Number(item?.project_file_page_number || 0))
+          .filter((item) => Number.isFinite(item) && item > 0),
+      ),
+    );
+  }, [evidences]);
 
   const handleDeleteEvidence = (evidenceId: string, evidenceUrl: string) => {
     Modal.confirm({
@@ -197,6 +212,35 @@ export default function EvidenceSection({
     setIsEditModalOpen(true);
   };
 
+  const handleOpenPdfPreview = (evidence: {
+    project_file_id?: number;
+    project_file_page_number?: number;
+  }) => {
+    const targetFile = files?.length > 0 ? files[0] : null;
+    if (!targetFile) {
+      notify.warning({
+        title: "No File",
+        description: "Cannot find related file for current evidence.",
+      });
+      return;
+    }
+    setPdfPreviewFile(targetFile);
+    setPdfPreviewInitialPage(Number(evidence?.project_file_page_number || 1) || 1);
+    setPdfPreviewOpen(true);
+  };
+
+  const handleOpenPanelPdfPreview = () => {
+    const firstEvidence = (evidences || [])[0];
+    // if (!firstEvidence) {
+    //   notify.info({
+    //     title: "No Evidence",
+    //     description: `No ${title} evidence found.`,
+    //   });
+    //   return;
+    // }
+    handleOpenPdfPreview(firstEvidence);
+  };
+
   const handleConfirmEdit = async () => {
     if (!targetLabel) {
       notify.warning({
@@ -230,9 +274,26 @@ export default function EvidenceSection({
   return (
     <>
       <div className="relative flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-          <span className="text-xs text-grey-normal">{evidences.length} images</span>
+        <div className="mb-3 grid grid-cols-3 items-center gap-2">
+          <div className="flex justify-start">
+            <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
+          </div>
+          <div className="flex items-center justify-center">
+            {showPanelPreviewButton && (
+              <Button
+                type="text"
+                size="small"
+                className="!flex !h-6 !items-center !gap-1 !px-1 !text-forumBlue-normal"
+                onClick={handleOpenPanelPdfPreview}
+              >
+                <PlusCircleOutlined />
+                <span className="text-xs">Open PDF</span>
+              </Button>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <span className="text-xs text-grey-normal">{evidences.length} images</span>
+          </div>
         </div>
         {evidences.length > 0 ? (
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -355,6 +416,17 @@ export default function EvidenceSection({
         imageUrl={previewPayload.imageUrl}
         pageEvidences={previewPayload.pageEvidences}
         onCancel={() => setPreviewOpen(false)}
+      />
+
+      <EvidencePdfPreviewModal
+        open={pdfPreviewOpen}
+        fileInfo={pdfPreviewFile}
+        panelType={title}
+        panelEvidences={evidences}
+        warningPages={warningPages}
+        initialPageNumber={pdfPreviewInitialPage}
+        onCancel={() => setPdfPreviewOpen(false)}
+        onConfirmSuccess={onRefreshItemsAndEvidence}
       />
     </>
   );
