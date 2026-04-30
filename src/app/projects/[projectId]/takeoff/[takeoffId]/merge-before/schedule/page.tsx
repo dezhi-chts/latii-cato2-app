@@ -38,7 +38,7 @@ import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
 const { confirm } = Modal;
 
-const REQUIRED_VISIBLE_COLUMNS = ["Label", "Sub Label", "Product", "Quantity"] as const;
+const REQUIRED_VISIBLE_COLUMNS: readonly string[] = [];
 
 export default function SchedulePage() {
   const router = useRouter();
@@ -148,9 +148,11 @@ export default function SchedulePage() {
           let values: any = Object.values(res.data || {}) || [];
           let list = values.flatMap((item: any) => item || []);
           setItemBoxList(list);
+          setColumns(resolveColumnsWithValue(list, templateColumns));
           setItemBoxEvidenceId(id);
         } else {
           setItemBoxList([]);
+          setColumns([]);
           setItemBoxEvidenceId(id);
           notify.error({
             title: "Error",
@@ -159,7 +161,7 @@ export default function SchedulePage() {
         }
       }
     },
-    [],
+    [resolveColumnsWithValue, templateColumns],
   );
 
   useEffect(() => {
@@ -235,18 +237,64 @@ export default function SchedulePage() {
     return result;
   };
 
+  function hasDisplayValue(value: unknown): boolean {
+    if (value === null || value === undefined) return false;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed !== "" && trimmed !== "-";
+    }
+    if (typeof value === "number") {
+      return Number.isFinite(value);
+    }
+    if (typeof value === "boolean") {
+      return true;
+    }
+    if (Array.isArray(value)) {
+      return value.some((item) => hasDisplayValue(item));
+    }
+    if (typeof value === "object") {
+      return Object.values(value as Record<string, unknown>).some((item) =>
+        hasDisplayValue(item),
+      );
+    }
+    return false;
+  }
+
+  function resolveColumnsWithValue(rows: any[], orderedTemplateColumns: string[]) {
+    const fieldSet = new Set<string>();
+    (rows || []).forEach((row) => {
+      const parsedResult = parseItemResultUtil((row as any)?.result as any) || {};
+      Object.entries(parsedResult).forEach(([fieldName, fieldValue]) => {
+        if (!fieldName) return;
+        if (hasDisplayValue(fieldValue)) {
+          fieldSet.add(normalizeFieldName(fieldName));
+        }
+      });
+    });
+
+    const availableFields = Array.from(fieldSet);
+    const templateOrder = orderedTemplateColumns.filter((field) =>
+      fieldSet.has(field),
+    );
+    const extraFields = availableFields.filter(
+      (field) => !orderedTemplateColumns.includes(field),
+    );
+    return ensureLabelFieldsFirst([...templateOrder, ...extraFields]);
+  }
+
   const normalizeVisibleColumns = useCallback(
     (candidateColumns: string[], allTemplateColumns: string[]) => {
       const allSet = new Set(allTemplateColumns);
-      const requiredColumnSet = new Set<string>(
-        REQUIRED_VISIBLE_COLUMNS as readonly string[],
+      const candidateSet = new Set(
+        candidateColumns.map((field) => normalizeFieldName(field)),
       );
-      const requiredColumns = allTemplateColumns.filter((field) =>
-        requiredColumnSet.has(field),
+      const orderedFromTemplate = allTemplateColumns.filter((field) =>
+        candidateSet.has(field),
       );
-      const candidateSet = new Set(candidateColumns);
-      const mergedSet = new Set([...requiredColumns, ...Array.from(candidateSet)]);
-      return allTemplateColumns.filter((field) => mergedSet.has(field));
+      const extraFields = Array.from(candidateSet).filter(
+        (field) => !allSet.has(field),
+      );
+      return ensureLabelFieldsFirst([...orderedFromTemplate, ...extraFields]);
     },
     [],
   );
@@ -268,12 +316,6 @@ export default function SchedulePage() {
             // Ensure Label and Sub Label are first
             const orderedFields = ensureLabelFieldsFirst(fieldNames);
             setTemplateColumns(orderedFields);
-            setColumns((prev) => {
-              if (prev.length === 0) {
-                return normalizeVisibleColumns([], orderedFields);
-              }
-              return normalizeVisibleColumns(prev, orderedFields);
-            });
             return orderedFields;
           }
         }
@@ -303,15 +345,9 @@ export default function SchedulePage() {
         "Source Type",
       ];
       setTemplateColumns(defaultFields);
-      setColumns((prev) => {
-        if (prev.length === 0) {
-          return normalizeVisibleColumns([], defaultFields);
-        }
-        return normalizeVisibleColumns(prev, defaultFields);
-      });
       return defaultFields;
     },
-    [normalizeVisibleColumns],
+    [],
   );
 
   const handleOpenColumnModal = useCallback(() => {
@@ -326,19 +362,12 @@ export default function SchedulePage() {
 
   const handleToggleColumnDraft = useCallback((fieldName: string, checked: boolean) => {
     setColumnDraft((prev) => {
-      const requiredSet = new Set<string>(
-        REQUIRED_VISIBLE_COLUMNS as readonly string[],
-      );
-      if (requiredSet.has(fieldName)) {
-        return prev;
-      }
       const nextSet = new Set(prev);
       if (checked) {
         nextSet.add(fieldName);
       } else {
         nextSet.delete(fieldName);
       }
-      REQUIRED_VISIBLE_COLUMNS.forEach((requiredField) => nextSet.add(requiredField));
       return templateColumns.filter((field) => nextSet.has(field));
     });
   }, [templateColumns]);
