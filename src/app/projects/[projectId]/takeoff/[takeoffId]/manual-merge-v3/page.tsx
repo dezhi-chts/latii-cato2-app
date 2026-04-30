@@ -9,12 +9,13 @@ import { DownOutlined, UpOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
   autoCreateMultipleFilesMergeResultByTakeOffId,
-  deleteFileSourceMergeResultById,
-  deleteSingleFileMergeResultById,
+  deleteFileSourceMergeResultByIdList,
+  deleteSingleFileMergeResultByIdList,
   getFileSourceMergeResultsByLabel,
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
   getTakeOffEvidenceUrlsByIds,
+  splitFileSourceMergeResultsByIdList,
   updateFileSourceMergeResultsByIdList,
   updateSingleFileMergeResultsByIdList,
 } from "@/services/takeOffService";
@@ -209,6 +210,28 @@ const normalizeRows = (rows: any[]) =>
 const normalizeGroupFieldValue = (value: string) => {
   if (isEmptyDisplayValue(value || "")) return "";
   return normalizeLabelKey(value || "");
+};
+
+const pickParentRowByRule = (rows: any[]): any | null => {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const emptySubLabelRows = rows.filter((row) => {
+    const subLabel = getDisplayValueByField(row?.result || {}, "Sub Label");
+    return isEmptyDisplayValue(subLabel || "");
+  });
+
+  if (emptySubLabelRows.length === 1) {
+    return emptySubLabelRows[0];
+  }
+
+  if (emptySubLabelRows.length > 1) {
+    const emptyProductRow = emptySubLabelRows.find((row) => {
+      const product = getDisplayValueByField(row?.result || {}, "Product");
+      return isEmptyDisplayValue(product || "");
+    });
+    return emptyProductRow || rows[0];
+  }
+
+  return rows[0];
 };
 
 const parseQuantityNumber = (value: string) => {
@@ -407,6 +430,7 @@ export default function ManualMergeV2Page() {
   const [collapsedConflictLabels, setCollapsedConflictLabels] = useState(false);
   const [collapsedFloorPlanGroupMap, setCollapsedFloorPlanGroupMap] = useState<Record<string, boolean>>({});
   const [collapsedElevationGroupMap, setCollapsedElevationGroupMap] = useState<Record<string, boolean>>({});
+  const [collapsedScheduleGroupMap, setCollapsedScheduleGroupMap] = useState<Record<string, boolean>>({});
 
   const [contentTab, setContentTab] = useState<ContentTab>("evidences");
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -512,64 +536,108 @@ export default function ManualMergeV2Page() {
     const groupedMap = new Map<
       string,
       {
-        parentRow: any | null;
-        childRows: any[];
+        rows: any[];
       }
     >();
     floorPlanRows.forEach((row) => {
       const label = getDisplayValueByField(row?.result || {}, "Label");
       const groupKey = normalizeGroupFieldValue(label) || `__unknown__${String(row?.id || "")}`;
       if (!groupedMap.has(groupKey)) {
-        groupedMap.set(groupKey, { parentRow: null, childRows: [] });
+        groupedMap.set(groupKey, { rows: [] });
       }
       const groupData = groupedMap.get(groupKey)!;
-      const subLabel = getDisplayValueByField(row?.result || {}, "Sub Label");
-      const isParentRow = isEmptyDisplayValue(subLabel || "");
-      if (isParentRow && !groupData.parentRow) {
-        groupData.parentRow = row;
-      } else {
-        groupData.childRows.push(row);
-      }
+      groupData.rows.push(row);
     });
-    groupedMap.forEach((groupData) => {
-      if (!groupData.parentRow && groupData.childRows.length > 0) {
-        groupData.parentRow = groupData.childRows[0];
-        groupData.childRows = groupData.childRows.slice(1);
-      }
-    });
-    return groupedMap;
-  }, [floorPlanRows]);
 
-  const groupedElevationRows = useMemo(() => {
-    const groupedMap = new Map<
+    const normalizedGroupedMap = new Map<
       string,
       {
         parentRow: any | null;
         childRows: any[];
       }
     >();
+    groupedMap.forEach((groupData, groupKey) => {
+      const parentRow = pickParentRowByRule(groupData.rows);
+      const childRows = groupData.rows.filter((row) => row !== parentRow);
+      normalizedGroupedMap.set(groupKey, {
+        parentRow,
+        childRows,
+      });
+    });
+
+    return normalizedGroupedMap;
+  }, [floorPlanRows]);
+
+  const groupedScheduleRows = useMemo(() => {
+    const groupedMap = new Map<
+      string,
+      {
+        rows: any[];
+      }
+    >();
+    scheduleRows.forEach((row) => {
+      const label = getDisplayValueByField(row?.result || {}, "Label");
+      const groupKey = normalizeGroupFieldValue(label) || `__unknown__${String(row?.id || "")}`;
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, { rows: [] });
+      }
+      const groupData = groupedMap.get(groupKey)!;
+      groupData.rows.push(row);
+    });
+
+    const normalizedGroupedMap = new Map<
+      string,
+      {
+        parentRow: any | null;
+        childRows: any[];
+      }
+    >();
+    groupedMap.forEach((groupData, groupKey) => {
+      const parentRow = pickParentRowByRule(groupData.rows);
+      const childRows = groupData.rows.filter((row) => row !== parentRow);
+      normalizedGroupedMap.set(groupKey, {
+        parentRow,
+        childRows,
+      });
+    });
+
+    return normalizedGroupedMap;
+  }, [scheduleRows]);
+
+  const groupedElevationRows = useMemo(() => {
+    const groupedMap = new Map<
+      string,
+      {
+        rows: any[];
+      }
+    >();
     elevationRows.forEach((row) => {
       const label = getDisplayValueByField(row?.result || {}, "Label");
       const groupKey = normalizeGroupFieldValue(label) || `__unknown__${String(row?.id || "")}`;
       if (!groupedMap.has(groupKey)) {
-        groupedMap.set(groupKey, { parentRow: null, childRows: [] });
+        groupedMap.set(groupKey, { rows: [] });
       }
       const groupData = groupedMap.get(groupKey)!;
-      const subLabel = getDisplayValueByField(row?.result || {}, "Sub Label");
-      const isParentRow = isEmptyDisplayValue(subLabel || "");
-      if (isParentRow && !groupData.parentRow) {
-        groupData.parentRow = row;
-      } else {
-        groupData.childRows.push(row);
-      }
+      groupData.rows.push(row);
     });
-    groupedMap.forEach((groupData) => {
-      if (!groupData.parentRow && groupData.childRows.length > 0) {
-        groupData.parentRow = groupData.childRows[0];
-        groupData.childRows = groupData.childRows.slice(1);
+
+    const normalizedGroupedMap = new Map<
+      string,
+      {
+        parentRow: any | null;
+        childRows: any[];
       }
+    >();
+    groupedMap.forEach((groupData, groupKey) => {
+      const parentRow = pickParentRowByRule(groupData.rows);
+      const childRows = groupData.rows.filter((row) => row !== parentRow);
+      normalizedGroupedMap.set(groupKey, {
+        parentRow,
+        childRows,
+      });
     });
-    return groupedMap;
+
+    return normalizedGroupedMap;
   }, [elevationRows]);
 
   useEffect(() => {
@@ -581,6 +649,16 @@ export default function ManualMergeV2Page() {
       return next;
     });
   }, [groupedFloorPlanRows]);
+
+  useEffect(() => {
+    setCollapsedScheduleGroupMap((prev) => {
+      const next: Record<string, boolean> = {};
+      groupedScheduleRows.forEach((_, groupKey) => {
+        next[groupKey] = prev[groupKey] ?? true;
+      });
+      return next;
+    });
+  }, [groupedScheduleRows]);
 
   useEffect(() => {
     setCollapsedElevationGroupMap((prev) => {
@@ -614,6 +692,28 @@ export default function ManualMergeV2Page() {
     return result;
   }, [collapsedFloorPlanGroupMap, groupedFloorPlanRows]);
 
+  const displayScheduleRows = useMemo<GroupedSummaryRow[]>(() => {
+    const result: GroupedSummaryRow[] = [];
+    groupedScheduleRows.forEach((groupData, groupKey) => {
+      if (!groupData.parentRow) {
+        return;
+      }
+      if (groupData.childRows.length === 0) {
+        result.push(groupData.parentRow);
+        return;
+      }
+      result.push({
+        ...groupData.parentRow,
+        __isGroupedSummary: true,
+        __groupKey: groupKey,
+      });
+      if (!collapsedScheduleGroupMap[groupKey]) {
+        result.push(...groupData.childRows);
+      }
+    });
+    return result;
+  }, [collapsedScheduleGroupMap, groupedScheduleRows]);
+
   const displayElevationRows = useMemo<GroupedSummaryRow[]>(() => {
     const result: GroupedSummaryRow[] = [];
     groupedElevationRows.forEach((groupData, groupKey) => {
@@ -639,6 +739,10 @@ export default function ManualMergeV2Page() {
   const floorPlanItemCount = useMemo(
     () => floorPlanRows.filter(isOriginalItemRow).length,
     [floorPlanRows],
+  );
+  const scheduleItemCount = useMemo(
+    () => scheduleRows.filter(isOriginalItemRow).length,
+    [scheduleRows],
   );
   const elevationItemCount = useMemo(
     () => elevationRows.filter(isOriginalItemRow).length,
@@ -686,12 +790,9 @@ export default function ManualMergeV2Page() {
         return;
       }
 
-      const rootRow = groupedRows.find((item) =>
-        isEmptyDisplayValue(getDisplayValueByField(item?.result || {}, "Sub Label") || ""),
-      );
+      const rootRow = pickParentRowByRule(groupedRows);
       if (!rootRow) {
-        // Only collapse when there is an explicit parent row (empty Sub Label).
-        result.push(...groupedRows);
+        result.push(groupedRows[0]);
         return;
       }
       const childRows = groupedRows.filter((item) => item !== rootRow);
@@ -816,6 +917,7 @@ export default function ManualMergeV2Page() {
     setElevationMergedRows([]);
     setOriginalScheduleLabelById({});
     setCollapsedSystemLabelMap({});
+    setCollapsedScheduleGroupMap({});
     try {
       const response = await getFileSourceMergeResultsByLabel(takeoffId, resolvedFileId, label);
       if (response.status !== "success") {
@@ -1322,11 +1424,30 @@ export default function ManualMergeV2Page() {
         cancelText: "Cancel",
         okButtonProps: { danger: true },
         onOk: async () => {
+          const idsToDelete = (() => {
+            if (!record?.__isSystemRoot || !record?.__systemGroupKey) {
+              return [String(itemId)];
+            }
+            const parentGroupKey = String(record.__systemGroupKey);
+            const groupedIds = finalItemsSource.rows
+              .filter((row) => {
+                const labelValue = getDisplayValueByField(row?.result || {}, "Label");
+                const rowGroupKey =
+                  normalizeLabelKey(labelValue || "") ||
+                  `__unknown__${String(row?.id ?? row?.__rowKey ?? "")}`;
+                return rowGroupKey === parentGroupKey;
+              })
+              .map((row) => String(row?.id || ""))
+              .filter(Boolean);
+            return groupedIds.length ? groupedIds : [String(itemId)];
+          })();
+
           setLoading(true);
           try {
+            const resultIds = idsToDelete.join(",");
             const response = isSelectedLabelMerged
-              ? await deleteSingleFileMergeResultById(itemId)
-              : await deleteFileSourceMergeResultById(itemId);
+              ? await deleteSingleFileMergeResultByIdList(resultIds)
+              : await deleteFileSourceMergeResultByIdList(resultIds);
 
             if (response.status !== "success") {
               notify.error({
@@ -1338,7 +1459,10 @@ export default function ManualMergeV2Page() {
 
             notify.success({
               title: "Success",
-              description: "Item deleted successfully.",
+              description:
+                idsToDelete.length > 1
+                  ? `Deleted ${idsToDelete.length} items successfully.`
+                  : "Item deleted successfully.",
             });
 
             await fetchLabelData(selectedLabel, fileId);
@@ -1348,7 +1472,7 @@ export default function ManualMergeV2Page() {
         },
       });
     },
-    [fetchLabelData, fileId, isSelectedLabelMerged, selectedLabel],
+    [fetchLabelData, fileId, finalItemsSource.rows, isSelectedLabelMerged, selectedLabel],
   );
 
   const refreshItemsAndEvidence = useCallback(async () => {
@@ -1394,18 +1518,10 @@ export default function ManualMergeV2Page() {
   }, [closeCopyModal, copySelectedRowKeys.length]);
 
   const handleSubmitSplit = useCallback(async (selectedRowKeys: React.Key[], targetLabel: string) => {
-    const selectedIdSet = new Set(selectedRowKeys.map((key) => String(key)));
-    const payload = finalItemsSource.rows
-      .filter((row) => selectedIdSet.has(String(row.id)))
-      .map((row) => ({
-        id: row.id,
-        result: {
-          ...parseItemResultUtil(row?.result as any),
-          Label: targetLabel,
-        },
-      }));
-
-    if (payload.length === 0) {
+    const selectedIds = selectedRowKeys
+      .map((key) => String(key))
+      .filter(Boolean);
+    if (!selectedIds.length) {
       notify.warning({
         title: "No Valid Items",
         description: "Selected items are invalid, please reselect.",
@@ -1415,7 +1531,12 @@ export default function ManualMergeV2Page() {
 
     setSplitSubmitting(true);
     try {
-      const response = await updateFileSourceMergeResultsByIdList(payload);
+      const response = await splitFileSourceMergeResultsByIdList(
+        takeoffId,
+        fileId,
+        selectedIds.join(","),
+        targetLabel,
+      );
       if (response.status !== "success") {
         notify.error({
           title: "Error",
@@ -1426,14 +1547,14 @@ export default function ManualMergeV2Page() {
 
       notify.success({
         title: "Success",
-        description: `Split ${payload.length} items successfully.`,
+        description: `Split ${selectedIds.length} items successfully.`,
       });
       closeSplitModal();
       await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
     } finally {
       setSplitSubmitting(false);
     }
-  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, finalItemsSource.rows, selectedLabel]);
+  }, [closeSplitModal, fetchLabelsAndMaybeLoadData, fileId, selectedLabel, takeoffId]);
 
   const renderTable = (
     title: string,
@@ -1509,7 +1630,7 @@ export default function ManualMergeV2Page() {
               </div>
             ) : fieldName === "Label" &&
               isGroupedSummary &&
-              (title === "Floor Plan" || title === "Elevation") &&
+              (title === "Schedule" || title === "Floor Plan" || title === "Elevation") &&
               record?.__groupKey ? (
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -1522,6 +1643,13 @@ export default function ManualMergeV2Page() {
                   onClick={(event) => {
                     event.stopPropagation();
                     const groupKey = String(record.__groupKey);
+                    if (title === "Schedule") {
+                      setCollapsedScheduleGroupMap((prev) => ({
+                        ...prev,
+                        [groupKey]: !(prev[groupKey] ?? true),
+                      }));
+                      return;
+                    }
                     if (title === "Floor Plan") {
                       setCollapsedFloorPlanGroupMap((prev) => ({
                         ...prev,
@@ -1535,7 +1663,11 @@ export default function ManualMergeV2Page() {
                     }));
                   }}
                 >
-                  {title === "Floor Plan"
+                  {title === "Schedule"
+                    ? (collapsedScheduleGroupMap[String(record.__groupKey)] ?? true)
+                      ? <DownOutlined className="text-[10px] text-grey-normal" />
+                      : <UpOutlined className="text-[10px] text-grey-normal" />
+                    : title === "Floor Plan"
                     ? (collapsedFloorPlanGroupMap[String(record.__groupKey)] ?? true)
                       ? <DownOutlined className="text-[10px] text-grey-normal" />
                       : <UpOutlined className="text-[10px] text-grey-normal" />
@@ -1707,7 +1839,8 @@ export default function ManualMergeV2Page() {
                     <div className="shrink-0">
                       <TableSection
                         title="Schedule"
-                        rows={scheduleRows}
+                        rows={displayScheduleRows}
+                        itemCount={scheduleItemCount}
                         editable={false}
                         withEvidenceAction={true}
                         extra={null}

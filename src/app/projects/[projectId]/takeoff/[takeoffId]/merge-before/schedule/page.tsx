@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Image, Popover, Modal, Tooltip } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import { useParams, useRouter } from "next/navigation";
 
 import {
@@ -11,7 +12,6 @@ import {
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import EvidenceThumbailList from "../floor-plan/components/EvidenceThumbailList";
 import LoadingScreen from "@/components/loading-screen";
-import ScheduleTable from "./components/ScheduleTable";
 import {
   getTakeOffById,
   getEvidencesWindowTableQuoteWithUrlByProjectFileId,
@@ -20,6 +20,8 @@ import {
   deleteTakeOffResultItemById,
   reconcileTakeOffResultItemsByTakeOffAndFile,
   deleteTakeOffResultItemByEvidenceId,
+  validateScheduleSubLabelsByTakeOffAndFile,
+  addTakeOffResultItemByEvidenceId,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -27,11 +29,13 @@ import {
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
 } from "../../analyze-new/takeoffUtils";
+import { EvidenceRecord } from "../../analyze-new/types";
 import BuildingBackground from "../../identification/components/BuildingBackground";
-import CreateItemModal from "./components/CreateItemModal";
-import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 import DisplayColumnsModal from "./components/DisplayColumnsModal";
+import ScheduleEvidenceImage from "./components/ScheduleEvidenceImage";
+import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
+import ScheduleTable from "./components/ScheduleTable";
 const { confirm } = Modal;
 
 const REQUIRED_VISIBLE_COLUMNS = ["Label", "Sub Label", "Product", "Quantity"] as const;
@@ -61,11 +65,31 @@ export default function SchedulePage() {
   const [columnDraft, setColumnDraft] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
-  const [createItemOpen, setCreateItemOpen] = useState(false);
+  const [focusedItemId, setFocusedItemId] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
   }, [files, selectedFileId]);
+
+  const currentScheduleEvidence = useMemo(() => {
+    return scheduleList.find((item) => item.id === pageEvidenceId) || null;
+  }, [scheduleList, pageEvidenceId]);
+
+  const previewImageUrl = useMemo(() => {
+    const pageNumber =
+      Number(currentScheduleEvidence?.project_file_page_number || currentPage || 0) || 0;
+    const pageInfo = selectedFile?.parse_detail?.image_page_infos?.find(
+      (item: any, index: number) =>
+        Number(item?.project_file_page_number || item?.page_number || index + 1) === pageNumber,
+    );
+    return pageInfo?.s3_url || imageUrl;
+  }, [currentPage, currentScheduleEvidence, imageUrl, selectedFile]);
+
+  const previewPageEvidences = useMemo<EvidenceRecord[]>(() => {
+    if (!currentScheduleEvidence) return [];
+    return [currentScheduleEvidence as EvidenceRecord];
+  }, [currentScheduleEvidence]);
 
   const fetchTakeoffData = useCallback(async () => {
     if (!takeOffId) return;
@@ -160,6 +184,18 @@ export default function SchedulePage() {
     }
   }, [pageEvidenceId, scheduleList]);
 
+  useEffect(() => {
+    setFocusedItemId(null);
+  }, [pageEvidenceId, selectedFileId]);
+
+  useEffect(() => {
+    if (focusedItemId === null) return;
+    const exists = itemBoxList.some((item: any) => Number(item?.id) === focusedItemId);
+    if (!exists) {
+      setFocusedItemId(null);
+    }
+  }, [focusedItemId, itemBoxList]);
+
 
   const handlePageEvidenceChange = useCallback(
     (evidenceId: any) => {
@@ -167,48 +203,20 @@ export default function SchedulePage() {
       const selectedEvidence = scheduleList.find((item) => item.id === evidenceId);
       setCurrentPage(selectedEvidence?.project_file_page_number || 0);
       setImageUrl(selectedEvidence?.evidence_url || "");
+      setFocusedItemId(null);
     },
     [scheduleList],
   );
 
-  const handleDeleteEvidence = (data: any) => {
-    // 刷新数据
-    getItemsByPageEvidences(pageEvidenceId);
-  };
-
-  const handleUpdateEvidence = (data: any) => {
-    if (data?.evidences) {
-      setItemBoxList((prev) =>
-        prev.map((e) => {
-          const updated = data.evidences.find((u: any) => u.id === e.id);
-          return updated ? { ...e, ...updated } : e;
-        }),
-      );
-    }
-  };
-
-  const handleSelectFloorPlan = (item: { id: string | number }) => {
-    setSelectedEvidenceIds([item.id]);
-  };
-
-  const handleSelectElevation = (item: { id: string | number }) => {
-    setSelectedEvidenceIds([item.id]);
-  };
-
-  const handleUpdateItemByLabelTable = useCallback((updatedItem: any) => {
-    setItemBoxList((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item)),
-    );
+  const handleSelectOverlayItem = useCallback((itemId: number) => {
+    setFocusedItemId(itemId);
   }, []);
 
-  const handleDeleteItemByLabelTable = useCallback(
-    async (deletedId: number) => {
-      setSelectedEvidenceIds((prev: number[] | null) =>
-        prev?.includes(deletedId) ? null : prev,
-      );
-      await getItemsByPageEvidences(pageEvidenceId);
+  const handleFocusItemFromTable = useCallback(
+    (itemId: number) => {
+      setFocusedItemId(itemId);
     },
-    [getItemsByPageEvidences, pageEvidenceId],
+    [],
   );
 
   // Ensure Label and Sub Label are always at the beginning and adjacent
@@ -501,38 +509,101 @@ export default function SchedulePage() {
     [getItemsByPageEvidences, pageEvidenceId],
   );
 
-  const getDefaultNextLabel = useCallback(() => {
-    const lastItem = itemBoxList[itemBoxList.length - 1] as any;
-    const lastLabel = String(
-      getDisplayValueByField(lastItem?.result || {}, "Label") || "",
-    )
-      .replace(/^-$/, "")
-      .trim();
-
-    if (!lastLabel) return "Label 1";
-
-    const trailingNumberMatch = lastLabel.match(/^(.*?)(\d+)$/);
-    if (trailingNumberMatch) {
-      const prefix = trailingNumberMatch[1];
-      const number = Number(trailingNumberMatch[2]);
-      if (Number.isFinite(number)) {
-        return `${prefix}${number + 1}`.trim();
-      }
+  const handleCreateItem = useCallback(async () => {
+    if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
+      notify.error({
+        title: "Error",
+        description: "Missing takeoff context, unable to create item.",
+      });
+      return;
+    }
+    if (!itemBoxList.length) {
+      notify.error({
+        title: "Error",
+        description: "No reference label found in current item list.",
+      });
+      return;
     }
 
-    return `${lastLabel} 1`;
-  }, [itemBoxList]);
+    const firstItem = itemBoxList[0] as any;
+    const firstLabel = String(getDisplayValueByField(firstItem?.result || {}, "Label") || "")
+      .replace(/^-$/, "")
+      .trim();
+    if (!firstLabel) {
+      notify.error({
+        title: "Error",
+        description: "The first item's Label is empty. Unable to create item.",
+      });
+      return;
+    }
 
-  const handleOpenCreateItemModal = useCallback(() => {
-    setCreateItemOpen(true);
-  }, []);
+    setFullLoading(true);
+    const response = await addTakeOffResultItemByEvidenceId(
+      String(takeOffId),
+      String(selectedFileId),
+      String(pageEvidenceId),
+      { Label: firstLabel },
+    );
+    setFullLoading(false);
+    if (response.status !== "success") {
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to create item.",
+      });
+      return;
+    }
 
-  const handleCancelCreateItem = useCallback(() => {
-    setCreateItemOpen(false);
-  }, []);
+    await getItemsByPageEvidences(pageEvidenceId);
+  }, [getItemsByPageEvidences, itemBoxList, pageEvidenceId, selectedFileId, takeOffId]);
 
   const handleReconcileTakeOff = async () => {
     setBuildingLoading(true);
+    // 先检测当前文件是否存在schedule sub label
+    const validateRes = await validateScheduleSubLabelsByTakeOffAndFile(takeOffId as string, selectedFileId as any);
+    if (validateRes.status !== "success") {
+      setBuildingLoading(false);
+      let detail = validateRes?.data?.detail;
+      if (detail?.invalid_count > 0) {
+        let groups: any = {};
+        if (detail?.invalid_items?.length > 0) {
+          // 统计相同的Label数量
+          detail?.invalid_items?.forEach((item: any) => {
+            let label = item?.label || "";
+            if (!groups[label]) groups[label] = 0;
+            groups[label]++;
+          })
+        }
+        // 存在schedule sub label，则提示用户
+        confirm({
+          title: `Warning: ${detail?.message}`,
+          content: <div>
+            <div>Invalid Count: {detail?.invalid_count}</div>
+            <div>{Object.keys(groups).map((label) => <div key={label}>Label: {label}: {groups[label]}</div>)}</div>
+          </div>,
+          okText: "Continue",
+          okType: "danger",
+          cancelText: "Cancel",
+          onOk: async () => {
+            // 跳转到groups中第一个label的schedule sub label页面
+            let firstLabel = Object.keys(groups)?.[0] || "";
+            if (!firstLabel) return;
+            let targetEvidence = scheduleList.find((item: any) => item?.label_list?.includes(firstLabel));
+            if (targetEvidence) {
+              setPageEvidenceId(targetEvidence.id);
+            }
+          }
+        })
+      } else {
+        notify.error({
+          title: "Error",
+          description: validateRes?.data?.detail || "Failed to validate schedule sub labels.",
+        });
+      }
+      return;
+    }
+
+    return;
+
     let res = await reconcileTakeOffResultItemsByTakeOffAndFile(takeOffId as string, selectedFileId as any)
     setBuildingLoading(false);
     if (res.status === "success") {
@@ -665,11 +736,24 @@ export default function SchedulePage() {
         <div
           className={`min-w-0 flex-1 flex flex-col overflow-hidden`}
         >
+          <div className="mr-2 mb-1 flex items-center justify-end">
+            <Tooltip title="Preview PDF Context">
+              <div className="px-1 bg-forumBlue-normal rounded-full">
+                <EyeOutlined
+                  onClick={() => setPreviewOpen(true)}
+                  disabled={!previewImageUrl}
+                  className="cursor-pointer text-white" />
+              </div>
+            </Tooltip>
+          </div>
           {/* Images */}
-          <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center">
-            {
-              imageUrl && <ImagePreviewWithExpand src={imageUrl} alt="Schedule Evidence" />
-            }
+          <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center relative group">
+            <ScheduleEvidenceImage
+              imageUrl={imageUrl}
+              items={itemBoxList}
+              activeItemId={focusedItemId}
+              onSelectItem={handleSelectOverlayItem}
+            />
           </div>
         </div>
         {/** right view */}
@@ -684,21 +768,13 @@ export default function SchedulePage() {
             onUpdateField={handleUpdateScheduleItemField}
             onDeleteItem={handleDeleteScheduleItem}
             onOpenColumnSelector={handleOpenColumnModal}
-            onOpenCreateItemModal={handleOpenCreateItemModal}
+            onCreateItem={handleCreateItem}
             onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
+            focusedItemId={focusedItemId}
+            onFocusItemChange={handleFocusItemFromTable}
           />
         </div>
       </div>
-      <CreateItemModal
-        open={createItemOpen}
-        columns={columns}
-        takeOffId={String(takeOffId || "")}
-        selectedFileId={selectedFileId}
-        pageEvidenceId={pageEvidenceId}
-        defaultLabel={getDefaultNextLabel()}
-        onCancel={handleCancelCreateItem}
-        onSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
-      />
       {fullLoading && <LoadingScreen isLoading={fullLoading} />}
       {buildingLoading && <BuildingBackground step={'page-merge'} />}
       <DisplayColumnsModal
@@ -709,6 +785,14 @@ export default function SchedulePage() {
         onToggleColumn={handleToggleColumnDraft}
         onCancel={handleCancelColumnModal}
         onConfirm={handleConfirmColumnModal}
+      />
+      <EvidenceImagePreviewModal
+        open={previewOpen}
+        fileName={selectedFile?.file_name || "Unnamed file"}
+        pageNumber={Number(currentScheduleEvidence?.project_file_page_number || currentPage || 1)}
+        imageUrl={previewImageUrl}
+        pageEvidences={previewPageEvidences}
+        onCancel={() => setPreviewOpen(false)}
       />
     </div>
   );

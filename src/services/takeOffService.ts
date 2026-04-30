@@ -46,17 +46,17 @@ export const getTakeOffsDetails = async (takeOffId: string) => {
   }
 };
 
-export const updateTakeOffName = async (name: string, takeOffId: number) => {
+export const updateTakeOffInfo = async (takeOffId: number, updateParams: {name: string}) => {
   try {
     const url = `/project/take_off/edit/take_off_id`;
     const body = {
       id: takeOffId,
-      name: name,
+      ...updateParams,
     };
     const response = await http.put(url, body);
     return { data: response as any, status: "success" };
   } catch (error:any) {
-    console.error("Error updating take off name:", error);
+    console.error("Error updating take off info:", error);
     return { data: error?.response?.data || null, status: "error" };
   }
 };
@@ -209,6 +209,11 @@ export const addTakeOffResultItem = async (data: any) => {
   }
 };
 
+/**
+ * 删除最终页面take off result item
+ * @param result_id 
+ * @returns 
+ */
 export const deleteTakeOffResultItem = async (result_id: string) => {
   try {
     const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_id?result_id=${result_id}`;
@@ -216,6 +221,22 @@ export const deleteTakeOffResultItem = async (result_id: string) => {
     return { data: response as any, status: "success" };
   } catch (error:any) {
     console.error("Error deleting take off result item:", error);
+    return { data: error?.response?.data || null, status: "error" };
+  }
+};
+
+/**
+ * 批量删除最终页面take off result item
+ * @param take_off_id 
+ * @returns 
+ */
+export const deleteTakeOffResultItemList = async (result_ids: string) => {
+  try {
+    const url = `/drawing-ai/drawing_ai/delete_multiple_files_merge_result_by_ids?result_ids=${result_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  } catch (error:any) {
+    console.error("Error deleting take off result items:", error);
     return { data: error?.response?.data || null, status: "error" };
   }
 };
@@ -599,6 +620,22 @@ export const deleteFileSourceMergeResultById = async (result_id: string | number
 }
 
 /**
+ * 批量删除未合并的label的item
+ * @param result_id 
+ * @returns 
+ */
+export const deleteFileSourceMergeResultByIdList = async (result_ids: string) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_file_source_merge_result_by_ids?result_ids=${result_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
  * 删除已合并label的item
  * @param result_id 
  * @returns 
@@ -613,6 +650,25 @@ export const deleteSingleFileMergeResultById = async (result_id: string | number
     return { data: error?.response?.data, status: "error" };
   }
 }
+
+
+/**
+ * 批量删除已合并label的item
+ * @param result_ids 
+ * @returns 
+ */
+export const deleteSingleFileMergeResultByIdList = async (result_ids: string) => {
+  try{
+    const url = `/drawing-ai/drawing_ai/delete_single_file_merge_result_by_ids?result_ids=${result_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
 
 /**
  * 更新未合并的label的item数据
@@ -629,6 +685,33 @@ export const updateFileSourceMergeResultsByIdList = async (data:any)=>{
     return { data: error?.response?.data, status: "error" };
   }
 }
+
+
+/**
+ * 分割未合并的label的item
+ * @param take_off_id 
+ * @param file_id 
+ * @param file_source_merge_result_ids 
+ * @param label 
+ * @returns 
+ */
+export const splitFileSourceMergeResultsByIdList = async (
+  take_off_id: string | number, 
+  file_id: string | number, 
+  file_source_merge_result_ids: string, 
+  label: string | number
+)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/split_file_source_merge_results_by_ids?take_off_id=${take_off_id}&file_id=${file_id}&file_source_merge_result_ids=${file_source_merge_result_ids}&label=${label}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error splitting file source merge results by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
 
 /**
  * 删除未合并的label中的evidence
@@ -680,22 +763,6 @@ export const updateTakeOffResultItemResultByIdList = async (data:any)=>{
 }
 
 /**
- * 删除take off result item
- * @param take_off_result_item_ids 
- * @returns 
- */
-export const deleteTakeOffResultItemByIdList = async (take_off_result_item_ids:string)=>{
-  try{ 
-    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_by_id_list?take_off_result_item_ids=${take_off_result_item_ids}`;
-    const response = await http.delete(url);
-    return { data: response as any, status: "success" };
-  }catch(error: any){
-    console.error("Error deleting take off result item by id list:", error);
-    return { data: error?.response?.data, status: "error" };
-  }
-}
-
-/**
  * 添加多个take off result item
  * @param data 
  * @returns 
@@ -726,7 +793,14 @@ export const updateMultipleTakeOffResultItems = async (data: any) => {
  * @returns
  */
 export const deleteMultipleTakeOffResultItems = async (take_off_result_item_ids: string) => {
-  return deleteTakeOffResultItemByIdList(take_off_result_item_ids);
+  try{ 
+    const url = `/drawing-ai/drawing_ai/delete_take_off_result_item_by_id_list?take_off_result_item_ids=${take_off_result_item_ids}`;
+    const response = await http.delete(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error deleting take off result item by id list:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
 }
 
 /**
@@ -746,6 +820,23 @@ export const getGroupedEvidencesByTakeOffAndFile = async (take_off_id: string | 
   }
 }
 
+
+/**
+ * 验证当前文件是否存在schedule sub label
+ * @param take_off_id 
+ * @param file_id 
+ * @returns 
+ */
+export const validateScheduleSubLabelsByTakeOffAndFile = async (take_off_id: string | number, file_id: string | number)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/validate_schedule_sub_labels_by_take_off_and_file?take_off_id=${take_off_id}&file_id=${file_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error validating schedule sub labels by take off and file:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
 
 
 

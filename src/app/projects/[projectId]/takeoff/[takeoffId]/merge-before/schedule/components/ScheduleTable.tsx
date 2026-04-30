@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Checkbox, Input, Modal, Table, Tooltip } from "antd";
+import { Button, Card, Checkbox, Empty, Input, Modal, Radio, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,6 +14,8 @@ import {
 	DeleteOutlined,
 	CopyOutlined,
 	ColumnWidthOutlined,
+	AppstoreOutlined,
+	TableOutlined,
 } from "@ant-design/icons";
 import { notify } from "@/utils/notify";
 import {
@@ -60,9 +62,11 @@ interface ScheduleTableProps {
 		newValue: string,
 	) => Promise<boolean>;
 	onDeleteItem: (itemId: number) => Promise<boolean>;
-	onOpenCreateItemModal: () => void;
+	onCreateItem: () => Promise<void> | void;
 	onOpenColumnSelector?: () => void;
 	onBatchActionSuccess?: () => Promise<void> | void;
+	focusedItemId?: number | null;
+	onFocusItemChange?: (itemId: number) => void;
 }
 
 function TruncatedTextCell({ value }: { value: string }) {
@@ -130,10 +134,14 @@ export default function ScheduleTable({
 	pageEvidenceId,
 	onUpdateField,
 	onDeleteItem,
-	onOpenCreateItemModal,
+	onCreateItem,
 	onOpenColumnSelector,
 	onBatchActionSuccess,
+	focusedItemId = null,
+	onFocusItemChange,
 }: ScheduleTableProps) {
+	const tableContainerRef = useRef<HTMLDivElement | null>(null);
+	const [viewMode, setViewMode] = useState<"table" | "card">("table");
 	const [editingCell, setEditingCell] = useState<{
 		id: number;
 		field: string;
@@ -146,6 +154,7 @@ export default function ScheduleTable({
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [batchSubmitting, setBatchSubmitting] = useState(false);
 	const [batchEditValues, setBatchEditValues] = useState<Record<string, string>>({});
+	const hasRows = sections.length > 0;
 
 
 	const startEdit = (record: any, fieldName: string) => {
@@ -260,6 +269,53 @@ export default function ScheduleTable({
 		);
 		setBatchSelectedIds((prev) => prev.filter((id) => validIds.has(id)));
 	}, [sections]);
+
+	useEffect(() => {
+		if (focusedItemId === null) return;
+		const container = tableContainerRef.current;
+		if (!container) return;
+
+		if (viewMode === "table") {
+			const body = container.querySelector(".ant-table-body") as HTMLElement | null;
+			const row = container.querySelector(
+				`.ant-table-tbody tr[data-row-key="${focusedItemId}"]`,
+			) as HTMLElement | null;
+			if (!body || !row) return;
+
+			const bodyRect = body.getBoundingClientRect();
+			const rowRect = row.getBoundingClientRect();
+			const padding = 8;
+
+			if (rowRect.top < bodyRect.top) {
+				body.scrollTop -= bodyRect.top - rowRect.top + padding;
+				return;
+			}
+			if (rowRect.bottom > bodyRect.bottom) {
+				body.scrollTop += rowRect.bottom - bodyRect.bottom + padding;
+			}
+			return;
+		}
+
+		const cardContainer = container.querySelector(
+			".schedule-card-scroll",
+		) as HTMLElement | null;
+		const card = container.querySelector(
+			`[data-card-row-key="${focusedItemId}"]`,
+		) as HTMLElement | null;
+		if (!cardContainer || !card) return;
+		card.scrollIntoView({ block: "nearest", inline: "nearest" });
+	}, [focusedItemId, sections, viewMode]);
+
+	const cardFieldNames = useMemo(() => {
+		const fieldSet = new Set<string>(columns);
+		sections.forEach((row) => {
+			const parsedResult = parseItemResultUtil((row as any)?.result as any) || {};
+			Object.keys(parsedResult).forEach((fieldName) => {
+				if (fieldName) fieldSet.add(fieldName);
+			});
+		});
+		return Array.from(fieldSet);
+	}, [columns, sections]);
 
 	const selectedPreviewColumns: ColumnsType<any> = [
 		{
@@ -450,7 +506,9 @@ export default function ScheduleTable({
 						? 120
 						: getColumnWidth(fieldName),
 				fixed:
-					isLabelColumn || isSubLabelColumn ? ("left" as const) : undefined,
+					hasRows && (isLabelColumn || isSubLabelColumn)
+						? ("left" as const)
+						: undefined,
 				align: "center" as const,
 				render: (_: unknown, record: any) => {
 					const displayValue = getDisplayValueByField(record?.result, fieldName);
@@ -505,11 +563,31 @@ export default function ScheduleTable({
 			}
 		};
 
+		const focusColumn = {
+			title: "",
+			key: "focus",
+			width: 36,
+			align: "center" as const,
+			render: (_: unknown, record: any) => {
+				const rowId = Number(record.id);
+				const checked = Number.isFinite(rowId) && focusedItemId === rowId;
+				return (
+					<Radio
+						checked={checked}
+						onChange={() => {
+							if (!Number.isFinite(rowId)) return;
+							onFocusItemChange?.(rowId);
+						}}
+					/>
+				);
+			},
+		};
+
 		const actionColumn: ColumnsType<any>[number] = {
 			title: <div className="text-center text-xs text-grey-normal">Action</div>,
 			key: "action",
 			width: 80,
-			fixed: "right",
+			fixed: hasRows ? "right" : undefined,
 			align: "center",
 			render: (_: unknown, record: any) => (
 				<Button
@@ -526,7 +604,9 @@ export default function ScheduleTable({
 			),
 		};
 
-		return [checkedColumn, ...dataColumns, actionColumn];
+		return hasRows
+			? [checkedColumn, focusColumn, ...dataColumns, actionColumn]
+			: [...dataColumns, actionColumn];
 	})();
 
 	return (
@@ -575,35 +655,159 @@ export default function ScheduleTable({
 								<ColumnWidthOutlined className="text-[12px]" />
 							</div>
 						</Tooltip>
+						<Tooltip title={viewMode === "table" ? "Switch to Card View" : "Switch to Table View"}>
+							<div
+								className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+								onClick={() => setViewMode((prev) => (prev === "table" ? "card" : "table"))}
+							>
+								{viewMode === "table" ? (
+									<AppstoreOutlined className="text-[12px]" />
+								) : (
+									<TableOutlined className="text-[12px]" />
+								)}
+							</div>
+						</Tooltip>
 						<Button
 							className="custom-primary-btn !w-[60px] !text-xs"
-							onClick={() => onOpenCreateItemModal?.()}
+							onClick={() => onCreateItem?.()}
 						>
 							+ Item
 						</Button>
 					</div>
 
 				</div>
-				<div className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white">
-					<Table<any>
-						rowKey={(record) => record.id}
-						columns={tableColumns}
-						dataSource={sections}
-						pagination={false}
-						loading={tableLoading}
-						scroll={{
-							x: "max-content",
-							y: "calc(100vh - 280px)",
-						}}
-						locale={{
-							emptyText: (
-								<div className="py-10 text-xs text-grey-normal">
-									No labels found for this source.
+				<div
+					ref={tableContainerRef}
+					className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white"
+				>
+					{viewMode === "table" ? (
+						<Table<any>
+							rowKey={(record) => record.id}
+							columns={tableColumns}
+							dataSource={sections}
+							pagination={false}
+							loading={tableLoading}
+							scroll={
+								sections.length > 0 ? {
+									x: "max-content",
+									y: "calc(100vh - 280px)",
+								} : {
+									y: "calc(100vh - 280px)",
+								}}
+							locale={{
+								emptyText: (
+									<div className="py-10 text-xs text-grey-normal">
+										No labels found for this source.
+									</div>
+								),
+							}}
+							className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
+							tableLayout="fixed"
+						/>
+					) : (
+						<div className="schedule-card-scroll h-[calc(100vh-200px)] overflow-auto p-3">
+							{sections.length === 0 ? (
+								<div className="flex h-full items-center justify-center">
+									<Empty
+										image={Empty.PRESENTED_IMAGE_SIMPLE}
+										description={<span className="text-xs text-grey-normal">No labels found for this source.</span>}
+									/>
 								</div>
-							),
-						}}
-						className="[&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-3 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-3 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal [&_.ant-pagination]:!my-3 [&_.ant-pagination]:!px-4 [&_.ant-pagination]:!text-xs"
-					/>
+							) : (
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+									{sections.map((record: any) => {
+										const rowId = Number(record?.id);
+										const parsedResult = parseItemResultUtil((record as any)?.result as any) || {};
+										const rowLabel = getDisplayValueByField(parsedResult, "Label") || `Item ${rowId}`;
+										return (
+											<Card
+												key={record.id}
+												data-card-row-key={rowId}
+												size="small"
+												className={`border transition-shadow ${focusedItemId === rowId ? "border-forumBlue-normal shadow-md" : "border-primaryN30 hover:shadow-sm"}`}
+												title={
+													<div className="flex items-center justify-between">
+														<div className="min-w-0 truncate text-xs font-semibold text-grey-dark">{rowLabel}</div>
+														<div className="ml-2 flex items-center gap-2">
+															<Checkbox
+																checked={batchSelectedIds.includes(rowId)}
+																onChange={(event) =>
+																	handleToggleBatchSelected(rowId, event.target.checked)
+																}
+															/>
+															<Radio
+																checked={Number.isFinite(rowId) && focusedItemId === rowId}
+																onChange={() => {
+																	if (!Number.isFinite(rowId)) return;
+																	onFocusItemChange?.(rowId);
+																}}
+															/>
+															<Button
+																type="link"
+																size="small"
+																className="!px-0"
+																onClick={(event) => {
+																	event.stopPropagation();
+																	handleDelete(record);
+																}}
+															>
+																<Image alt="Delete" src="/assets/icons/delete.svg" width={16} height={16} />
+															</Button>
+														</div>
+													</div>
+												}
+											>
+												<div className="grid grid-cols-1 gap-2">
+													{cardFieldNames.map((fieldName) => {
+														const displayValue = getDisplayValueByField(parsedResult, fieldName);
+														const isEditing =
+															editingCell?.id === Number(record?.id) &&
+															editingCell?.field === fieldName;
+														const fieldLabel = String(fieldName || "").replaceAll(".", ". ");
+														return (
+															<div
+																key={`${record.id}-${fieldName}`}
+																className="grid grid-cols-[minmax(150px,40%)_1fr] items-start gap-2 text-xs"
+															>
+																<Tooltip title={fieldName}>
+																	<div className="shrink-0 whitespace-normal break-words leading-5 text-grey-normal">
+																		{fieldLabel}
+																	</div>
+																</Tooltip>
+																<div className="min-w-0 flex-1">
+																	{isEditing ? (
+																		<Input
+																			autoFocus
+																			size="small"
+																			value={editingValue}
+																			onChange={(event) => setEditingValue(event.target.value)}
+																			onBlur={() => submitEdit(record, fieldName)}
+																			onKeyDown={(event) => {
+																				if (event.key === "Escape") {
+																					cancelEdit();
+																				}
+																			}}
+																		/>
+																	) : (
+																		<div
+																			className="cursor-text rounded px-1 py-[2px] hover:bg-primaryN20"
+																			onClick={() => startEdit(record, fieldName)}
+																		>
+																			<TruncatedTextCell value={displayValue} />
+																		</div>
+																	)}
+																</div>
+															</div>
+														);
+													})}
+												</div>
+											</Card>
+										);
+									})}
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 

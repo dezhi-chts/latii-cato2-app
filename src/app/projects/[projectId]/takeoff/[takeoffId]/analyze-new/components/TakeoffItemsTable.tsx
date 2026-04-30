@@ -28,7 +28,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
 	updateTakeOffResultItem,
 	addTakeOffResultItem,
-	deleteTakeOffResultItem,
+	deleteTakeOffResultItemList,
 } from "@/services/takeOffService";
 
 import {
@@ -135,6 +135,8 @@ export default function TakeoffItemsTable({
 		normalizeLabel(getResultValue(item, "Label"));
 	const getSubLabelText = (item: TakeoffItemRecord) =>
 		formatCellValue(getResultValue(item, "Sub Label")).trim();
+	const getProductText = (item: TakeoffItemRecord) =>
+		formatCellValue(getResultValue(item, "Product")).trim();
 
 	interface LabelGroup {
 		groupKey: string;
@@ -178,8 +180,14 @@ export default function TakeoffItemsTable({
 				return;
 			}
 
+			const subLabelEmptyItems = sameLabelItems.filter(
+				(row) => getSubLabelText(row) === "",
+			);
 			const parent =
-				sameLabelItems.find((row) => getSubLabelText(row) === "") || sameLabelItems[0];
+				subLabelEmptyItems.length > 1
+					? subLabelEmptyItems.find((row) => getProductText(row) === "") ||
+						subLabelEmptyItems[0]
+					: subLabelEmptyItems[0] || sameLabelItems[0];
 			const children = sameLabelItems.filter((row) => row.id !== parent.id);
 			groups.push({
 				groupKey: key,
@@ -394,6 +402,19 @@ export default function TakeoffItemsTable({
 	};
 
 	const handleDeleteItem = (record: TakeoffItemRecord) => {
+		const displayRecord = record as DisplayRow;
+		const group = displayRecord.__groupKey
+			? labelGroups.find((item) => item.groupKey === displayRecord.__groupKey)
+			: null;
+		const deleteIds =
+			displayRecord.__isSystemParent && group
+				? [group.parent.id, ...group.children.map((child) => child.id)]
+				: [record.id];
+		const resultIds = deleteIds
+			.map((id) => String(id))
+			.filter((id) => id.trim().length > 0)
+			.join(",");
+
 		Modal.confirm({
 			title: "Delete Item",
 			content: `Are you sure you want to delete this item: ${getResultValue(record, "Label")}?`,
@@ -401,17 +422,25 @@ export default function TakeoffItemsTable({
 			okButtonProps: { danger: true },
 			cancelText: "Cancel",
 			onOk: async () => {
+				if (!resultIds) {
+					notify.error({
+						title: "Error",
+						description: "No valid item ids found for deletion",
+					});
+					return;
+				}
 				setDeleteLoading(true);
 				try {
-					const response = await deleteTakeOffResultItem(String(record.id));
+					const response = await deleteTakeOffResultItemList(resultIds);
 					if (response.status === "success") {
 						notify.success({
 							title: "Success",
 							description: "Item deleted successfully",
 						});
 						setTableData((prev) =>
-							prev.filter((item) => item.id !== record.id),
+							prev.filter((item) => !deleteIds.includes(item.id)),
 						);
+						await onRefreshItems?.();
 					} else {
 						notify.error({
 							title: "Error",

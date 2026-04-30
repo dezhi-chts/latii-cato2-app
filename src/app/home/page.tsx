@@ -289,6 +289,7 @@ const Home = () => {
               takeoffs={takeoffsCache}
               selectedColumns={[]}
               handleRemoveTakeoff={handleRemoveTakeoff}
+              onRefreshTakeoffs={() => getTakeoffs(currentTakeoffsPage)}
               currentPage={currentTakeoffsPage}
               setCurrentPage={setCurrentTakeoffsPage}
               totalTakeoffs={totalTakeoffs}

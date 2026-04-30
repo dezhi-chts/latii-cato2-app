@@ -8,7 +8,7 @@ import { useParams, useSearchParams } from "next/navigation";
 
 import Button from "@/components/Button";
 import { FilePanel } from "@/app/projects/[projectId]/components/Create-Takeoff/Cato-Upload";
-import { updateTakeOffName } from "@/services/takeOffService";
+import { updateTakeOffInfo } from "@/services/takeOffService";
 const Header = ({
   project,
   takeOff,
@@ -35,7 +35,7 @@ const Header = ({
   );
 
   const handleUpdateTakeOffName = async (name: string) => {
-    let response = await updateTakeOffName(name, takeOff?.take_off_result?.id);
+    let response = await updateTakeOffInfo(takeOff?.take_off_result?.id, { name: name });
     if (response.status === "success") {
       notification.success({
         message: "Success",
@@ -155,7 +155,7 @@ const Header = ({
           <Button
             backgroundColor="forumBlue-normal"
             className="rounded-md"
-            onClick={() => {}}
+            onClick={() => { }}
           >
             Download
           </Button>
