@@ -110,6 +110,9 @@ export default function SplitItemsModal({
           rowSelection={{
             selectedRowKeys,
             onChange: (nextRowKeys) => setSelectedRowKeys(nextRowKeys),
+            getCheckboxProps: (record: any) => ({
+              disabled: Boolean(record?.__isSystemRoot),
+            }),
           }}
           scroll={{ x: "max-content", y: 380 }}
           className="h-full [&_.ant-table]:!text-xs [&_.ant-table-cell]:!border-b-primaryN30 [&_.ant-table-tbody>tr>td]:!py-2 [&_.ant-table-thead>tr>th]:!bg-[#FBFBFC] [&_.ant-table-thead>tr>th]:!py-2 [&_.ant-table-thead>tr>th]:!font-normal [&_.ant-table-thead>tr>th]:!text-grey-normal"
