@@ -72,7 +72,7 @@ const LabelConfirmModal = ({
           <Button className="custom-default-btn" onClick={onCancel}>
             Cancel
           </Button>
-          <Button className="custom-primary-btn" onClick={handleSubmit}>
+          <Button className="custom-primary-btn !w-[76px]" onClick={handleSubmit}>
             Submit
           </Button>
         </div>

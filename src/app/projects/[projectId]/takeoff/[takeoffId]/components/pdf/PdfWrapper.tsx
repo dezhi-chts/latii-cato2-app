@@ -2588,8 +2588,8 @@ const PdfWrapper = forwardRef(
 			let groupObj = sections.find((e: any) => e.id === group.id);
 			if (!groupObj) return;
 
-			let gapX = 20;
-			let gapY = 20;
+			let gapX = 15;
+			let gapY = 15;
 
 			let {
 				minX: baseMinX,
@@ -2735,39 +2735,62 @@ const PdfWrapper = forwardRef(
 				}
 			}
 
-			let targetLeft =
+			// Keep the legacy "find available gap among nearby shapes" block above for future fallback,
+			// but the current copy behavior should always continue moving toward one direction.
+			// We do not attempt to find an empty slot between shapes, and we allow overlap.
+			const copyRootId = (groupObj as any).copyRootId || groupObj.id;
+			const sameFamilyShapes = sections.filter((section) => {
+				const sectionRootId = (section as any).copyRootId || section.id;
+				return sectionRootId === copyRootId;
+			});
+
+			const laneTolerance = 2;
+			const alignedShapes =
+				direction === "right" || direction === "left"
+					? sameFamilyShapes.filter(
+						(section) => Math.abs(section.bounds.minY - baseMinY) <= laneTolerance,
+					)
+					: sameFamilyShapes.filter(
+						(section) => Math.abs(section.bounds.minX - baseMinX) <= laneTolerance,
+					);
+			const anchorShapes = alignedShapes.length ? alignedShapes : [groupObj];
+
+			const rightAnchor = anchorShapes.length
+				? Math.max(...anchorShapes.map((shape) => shape.bounds.maxX))
+				: baseMaxX;
+			const leftAnchor = anchorShapes.length
+				? Math.min(...anchorShapes.map((shape) => shape.bounds.minX))
+				: baseMinX;
+			const bottomAnchor = anchorShapes.length
+				? Math.max(...anchorShapes.map((shape) => shape.bounds.maxY))
+				: baseMaxY;
+			const topAnchor = anchorShapes.length
+				? Math.min(...anchorShapes.map((shape) => shape.bounds.minY))
+				: baseMinY;
+			// Keep vertical spacing consistent with horizontal spacing.
+			const unifiedGap = gapX;
+
+			const targetLeft =
 				direction === "right"
-					? maxXRight + gapX
+					? rightAnchor + unifiedGap
 					: direction === "left"
-						? minXLeft - gapX - baseWidth
+						? leftAnchor - unifiedGap - baseWidth
 						: baseMinX;
-			let targetTop =
+			const targetTop =
 				direction === "bottom"
-					? maxYBottom + gapY
+					? bottomAnchor + unifiedGap
 					: direction === "top"
-						? minYTop - gapY - baseHeight
+						? topAnchor - unifiedGap - baseHeight
 						: baseMinY;
 
-			if (direction === "right") {
-				if (maxXRight + gapX + baseWidth > stageWidth - 10) {
-					message.error("The shape cannot be placed outside the stage");
-					return null;
-				}
-			} else if (direction === "bottom") {
-				if (maxYBottom + gapY + baseHeight > stageHeight - 10) {
-					message.error("The shape cannot be placed outside the stage");
-					return null;
-				}
-			} else if (direction === "left") {
-				if (targetLeft < 10) {
-					message.error("The shape cannot be placed outside the stage");
-					return null;
-				}
-			} else if (direction === "top") {
-				if (targetTop < 10) {
-					message.error("The shape cannot be placed outside the stage");
-					return null;
-				}
+			if (
+				targetLeft < 10 ||
+				targetTop < 10 ||
+				targetLeft + baseWidth > stageWidth - 10 ||
+				targetTop + baseHeight > stageHeight - 10
+			) {
+				message.error("The shape cannot be placed outside the stage");
+				return null;
 			}
 
 			const dx = Math.round(targetLeft - baseMinX);
@@ -2805,6 +2828,7 @@ const PdfWrapper = forwardRef(
 				pdfPolygons: pdfPolygons,
 				bounds,
 			};
+			(crop as any).copyRootId = copyRootId;
 			return crop;
 		};
 
