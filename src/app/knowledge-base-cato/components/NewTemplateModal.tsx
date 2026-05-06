@@ -33,6 +33,7 @@ export const NewTemplateModal = ({
   const [standardFields, setStandardFields] = useState<StandardField[]>([]);
   const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [templateNameError, setTemplateNameError] = useState("");
 
   const { company_id } = useUser();
 
@@ -48,8 +49,16 @@ export const NewTemplateModal = ({
     if (!isOpen) {
       setTemplateName("");
       setSelectedFieldIds([]);
+      setTemplateNameError("");
     }
   }, [isOpen]);
+
+  // 当用户输入时清除错误信息
+  useEffect(() => {
+    if (templateName.trim() && templateNameError) {
+      setTemplateNameError("");
+    }
+  }, [templateName, templateNameError]);
 
   const fetchStandardFields = async () => {
     setLoading(true);
@@ -86,12 +95,12 @@ export const NewTemplateModal = ({
 
   const handleCreate = async () => {
     if (!templateName.trim()) {
-      message.error("Please enter template name");
+      setTemplateNameError("Template name is required");
       return;
     }
 
     if (selectedFieldIds.length === 0) {
-      message.error("Please select at least one field");
+      setTemplateNameError("At least one field is required");
       return;
     }
 
@@ -151,9 +160,14 @@ export const NewTemplateModal = ({
           <Input
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            className="h-[28px] border-primaryN30 rounded-md text-xs"
+            className={`h-[28px] rounded-md text-xs ${templateNameError ? 'border-red-500' : 'border-primaryN30'}`}
             placeholder="Template Name"
+            status={templateNameError ? "error" : undefined}
+            required
           />
+          {templateNameError && (
+            <span className="text-xs text-red-500">{templateNameError}</span>
+          )}
         </div>
 
         {/* Standard Fields Section */}
@@ -211,7 +225,6 @@ export const NewTemplateModal = ({
             <Button
               className="ml-2 custom-primary-btn !w-[60px]"
               onClick={handleCreate}
-              disabled={!templateName.trim() || selectedFieldIds.length === 0}
             >
               Add
             </Button>
