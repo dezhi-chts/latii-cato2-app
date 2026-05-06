@@ -36,6 +36,7 @@ import {
 import { FileOperationType } from "../types/evidence";
 import LoadingScreen from "@/components/loading-screen";
 import { notify } from "@/utils/notify";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 
 interface ParsedTakeoffItem {
 	id: number | string;
@@ -208,6 +209,7 @@ export default function TakeoffListPage() {
 	const params = useParams();
 	const projectId = String(params?.projectId || "");
 	const takeoffId = String(params?.takeoffId || "");
+	useBrowserBackToHome();
 
 	const [loading, setLoading] = useState(true);
 	const [takeoffData, setTakeoffData] = useState<TakeoffDetailsData>();

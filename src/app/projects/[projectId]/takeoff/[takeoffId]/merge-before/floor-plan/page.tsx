@@ -56,6 +56,7 @@ import PromptTemplateSelect, {
   resolvePreferredTemplateId,
   type PromptTemplateItem,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 const { confirm } = Modal;
 
 interface ExtendedProjectFile extends ProjectFileRecord {
@@ -66,6 +67,7 @@ export default function FloorPlanPage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
+  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
 

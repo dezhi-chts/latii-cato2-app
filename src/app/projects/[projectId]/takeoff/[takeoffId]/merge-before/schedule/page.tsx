@@ -36,6 +36,7 @@ import ScheduleEvidenceImage from "./components/ScheduleEvidenceImage";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 const { confirm } = Modal;
 
 const REQUIRED_VISIBLE_COLUMNS: readonly string[] = [];
@@ -44,6 +45,7 @@ export default function SchedulePage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
+  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
 

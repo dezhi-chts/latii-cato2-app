@@ -36,6 +36,7 @@ import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
 import { notify } from "@/utils/notify";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -402,6 +403,7 @@ export default function ManualMergeV2Page() {
   const router = useRouter();
   const projectId = useParams().projectId as string;
   const takeoffId = useParams().takeoffId as string;
+  useBrowserBackToHome();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
