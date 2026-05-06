@@ -22,6 +22,7 @@ import Button from "@/components/Button";
 import { formatDateLong, getDaysAgoLabel } from "@/lib/functions";
 import Link from "next/link";
 import { TakeOffFileStatus } from "@/types/home";
+import { setTakeoffEntrySource } from "./takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 
 const { confirm } = Modal;
 
@@ -184,6 +185,7 @@ const Project = () => {
 
 	const handleLocation = async (record: any) => {
 		console.log("######## takeoff detail", record);
+		setTakeoffEntrySource(record.id, "project");
 		let floorPlanUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/floor-plan`;
 		let scheduleUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/schedule`;
 		let manualMergeUrl = `/projects/${record.project_id}/takeoff/${record.id}/manual-merge-v3`;
@@ -389,6 +391,10 @@ const Project = () => {
 					handleNext={(type: "takeoffModal" | "pageIndex") => {
 						// 跳转到Page-Index页面
 						//router.push(`/projects/38/takeoff/15/identification`);
+						setTakeoffEntrySource(
+							projectInfo.current?.take_off_id,
+							"project",
+						);
 						router.push(
 							`/projects/${projectId}/takeoff/${projectInfo.current?.take_off_id}/identification`,
 						);

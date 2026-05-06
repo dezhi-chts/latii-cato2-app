@@ -56,6 +56,8 @@ import PromptTemplateSelect, {
   resolvePreferredTemplateId,
   type PromptTemplateItem,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
+import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
 const { confirm } = Modal;
 
 interface ExtendedProjectFile extends ProjectFileRecord {
@@ -66,6 +68,7 @@ export default function FloorPlanPage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
+  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
 
@@ -784,32 +787,19 @@ export default function FloorPlanPage() {
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
-      <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
+      <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white pt-4">
         {/* <div className="cursor-pointer" onClick={handleBack}>
           <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
         </div> */}
-        <div className="flex-1 ml-6 flex items-center gap-3">
-          {files.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className={`flex h-[50px] min-w-[140px] flex-col items-start justify-center rounded-lg px-4 text-left transition-all ${file.id === selectedFileId
-                ? "bg-primaryN30"
-                : "border border-primaryN30"
-                }`}
-              onClick={() => handleSelectFile(file.id)}
-            >
-              <span className="max-w-[180px] truncate text-sm text-grey-dark">
-                {file.file_name || `File ${file.id}`}
-              </span>
-              {file.operation_type && (
-                <span className="mt-1 text-xs text-grey-normal">
-                  {file.operation_type}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <TakeoffFileWorkflowNav
+          className="ml-6 flex-1"
+          files={files}
+          selectedFileId={selectedFileId}
+          onSelectFile={(fileId) => handleSelectFile(Number(fileId))}
+          currentStep="sources"
+          projectId={String(projectId || "")}
+          takeoffId={String(takeOffId || "")}
+        />
         <div className="flex flex-row items-end gap-2">
           <div className="mr-3 flex items-center gap-2">
             <span className="text-sm text-forumBlue-normal">Reading Prompt</span>

@@ -1,10 +1,13 @@
 "use client";
 
 import { Button } from "antd";
+import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
 
 interface FileHeaderProps {
-  files: Array<{ id: string | number; file_name?: string }>;
+  files: Array<{ id: string | number; file_name?: string; operation_type?: string }>;
   fileId: string;
+  projectId: string;
+  takeoffId: string;
   onSwitchFile: (fileId: string) => void;
   onCreateMergeResult: () => void;
 }
@@ -12,26 +15,22 @@ interface FileHeaderProps {
 export default function FileHeader({
   files,
   fileId,
+  projectId,
+  takeoffId,
   onSwitchFile,
   onCreateMergeResult,
 }: FileHeaderProps) {
   return (
-    <header className="flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10">
-      <div className="flex items-center gap-3">
-        {files.map((file) => (
-          <button
-            key={file.id}
-            type="button"
-            className={`flex h-[50px] min-w-[140px] flex-col items-start justify-center rounded-lg px-4 text-left transition-all ${String(file.id) === fileId ? "bg-primaryN30" : "border border-primaryN30"
-              }`}
-            onClick={() => onSwitchFile(String(file.id))}
-          >
-            <span className="max-w-[180px] truncate text-sm text-grey-dark">
-              {file.file_name || `File ${file.id}`}
-            </span>
-          </button>
-        ))}
-      </div>
+    <header className="flex h-[162px] shrink-0 items-start justify-between border-b border-primaryN30 bg-white px-10 pt-4">
+      <TakeoffFileWorkflowNav
+        className="flex-1"
+        files={files}
+        selectedFileId={fileId}
+        onSelectFile={onSwitchFile}
+        currentStep="final-items"
+        projectId={projectId}
+        takeoffId={takeoffId}
+      />
       <Button type="primary" className="custom-primary-btn !w-[150px]" onClick={onCreateMergeResult}>
         Create Merge Result
       </Button>

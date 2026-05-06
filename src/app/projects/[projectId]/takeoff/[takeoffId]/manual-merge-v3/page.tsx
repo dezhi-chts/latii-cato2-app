@@ -36,6 +36,9 @@ import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
 import { notify } from "@/utils/notify";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
+import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
+
 const { confirm } = Modal;
 
 type ContentTab = "items" | "evidences";
@@ -402,6 +405,7 @@ export default function ManualMergeV2Page() {
   const router = useRouter();
   const projectId = useParams().projectId as string;
   const takeoffId = useParams().takeoffId as string;
+  useBrowserBackToHome();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1668,12 +1672,12 @@ export default function ManualMergeV2Page() {
                       ? <DownOutlined className="text-[10px] text-grey-normal" />
                       : <UpOutlined className="text-[10px] text-grey-normal" />
                     : title === "Floor Plan"
-                    ? (collapsedFloorPlanGroupMap[String(record.__groupKey)] ?? true)
-                      ? <DownOutlined className="text-[10px] text-grey-normal" />
-                      : <UpOutlined className="text-[10px] text-grey-normal" />
-                    : (collapsedElevationGroupMap[String(record.__groupKey)] ?? true)
-                      ? <DownOutlined className="text-[10px] text-grey-normal" />
-                      : <UpOutlined className="text-[10px] text-grey-normal" />}
+                      ? (collapsedFloorPlanGroupMap[String(record.__groupKey)] ?? true)
+                        ? <DownOutlined className="text-[10px] text-grey-normal" />
+                        : <UpOutlined className="text-[10px] text-grey-normal" />
+                      : (collapsedElevationGroupMap[String(record.__groupKey)] ?? true)
+                        ? <DownOutlined className="text-[10px] text-grey-normal" />
+                        : <UpOutlined className="text-[10px] text-grey-normal" />}
                 </Button>
               </div>
             ) : (
@@ -1766,13 +1770,20 @@ export default function ManualMergeV2Page() {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
-      <FileHeader
-        files={files}
-        fileId={fileId}
-        onSwitchFile={handleSwitchFile}
-        onCreateMergeResult={handleCreateMergeResult}
-      />
-
+      <header className="flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10 pt-4">
+        <TakeoffFileWorkflowNav
+          className="flex-1"
+          files={files}
+          selectedFileId={fileId}
+          onSelectFile={handleSwitchFile}
+          currentStep="final-items"
+          projectId={projectId}
+          takeoffId={takeoffId}
+        />
+        <Button type="primary" className="custom-primary-btn !w-[150px]" onClick={handleCreateMergeResult}>
+          Create Merge Result
+        </Button>
+      </header>
       <div className="flex flex-1 gap-4 p-4 overflow-y-hidden">
         <LabelSidebar
           labels={labels}
