@@ -62,15 +62,38 @@ export function useBrowserBackToHome() {
       }
     }
 
-    const currentUrl = window.location.href;
-    window.history.pushState({ __cato_back_intercept__: true }, "", currentUrl);
+    const targetUrl =
+      entrySource === "project" && projectId ? `/projects/${projectId}` : "/home";
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const currentState = window.history.state || {};
+    const alreadyInstalled =
+      currentState?.__cato_back_current__ === true &&
+      currentState?.__cato_back_takeoff_id__ === takeoffId &&
+      currentState?.__cato_back_target__ === targetUrl;
+
+    if (!alreadyInstalled) {
+      window.history.replaceState(
+        {
+          __cato_back_base__: true,
+          __cato_back_takeoff_id__: takeoffId,
+          __cato_back_target__: targetUrl,
+        },
+        "",
+        targetUrl,
+      );
+      window.history.pushState(
+        {
+          __cato_back_current__: true,
+          __cato_back_takeoff_id__: takeoffId,
+          __cato_back_target__: targetUrl,
+        },
+        "",
+        currentUrl,
+      );
+    }
 
     const handlePopState = () => {
-      if (entrySource === "project" && projectId) {
-        router.replace(`/projects/${projectId}`);
-        return;
-      }
-      router.replace("/home");
+      router.replace(targetUrl);
     };
 
     window.addEventListener("popstate", handlePopState);
