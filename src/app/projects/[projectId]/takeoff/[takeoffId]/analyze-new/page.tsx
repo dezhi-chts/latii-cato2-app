@@ -693,17 +693,21 @@ export default function TakeoffListPage() {
 
 	return (
 		<div className="flex h-screen flex-col overflow-hidden bg-white">
-			<TakeoffListHeader
-				takeoffName={takeoffData?.take_off_result?.name || ""}
-				files={files}
-				selectedFileId={selectedFileId}
-				summaryStats={summaryStats}
-				downloadLoading={downloadLoading}
-				onSelectFile={updateCurrentFileSelection}
-				onResetTakeoff={handleResetTakeoff}
-				onDownload={handleDownload}
-			/>
-
+			<div className="h-[110px] border-b border-primaryN30 bg-white px-14">
+				<TakeoffListHeader
+					takeoffName={takeoffData?.take_off_result?.name || ""}
+					files={files}
+					selectedFileId={selectedFileId}
+					summaryStats={summaryStats}
+					projectId={projectId}
+					takeoffId={takeoffId}
+					currentStep="export"
+					downloadLoading={downloadLoading}
+					onSelectFile={updateCurrentFileSelection}
+					onResetTakeoff={handleResetTakeoff}
+					onDownload={handleDownload}
+				/>
+			</div>
 			<div className="flex min-h-0 flex-1 overflow-hidden px-14 pb-6">
 				<TakeoffItemsTable
 					items={allItems}

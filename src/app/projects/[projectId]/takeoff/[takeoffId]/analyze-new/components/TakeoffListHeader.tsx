@@ -8,12 +8,18 @@ import {
 import { Button, Divider, Dropdown, Popover, Tooltip } from "antd";
 
 import { ProjectFileRecord, SummaryStats } from "../types";
+import TakeoffWorkflow, {
+	type TakeoffWorkflowStepKey,
+} from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffWorkflow";
 
 interface TakeoffListHeaderProps {
 	takeoffName: string;
 	files: ProjectFileRecord[];
 	selectedFileId: number;
 	summaryStats: SummaryStats;
+	projectId: string;
+	takeoffId: string;
+	currentStep?: TakeoffWorkflowStepKey;
 	downloadLoading?: boolean;
 	onSelectFile: (fileId: number) => void;
 	onResetTakeoff: () => void;
@@ -25,6 +31,9 @@ export default function TakeoffListHeader({
 	files,
 	selectedFileId,
 	summaryStats,
+	projectId,
+	takeoffId,
+	currentStep = "export",
 	downloadLoading = false,
 	onSelectFile,
 	onResetTakeoff,
@@ -46,10 +55,16 @@ export default function TakeoffListHeader({
 	}));
 
 	return (
-		<div className="flex min-h-[118px] items-center justify-between border-b border-primaryN30 bg-white px-14">
-			<div className="flex items-center gap-6">
+		<div className="h-full flex items-center justify-between">
+			<div className="flex items-center gap-4">
 				<div className="min-w-[260px] text-base">
 					{takeoffName || "Untitled Takeoff"}
+					<TakeoffWorkflow
+						className="mt-2"
+						currentStep={currentStep}
+						projectId={projectId}
+						takeoffId={takeoffId}
+					/>
 				</div>
 				<Dropdown
 					menu={{

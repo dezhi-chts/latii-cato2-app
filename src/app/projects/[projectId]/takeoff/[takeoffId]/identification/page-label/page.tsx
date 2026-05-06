@@ -45,7 +45,6 @@ import BuildingBackground, {
 	BuildLoadingStep,
 } from "../components/BuildingBackground";
 import NewLogicBoxModal from "./components/NewLogicBoxModal";
-import Header from "../components/Header";
 
 import {
 	EvidenceType,
@@ -71,11 +70,14 @@ import PromptTemplateSelect, {
 	type PromptTemplateItem,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/template/PromptTemplateSelect";
 import {
+	getTakeOffById,
 	enrichElevationFloorPlanByEvidenceIds,
 	generateFileKeysByProjectFileIds,
 	getGroupedEvidencesByTakeOffAndFile,
 } from "@/services/takeOffService";
 import { notify } from "@/utils/notify";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
+import TakeoffFileWorkflowNav from "../../components/workflow/TakeoffFileWorkflowNav";
 
 const { confirm } = Modal;
 
@@ -97,6 +99,8 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const projectId = useParams().projectId;
 	const takeOffId = useParams().takeoffId;
 	const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
+
+	useBrowserBackToHome();
 
 	useImperativeHandle(ref, () => ({
 		pdfRef,
@@ -146,7 +150,58 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		selectedFileId,
 		setSelectedFileId,
 		clearStorage,
+		mergeFileStatus,
 	} = useTakeoff();
+
+	const initFilesByApi = useCallback(async () => {
+		const response = await getTakeOffById(takeOffId as string);
+		if (response.status !== "success" || !response.data) {
+			notify.error({
+				title: "Error",
+				description: response?.data?.detail || "Failed to load takeoff files",
+			});
+			return;
+		}
+
+		const projectFiles = response.data.project_files || [];
+		const mergedFiles = mergeFileStatus(projectFiles);
+		const normalizedFiles = (mergedFiles || []).map((file: any) => ({
+			...file,
+			status: file?.status || FileStatus.Uploaded,
+		}));
+
+		if (normalizedFiles.length > 0) {
+			const hasProcessing = normalizedFiles.some(
+				(file: any) => file.status === FileStatus.Processing,
+			);
+			if (!hasProcessing) {
+				normalizedFiles[0] = {
+					...normalizedFiles[0],
+					status: FileStatus.Processing,
+				};
+			}
+		}
+
+		setFileList(normalizedFiles);
+
+		if (selectedFileId === -1 && normalizedFiles.length > 0) {
+			const activeFile = normalizedFiles.find(
+				(file: any) => file.status === FileStatus.Processing,
+			);
+			setSelectedFileId(activeFile?.id || normalizedFiles[0].id);
+		}
+	}, [
+		mergeFileStatus,
+		selectedFileId,
+		setFileList,
+		setSelectedFileId,
+		takeOffId,
+	]);
+
+	useEffect(() => {
+		if (fileList.length > 0) return;
+		initFilesByApi();
+	}, [fileList.length, initFilesByApi]);
 
 	useEffect(() => {
 		getBoxTypeList();
@@ -1007,13 +1062,24 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 	return (
 		<div className={`w-full h-[100vh] flex flex-col relative overflow-hidden`}>
-			<div className="h-[110px]">
-				<Header
-					onChangeFile={(fileId: number) => handleChangeFile(fileId)}
-					nextButtonInfo={nextButtonInfo}
-					handleNext={handleNext}
-					onHandleBack={handleBack}
-				></Header>
+			<div className="shrink-0">
+				<div className="px-14 h-[110px] flex justify-between items-center border-b border-primaryN30 bg-white">
+					<TakeoffFileWorkflowNav
+						files={fileList}
+						selectedFileId={selectedFileId}
+						onSelectFile={(fileId) => handleChangeFile(Number(fileId))}
+						currentStep="page-labeling"
+						projectId={String(projectId || "")}
+						takeoffId={String(takeOffId || "")}
+					/>
+					<Button
+						className="custom-primary-btn w-[102px] h-[26px] cursor-pointer"
+						disabled={nextButtonInfo?.disabled}
+						onClick={() => handleNext(nextButtonInfo)}
+					>
+						{nextButtonInfo?.text}
+					</Button>
+				</div>
 			</div>
 			<div className={`flex-1 pr-14 flex flex-row overflow-hidden`}>
 				<div className="pl-4 mb-2 flex flex-col">

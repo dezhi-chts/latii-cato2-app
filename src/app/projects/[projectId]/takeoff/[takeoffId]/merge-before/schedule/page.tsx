@@ -37,6 +37,7 @@ import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImag
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
+import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
 const { confirm } = Modal;
 
 const REQUIRED_VISIBLE_COLUMNS: readonly string[] = [];
@@ -668,36 +669,23 @@ export default function SchedulePage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white font-nunito">
       {/* Header */}
-      <header className="px-14 flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white">
+      <header className="px-14 flex h-[110px] shrink-0 items-start justify-between border-b border-primaryN30 bg-white pt-4">
         {/* <div>
           <div className="cursor-pointer" onClick={handleBack}>
             <Image src="/assets/icons/arrow-back.svg" alt="logo" width={12} height={6} style={{ height: 'auto' }}></Image>
           </div>
         </div> */}
 
-        <div className="ml-6 flex-1 flex items-center gap-3">
-          {files.map((file) => (
-            <button
-              key={file.id}
-              type="button"
-              className={`flex h-[50px] min-w-[140px] flex-col items-start justify-center rounded-lg px-4 text-left transition-all ${file.id === selectedFileId
-                ? "bg-primaryN30"
-                : "border border-primaryN30"
-                }`}
-              onClick={() => handleSelectFile(file.id)}
-            >
-              <span className="max-w-[180px] truncate text-sm text-grey-dark">
-                {file.file_name || `File ${file.id}`}
-              </span>
-              {file.operation_type && (
-                <span className="mt-1 text-xs text-grey-normal">
-                  {file.operation_type}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-row items-end gap-2">
+        <TakeoffFileWorkflowNav
+          className="ml-6 flex-1"
+          files={files}
+          selectedFileId={selectedFileId}
+          onSelectFile={(id) => handleSelectFile(Number(id))}
+          currentStep="schedules"
+          projectId={String(projectId || "")}
+          takeoffId={String(takeOffId || "")}
+        />
+        <div className="h-full flex flex-row items-center gap-2">
           <Popover
             placement="rightBottom"
             title={null}

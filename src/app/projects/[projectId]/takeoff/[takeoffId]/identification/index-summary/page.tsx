@@ -29,6 +29,7 @@ import {
   getDrawingIndexTypeList,
   recognizeDrawingIndex,
 } from "@/services/drawingIndexService";
+import { getTakeOffById } from "@/services/takeOffService";
 
 import LoadingScreen from "@/components/loading-screen";
 import PdfWrapper from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/PdfWrapper";
@@ -41,7 +42,6 @@ import {
   ZOOM_MAX,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/pdf/Pdf-Controls";
 import ContentView from "./components/ContentView";
-import Header from "../components/Header";
 
 import {
   EvidenceResult,
@@ -56,6 +56,8 @@ import BuildingBackground, { BuildLoadingStep } from "../components/BuildingBack
 import { useTakeoff } from "@/context/TakeoffContext";
 import { ButtonText } from "../page";
 import { notify } from "@/utils/notify";
+import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
+import TakeoffFileWorkflowNav from "../../components/workflow/TakeoffFileWorkflowNav";
 
 const confirm = Modal.confirm;
 
@@ -65,6 +67,7 @@ const IdentSummary = () => {
   const takeOffId = useParams().takeoffId;
   const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
   const thumbnailRef = useRef<any>(null);
+  useBrowserBackToHome();
 
   const [takeOff, setTakeOff] = useState<any>(null);
   const [pdfUrl, setPdfUrl] = useState<string>();
@@ -94,8 +97,60 @@ const IdentSummary = () => {
     setFileList,
     selectedFileId,
     setSelectedFileId,
-    clearStorage
+    clearStorage,
+    mergeFileStatus,
   } = useTakeoff();
+
+  const initFilesByApi = useCallback(async () => {
+    const response = await getTakeOffById(takeOffId as string);
+    if (response.status !== "success" || !response.data) {
+      notify.error({
+        title: "Error",
+        description: response?.data?.detail || "Failed to load takeoff files",
+      });
+      return;
+    }
+
+    const projectFiles = response.data.project_files || [];
+    const mergedFiles = mergeFileStatus(projectFiles);
+    const normalizedFiles = (mergedFiles || []).map((file: any) => ({
+      ...file,
+      status: file?.status || FileStatus.Uploaded,
+    }));
+
+    if (normalizedFiles.length > 0) {
+      const hasProcessing = normalizedFiles.some(
+        (file: any) => file.status === FileStatus.Processing,
+      );
+      if (!hasProcessing) {
+        normalizedFiles[0] = {
+          ...normalizedFiles[0],
+          status: FileStatus.Processing,
+        };
+      }
+    }
+
+    setTakeOff(response.data);
+    setFileList(normalizedFiles);
+
+    if (selectedFileId === -1 && normalizedFiles.length > 0) {
+      const activeFile = normalizedFiles.find(
+        (file: any) => file.status === FileStatus.Processing,
+      );
+      setSelectedFileId(activeFile?.id || normalizedFiles[0].id);
+    }
+  }, [
+    mergeFileStatus,
+    selectedFileId,
+    setFileList,
+    setSelectedFileId,
+    takeOffId,
+  ]);
+
+  useEffect(() => {
+    if (fileList.length > 0) return;
+    initFilesByApi();
+  }, [fileList.length, initFilesByApi]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -359,13 +414,23 @@ const IdentSummary = () => {
 
   return (
     <div className={`w-full h-[100vh] flex flex-col relative overflow-hidden`}>
-      <Header
-        onChangeFile={(fileId: number) => handleChangeFile(fileId)}
-        nextButtonInfo={nextButtonInfo}
-        handleNext={handleNext}
-        onHandleBack={handleBack}
-      >
-      </Header>
+      <div className="px-14 h-[110px] shrink-0 flex justify-between items-center border-b border-primaryN30 bg-white">
+        <TakeoffFileWorkflowNav
+          files={fileList}
+          selectedFileId={selectedFileId}
+          onSelectFile={(fileId) => handleChangeFile(Number(fileId))}
+          currentStep="page-index"
+          projectId={String(projectId || "")}
+          takeoffId={String(takeOffId || "")}
+        />
+        <Button
+          className="custom-primary-btn w-[102px] h-[26px] cursor-pointer"
+          disabled={nextButtonInfo?.disabled}
+          onClick={() => handleNext(nextButtonInfo)}
+        >
+          {nextButtonInfo?.text}
+        </Button>
+      </div>
       <div className={`pr-14 flex-1 flex flex-row overflow-hidden relative`}>
         <div
           className="flex flex-col border-r border-primaryN30"

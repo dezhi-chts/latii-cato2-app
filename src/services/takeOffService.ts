@@ -860,5 +860,38 @@ export const saveNewListAndSyncFileSourceMergeResult = async (
   }
 }
 
+/**
+ * 获取takeoff文件流程
+ * @param take_off_id 
+ * @returns 
+ */
+export const getTakeOffMergeFlowsById = async (take_off_id: string | number)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/get_merge_flows_by_take_off_id?take_off_id=${take_off_id}`;
+    const response = await http.get(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error getting merge flows by take off id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 回滚take off文件流程
+ * @param take_off_id 
+ * @param status  // status就是上边接口返回的name 字段，只有completed 的阶段才能回滚，其他阶段不能回滚
+ * @returns 
+ */
+export const rollbackTakeOffByMergeFlowStatus = async (take_off_id: string | number, status: string)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/rollback_take_off_by_merge_flow_status?take_off_id=${take_off_id}&status=${status}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 

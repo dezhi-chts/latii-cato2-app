@@ -11,6 +11,7 @@ import { TakeOffFileStatus } from "@/types/home";
 import { notify } from "@/utils/notify";
 import { EditOutlined } from "@ant-design/icons";
 import { updateTakeOffInfo } from "@/services/takeOffService";
+import { setTakeoffEntrySource } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 
 const TextCell = ({ value }: { value: unknown }) => {
   const text = value != null ? String(value) : "-";
@@ -233,6 +234,7 @@ const HomeTakeoffsTable = ({
     (record: ProjectRow) => ({
       onClick: async () => {
         if (pageLoading) return;
+        setTakeoffEntrySource(String(record.id || ""), "home");
 
         let floorPlanUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/floor-plan`;
         let scheduleUrl = `/projects/${record.project_id}/takeoff/${record.id}/merge-before/schedule`;
