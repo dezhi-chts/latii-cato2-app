@@ -15,6 +15,7 @@ import {
   getGroupedLabelsByFileAndTakeOff,
   getTakeOffById,
   getTakeOffEvidenceUrlsByIds,
+  rollbackSingleFileMergeResultByIds,
   splitFileSourceMergeResultsByIdList,
   updateFileSourceMergeResultsByIdList,
   updateSingleFileMergeResultsByIdList,
@@ -411,7 +412,7 @@ export default function ManualMergeV2Page() {
   const [submitting, setSubmitting] = useState(false);
   const [buildLoading, setBuildLoading] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
-  const [fileId, setFileId] = useState<string>("");
+  const [fileId, setFileId] = useState<number | null>(null);
   const [labels, setLabels] = useState<LabelOption[]>([]);
   const [selectedLabel, setSelectedLabel] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
@@ -457,6 +458,7 @@ export default function ManualMergeV2Page() {
   );
   const [splitModalOpen, setSplitModalOpen] = useState(false);
   const [splitSubmitting, setSplitSubmitting] = useState(false);
+  const [rollbackSubmitting, setRollbackSubmitting] = useState(false);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [copySubmitting, setCopySubmitting] = useState(false);
   const [copySelectedRowKeys, setCopySelectedRowKeys] = useState<React.Key[]>([]);
@@ -1005,7 +1007,7 @@ export default function ManualMergeV2Page() {
 
   const fetchLabelsAndMaybeLoadData = useCallback(
     async (
-      resolvedFileId: string,
+      resolvedFileId: number,
       preferredLabel?: string,
       autoSwitchFromMergedCurrent: boolean = false,
     ) => {
@@ -1111,10 +1113,10 @@ export default function ManualMergeV2Page() {
         });
         return;
       }
-      setFileId(String(firstFileId));
+      setFileId(firstFileId);
       fetchColumns(takeoffRes.data?.take_off_result?.template_id || 1);
 
-      await fetchLabelsAndMaybeLoadData(String(firstFileId));
+      await fetchLabelsAndMaybeLoadData(firstFileId);
     } finally {
       setLoading(false);
     }
@@ -1146,7 +1148,7 @@ export default function ManualMergeV2Page() {
     await fetchLabelData(label);
   };
 
-  const handleSwitchFile = async (nextFileId: string) => {
+  const handleSwitchFile = async (nextFileId: number) => {
     if (!nextFileId || nextFileId === fileId) return;
     if (modifiedCount > 0) {
       Modal.warning({
@@ -1392,6 +1394,58 @@ export default function ManualMergeV2Page() {
     await submitFinalItemsRows(normalizedRows, { silentSuccess: false });
   }, [finalItemsSource, normalizeScheduleRowsForSubmit, submitFinalItemsRows]);
 
+  const handleRollbackMergedLabel = useCallback(() => {
+    if (!isSelectedLabelMerged) return;
+    const resolvedFileId = fileId ? Number(fileId) : 0;
+    const rollbackIds = finalItemsSource.rows
+      .map((row) => String(row?.id || "").trim())
+      .filter(Boolean);
+
+    if (!resolvedFileId || rollbackIds.length === 0) {
+      notify.warning({
+        title: "No Merged Data",
+        description: "No merged results found for the current label.",
+      });
+      return;
+    }
+
+    confirm({
+      title: "Undo Merge Confirmation",
+      content:
+        "Undoing this merge will rollback the current merged label. Are you sure you want to continue?",
+      okText: "Confirm",
+      cancelText: "Cancel",
+      onOk: async () => {
+        setRollbackSubmitting(true);
+        try {
+          const response = await rollbackSingleFileMergeResultByIds(
+            rollbackIds.join(","),
+          );
+          if (response.status !== "success") {
+            notify.error({
+              title: "Error",
+              description: response?.data?.detail || "Failed to undo merged label.",
+            });
+            return;
+          }
+          notify.success({
+            title: "Success",
+            description: "Merged label has been rolled back.",
+          });
+          await fetchLabelsAndMaybeLoadData(resolvedFileId, selectedLabel);
+        } finally {
+          setRollbackSubmitting(false);
+        }
+      },
+    });
+  }, [
+    fetchLabelsAndMaybeLoadData,
+    finalItemsSource.rows,
+    fileId,
+    isSelectedLabelMerged,
+    selectedLabel,
+  ]);
+
   const handleCreateMergeResult = useCallback(async () => {
     if (!takeoffId) return;
     setBuildLoading(true);
@@ -1537,7 +1591,7 @@ export default function ManualMergeV2Page() {
     try {
       const response = await splitFileSourceMergeResultsByIdList(
         takeoffId,
-        fileId,
+        fileId as number,
         selectedIds.join(","),
         targetLabel,
       );
@@ -1554,7 +1608,7 @@ export default function ManualMergeV2Page() {
         description: `Split ${selectedIds.length} items successfully.`,
       });
       closeSplitModal();
-      await fetchLabelsAndMaybeLoadData(fileId, selectedLabel);
+      await fetchLabelsAndMaybeLoadData(fileId as number, selectedLabel);
     } finally {
       setSplitSubmitting(false);
     }
@@ -1770,7 +1824,7 @@ export default function ManualMergeV2Page() {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
-      <header className="flex h-[110px] shrink-0 items-center justify-between border-b border-primaryN30 bg-white px-10 pt-4">
+      <header className="flex h-[110px] shrink-0 items justify-between border-b border-primaryN30 bg-white px-10 pt-4">
         <TakeoffFileWorkflowNav
           className="flex-1"
           files={files}
@@ -1814,6 +1868,14 @@ export default function ManualMergeV2Page() {
                     >
                       {isSelectedLabelMerged ? "Save" : "Merge Complete"}
                     </Button>
+                    {isSelectedLabelMerged && (
+                      <Button
+                        className="custom-primary-btn !w-[96px]"
+                        onClick={handleRollbackMergedLabel}
+                      >
+                        Undo Merge
+                      </Button>
+                    )}
                     {!isSelectedLabelMerged && (
                       finalItemsRows.length > 1 && (
                         <Button className="custom-primary-btn !w-[60px]" onClick={openSplitModal}>

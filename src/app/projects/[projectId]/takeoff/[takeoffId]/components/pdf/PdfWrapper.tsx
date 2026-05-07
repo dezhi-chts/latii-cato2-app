@@ -210,6 +210,7 @@ const PdfWrapper = forwardRef(
 		const AUTO_FIT_MIN_SCALE = 0.1;
 		const AUTO_FIT_PADDING = 0;
 		const WHEEL_ZOOM_STEP = 0.1;
+		const WHEEL_ZOOM_DEBOUNCE_MS = 80;
 		const AREA_SELECT_MIN_SIZE = 10;
 
 		const scrollRef = useRef<HTMLDivElement>(null);
@@ -254,8 +255,12 @@ const PdfWrapper = forwardRef(
 		const shouldAutoFitPageRef = useRef(true);
 		const minZoomScaleRef = useRef(MIN_SCALE);
 		const autoFitAppliedAtRef = useRef(0);
+		const wheelZoomTimerRef = useRef<number | null>(null);
+		const pendingWheelScaleRef = useRef<number | null>(null);
+		const renderVersionRef = useRef(0);
 
 		const [showEvidence, setShowEvidence] = useState<boolean>(true);
+		const [viewportVersion, setViewportVersion] = useState(0);
 
 		const [isDrawingPolygon, setIsDrawingPolygon] = useState<boolean>(false);
 
@@ -272,6 +277,17 @@ const PdfWrapper = forwardRef(
 		const [isRendering, setIsRendering] = useState(false);
 
 		const [rotate, setRotate] = useState<number>(-1);
+
+		const clearPendingWheelZoom = (clearAnchor = false) => {
+			if (wheelZoomTimerRef.current !== null) {
+				window.clearTimeout(wheelZoomTimerRef.current);
+				wheelZoomTimerRef.current = null;
+			}
+			pendingWheelScaleRef.current = null;
+			if (clearAnchor) {
+				zoomAnchorRef.current = null;
+			}
+		};
 
 		const isAdjustRotateRef = useRef<boolean>(false);
 
@@ -354,6 +370,13 @@ const PdfWrapper = forwardRef(
 		useEffect(() => {
 			if (typeof zoom === "number" && Number.isFinite(zoom)) {
 				const nextZoom = Number(zoom.toFixed(2));
+				const pendingWheelScale = pendingWheelScaleRef.current;
+				if (
+					pendingWheelScale !== null &&
+					Math.abs(nextZoom - pendingWheelScale) > 0.001
+				) {
+					clearPendingWheelZoom(true);
+				}
 				// Guard against stale parent zoom echoing back right after auto-fit.
 				if (
 					Date.now() - autoFitAppliedAtRef.current < 500 &&
@@ -366,6 +389,12 @@ const PdfWrapper = forwardRef(
 				setScale(nextZoom);
 			}
 		}, [zoom, scale]);
+
+		useEffect(() => {
+			return () => {
+				clearPendingWheelZoom(true);
+			};
+		}, []);
 
 		useEffect(() => {
 			if (pdfCanvas.current) {
@@ -851,6 +880,8 @@ const PdfWrapper = forwardRef(
 			)
 				return;
 			(async () => {
+				const renderVersion = ++renderVersionRef.current;
+				setShowEvidence(false);
 				setIsRendering(true);
 				const page = await pdfDoc.current.getPage(pageNum);
 				const pageOriginalRotation = page.rotate;
@@ -937,10 +968,17 @@ const PdfWrapper = forwardRef(
 
 				try {
 					await task.promise;
+					if (renderVersion !== renderVersionRef.current) {
+						return;
+					}
 					setStageWidth(viewport.width);
 					setStageHeight(viewport.height);
+					setViewportVersion((prev) => prev + 1);
 
 					requestAnimationFrame(() => {
+						if (renderVersion !== renderVersionRef.current) {
+							return;
+						}
 						setShowEvidence(true);
 					});
 					// pdfPageText.current = await page.getTextContent({
@@ -948,16 +986,12 @@ const PdfWrapper = forwardRef(
 					//   disableCombineTextItems: true,
 					// });
 
-					if (currentViewportRef.current && cropSections.length > 0) {
+					if (cropSections.length > 0) {
 						setCropSections((prev) => {
 							return prev.map((group) => {
 								if (group.pdfPolygons && group.pdfPolygons.length > 0) {
 									const newPolygons = group.pdfPolygons.map((p) => {
-										const [vx, vy] =
-											currentViewportRef.current!.convertToViewportPoint(
-												p.x,
-												p.y,
-											);
+										const [vx, vy] = viewport.convertToViewportPoint(p.x, p.y);
 										return { x: vx, y: vy };
 									});
 									const bounds = getZoneBounds(newPolygons);
@@ -968,8 +1002,7 @@ const PdfWrapper = forwardRef(
 									};
 								} else if (group.polygons.length > 0) {
 									const pdfPolygons = group.polygons.map((p) => {
-										const [px, py] =
-											currentViewportRef.current!.convertToPdfPoint(p.x, p.y);
+										const [px, py] = viewport.convertToPdfPoint(p.x, p.y);
 										return { x: px, y: py };
 									});
 									const bounds = getZoneBounds(group.polygons);
@@ -991,7 +1024,9 @@ const PdfWrapper = forwardRef(
 				} catch (e: any) {
 					if (e?.name !== "RenderingCancelledException") console.error(e);
 				} finally {
-					setIsRendering(false);
+					if (renderVersion === renderVersionRef.current) {
+						setIsRendering(false);
+					}
 				}
 			})();
 			return () => {
@@ -2451,16 +2486,16 @@ const PdfWrapper = forwardRef(
 			const mouseY = e.clientY - containerRect.top;
 
 			const direction = e.deltaY < 0 ? 1 : -1;
-			const prevScale = Number(scale.toFixed(2));
+			const baseScale = pendingWheelScaleRef.current ?? scale;
+			const prevScale = Number(baseScale.toFixed(2));
 			const dynamicMinScale = Number(
 				Math.max(AUTO_FIT_MIN_SCALE, minZoomScaleRef.current || MIN_SCALE).toFixed(2),
 			);
 			const next = Math.min(
 				MAX_SCALE,
-				Math.max(dynamicMinScale, scale + direction * WHEEL_ZOOM_STEP),
+				Math.max(dynamicMinScale, baseScale + direction * WHEEL_ZOOM_STEP),
 			);
 			const nextScale = Number(next.toFixed(2));
-			onUpdateSafeZoom?.(nextScale);
 			if (nextScale === prevScale) {
 				return;
 			}
@@ -2477,8 +2512,21 @@ const PdfWrapper = forwardRef(
 			};
 
 			setShowEvidence(false);
-			setScale(nextScale);
-			onChangeZoom?.(nextScale);
+			pendingWheelScaleRef.current = nextScale;
+			if (wheelZoomTimerRef.current !== null) {
+				window.clearTimeout(wheelZoomTimerRef.current);
+			}
+			wheelZoomTimerRef.current = window.setTimeout(() => {
+				const targetScale = pendingWheelScaleRef.current;
+				wheelZoomTimerRef.current = null;
+				pendingWheelScaleRef.current = null;
+				if (targetScale === null) {
+					return;
+				}
+				onUpdateSafeZoom?.(targetScale);
+				setScale(targetScale);
+				onChangeZoom?.(targetScale);
+			}, WHEEL_ZOOM_DEBOUNCE_MS);
 		};
 
 		useEffect(() => {
@@ -2979,7 +3027,7 @@ const PdfWrapper = forwardRef(
 			});
 
 			setPageEvidence(updatedPageEvidence);
-		}, [showEvidence, pageNum, allEvidence, scale]);
+		}, [showEvidence, pageNum, allEvidence, viewportVersion]);
 
 		const centerEvidence = useMemo(() => {
 			if (!selectedEvidenceIds || selectedEvidenceIds.length === 0) {
