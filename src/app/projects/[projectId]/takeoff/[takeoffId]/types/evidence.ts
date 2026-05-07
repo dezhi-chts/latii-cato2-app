@@ -219,6 +219,7 @@ export interface GroupFrame {
   types?: TypeItem[]; //所选择的type类型
   bounds: Bounds; //边界
   isParentEvidence?: boolean; //是否是父evidence
+  isOtherParentEvidence?: boolean; //是否是其他父evidence
 }
 
 //evidence结构
@@ -242,6 +243,7 @@ export interface EvidenceType {
 
   evidence_url: string; //图片URL
   isParentEvidence?: boolean; //是否是父evidence
+  isOtherParentEvidence?: boolean; //是否是其他父evidence
 }
 
 // 增，删，改 矩形框后返回的所有结构
