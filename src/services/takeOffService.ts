@@ -697,7 +697,7 @@ export const updateFileSourceMergeResultsByIdList = async (data:any)=>{
  */
 export const splitFileSourceMergeResultsByIdList = async (
   take_off_id: string | number, 
-  file_id: string | number, 
+  file_id: number, 
   file_source_merge_result_ids: string, 
   label: string | number
 )=>{
@@ -889,6 +889,22 @@ export const rollbackTakeOffByMergeFlowStatus = async (take_off_id: string | num
     return { data: response as any, status: "success" };
   }catch(error: any){
     console.error("Error:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+/**
+ * 撤销已合并的label
+ * @param ids 
+ * @returns 
+ */
+export const rollbackSingleFileMergeResultByIds = async (ids: string)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/rollback_single_file_merge_result_by_ids?ids=${ids}`;
+    const response = await http.post(url);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error rolling back single file merge result by ids:", error);
     return { data: error?.response?.data, status: "error" };
   }
 }
