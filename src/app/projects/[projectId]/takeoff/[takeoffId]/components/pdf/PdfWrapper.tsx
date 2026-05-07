@@ -65,7 +65,7 @@ import {
 	PageType,
 	FileOperationType,
 	itemBoxType,
-	ArchDrawingItemLabelTypes,
+	ArchDrawingScheduleLabelTypes
 } from "../../types/evidence";
 import LabelTypesSelect from "./Label-Types-Select";
 import EditableSubText from "./EditableSubText";
@@ -162,12 +162,12 @@ const itemBoxTypes = [
 	itemBoxType.WindowDoorUnitListItem,
 ];
 
-const showItemConfirmBtnTypes = ['Floor Plan Item', 'Elevation Item'];
+const showItemConfirmBtnTypes = [...itemBoxTypes];
 
 const PdfWrapper = forwardRef(
 	(
 		{
-			operationMode = "edit",
+			operationMode = "edit", // 全局操作模式，edit｜view， 默认都是可编辑状态，view模式下只能查看，不能编辑
 			project_id,
 			project_file_id,
 			pdfUrl,
@@ -179,6 +179,7 @@ const PdfWrapper = forwardRef(
 			pdfOperationType = FileOperationType.ArchitectureDrawing,
 			evidenceDraggable = true,
 			showAddBtnOnBox = false,
+			onlyShowScheduleTypeList = false,
 			onChangePage,
 			onTotalPages,
 			onAppendEvidence,
@@ -815,7 +816,6 @@ const PdfWrapper = forwardRef(
 			const rotateAngle: number = (viewport as any).rotation ?? 0;
 
 			let updateData: any = { ...evid };
-
 			switch (operationType) {
 				case 'drag':
 				// 拖动更新位置
@@ -3673,7 +3673,7 @@ const PdfWrapper = forwardRef(
 												<div className="flex items-center gap-1">
 													{showSelectGroup && (
 														<LabelTypesSelect
-															typeList={ArchDrawingLabelTypes as any}
+															typeList={onlyShowScheduleTypeList ? ArchDrawingScheduleLabelTypes : ArchDrawingLabelTypes as any}
 															selectedType={type}
 															onChangeType={async (type) => {
 																if (type === item.type) return;
@@ -3963,8 +3963,6 @@ const PdfWrapper = forwardRef(
 										allPageTypes[group.type as keyof typeof allPageTypes]
 											?.color ?? colorList["forumBlue-normal"];
 
-									let showSelectGroup = false;
-									let selectGroupTypeList: any[] = ArchDrawingLabelTypes;
 									if (itemBoxTypes.includes(group.type as any)) {
 										// 添加的是item小框类型
 										if (
@@ -3972,11 +3970,9 @@ const PdfWrapper = forwardRef(
 											group.type === (itemBoxType.TableItem as any)
 										) {
 											//如果添加的是schedule类型，则需要显示schedule类型下拉框
-											showSelectGroup = true;
 											color =
 												allPageTypes[group.type as keyof typeof allPageTypes]
 													?.color ?? colorList["forumBlue-normal"];
-											selectGroupTypeList = ArchDrawingItemLabelTypes;
 										}
 									}
 
@@ -4013,26 +4009,6 @@ const PdfWrapper = forwardRef(
 													transformOrigin: "top right",
 												}}
 											>
-												{showSelectGroup && (
-													<LabelTypesSelect
-														typeList={selectGroupTypeList}
-														selectedType={group.type}
-														onChangeType={async (type) => {
-															if (type === group.type) return;
-															setCropSections((prev: any) => {
-																return prev.map((item: any) => {
-																	if (item.id === group.id) {
-																		return {
-																			...item,
-																			type: type as GroupType,
-																		};
-																	}
-																	return item;
-																});
-															});
-														}}
-													/>
-												)}
 												{showReadBtnGroupTypes.includes(group.type) && (
 													<div
 														className="w-[84px] py-[2px] font-light text-white text-xxs text-center bg-forumBlue-normal rounded-xl whitespace-nowrap cursor-pointer"

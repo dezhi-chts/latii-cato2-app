@@ -186,14 +186,14 @@ export const ArchDrawingLabelTypes = [
   allPageTypes[PageType.KeyNotes],
 ];
 
-export const ArchDrawingItemLabelTypes = [
+export const ArchDrawingScheduleLabelTypes = [
   {
-    type: itemBoxType.WindowDoorUnitItem,
+    type: GroupType.WindowDoorUnit,
     icon: "W",
     color: "#5859D6",
   },
   {
-    type: itemBoxType.TableItem,
+    type: GroupType.Table,
     icon: "T",
     color: "#9400D3",
   },
@@ -308,8 +308,7 @@ export enum FileStatus {
 
 //pdf wrapper props
 export interface PdfWrapperProps {
-  mode?: string; //模式， full(全屏) half(半屏)
-  operationMode: "edit" | "view"; //操作模式， edit(编辑) view(查看)
+  operationMode: "edit" | "view"; // 全局操作模式， edit(编辑) view(查看)
   project_id: number | string;
   project_file_id: number;
   pdfUrl: string;
@@ -321,6 +320,7 @@ export interface PdfWrapperProps {
   selectedEvidenceIds?: number[]; //当前选中的evidence ids
   evidenceDraggable?: boolean; //是否可拖动evidence
   showAddBtnOnBox?: boolean; //是否在框上显示添加按钮
+  onlyShowScheduleTypeList?: boolean; //是否只显示schedule类型的下拉列表
   onChangePage?: (page: number) => void; // 切换页码时，通知父组件
   onTotalPages?: (total: number) => void; //获取总页数
   onAppendEvidence?: (evidenceResult: EvidenceResult) => void; // 提交成功后，将新生成的evidece添加到allEvidence，进行增量刷新

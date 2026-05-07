@@ -99,7 +99,8 @@ export default function EvidenceSection({
       });
   }, [allLabels, currentLabel]);
   const showPanelPreviewButton =
-    !isLabelMerged && (title === "Floor Plan" || title === "Elevation");
+    !isLabelMerged &&
+    (title === "Schedule" || title === "Floor Plan" || title === "Elevation");
   const warningPages = useMemo(() => {
     return Array.from(
       new Set(

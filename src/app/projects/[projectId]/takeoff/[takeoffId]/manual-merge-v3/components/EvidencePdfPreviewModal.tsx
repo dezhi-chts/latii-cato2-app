@@ -99,8 +99,16 @@ export default function EvidencePdfPreviewModal({
     console.log(evidence);
     if (!evidence) return;
 
+    let type = evidence.type;
+    if (type === itemBoxType.WindowDoorUnitItem) {
+      type = itemBoxType.WindowDoorUnitItem.split(" Item")[0];
+    } else if (type === itemBoxType.TableItem) {
+      type = itemBoxType.TableItem.split(" Item")[0];
+    }
+
     let newEvidence = {
       ...evidence,
+      type,
       ocr_text: JSON.stringify({
         result: {
           Label: selectLabel
@@ -132,8 +140,8 @@ export default function EvidencePdfPreviewModal({
       : FileOperationType.ArchitectureDrawing;
   const addBoxType =
     panelType === "Elevation"
-      ? itemBoxType.ElevationItem
-      : itemBoxType.FloorPlanItem;
+      ? itemBoxType.ElevationItem : panelType === "Floor Plan"
+        ? itemBoxType.FloorPlanItem : panelType === "Schedule" ? itemBoxType.WindowDoorUnitItem : itemBoxType.TableItem;
 
   return (
     <Modal
@@ -197,10 +205,12 @@ export default function EvidencePdfPreviewModal({
               allEvidence={panelEvidences}
               showAddBtnOnBox={false}
               evidenceDraggable={false}
+              onlyShowScheduleTypeList={true}
               onChangePage={setPageNumber}
               onTotalPages={setTotalPages}
               onChangeZoom={handleZoomChange}
               onItemEvidenceConfirm={onItemEvidenceConfirm}
+              onUpdateEvidence={onConfirmSuccess}
             />
           </div>
         </div>
