@@ -231,7 +231,7 @@ const EvidenceThumbailList = ({
 									onClick={() => onClickEvidenceId(info.id)}
 								>
 									<div className={`rounded-2xl ${info?.has_empty_label ? 'border border-red-500 shadow-[0_0_5px_rgba(239,68,68,1)]' : ''}`}>
-										<div className="p-[10px] pt-[5px] pb-[5px]">
+										<div className="p-[10px] pt-[5px]">
 											<div className="h-[30px] flex flex-row justify-between items-center group">
 												<div className="overflow-hidden">
 													<PageTextWithTooltip text={itemPageNum} />
