@@ -164,10 +164,16 @@ const itemBoxTypes = [
 
 const showItemConfirmBtnTypes = [...itemBoxTypes];
 
+// 全局操作模式
+enum OperationMode {
+	Edit = "edit",
+	View = "view",
+}
+
 const PdfWrapper = forwardRef(
 	(
 		{
-			operationMode = "edit", // 全局操作模式，edit｜view， 默认都是可编辑状态，view模式下只能查看，不能编辑
+			operationMode = OperationMode.Edit, // 全局操作模式，edit｜view， 默认都是可编辑状态，view模式下只能查看，不能编辑
 			project_id,
 			project_file_id,
 			pdfUrl,
@@ -1285,7 +1291,7 @@ const PdfWrapper = forwardRef(
 			// Shift + 左键进入区域框选模式，不影响原有拖动画布与绘制逻辑
 			if (
 				enableAreaSelection &&
-				operationMode === "edit" &&
+				operationMode === OperationMode.Edit &&
 				cropMode === null &&
 				isStageTarget &&
 				(e.evt.shiftKey || isAreaSelectMode)
@@ -1646,7 +1652,7 @@ const PdfWrapper = forwardRef(
 			insertGroup(groupFrame);
 
 			setCropMode(null);
-			if (operationMode !== "view") {
+			if (operationMode === OperationMode.View) {
 				// 取消默认添加时默认选中
 				setSelectedShapeId(groupFrame.id);
 			}
@@ -3300,7 +3306,7 @@ const PdfWrapper = forwardRef(
 							className="flex-1 min-h-0 overflow-auto"
 							onWheel={handleWheelZoom}
 							style={
-								operationMode === "edit"
+								operationMode === OperationMode.Edit
 									? {
 										display: "grid",
 										alignItems: "center",
@@ -3420,8 +3426,6 @@ const PdfWrapper = forwardRef(
 														}, 100);
 													}}
 													onClick={() => {
-														if (operationMode === "view") return;
-
 														if (selectedShapeId === evid.id) {
 															setSelectedShapeId(null);
 															onChangeSelectedEvidence?.([]);
@@ -3574,10 +3578,6 @@ const PdfWrapper = forwardRef(
 
 								{/** 处理Evidence按钮的相关显示  */}
 								{pageEvidence.map((item: any, index: number) => {
-									if (operationMode === "view") {
-										return null;
-									}
-
 									if (
 										!item.viewportPolygons ||
 										item.viewportPolygons.length === 0
@@ -3629,9 +3629,12 @@ const PdfWrapper = forwardRef(
 										}
 									}
 
-									if (selectedShapeId === item.id && !item.isParentEvidence && !item.isOtherParentEvidence && evidenceDraggable) {
-										// 如果当前选中的元素是当前Evidence，那么显示删除按钮
-										showDeleteBtn = true;
+									if (selectedShapeId === item.id) {
+										// 如果当前evidence是选中的元素
+										if (evidenceDraggable && !item.isParentEvidence && !item.isOtherParentEvidence) {
+											// 如果evidence允许拖动，并且evidence不是父evidence或者其他父evidence，那么可以显示删除按钮
+											showDeleteBtn = true;
+										}
 									}
 
 									return (
@@ -4279,45 +4282,45 @@ const ShapeWrapper = ({
 		}
 	}
 
-	let shapeDraggable = type === "evidence" ? evidenceDraggable ?? true : true;
+	let shapeDraggable = type === "evidence" ? evidenceDraggable : true;
 	if (type === "evidence") {
+		// 如果当前evidence是父级evidence或者其他父evidence，则不允许点击和移动
 		if (shape?.isParentEvidence || shape?.isOtherParentEvidence) {
-			// 如果是父级红色外框，则不允许点击和移动
 			shapeDraggable = false;
 		}
 	}
-	!(type === "evidence" && !evidenceDraggable);
 
 	if (draggingShapeId === shape.id) {
+		// 如果当前evidence正在拖动，则设置颜色为红色
 		color = "#FF4500";
 	}
 
 	if (centerEvidence?.id === shape.id) {
+		// 如果当前evidence是居中显示的evidence，则设置颜色为红色
 		color = "#FF4500";
-	}
-
-	if (shape?.isParentEvidence) {
-		color = "#FF4500";
-	}
-
-	if (selectedShapeId === shape.id) {
-		if (shapeDraggable) {
-			circlePoints = getCriclePoints(width, height);
-		}
 	}
 
 	const isParentEvidence = shape?.isParentEvidence;
 	const isOtherParentEvidence = shape?.isOtherParentEvidence;
 	let fill: any = color + "30";
 	if (isParentEvidence) {
+		// 如果是父级evidence，则不填充颜色，使用红色的边框线
 		fill = undefined;
+		color = "#FF4500";
 	} else if (isOtherParentEvidence) {
+		// 如果是其他父evidence，则不填充颜色，使用灰色的边框线
 		//fill = "#717171" + "90";
 		fill = undefined;
 		color = "#717171";
 	}
 
-
+	if (selectedShapeId === shape.id) {
+		// 如果是选中的evidence
+		if (shapeDraggable) {
+			// 如果evidence可以拖动，则显示拖动点
+			circlePoints = getCriclePoints(width, height);
+		}
+	}
 
 	return (
 		<Group key={shape.id} x={minX} y={minY}>
@@ -4326,9 +4329,9 @@ const ShapeWrapper = ({
 				data={pathData}
 				fill={fill}
 				stroke={color}
-				strokeWidth={isParentEvidence || isOtherParentEvidence ? 3 : 1}
-				dash={isParentEvidence || isOtherParentEvidence ? [10, 5] : undefined}
-				listening={!isParentEvidence && !isOtherParentEvidence}
+				strokeWidth={isParentEvidence || isOtherParentEvidence ? 3 : 1}  // 父级evidence和其他父evidence使用3px的框线
+				dash={isParentEvidence || isOtherParentEvidence ? [10, 5] : undefined} // 父级evidence和其他父evidence使用虚线
+				listening={!isParentEvidence && !isOtherParentEvidence} // 父级evidence和其他父evidence不允许点击
 				draggable={shapeDraggable}
 				dragDistance={2}
 				onMouseEnter={(e) => {
@@ -4336,13 +4339,13 @@ const ShapeWrapper = ({
 					if (isParentEvidence || isOtherParentEvidence) {
 						return;
 					}
-					if (stage && operationMode === "edit") {
+					if (stage) {
 						stage.container().style.cursor = "move";
 					}
 				}}
 				onMouseLeave={(e) => {
 					const stage = e.target.getStage();
-					if (stage && operationMode === "edit") {
+					if (stage) {
 						stage.container().style.cursor = "default";
 					}
 				}}
@@ -4368,7 +4371,12 @@ const ShapeWrapper = ({
 				}}
 				onClick={(e) => {
 					e.cancelBubble = true;
+					if (operationMode === OperationMode.View && type === "evidence") {
+						// 如果是查看模式，并且是evidence，则不允许点击和移动
+						return;
+					}
 					if (isParentEvidence || isOtherParentEvidence) {
+						// 如果是父级evidence或者其他父evidence，则不允许点击和移动
 						return;
 					}
 					onClick?.();
