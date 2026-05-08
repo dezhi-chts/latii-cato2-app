@@ -549,24 +549,31 @@ export default function SchedulePage() {
       });
       return;
     }
-    if (!itemBoxList.length) {
-      notify.error({
-        title: "Error",
-        description: "No reference label found in current item list.",
-      });
-      return;
-    }
 
-    const firstItem = itemBoxList[0] as any;
-    const firstLabel = String(getDisplayValueByField(firstItem?.result || {}, "Label") || "")
-      .replace(/^-$/, "")
-      .trim();
-    if (!firstLabel) {
-      notify.error({
-        title: "Error",
-        description: "The first item's Label is empty. Unable to create item.",
-      });
-      return;
+    let firstItem = null;
+    let firstLabel = '';
+
+    // if (!itemBoxList.length) {
+    //   notify.error({
+    //     title: "Error",
+    //     description: "No reference label found in current item list.",
+    //   });
+    //   return;
+    // }
+    if (itemBoxList?.length === 0) {
+      firstLabel = 'Label';
+    } else {
+      firstItem = itemBoxList[0] as any;
+      firstLabel = String(getDisplayValueByField(firstItem?.result || {}, "Label") || "")
+        .replace(/^-$/, "")
+        .trim();
+      if (!firstLabel) {
+        notify.error({
+          title: "Error",
+          description: "The first item's Label is empty. Unable to create item.",
+        });
+        return;
+      }
     }
 
     setFullLoading(true);
@@ -741,11 +748,6 @@ export default function SchedulePage() {
             showShadow={false}
             showCategory={true}
             categoryList={ArchDrawingSummaryPageTypes}
-            size={
-              selectedFile?.operation_type === FileOperationType.Quote
-                ? "larger"
-                : "default"
-            }
             onClickDelete={handleDeleteScheduleEvidence}
           />
         </div>
