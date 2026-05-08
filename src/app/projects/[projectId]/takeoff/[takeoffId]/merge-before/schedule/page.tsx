@@ -144,9 +144,9 @@ export default function SchedulePage() {
   const getItemsByPageEvidences = useCallback(
     async (id: number) => {
       if (id) {
-        setTableLoading(true);
+        setFullLoading(true);
         let res = await getTakeOffResultItemsByEvidenceIds(id.toString());
-        setTableLoading(false);
+        setFullLoading(false);
         if (res.status === "success" && res.data) {
           let values: any = Object.values(res.data || {}) || [];
           let list = values.flatMap((item: any) => item || []);
@@ -780,7 +780,6 @@ export default function SchedulePage() {
           <ScheduleTable
             columns={columns}
             sections={itemBoxList}
-            tableLoading={tableLoading}
             takeOffId={String(takeOffId || "")}
             selectedFileId={selectedFileId}
             pageEvidenceId={pageEvidenceId}

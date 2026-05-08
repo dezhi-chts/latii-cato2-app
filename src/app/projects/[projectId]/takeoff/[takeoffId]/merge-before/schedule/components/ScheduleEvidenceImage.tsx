@@ -221,7 +221,7 @@ export default function ScheduleEvidenceImage({
                   top: `${rect.top}px`,
                   width: `${Math.max(rect.width, 2)}px`,
                   height: `${Math.max(rect.height, 2)}px`,
-                  borderColor: isActive ? "#FF450030" : "#427CCE",
+                  borderColor: isActive ? "#FF4500" : "#427CCE",
                   backgroundColor: isActive ? "#FF450030" : "#427CCE30",
                 }}
                 onClick={() => onSelectItem?.(rect.id)}
