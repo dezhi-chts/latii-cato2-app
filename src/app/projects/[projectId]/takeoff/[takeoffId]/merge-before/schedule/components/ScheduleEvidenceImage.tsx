@@ -31,6 +31,7 @@ export default function ScheduleEvidenceImage({
 }: ScheduleEvidenceImageProps) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [imageReady, setImageReady] = useState(false);
+  const [showBoxes, setShowBoxes] = useState(false);
   const [imageMetrics, setImageMetrics] = useState({
     renderedWidth: 0,
     renderedHeight: 0,
@@ -39,19 +40,17 @@ export default function ScheduleEvidenceImage({
   });
 
   useEffect(() => {
-    // Clear stale overlays before the next image finishes loading.
+    const imageElement = imageRef.current;
+    if (!imageElement) return;
+
     setImageReady(false);
+    setShowBoxes(false);
     setImageMetrics({
       renderedWidth: 0,
       renderedHeight: 0,
       naturalWidth: 0,
       naturalHeight: 0,
     });
-  }, [imageUrl]);
-
-  useEffect(() => {
-    const imageElement = imageRef.current;
-    if (!imageElement) return;
 
     const syncLoadedMetrics = () => {
       const rect = imageElement.getBoundingClientRect();
@@ -62,6 +61,7 @@ export default function ScheduleEvidenceImage({
         naturalHeight: imageElement.naturalHeight || 0,
       });
       setImageReady(true);
+      setShowBoxes(true);
     };
 
     const syncRenderedSize = () => {
@@ -145,6 +145,7 @@ export default function ScheduleEvidenceImage({
           top: topNatural * scaleY,
           width: widthNatural * scaleX,
           height: heightNatural * scaleY,
+          area: widthNatural * heightNatural,
         };
       })
       .filter(Boolean) as Array<{
@@ -153,8 +154,17 @@ export default function ScheduleEvidenceImage({
         top: number;
         width: number;
         height: number;
+        area: number;
       }>;
   }, [imageMetrics, imageReady, items]);
+
+  const orderedOverlayRects = useMemo(() => {
+    // Render larger boxes first so smaller boxes stay on top and remain clickable.
+    return [...overlayRects].sort((a, b) => {
+      if (b.area !== a.area) return b.area - a.area;
+      return a.id - b.id;
+    });
+  }, [overlayRects]);
 
   if (!hasImage) {
     return (
@@ -172,6 +182,7 @@ export default function ScheduleEvidenceImage({
       <div className="mx-auto w-fit">
         <div className="relative inline-block">
           <img
+            key={imageUrl}
             ref={imageRef}
             src={imageUrl}
             alt="Schedule Evidence"
@@ -187,6 +198,7 @@ export default function ScheduleEvidenceImage({
                 naturalHeight: element.naturalHeight || 0,
               });
               setImageReady(true);
+              setShowBoxes(true);
             }}
             style={
               renderAtNaturalSize && imageMetrics.naturalWidth && imageMetrics.naturalHeight
@@ -198,7 +210,7 @@ export default function ScheduleEvidenceImage({
             }
           />
 
-          {overlayRects.map((rect) => {
+          {showBoxes && orderedOverlayRects.map((rect) => {
             const isActive = rect.id === activeItemId;
             return (
               <div

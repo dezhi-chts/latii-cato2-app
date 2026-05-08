@@ -545,7 +545,7 @@ export default function ScheduleTable({
 		});
 
 		const checkedColumn = {
-			title: "",
+			title: '',
 			key: "checkbox",
 			width: 36,
 			fixed: "left" as const,
