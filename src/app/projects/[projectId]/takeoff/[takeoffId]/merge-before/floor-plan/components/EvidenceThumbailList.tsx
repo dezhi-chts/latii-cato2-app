@@ -199,10 +199,9 @@ const EvidenceThumbailList = ({
 
 	return (
 		<div
-			className={`${fixed ? "absolute" : ""} top-0 right-0 transition-all duration-200 bg-white z-9999`}
+			className={`${fixed ? "absolute" : ""} pb-4 h-full top-0 right-0 transition-all duration-200 bg-white z-9999`}
 			style={{
 				width: "250px",
-				height: "100%",
 			}}
 		>
 			<div
