@@ -51,7 +51,6 @@ export interface ScheduleSourceSection {
 interface ScheduleTableProps {
 	columns: string[];
 	sections: any[];
-	tableLoading: boolean;
 	takeOffId: string;
 	selectedFileId: number | null;
 	pageEvidenceId: number;
@@ -128,7 +127,6 @@ const getColumnWidth = (title: string) => {
 export default function ScheduleTable({
 	columns,
 	sections,
-	tableLoading,
 	takeOffId,
 	selectedFileId,
 	pageEvidenceId,
@@ -686,7 +684,6 @@ export default function ScheduleTable({
 							columns={tableColumns}
 							dataSource={sections}
 							pagination={false}
-							loading={tableLoading}
 							scroll={
 								sections.length > 0 ? {
 									x: "max-content",

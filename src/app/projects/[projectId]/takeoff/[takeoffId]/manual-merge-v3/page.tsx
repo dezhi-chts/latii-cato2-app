@@ -39,6 +39,7 @@ import SplitItemsModal from "./components/SplitItemsModal";
 import { notify } from "@/utils/notify";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
+import LoadingScreen from "@/components/loading-screen";
 
 const { confirm } = Modal;
 
@@ -2032,11 +2033,7 @@ export default function ManualMergeV2Page() {
         />
       </Modal>
 
-      {loading && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-white/40">
-          <Spin />
-        </div>
-      )}
+      {loading && <LoadingScreen isLoading={loading} />}
       {buildLoading && <BuildingBackground step={"page-takeoff"} />}
     </div>
   );
