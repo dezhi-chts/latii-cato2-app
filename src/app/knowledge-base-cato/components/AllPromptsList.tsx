@@ -175,7 +175,7 @@ export const AllPromptsList = ({
     }
   };
 
-  const disbaleFileName = ['Generations', 'Label', 'Sub Label', 'Product', 'Quantity'];
+  const disbaleFileName = ['Generations', 'Label', 'Sub Label', 'Product', 'Quantity', 'coordinates.x1', 'coordinates.y1', 'coordinates.x2', 'coordinates.y2'];
 
   return (
     <div className="w-[350px] h-full flex flex-col">

@@ -172,7 +172,7 @@ export const FieldEditor = ({
     return formData?.config_json?.available_values || [];
   }, [formData]);
 
-  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity'];
+  const disbaleFileName = ['Label', 'Sub Label', 'Product', 'Quantity', 'coordinates.x1', 'coordinates.y1', 'coordinates.x2', 'coordinates.y2'];
 
   const disabelEdit = templateId === 1 || field?.name === 'Generations' || templateInfo?.is_edit === false;
 

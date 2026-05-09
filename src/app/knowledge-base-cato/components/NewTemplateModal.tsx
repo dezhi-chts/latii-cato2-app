@@ -22,6 +22,8 @@ interface NewTemplateModalProps {
   onAddPrompt: () => void;
 }
 
+// 默认选中的字段,并且不能取消勾选
+const defaultCheckedFields = ['Label', 'Sub Label', 'Product', 'Quantity', 'coordinates.x1', 'coordinates.y1', 'coordinates.x2', 'coordinates.y2']
 export const NewTemplateModal = ({
   isOpen,
   onClose,
@@ -195,10 +197,7 @@ export const NewTemplateModal = ({
                 onChange={(e) => handleFieldToggle(field.id, e.target.checked)}
                 className="custom-checkbox text-xs text-grey-normal"
                 disabled={
-                  field.name === 'Label' ||
-                  field.name === 'Sub Label' ||
-                  field.name === 'Product' ||
-                  field.name === 'Quantity'
+                  defaultCheckedFields.includes(field.name)
                 }
               >
                 <span className="text-sm">{field.name}</span>
