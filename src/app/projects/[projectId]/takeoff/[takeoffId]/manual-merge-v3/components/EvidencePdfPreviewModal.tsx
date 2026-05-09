@@ -32,7 +32,7 @@ interface EvidencePdfPreviewModalProps {
   warningPages?: number[];
   initialPageNumber?: number;
   onCancel: () => void;
-  onConfirmSuccess: () => void;
+  onConfirmSuccess: () => void | Promise<void>;
 }
 
 const clampZoom = (value: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, value));
@@ -117,20 +117,28 @@ export default function EvidencePdfPreviewModal({
     }
 
     setLoading(true);
-    let res = await saveNewListAndSyncFileSourceMergeResult(takeoffId, fileInfo?.id, panelType, [newEvidence]);
-    setLoading(false);
-    if (res.status === "success") {
-      notify.success({
-        title: "Success",
-        description: "Source data saved successfully.",
-      })
-      pdfRef.current?.removeCropSectionByIds([evidence?.groupId]);
-      onConfirmSuccess();
-    } else {
-      notify.error({
-        title: "Error",
-        description: res?.data?.detail || "Failed to save source data.",
-      })
+    try {
+      const res = await saveNewListAndSyncFileSourceMergeResult(
+        takeoffId,
+        fileInfo?.id,
+        panelType,
+        [newEvidence],
+      );
+      if (res.status === "success") {
+        notify.success({
+          title: "Success",
+          description: "Source data saved successfully.",
+        });
+        pdfRef.current?.removeCropSectionByIds([evidence?.groupId]);
+        await Promise.resolve(onConfirmSuccess());
+      } else {
+        notify.error({
+          title: "Error",
+          description: res?.data?.detail || "Failed to save source data.",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
