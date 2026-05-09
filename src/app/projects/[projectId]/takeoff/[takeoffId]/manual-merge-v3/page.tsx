@@ -1825,7 +1825,7 @@ export default function ManualMergeV2Page() {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-white font-nunito">
-      <header className="flex h-[110px] shrink-0 items justify-between border-b border-primaryN30 bg-white px-10 pt-4">
+      <header className="flex h-[110px] shrink-0 items justify-between items-center border-b border-primaryN30 bg-white px-10 pt-4">
         <TakeoffFileWorkflowNav
           className="flex-1"
           files={files}

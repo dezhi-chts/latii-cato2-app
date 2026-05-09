@@ -82,8 +82,8 @@ export default function TakeoffListHeader({
 				</Dropdown>
 			</div>
 
-			<div className="flex items-center gap-8">
-				<div className="flex items-center gap-4">
+			<div className="flex-1 flex flex-row justify-center items-center gap-8">
+				<div className="flex items-center gap-2">
 					<div className="flex items-center gap-1 text-sm text-forumBlue-normal">
 						<span>Summary</span>
 						{/* <Popover title={null} content={summaryTooltip} color="white">
@@ -92,7 +92,7 @@ export default function TakeoffListHeader({
 					</div>
 					<Divider type="vertical" className="!h-7 !bg-primaryN30" />
 				</div>
-				<div className="flex items-center gap-10">
+				<div className="flex items-center gap-5">
 					<div className="flex flex-col">
 						<span className="text-lg text-center">
 							{summaryStats?.unique_labels_quantity ?? 0}

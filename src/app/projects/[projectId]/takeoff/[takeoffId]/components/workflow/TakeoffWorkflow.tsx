@@ -217,7 +217,7 @@ export default function TakeoffWorkflow({
           <div key={step.key} className="flex items-center gap-2">
             <button
               type="button"
-              className={`rounded-full px-3 py-[2px] transition-all ${isCurrent
+              className={`rounded-full px-2 py-[2px] transition-all ${isCurrent
                 ? "bg-forumBlue-normal text-white"
                 : isCompleted
                   ? "bg-green-light text-green-normal cursor-pointer"

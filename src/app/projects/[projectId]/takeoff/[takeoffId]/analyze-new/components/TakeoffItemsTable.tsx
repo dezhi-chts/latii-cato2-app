@@ -659,7 +659,7 @@ export default function TakeoffItemsTable({
 			title: <div className="text-center text-xs text-grey-normal">Label</div>,
 			key: "Label",
 			dataIndex: "Label",
-			minWidth: 100,
+			minWidth: 140,
 			fixed: "left",
 			align: "center",
 			sorter: true,
