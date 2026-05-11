@@ -28,7 +28,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
 	updateTakeOffResultItem,
-	addTakeOffResultItem,
+	copyMultipleFilesMergeResultByIds,
 	deleteTakeOffResultItemList,
 } from "@/services/takeOffService";
 
@@ -196,7 +196,7 @@ export default function TakeoffItemsTable({
 			const parent =
 				subLabelEmptyItems.length > 1
 					? subLabelEmptyItems.find((row) => getProductText(row) === "") ||
-						subLabelEmptyItems[0]
+					subLabelEmptyItems[0]
 					: subLabelEmptyItems[0] || sameLabelItems[0];
 			const children = sameLabelItems.filter((row) => row.id !== parent.id);
 			groups.push({
@@ -397,27 +397,16 @@ export default function TakeoffItemsTable({
 		const originalResult = parseItemResult(
 			(selectedItem as any).originalResult ?? selectedItem.result,
 		);
+
 		const originalLabel = String(originalResult["Label"] ?? "").trim();
 		const newLabel = generateUniqueCopyLabel(originalLabel);
 
-		const newResult = {
-			...originalResult,
-			Label: newLabel,
-		};
-
-		const requestBody = {
-			take_off_id: takeoffId,
-			single_file_merge_result_ids: "",
-			take_off_result_item_ids: "",
-			file_source_merge_result_ids: "",
-			result: JSON.stringify(newResult),
-			is_deleted: false,
-			is_merged: false,
-		};
-
 		setCopyLoading(true);
 		try {
-			const response = await addTakeOffResultItem(requestBody);
+			const response = await copyMultipleFilesMergeResultByIds(
+				takeoffId,
+				String(selectedItem.id),
+			);
 			if (response.status === "success") {
 				notify.success({
 					title: "Success",
