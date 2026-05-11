@@ -909,5 +909,29 @@ export const rollbackSingleFileMergeResultByIds = async (ids: string)=>{
   }
 }
 
+/**
+ * 复制最终页面item
+ * @param take_off_id 
+ * @param result_id 
+ * @returns 
+ */
+export const copyMultipleFilesMergeResultByIds = async (
+  take_off_id: string | number, 
+  result_id: string
+)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/copy_multiple_files_merge_result_by_id`;
+    let body = {
+      take_off_id:take_off_id,
+      result_id:result_id,
+    }
+    const response = await http.post(url,body);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error copying multiple files merge result by id:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
