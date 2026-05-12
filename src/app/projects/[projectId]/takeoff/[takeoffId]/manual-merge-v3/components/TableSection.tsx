@@ -5,7 +5,6 @@ interface TableSectionProps {
   rows: any[];
   itemCount?: number;
   editable: boolean;
-  withEvidenceAction: boolean;
   extra?: React.ReactNode;
   scrollY?: string;
   stretch?: boolean;
@@ -13,7 +12,6 @@ interface TableSectionProps {
     title: string,
     rows: any[],
     editable: boolean,
-    withEvidenceAction: boolean,
     scrollY?: string,
   ) => React.ReactNode;
 }
@@ -23,7 +21,6 @@ export default function TableSection({
   rows,
   itemCount,
   editable,
-  withEvidenceAction,
   extra,
   scrollY = "calc((100vh - 130px)/2 - 96px)",
   stretch = true,
@@ -42,7 +39,7 @@ export default function TableSection({
         </div>
       </div>
       <div className={stretch ? "min-h-0 flex-1" : ""}>
-        {renderTable(title, rows, editable, withEvidenceAction, scrollY)}
+        {renderTable(title, rows, editable, scrollY)}
       </div>
     </div>
   );

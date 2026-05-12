@@ -490,7 +490,7 @@ export default function ScheduleTable({
 		const dataColumns = columns.map((fieldName) => {
 			const isLabelColumn = fieldName === "Label";
 			const isSubLabelColumn = fieldName === "Sub Label";
-
+			const columnWidth = getColumnWidth(fieldName);
 			return {
 				title: (
 					<div className="whitespace-nowrap text-center text-xs text-grey-normal">
@@ -499,12 +499,10 @@ export default function ScheduleTable({
 				),
 				key: fieldName,
 				dataIndex: fieldName,
-				width:
-					fieldName === "Label" || fieldName === "Sub Label"
-						? 120
-						: getColumnWidth(fieldName),
+				width: columnWidth,
+				minWidth: columnWidth,
 				fixed:
-					hasRows && (isLabelColumn || isSubLabelColumn)
+					(isLabelColumn || isSubLabelColumn)
 						? ("left" as const)
 						: undefined,
 				align: "center" as const,
@@ -565,6 +563,7 @@ export default function ScheduleTable({
 			title: "",
 			key: "focus",
 			width: 36,
+			fixed: "left" as const,
 			align: "center" as const,
 			render: (_: unknown, record: any) => {
 				const rowId = Number(record.id);
@@ -601,7 +600,6 @@ export default function ScheduleTable({
 				</Button>
 			),
 		};
-
 		return hasRows
 			? [checkedColumn, focusColumn, ...dataColumns, actionColumn]
 			: [...dataColumns, actionColumn];
@@ -676,7 +674,7 @@ export default function ScheduleTable({
 				</div>
 				<div
 					ref={tableContainerRef}
-					className="min-h-0 flex-1 rounded-xl border border-primaryN30 bg-white"
+					className="min-h-0 flex-1 rounded-md border border-primaryN30 bg-white"
 				>
 					{viewMode === "table" ? (
 						<Table<any>
@@ -685,10 +683,8 @@ export default function ScheduleTable({
 							dataSource={sections}
 							pagination={false}
 							scroll={
-								sections.length > 0 ? {
+								{
 									x: "max-content",
-									y: "calc(100vh - 280px)",
-								} : {
 									y: "calc(100vh - 280px)",
 								}}
 							locale={{

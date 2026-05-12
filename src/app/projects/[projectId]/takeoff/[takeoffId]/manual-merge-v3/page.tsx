@@ -1619,11 +1619,10 @@ export default function ManualMergeV2Page() {
     title: string,
     rows: any[],
     editable: boolean,
-    withEvidenceAction: boolean,
     scrollY?: string,
   ) => {
     const dataColumns: ColumnsType<any> = columns.map((fieldName) => ({
-      title: <div className="text-center text-xs text-grey-normal">{fieldName}</div>,
+      title: <div className="text-center whitespace-nowrap text-xs text-grey-normal">{fieldName}</div>,
       key: fieldName,
       dataIndex: fieldName,
       width: fieldName === "Label" || fieldName === "Sub Label" ? 120 : 130,
@@ -1807,7 +1806,7 @@ export default function ManualMergeV2Page() {
     return (
       <Table<any>
         rowKey={(record) => record.id ?? record.__rowKey}
-        columns={withEvidenceAction ? [...dataColumns, actionColumn] : dataColumns}
+        columns={[...dataColumns, actionColumn]}
         dataSource={rows}
         pagination={false}
         scroll={scrollY ? { x: "max-content", y: scrollY } : { x: "max-content" }}
@@ -1859,7 +1858,6 @@ export default function ManualMergeV2Page() {
                 title="Final Items"
                 rows={finalItemsRows}
                 editable={true}
-                withEvidenceAction={true}
                 extra={(
                   <div className="ml-4 flex items-center gap-2">
                     <Button
@@ -1916,7 +1914,6 @@ export default function ManualMergeV2Page() {
                         rows={displayScheduleRows}
                         itemCount={scheduleItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}
@@ -1929,7 +1926,6 @@ export default function ManualMergeV2Page() {
                         rows={displayFloorPlanRows}
                         itemCount={floorPlanItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}
@@ -1942,7 +1938,6 @@ export default function ManualMergeV2Page() {
                         rows={displayElevationRows}
                         itemCount={elevationItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}
