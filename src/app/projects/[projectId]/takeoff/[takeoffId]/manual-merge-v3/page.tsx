@@ -407,11 +407,11 @@ export default function ManualMergeV2Page() {
   const router = useRouter();
   const projectId = useParams().projectId as string;
   const takeoffId = useParams().takeoffId as string;
-  useBrowserBackToHome();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [buildLoading, setBuildLoading] = useState(false);
+  useBrowserBackToHome({ disableBrowserNavigation: buildLoading });
   const [files, setFiles] = useState<any[]>([]);
   const [fileId, setFileId] = useState<number | null>(null);
   const [labels, setLabels] = useState<LabelOption[]>([]);
@@ -1452,6 +1452,7 @@ export default function ManualMergeV2Page() {
     setBuildLoading(true);
     try {
       const response = await autoCreateMultipleFilesMergeResultByTakeOffId(takeoffId);
+      setBuildLoading(false);
       if (response.status === "success") {
         router.replace(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
         return;
@@ -1460,8 +1461,12 @@ export default function ManualMergeV2Page() {
         title: "Error",
         description: response.data?.detail || "Failed to create merge result.",
       });
-    } finally {
+    } catch (error) {
       setBuildLoading(false);
+      notify.error({
+        title: "Error",
+        description: "Failed to create merge result.",
+      });
     }
   }, [takeoffId]);
 
@@ -1619,11 +1624,10 @@ export default function ManualMergeV2Page() {
     title: string,
     rows: any[],
     editable: boolean,
-    withEvidenceAction: boolean,
     scrollY?: string,
   ) => {
     const dataColumns: ColumnsType<any> = columns.map((fieldName) => ({
-      title: <div className="text-center text-xs text-grey-normal">{fieldName}</div>,
+      title: <div className="text-center whitespace-nowrap text-xs text-grey-normal">{fieldName}</div>,
       key: fieldName,
       dataIndex: fieldName,
       width: fieldName === "Label" || fieldName === "Sub Label" ? 120 : 130,
@@ -1807,7 +1811,7 @@ export default function ManualMergeV2Page() {
     return (
       <Table<any>
         rowKey={(record) => record.id ?? record.__rowKey}
-        columns={withEvidenceAction ? [...dataColumns, actionColumn] : dataColumns}
+        columns={[...dataColumns, actionColumn]}
         dataSource={rows}
         pagination={false}
         scroll={scrollY ? { x: "max-content", y: scrollY } : { x: "max-content" }}
@@ -1859,7 +1863,6 @@ export default function ManualMergeV2Page() {
                 title="Final Items"
                 rows={finalItemsRows}
                 editable={true}
-                withEvidenceAction={true}
                 extra={(
                   <div className="ml-4 flex items-center gap-2">
                     <Button
@@ -1916,7 +1919,6 @@ export default function ManualMergeV2Page() {
                         rows={displayScheduleRows}
                         itemCount={scheduleItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}
@@ -1929,7 +1931,6 @@ export default function ManualMergeV2Page() {
                         rows={displayFloorPlanRows}
                         itemCount={floorPlanItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}
@@ -1942,7 +1943,6 @@ export default function ManualMergeV2Page() {
                         rows={displayElevationRows}
                         itemCount={elevationItemCount}
                         editable={false}
-                        withEvidenceAction={true}
                         extra={null}
                         scrollY={undefined}
                         stretch={false}

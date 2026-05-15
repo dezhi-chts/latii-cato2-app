@@ -68,7 +68,6 @@ export default function FloorPlanPage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
-  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
 
@@ -94,8 +93,11 @@ export default function FloorPlanPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
   const [isSwitchingEvidence, setIsSwitchingEvidence] = useState(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
+  useBrowserBackToHome({ disableBrowserNavigation: buildLoading });
   const [areaEditModalOpen, setAreaEditModalOpen] = useState(false);
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
+  const isLabelItemUpdatingRef = useRef(false);
+  const isBatchLabelUpdatingRef = useRef(false);
   const eventSourceRef = useRef<{ close: () => void } | null>(null);
   const { username, company_id } = useUser();
   const [evidenceList, setEvidenceList] = useState<EvidenceType[]>([]);
@@ -646,6 +648,13 @@ export default function FloorPlanPage() {
 
   const handleNext = useCallback(async () => {
     if (!selectedFileId) return;
+    if (isLabelItemUpdatingRef.current || isBatchLabelUpdatingRef.current) {
+      notify.warning({
+        title: "Warning",
+        description: "Label is currently being updated. Please wait..",
+      });
+      return;
+    }
     // 检测所有的空标签是否已经处理完
     let pageList = [...thumbnailData].map((item, index) => {
       return {
@@ -704,10 +713,6 @@ export default function FloorPlanPage() {
     labelTableData,
     handleAnaylize,
   ]);
-
-  const handleBack = () => {
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
-  };
 
   const handleClearAllCrop = () => {
     if (!pdfWrapperRef.current) return;
@@ -783,6 +788,14 @@ export default function FloorPlanPage() {
       handleDeleteByEvidenceIds(evidenceIds);
     }
   }, [handleDeleteByEvidenceIds, handleOpenBatchEditByIds]);
+
+  const handleLabelItemUpdatingChange = useCallback((isUpdating: boolean) => {
+    isLabelItemUpdatingRef.current = isUpdating;
+  }, []);
+
+  const handleBatchLabelUpdatingChange = useCallback((isUpdating: boolean) => {
+    isBatchLabelUpdatingRef.current = isUpdating;
+  }, []);
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-white font-nunito">
@@ -977,6 +990,7 @@ export default function FloorPlanPage() {
               setShowScheduleModal={setShowScheduleModal}
               onSelect={handleSelectLabelItem}
               onUpdateItem={handleUpdateItemByLabelTable}
+              onItemUpdatingChange={handleLabelItemUpdatingChange}
               onDeleteSuccess={handleDeleteItemByLabelTable}
               onBatchEditRequest={handleOpenBatchEditByIds}
               onBatchDeleteRequest={({ evidenceIds }) => {
@@ -1014,6 +1028,7 @@ export default function FloorPlanPage() {
         evidences={itemBoxList as any[]}
         onCancel={handleCancelAreaEditModal}
         onSuccess={handleAreaEditSuccess}
+        onUpdatingChange={handleBatchLabelUpdatingChange}
       />
       {(fullLoading || isSwitchingEvidence) && (
         <LoadingScreen isLoading={fullLoading || isSwitchingEvidence} />

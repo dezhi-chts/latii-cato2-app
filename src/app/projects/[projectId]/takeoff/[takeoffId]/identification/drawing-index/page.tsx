@@ -196,7 +196,7 @@ const IdentIndex = forwardRef<IdentIndexRef, {
         description: "Drawing index recognized successfully",
       });
       // 识别成功后跳转到summary页面
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+      router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
     } else {
       notify.error({
         title: "Error",
@@ -358,7 +358,7 @@ const IdentIndex = forwardRef<IdentIndexRef, {
   // 处理返回按钮的点击事件
   const handleBack = useCallback(() => {
     // 返回summary页面
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+    router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
   }, [router]);
 
   // 右上角按钮的相关信息

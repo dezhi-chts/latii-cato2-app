@@ -307,7 +307,7 @@ const IdentSummary = () => {
 
   const handleRestartIndex = () => {
     // 跳转到index drawing页面，重新绘制index drawing
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/drawing-index`);
+    router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/drawing-index`);
   };
 
   const handleFileStatus = (oldFileId: number, newFileId: number) => {
@@ -331,7 +331,7 @@ const IdentSummary = () => {
     const file = fileList.find((file: any) => file.id === fileId);
     if (file?.status === FileStatus.Completed) {
       handleFileStatus(selectedFileId, fileId);
-      router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+      router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
     }
   };
 
@@ -347,7 +347,7 @@ const IdentSummary = () => {
       return;
     }
     // 在summary页面的时候，点击Next Step跳转到label页面
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+    router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
   };
 
   const fileOperationType = useMemo(() => {
@@ -385,13 +385,13 @@ const IdentSummary = () => {
         if (prevFile.status === FileStatus.Completed) {
           setSelectedFileId(prevFile.id);
           // 跳转到label页面
-          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
+          router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
         } else if (
           prevFile.operation_type === FileOperationType.ArchitectureDrawing
         ) {
           setSelectedFileId(prevFile.id);
           // 跳转到summary页面
-          router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
+          router.replace(`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`);
         }
       } else {
         // 如果前面没有文件可以返回了，则直接返回home

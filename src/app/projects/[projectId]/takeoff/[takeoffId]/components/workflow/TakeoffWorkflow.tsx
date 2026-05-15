@@ -153,7 +153,7 @@ export default function TakeoffWorkflow({
         (targetStep === "page-index" || targetStep === "page-labeling");
 
       if (isPageIndexOrLabeling && shouldSkipRollbackForPageIndexLabeling) {
-        router.push(targetPath);
+        router.replace(targetPath);
         return;
       }
 

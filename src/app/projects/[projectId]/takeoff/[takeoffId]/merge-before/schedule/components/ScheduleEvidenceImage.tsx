@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Empty } from "antd";
 import {
-  getDisplayValueByField,
-  parseItemResult as parseItemResultUtil,
-} from "../../../analyze-new/takeoffUtils";
+  forwardRef,
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Empty } from "antd";
+import { CheckOutlined, DeleteOutlined } from "@ant-design/icons";
 
 export interface NormalizedCoordinates {
   x1: number;
@@ -20,24 +25,80 @@ interface ScheduleEvidenceImageProps {
   activeItemId?: number | null;
   onSelectItem?: (itemId: number) => void;
   renderAtNaturalSize?: boolean;
+  onConfirmSubItemBox?: (
+    coordinates: NormalizedCoordinates,
+    boxId: string,
+  ) => Promise<boolean | void> | boolean | void;
 }
 
-export default function ScheduleEvidenceImage({
-  imageUrl,
-  items,
-  activeItemId = null,
-  onSelectItem,
-  renderAtNaturalSize = false,
-}: ScheduleEvidenceImageProps) {
+export interface ScheduleEvidenceImageRef {
+  addSubItemBox: () => void;
+}
+
+interface DraftSubItemBox {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+type ResizeCorner = "nw" | "ne" | "sw" | "se";
+type DragAction = "move" | ResizeCorner;
+
+const MIN_BOX_SIZE = 12;
+const NEW_BOX_BORDER_COLOR = "#16A34A";
+const NEW_BOX_BACKGROUND_COLOR = "rgba(22,163,74,0.12)";
+const HANDLE_BORDER_COLOR = "#427CCE";
+const HANDLE_BACKGROUND_COLOR = "#FFFFFF";
+
+const clamp = (value: number, min: number, max: number) => {
+  if (max < min) return min;
+  return Math.min(Math.max(value, min), max);
+};
+
+const toFixedRatio = (value: number) => Number(value.toFixed(3));
+
+const getClientPositionInContainer = (event: MouseEvent, rect: DOMRect) => {
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+};
+
+const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvidenceImageProps>(
+  function ScheduleEvidenceImage({
+    imageUrl,
+    items,
+    activeItemId = null,
+    onSelectItem,
+    renderAtNaturalSize = false,
+    onConfirmSubItemBox,
+  }: ScheduleEvidenceImageProps, ref) {
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const overlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [imageReady, setImageReady] = useState(false);
   const [showBoxes, setShowBoxes] = useState(false);
+  const [draftBoxes, setDraftBoxes] = useState<DraftSubItemBox[]>([]);
+  const [selectedDraftBoxId, setSelectedDraftBoxId] = useState<string | null>(null);
+  const [confirmingIds, setConfirmingIds] = useState<Record<string, boolean>>({});
   const [imageMetrics, setImageMetrics] = useState({
     renderedWidth: 0,
     renderedHeight: 0,
     naturalWidth: 0,
     naturalHeight: 0,
   });
+  const dragSessionRef = useRef<{
+    boxId: string;
+    action: DragAction;
+    containerRect: DOMRect;
+    startPointerX: number;
+    startPointerY: number;
+    initialLeft: number;
+    initialTop: number;
+    initialWidth: number;
+    initialHeight: number;
+  } | null>(null);
 
   useEffect(() => {
     const imageElement = imageRef.current;
@@ -84,6 +145,181 @@ export default function ScheduleEvidenceImage({
       observer.disconnect();
     };
   }, [imageUrl]);
+
+  useEffect(() => {
+    setDraftBoxes([]);
+    setSelectedDraftBoxId(null);
+    setConfirmingIds({});
+  }, [imageUrl]);
+
+  const updateDraftBoxById = (boxId: string, updater: (box: DraftSubItemBox) => DraftSubItemBox) => {
+    setDraftBoxes((prev) => prev.map((box) => (box.id === boxId ? updater(box) : box)));
+  };
+
+  const addSubItemBox = () => {
+    if (!imageReady || !imageMetrics.renderedWidth || !imageMetrics.renderedHeight) return;
+    const nextWidth = imageMetrics.renderedWidth * 0.5;
+    const nextHeight = imageMetrics.renderedHeight * 0.3;
+    const nextBox: DraftSubItemBox = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      left: clamp((imageMetrics.renderedWidth - nextWidth) / 2, 0, imageMetrics.renderedWidth - nextWidth),
+      top: clamp((imageMetrics.renderedHeight - nextHeight) / 2, 0, imageMetrics.renderedHeight - nextHeight),
+      width: nextWidth,
+      height: nextHeight,
+    };
+    setDraftBoxes((prev) => [...prev, nextBox]);
+    setSelectedDraftBoxId(nextBox.id);
+  };
+
+  useImperativeHandle(ref, () => ({
+    addSubItemBox,
+  }));
+
+  const removeDraftBox = (boxId: string) => {
+    setDraftBoxes((prev) => prev.filter((box) => box.id !== boxId));
+    setConfirmingIds((prev) => {
+      if (!prev[boxId]) return prev;
+      const next = { ...prev };
+      delete next[boxId];
+      return next;
+    });
+    setSelectedDraftBoxId((prev) => (prev === boxId ? null : prev));
+  };
+
+  const beginDrag = (
+    event: ReactMouseEvent<HTMLDivElement>,
+    box: DraftSubItemBox,
+    action: DragAction,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const container = overlayContainerRef.current;
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const pointer = {
+      x: event.clientX - containerRect.left,
+      y: event.clientY - containerRect.top,
+    };
+    setSelectedDraftBoxId(box.id);
+    dragSessionRef.current = {
+      boxId: box.id,
+      action,
+      containerRect,
+      startPointerX: pointer.x,
+      startPointerY: pointer.y,
+      initialLeft: box.left,
+      initialTop: box.top,
+      initialWidth: box.width,
+      initialHeight: box.height,
+    };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const dragSession = dragSessionRef.current;
+      if (!dragSession) return;
+      const currentPointer = getClientPositionInContainer(event, dragSession.containerRect);
+      const boundsWidth = imageMetrics.renderedWidth;
+      const boundsHeight = imageMetrics.renderedHeight;
+      if (!boundsWidth || !boundsHeight) return;
+      const {
+        boxId,
+        action,
+        startPointerX,
+        startPointerY,
+        initialLeft,
+        initialTop,
+        initialWidth,
+        initialHeight,
+      } = dragSession;
+
+      updateDraftBoxById(boxId, (box) => {
+        if (action === "move") {
+          const deltaX = currentPointer.x - startPointerX;
+          const deltaY = currentPointer.y - startPointerY;
+          const nextLeft = clamp(initialLeft + deltaX, 0, boundsWidth - initialWidth);
+          const nextTop = clamp(initialTop + deltaY, 0, boundsHeight - initialHeight);
+          return {
+            ...box,
+            left: Math.round(nextLeft),
+            top: Math.round(nextTop),
+          };
+        }
+
+        const startRight = initialLeft + initialWidth;
+        const startBottom = initialTop + initialHeight;
+        if (action === "nw") {
+          const nextLeft = clamp(currentPointer.x, 0, startRight - MIN_BOX_SIZE);
+          const nextTop = clamp(currentPointer.y, 0, startBottom - MIN_BOX_SIZE);
+          return {
+            ...box,
+            left: Math.round(nextLeft),
+            top: Math.round(nextTop),
+            width: Math.round(startRight - nextLeft),
+            height: Math.round(startBottom - nextTop),
+          };
+        }
+        if (action === "ne") {
+          const nextRight = clamp(currentPointer.x, initialLeft + MIN_BOX_SIZE, boundsWidth);
+          const nextTop = clamp(currentPointer.y, 0, startBottom - MIN_BOX_SIZE);
+          return {
+            ...box,
+            top: Math.round(nextTop),
+            width: Math.round(nextRight - initialLeft),
+            height: Math.round(startBottom - nextTop),
+          };
+        }
+        if (action === "sw") {
+          const nextLeft = clamp(currentPointer.x, 0, startRight - MIN_BOX_SIZE);
+          const nextBottom = clamp(currentPointer.y, initialTop + MIN_BOX_SIZE, boundsHeight);
+          return {
+            ...box,
+            left: Math.round(nextLeft),
+            width: Math.round(startRight - nextLeft),
+            height: Math.round(nextBottom - initialTop),
+          };
+        }
+        const nextRight = clamp(currentPointer.x, initialLeft + MIN_BOX_SIZE, boundsWidth);
+        const nextBottom = clamp(currentPointer.y, initialTop + MIN_BOX_SIZE, boundsHeight);
+        return {
+          ...box,
+          width: Math.round(nextRight - initialLeft),
+          height: Math.round(nextBottom - initialTop),
+        };
+      });
+    };
+
+    const handleMouseUp = () => {
+      dragSessionRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [imageMetrics.renderedHeight, imageMetrics.renderedWidth]);
+
+  const handleConfirmDraftBox = async (box: DraftSubItemBox) => {
+    if (!onConfirmSubItemBox || !imageMetrics.renderedWidth || !imageMetrics.renderedHeight) return;
+    const left = clamp(box.left, 0, imageMetrics.renderedWidth);
+    const top = clamp(box.top, 0, imageMetrics.renderedHeight);
+    const right = clamp(box.left + box.width, 0, imageMetrics.renderedWidth);
+    const bottom = clamp(box.top + box.height, 0, imageMetrics.renderedHeight);
+    const coordinates: NormalizedCoordinates = {
+      x1: toFixedRatio(left / imageMetrics.renderedWidth),
+      y1: toFixedRatio(top / imageMetrics.renderedHeight),
+      x2: toFixedRatio(right / imageMetrics.renderedWidth),
+      y2: toFixedRatio(bottom / imageMetrics.renderedHeight),
+    };
+
+    setConfirmingIds((prev) => ({ ...prev, [box.id]: true }));
+    const result = await onConfirmSubItemBox(coordinates, box.id);
+    setConfirmingIds((prev) => ({ ...prev, [box.id]: false }));
+    if (result === false) return;
+    removeDraftBox(box.id);
+  };
 
   const hasImage = Boolean(imageUrl);
   const parseCoordinates = (value: unknown): NormalizedCoordinates | null => {
@@ -180,7 +416,11 @@ export default function ScheduleEvidenceImage({
   return (
     <div className="h-full w-full overflow-auto p-3">
       <div className="mx-auto w-fit">
-        <div className="relative inline-block">
+        <div
+          ref={overlayContainerRef}
+          className="relative inline-block"
+          onMouseDown={() => setSelectedDraftBoxId(null)}
+        >
           <img
             key={imageUrl}
             ref={imageRef}
@@ -228,8 +468,105 @@ export default function ScheduleEvidenceImage({
               />
             );
           })}
+
+          {showBoxes && draftBoxes.map((box) => {
+            const isSelected = box.id === selectedDraftBoxId;
+            const handleSize = 10;
+            return (
+              <div
+                key={box.id}
+                className="absolute border"
+                style={{
+                  left: `${box.left}px`,
+                  top: `${box.top}px`,
+                  width: `${Math.max(box.width, MIN_BOX_SIZE)}px`,
+                  height: `${Math.max(box.height, MIN_BOX_SIZE)}px`,
+                  borderColor: NEW_BOX_BORDER_COLOR,
+                  backgroundColor: NEW_BOX_BACKGROUND_COLOR,
+                  cursor: "move",
+                  zIndex: isSelected ? 40 : 30,
+                }}
+                onMouseDown={(event) => beginDrag(event, box, "move")}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedDraftBoxId(box.id);
+                }}
+              >
+                <div className="absolute -right-1 -top-6 flex items-center gap-1 rounded-md bg-white px-1 py-[1px] shadow-sm">
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-primaryN30 bg-forumBlue-normal"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleConfirmDraftBox(box);
+                    }}
+                    disabled={Boolean(confirmingIds[box.id])}
+                  >
+                    <CheckOutlined className="text-xs text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-primaryN30 bg-forumBlue-normal"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      removeDraftBox(box.id);
+                    }}
+                  >
+                    <DeleteOutlined className="text-xs text-white" />
+                  </button>
+                </div>
+
+                <div
+                  className="absolute -left-1 -top-1 rounded-full border"
+                  style={{
+                    width: `${handleSize}px`,
+                    height: `${handleSize}px`,
+                    cursor: "nwse-resize",
+                    borderColor: HANDLE_BORDER_COLOR,
+                    backgroundColor: HANDLE_BACKGROUND_COLOR,
+                  }}
+                  onMouseDown={(event) => beginDrag(event, box, "nw")}
+                />
+                <div
+                  className="absolute -right-1 -top-1 rounded-full border"
+                  style={{
+                    width: `${handleSize}px`,
+                    height: `${handleSize}px`,
+                    cursor: "nesw-resize",
+                    borderColor: HANDLE_BORDER_COLOR,
+                    backgroundColor: HANDLE_BACKGROUND_COLOR,
+                  }}
+                  onMouseDown={(event) => beginDrag(event, box, "ne")}
+                />
+                <div
+                  className="absolute -bottom-1 -left-1 rounded-full border"
+                  style={{
+                    width: `${handleSize}px`,
+                    height: `${handleSize}px`,
+                    cursor: "nesw-resize",
+                    borderColor: HANDLE_BORDER_COLOR,
+                    backgroundColor: HANDLE_BACKGROUND_COLOR,
+                  }}
+                  onMouseDown={(event) => beginDrag(event, box, "sw")}
+                />
+                <div
+                  className="absolute -bottom-1 -right-1 rounded-full border"
+                  style={{
+                    width: `${handleSize}px`,
+                    height: `${handleSize}px`,
+                    cursor: "nwse-resize",
+                    borderColor: HANDLE_BORDER_COLOR,
+                    backgroundColor: HANDLE_BACKGROUND_COLOR,
+                  }}
+                  onMouseDown={(event) => beginDrag(event, box, "se")}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
-}
+});
+
+export default ScheduleEvidenceImage;
