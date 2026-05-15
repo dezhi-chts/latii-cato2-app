@@ -13,6 +13,7 @@ interface BatchEditEvidenceModalProps {
   evidences: any[];
   onCancel: () => void;
   onSuccess?: (updatedIds: number[]) => void;
+  onUpdatingChange?: (isUpdating: boolean) => void;
 }
 
 export default function BatchEditEvidenceModal({
@@ -21,11 +22,19 @@ export default function BatchEditEvidenceModal({
   evidences,
   onCancel,
   onSuccess,
+  onUpdatingChange,
 }: BatchEditEvidenceModalProps) {
   const labelInputRef = useRef<InputRef>(null);
   const [labelInput, setLabelInput] = useState("");
   const [subLabelInput, setSubLabelInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    onUpdatingChange?.(submitting);
+    return () => {
+      onUpdatingChange?.(false);
+    };
+  }, [onUpdatingChange, submitting]);
 
   const selectedItems = useMemo(() => {
     return evidences.filter((item: any) => evidenceIds.includes(Number(item.id)));

@@ -13,7 +13,7 @@ const { confirm } = Modal;
 interface LabelItem {
 	id: string | number;
 	label: string;
-	subLabel: string;
+	subLabel?: string;
 	hasMissingLabel: boolean;
 	evidenceId?: number;
 	sourceItem: Record<string, any>;
@@ -25,6 +25,7 @@ interface LabelTableProps {
 	selectedId: string | number | null;
 	onSelect: (item: LabelItem) => void;
 	onUpdateItem?: (item: Record<string, any>) => void;
+	onItemUpdatingChange?: (isUpdating: boolean) => void;
 	onDeleteSuccess?: (deletedId: number) => void;
 	onBatchEditRequest?: (evidenceIds: number[]) => void;
 	onBatchDeleteRequest?: (params: {
@@ -40,6 +41,7 @@ export default function LabelTable({
 	selectedId,
 	onSelect,
 	onUpdateItem,
+	onItemUpdatingChange,
 	onDeleteSuccess,
 	onBatchEditRequest,
 	onBatchDeleteRequest,
@@ -123,6 +125,13 @@ export default function LabelTable({
 		});
 	}, [rows]);
 
+	useEffect(() => {
+		onItemUpdatingChange?.(Boolean(savingCell));
+		return () => {
+			onItemUpdatingChange?.(false);
+		};
+	}, [onItemUpdatingChange, savingCell]);
+
 	// 当选中行变化时，滚动到可视区域
 	useEffect(() => {
 		if (selectedId && selectedRowRef.current && tableRef.current) {
@@ -146,7 +155,8 @@ export default function LabelTable({
 	const handleStartEdit = (record: LabelItem, field: "label" | "subLabel") => {
 		if (savingCell) return;
 		setEditingCell({ id: record.id, field });
-		setEditingValue(record[field] === "-" ? "" : record[field]);
+		const currentValue = record[field] ?? "";
+		setEditingValue(currentValue === "-" ? "" : currentValue);
 	};
 
 	const handleCancelEdit = () => {
@@ -224,6 +234,24 @@ export default function LabelTable({
 			title: "Error",
 			description: response?.data?.detail || "Failed to update label info. The table has been restored.",
 		});
+
+		// const response = await evidenceBatchUpdate([updatedItem]);
+		// setSavingCell(null);
+		// submittingCellKeyRef.current = null;
+		// if (response.status === "success") {
+		// 	onUpdateItem?.(updatedItem);
+		// 	notify.success({
+		// 		title: "Success",
+		// 		description: `${title} ${field === "label" ? "Label" : "Sub Label"} updated.`,
+		// 	});
+		// 	return;
+		// }
+
+		// setRows(prevRows);
+		// notify.error({
+		// 	title: "Error",
+		// 	description: response?.data?.detail || "Failed to update label info. The table has been restored.",
+		// });
 	};
 
 	const handleDeleteRow = async (record: LabelItem) => {

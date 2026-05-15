@@ -571,7 +571,9 @@ export const addTakeOffResultItemByEvidenceId = async (
   take_off_id: string, 
   project_file_id: string, 
   evidence_id: string, 
-  result: object) => { 
+  result: object,
+  coordinates?: { x1: number; y1: number; x2: number; y2: number },
+) => { 
   try{ 
     const url = `/drawing-ai/drawing_ai/add_take_off_result_item`;
     const response = await http.post(url, {
@@ -579,6 +581,7 @@ export const addTakeOffResultItemByEvidenceId = async (
       project_file_id,
       evidence_id,
       result,
+      coordinates,
     });
     return { data: response as any, status: "success" };
   }catch(error: any){

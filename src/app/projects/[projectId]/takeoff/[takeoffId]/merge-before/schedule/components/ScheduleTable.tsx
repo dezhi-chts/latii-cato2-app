@@ -64,6 +64,7 @@ interface ScheduleTableProps {
 	onCreateItem: () => Promise<void> | void;
 	onOpenColumnSelector?: () => void;
 	onBatchActionSuccess?: () => Promise<void> | void;
+	onBatchLabelUpdatingChange?: (isUpdating: boolean) => void;
 	focusedItemId?: number | null;
 	onFocusItemChange?: (itemId: number) => void;
 }
@@ -135,6 +136,7 @@ export default function ScheduleTable({
 	onCreateItem,
 	onOpenColumnSelector,
 	onBatchActionSuccess,
+	onBatchLabelUpdatingChange,
 	focusedItemId = null,
 	onFocusItemChange,
 }: ScheduleTableProps) {
@@ -438,6 +440,7 @@ export default function ScheduleTable({
 		});
 
 		setBatchSubmitting(true);
+		onBatchLabelUpdatingChange?.(true);
 		try {
 			const response = await updateMultipleTakeOffResultItems(payload);
 			if (response.status !== "success") {
@@ -456,6 +459,7 @@ export default function ScheduleTable({
 			await onBatchActionSuccess?.();
 		} finally {
 			setBatchSubmitting(false);
+			onBatchLabelUpdatingChange?.(false);
 		}
 	};
 

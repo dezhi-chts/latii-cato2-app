@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Image, Popover, Modal, Tooltip } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useParams, useRouter } from "next/navigation";
 
 import {
   EvidenceType,
   FileOperationType,
+  GroupType,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import EvidenceThumbailList from "../floor-plan/components/EvidenceThumbailList";
@@ -32,7 +33,10 @@ import {
 import { EvidenceRecord } from "../../analyze-new/types";
 import BuildingBackground from "../../identification/components/BuildingBackground";
 import DisplayColumnsModal from "./components/DisplayColumnsModal";
-import ScheduleEvidenceImage from "./components/ScheduleEvidenceImage";
+import ScheduleEvidenceImage, {
+  type NormalizedCoordinates,
+  type ScheduleEvidenceImageRef,
+} from "./components/ScheduleEvidenceImage";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
@@ -49,6 +53,7 @@ export default function SchedulePage() {
   useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
+  const scheduleEvidenceImageRef = useRef<ScheduleEvidenceImageRef | null>(null);
 
   const [fullLoading, setFullLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,6 +75,8 @@ export default function SchedulePage() {
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
   const [focusedItemId, setFocusedItemId] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const isSingleLabelUpdatingRef = useRef(false);
+  const isBatchLabelUpdatingRef = useRef(false);
 
   const selectedFile = useMemo(() => {
     return files.find((f) => f.id === selectedFileId) || null;
@@ -407,10 +414,16 @@ export default function SchedulePage() {
 
       setItemBoxList((prev) => prev.map((item) => (item.id === itemId ? updatedItem : item)));
 
-      const updateRes = await updateTakeOffResultItemResultById(
-        itemId.toString(),
-        updatedItem?.result || {},
-      );
+      isSingleLabelUpdatingRef.current = true;
+      let updateRes: any = null;
+      try {
+        updateRes = await updateTakeOffResultItemResultById(
+          itemId.toString(),
+          updatedItem?.result || {},
+        );
+      } finally {
+        isSingleLabelUpdatingRef.current = false;
+      }
       if (updateRes.status === "success") {
         notify.success({
           title: "Success",
@@ -440,6 +453,10 @@ export default function SchedulePage() {
     },
     [],
   );
+
+  const handleBatchLabelUpdatingChange = useCallback((isUpdating: boolean) => {
+    isBatchLabelUpdatingRef.current = isUpdating;
+  }, []);
 
   const hasEmptyLabelInTable = useMemo(() => {
     return itemBoxList.some((item) => {
@@ -595,6 +612,117 @@ export default function SchedulePage() {
     await getItemsByPageEvidences(pageEvidenceId);
   }, [getItemsByPageEvidences, itemBoxList, pageEvidenceId, selectedFileId, takeOffId]);
 
+  const resolveCurrentLabel = useCallback(() => {
+    const focusedItem = itemBoxList.find((item: any) => Number(item?.id) === focusedItemId);
+    const fallbackItem = itemBoxList[0];
+    const targetItem = focusedItem || fallbackItem;
+    if (!targetItem) return "";
+    const label = String(getDisplayValueByField((targetItem as any)?.result || {}, "Label") || "")
+      .replace(/^-$/, "")
+      .trim();
+    return label;
+  }, [focusedItemId, itemBoxList]);
+
+  const resolveCurrentLabelForCreateItem = useCallback(() => {
+    const currentLabel = resolveCurrentLabel();
+    return currentLabel || "Label";
+  }, [resolveCurrentLabel]);
+
+  const extractLabelFromCreateResponse = useCallback((payload: any) => {
+    if (!payload) return "";
+    return String(payload?.result?.Label || "").trim();
+  }, []);
+
+  const isCurrentEvidenceTable = useMemo(() => {
+    return String(currentScheduleEvidence?.type || "").trim() === GroupType.Table;
+  }, [currentScheduleEvidence]);
+
+  const handleConfirmSubItemBox = useCallback(
+    async (coordinates: NormalizedCoordinates) => {
+      if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
+        notify.error({
+          title: "Error",
+          description: "Missing takeoff context, unable to create sub item.",
+        });
+        return false;
+      }
+      if (isCurrentEvidenceTable) {
+        setFullLoading(true);
+        const ocrResponse = await addTakeOffResultItemByEvidenceId(
+          String(takeOffId),
+          String(selectedFileId),
+          String(pageEvidenceId),
+          {},
+          coordinates,
+        );
+        setFullLoading(false);
+        if (ocrResponse.status !== "success") {
+          notify.error({
+            title: "Error",
+            description: ocrResponse?.data?.detail || "Failed to OCR and create sub item.",
+          });
+          return false;
+        }
+        const currentLabel = resolveCurrentLabel();
+        const recognizedLabel = extractLabelFromCreateResponse(ocrResponse?.data);
+        notify.success({
+          title: "Success",
+          description: "OCR recognition completed.",
+        });
+        if (
+          currentLabel &&
+          recognizedLabel &&
+          recognizedLabel.toLowerCase() === currentLabel.toLowerCase()
+        ) {
+          await getItemsByPageEvidences(pageEvidenceId);
+          return true;
+        }
+        await fetchScheduleEvidenceList(selectedFileId);
+        return true;
+      }
+
+      // Non-Table: keep +Item behavior, but persist coordinates for replay.
+      const nextLabel = resolveCurrentLabelForCreateItem();
+      setFullLoading(true);
+      const createResponse = await addTakeOffResultItemByEvidenceId(
+        String(takeOffId),
+        String(selectedFileId),
+        String(pageEvidenceId),
+        { Label: nextLabel },
+        coordinates,
+      );
+      setFullLoading(false);
+      if (createResponse.status !== "success") {
+        notify.error({
+          title: "Error",
+          description: createResponse?.data?.detail || "Failed to create sub item.",
+        });
+        return false;
+      }
+      notify.success({
+        title: "Success",
+        description: "Sub item created successfully.",
+      });
+      await getItemsByPageEvidences(pageEvidenceId);
+      return true;
+    },
+    [
+      extractLabelFromCreateResponse,
+      fetchScheduleEvidenceList,
+      getItemsByPageEvidences,
+      isCurrentEvidenceTable,
+      pageEvidenceId,
+      resolveCurrentLabel,
+      resolveCurrentLabelForCreateItem,
+      selectedFileId,
+      takeOffId,
+    ],
+  );
+
+  const handleAddSubItems = useCallback(() => {
+    scheduleEvidenceImageRef.current?.addSubItemBox();
+  }, []);
+
   const handleReconcileTakeOff = async () => {
     setBuildingLoading(true);
     // 先检测当前文件是否存在schedule sub label
@@ -659,6 +787,13 @@ export default function SchedulePage() {
   }
 
   const handleNext = () => {
+    if (isSingleLabelUpdatingRef.current || isBatchLabelUpdatingRef.current) {
+      notify.warning({
+        title: "Warning",
+        description: "Label is currently being updated. Please wait..",
+      });
+      return;
+    }
     if (hasEmptyLabelInTable) {
       notify.warning({
         title: "Label Required",
@@ -756,6 +891,14 @@ export default function SchedulePage() {
           className={`min-w-0 flex-1 flex flex-col overflow-hidden`}
         >
           <div className="mr-2 mb-1 flex items-center justify-end">
+            {/* <Tooltip title="Add Sub Items">
+              <div className="mr-2 px-1 bg-forumBlue-normal rounded-full">
+                <PlusOutlined
+                  onClick={handleAddSubItems}
+                  className="cursor-pointer text-white"
+                />
+              </div>
+            </Tooltip> */}
             <Tooltip title="Preview PDF Context">
               <div className="px-1 bg-forumBlue-normal rounded-full">
                 <EyeOutlined
@@ -768,10 +911,12 @@ export default function SchedulePage() {
           {/* Images */}
           <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center relative group">
             <ScheduleEvidenceImage
+              ref={scheduleEvidenceImageRef}
               imageUrl={imageUrl}
               items={itemBoxList}
               activeItemId={focusedItemId}
               onSelectItem={handleSelectOverlayItem}
+              onConfirmSubItemBox={handleConfirmSubItemBox}
             />
           </div>
         </div>
@@ -788,6 +933,7 @@ export default function SchedulePage() {
             onOpenColumnSelector={handleOpenColumnModal}
             onCreateItem={handleCreateItem}
             onBatchActionSuccess={() => getItemsByPageEvidences(pageEvidenceId)}
+            onBatchLabelUpdatingChange={handleBatchLabelUpdatingChange}
             focusedItemId={focusedItemId}
             onFocusItemChange={handleFocusItemFromTable}
           />
