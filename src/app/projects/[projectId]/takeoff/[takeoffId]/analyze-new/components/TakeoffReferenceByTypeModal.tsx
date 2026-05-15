@@ -15,6 +15,7 @@ interface ReferenceEvidenceItem {
 interface TakeoffReferenceByTypeModalProps {
   open: boolean;
   item: any;
+  evidenceList?: ReferenceEvidenceItem[];
   onClose: () => void;
 }
 
@@ -100,13 +101,26 @@ function EvidenceCard({
 export default function TakeoffReferenceByTypeModal({
   open,
   item,
+  evidenceList,
   onClose,
 }: TakeoffReferenceByTypeModalProps) {
   const [loading, setLoading] = useState(false);
   const [evidences, setEvidences] = useState<ReferenceEvidenceItem[]>([]);
+  const useProvidedEvidenceList = evidenceList !== undefined;
 
   useEffect(() => {
-    if (!open || !item) return;
+    if (!open) return;
+
+    if (useProvidedEvidenceList) {
+      setLoading(false);
+      setEvidences(Array.isArray(evidenceList) ? evidenceList : []);
+      return;
+    }
+
+    if (!item) {
+      setEvidences([]);
+      return;
+    }
 
     const fetchEvidences = async () => {
       const ids = parseResultItemIds(item);
@@ -124,7 +138,9 @@ export default function TakeoffReferenceByTypeModal({
         }
 
         const payload = response.data?.data ?? response.data ?? {};
-        const next = Object.values(payload || {}) as ReferenceEvidenceItem[];
+        const next = Object.values(payload || {}).flatMap((value: any) =>
+          Array.isArray(value) ? value : [value],
+        ) as ReferenceEvidenceItem[];
         setEvidences(next);
       } finally {
         setLoading(false);
@@ -132,7 +148,7 @@ export default function TakeoffReferenceByTypeModal({
     };
 
     fetchEvidences();
-  }, [item, open]);
+  }, [evidenceList, item, open, useProvidedEvidenceList]);
 
   const scheduleEvidences = useMemo(
     () =>

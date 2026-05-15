@@ -359,7 +359,7 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     const scaleY = imageMetrics.renderedHeight / imageMetrics.naturalHeight;
 
     return items
-      .map((item) => {
+      .map((item, index) => {
         const id = Number(item?.id);
         if (!Number.isFinite(id)) return null;
         const coordinates = parseCoordinates(item?.coordinates);
@@ -377,6 +377,7 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
         const heightNatural = (bottomY - topY) * imageMetrics.naturalHeight;
         return {
           id,
+          renderKey: `${id}-${index}-${leftX.toFixed(4)}-${topY.toFixed(4)}-${rightX.toFixed(4)}-${bottomY.toFixed(4)}`,
           left: leftNatural * scaleX,
           top: topNatural * scaleY,
           width: widthNatural * scaleX,
@@ -386,6 +387,7 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
       })
       .filter(Boolean) as Array<{
         id: number;
+        renderKey: string;
         left: number;
         top: number;
         width: number;
@@ -454,7 +456,7 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
             const isActive = rect.id === activeItemId;
             return (
               <div
-                key={rect.id}
+                key={rect.renderKey}
                 className="absolute border transition-colors"
                 style={{
                   left: `${rect.left}px`,
