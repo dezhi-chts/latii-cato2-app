@@ -50,7 +50,6 @@ export default function SchedulePage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
-  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
   const scheduleEvidenceImageRef = useRef<ScheduleEvidenceImageRef | null>(null);
@@ -65,7 +64,6 @@ export default function SchedulePage() {
   const [scheduleList, setScheduleList] = useState<any[]>([]);
   const [itemBoxList, setItemBoxList] = useState<EvidenceType[]>([]);
   const [itemBoxEvidenceId, setItemBoxEvidenceId] = useState<number>(-1);
-  const [buildLoading, setBuildLoading] = useState<boolean>(false);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [columns, setColumns] = useState<string[]>([]);
   const [templateColumns, setTemplateColumns] = useState<string[]>([]);
@@ -73,6 +71,9 @@ export default function SchedulePage() {
   const [columnDraft, setColumnDraft] = useState<string[]>([]);
   const [tableLoading, setTableLoading] = useState<boolean>(false);
   const [buildingLoading, setBuildingLoading] = useState<boolean>(false);
+  useBrowserBackToHome({
+    disableBrowserNavigation: buildingLoading,
+  });
   const [focusedItemId, setFocusedItemId] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const isSingleLabelUpdatingRef = useRef(false);
@@ -802,10 +803,6 @@ export default function SchedulePage() {
       return;
     }
     handleReconcileTakeOff();
-  };
-
-  const handleBack = () => {
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/merge-before/floor-plan`);
   };
 
   return (

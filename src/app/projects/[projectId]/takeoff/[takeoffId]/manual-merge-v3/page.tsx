@@ -407,11 +407,11 @@ export default function ManualMergeV2Page() {
   const router = useRouter();
   const projectId = useParams().projectId as string;
   const takeoffId = useParams().takeoffId as string;
-  useBrowserBackToHome();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [buildLoading, setBuildLoading] = useState(false);
+  useBrowserBackToHome({ disableBrowserNavigation: buildLoading });
   const [files, setFiles] = useState<any[]>([]);
   const [fileId, setFileId] = useState<number | null>(null);
   const [labels, setLabels] = useState<LabelOption[]>([]);
@@ -1452,6 +1452,7 @@ export default function ManualMergeV2Page() {
     setBuildLoading(true);
     try {
       const response = await autoCreateMultipleFilesMergeResultByTakeOffId(takeoffId);
+      setBuildLoading(false);
       if (response.status === "success") {
         router.replace(`/projects/${projectId}/takeoff/${takeoffId}/analyze-new`);
         return;
@@ -1460,8 +1461,12 @@ export default function ManualMergeV2Page() {
         title: "Error",
         description: response.data?.detail || "Failed to create merge result.",
       });
-    } finally {
+    } catch (error) {
       setBuildLoading(false);
+      notify.error({
+        title: "Error",
+        description: "Failed to create merge result.",
+      });
     }
   }, [takeoffId]);
 

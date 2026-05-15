@@ -68,7 +68,6 @@ export default function FloorPlanPage() {
   const router = useRouter();
   const projectId = useParams().projectId;
   const takeOffId = useParams().takeoffId;
-  useBrowserBackToHome();
 
   const pdfWrapperRef = useRef<any>(null);
 
@@ -94,6 +93,7 @@ export default function FloorPlanPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
   const [isSwitchingEvidence, setIsSwitchingEvidence] = useState(false);
   const [buildLoading, setBuildLoading] = useState<boolean>(false);
+  useBrowserBackToHome({ disableBrowserNavigation: buildLoading });
   const [areaEditModalOpen, setAreaEditModalOpen] = useState(false);
   const [areaEditEvidenceIds, setAreaEditEvidenceIds] = useState<number[]>([]);
   const isLabelItemUpdatingRef = useRef(false);
@@ -713,10 +713,6 @@ export default function FloorPlanPage() {
     labelTableData,
     handleAnaylize,
   ]);
-
-  const handleBack = () => {
-    router.push(`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`);
-  };
 
   const handleClearAllCrop = () => {
     if (!pdfWrapperRef.current) return;

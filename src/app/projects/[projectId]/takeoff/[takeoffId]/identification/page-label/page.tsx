@@ -100,8 +100,6 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const takeOffId = useParams().takeoffId;
 	const pdfRef = useRef<PdfWrapperRefMethods | null>(null);
 
-	useBrowserBackToHome();
-
 	useImperativeHandle(ref, () => ({
 		pdfRef,
 		getUnsavedCrops,
@@ -128,6 +126,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	const [selectedTemplateId, setSelectedTemplateId] = useState<number>();
 	const [scheduleTemplateLoading, setScheduleTemplateLoading] =
 		useState<boolean>(false);
+	useBrowserBackToHome({ disableBrowserNavigation: buildLoading });
 
 	const [pageTypeList, setPageTypeList] = useState<any>(ArchDrawingAllPageTags);
 	const [labelTypeList, setLabelTypeList] = useState<any>([]);
@@ -689,7 +688,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 			onCompleted: (result: any) => {
 				console.log("[SSE] Analysis completed:", result);
 				eventSourceRef.current = null;
-				router.push(
+				router.replace(
 					`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-new`,
 				);
 			},
@@ -771,7 +770,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				},
 				onCompleted: () => {
 					eventSourceRef.current = null;
-					router.push(
+					router.replace(
 						`/projects/${projectId}/takeoff/${takeOffId}/merge-before/schedule`,
 					);
 				},
@@ -806,13 +805,14 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 	};
 
 	const handleFileKeys = async () => {
-		setFullLoading(true);
+		setBuildLoading(true);
 		let fileIds = fileList.map((file: any) => file.id);
 		let res = await generateFileKeysByProjectFileIds(fileIds.join(","));
 		if (res.status === "success") {
 			// 获取文件中所有的evidence
 			handleEvidenceItems();
 		} else {
+			setBuildLoading(false);
 			notify.error({
 				title: "Error",
 				description: res?.data?.detail || "Failed to generate file keys",
@@ -830,26 +830,26 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		let res = await enrichElevationFloorPlanByEvidenceIds(floorPlanIds.join(","));
 		if (res.status === "success") {
 			// 跳转到合并前页面
-			router.push(
+			router.replace(
 				`/projects/${projectId}/takeoff/${takeOffId}/merge-before/floor-plan`,
 			);
 		} else {
+			setBuildLoading(false);
 			notify.error({
 				title: "Error",
 				description: res?.data?.detail || "Failed to get items source",
 			});
 		}
-		setFullLoading(false);
 	};
 
 	const handleCreateTakeoff = useCallback(async () => {
 		if (!selectedFileId) return;
-		setFullLoading(true);
+		setBuildLoading(true);
 		const response = await getGroupedEvidencesByTakeOffAndFile(
 			takeOffId as string,
 			selectedFileId,
 		);
-		setFullLoading(false);
+		setBuildLoading(false);
 		if (response.status !== "success") {
 			notify.error({
 				title: "Error",
@@ -898,12 +898,12 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		let fileInfo = fileList.find((file: any) => file.id === newFileId);
 		if (fileInfo?.operation_type === FileOperationType.ArchitectureDrawing) {
 			// 如果新文件是Arch Drawing文件，则跳转到summary页面
-			router.push(
+			router.replace(
 				`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`,
 			);
 		} else if (fileInfo?.operation_type === FileOperationType.Quote) {
 			// 如果新文件是Quote文件，则跳转到label页面
-			router.push(
+			router.replace(
 				`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`,
 			);
 		}
@@ -973,7 +973,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				if (prevFile.status === FileStatus.Completed) {
 					setSelectedFileId(prevFile.id);
 					// 跳转到label页面
-					router.push(
+					router.replace(
 						`/projects/${projectId}/takeoff/${takeOffId}/identification/page-label`,
 					);
 				} else if (
@@ -981,7 +981,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 				) {
 					setSelectedFileId(prevFile.id);
 					// 跳转到summary页面
-					router.push(
+					router.replace(
 						`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`,
 					);
 				}
@@ -995,7 +995,7 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 
 		if (fileOperationType === FileOperationType.ArchitectureDrawing) {
 			// 如果当前文件是Arch Drawing文件，则跳转到summary页面
-			router.push(
+			router.replace(
 				`/projects/${projectId}/takeoff/${takeOffId}/identification/index-summary`,
 			);
 		} else if (fileOperationType === FileOperationType.Quote) {
