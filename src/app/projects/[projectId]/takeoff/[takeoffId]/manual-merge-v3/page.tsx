@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Button, Image, Input, Modal, Segmented, Spin, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useParams, useRouter } from "next/navigation";
-import { DownOutlined, UpOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import { DownOutlined, UpOutlined, DeleteOutlined } from "@ant-design/icons";
 
 import {
   checkFileSourceMergeResultsAndCreateSingleFileResults,
@@ -23,7 +23,6 @@ import {
 import { getTemplateById } from "@/services/templateService";
 import {
   getDisplayValueByField,
-  getEvidenceBounds,
   normalizeFieldName,
   parseItemResult as parseItemResultUtil,
   setResultValueByField,
@@ -34,10 +33,10 @@ import FileHeader from "./components/FileHeader";
 import LabelSidebar from "./components/LabelSidebar";
 import EvidenceImagePreviewModal from "../analyze-new/components/EvidenceImagePreviewModal";
 import TakeoffReferenceByTypeModal from "../analyze-new/components/TakeoffReferenceByTypeModal";
-import ScheduleEvidenceImage from "../merge-before/schedule/components/ScheduleEvidenceImage";
 import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
+import ImageReferenceModal from "./components/ImageReferenceModal";
 import { notify } from "@/utils/notify";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
@@ -86,6 +85,8 @@ interface ClassifiedEvidenceUrls {
   floorPlan: ClassifiedEvidenceItem[];
   elevation: ClassifiedEvidenceItem[];
 }
+
+type ReferenceType = "schedule" | "floorPlan" | "elevation";
 
 const SOURCE_TYPE_MAP: Record<SourceKey, string> = {
   schedule: "Schedule",
@@ -316,57 +317,6 @@ const getTakeOffResultItemIds = (item: any): string[] => {
   return [];
 };
 
-const getEvidenceId = (evidence: any, fallback: string = ""): string =>
-  String(
-    evidence?.evidence_id ??
-    evidence?.evidenceId ??
-    evidence?.id ??
-    fallback,
-  );
-
-const toEvidenceRecord = (evidence: any): EvidenceRecord => {
-  return {
-    ...(evidence || {}),
-    id: Number(evidence?.id || 0),
-  } as EvidenceRecord;
-};
-
-const extractEvidenceUrls = (
-  item: any,
-  evidenceByResultItemId: Record<string, EvidenceInfo[]>,
-): string[] => {
-  const urls: string[] = [];
-  getTakeOffResultItemIds(item).forEach((resultItemId) => {
-    const mappedEvidences = toArray(evidenceByResultItemId[resultItemId]);
-    mappedEvidences.forEach((mappedEvidence) => {
-      const mappedUrl = getEvidenceUrlFromItem(mappedEvidence);
-      if (mappedUrl) urls.push(mappedUrl);
-    });
-  });
-  if (typeof item?.evidence_url === "string" && item.evidence_url) urls.push(item.evidence_url);
-  if (typeof item?.s3_url === "string" && item.s3_url) urls.push(item.s3_url);
-  if (typeof item?.evidence_msg?.s3_url === "string" && item.evidence_msg.s3_url) {
-    urls.push(item.evidence_msg.s3_url);
-  }
-  if (Array.isArray(item?.evidence_urls)) {
-    item.evidence_urls.forEach((url: any) => {
-      if (typeof url === "string" && url) urls.push(url);
-    });
-  }
-  if (Array.isArray(item?.evidence_msg)) {
-    item.evidence_msg.forEach((msg: any) => {
-      if (typeof msg?.s3_url === "string" && msg.s3_url) urls.push(msg.s3_url);
-    });
-  }
-  if (Array.isArray(item?.evidences)) {
-    item.evidences.forEach((ev: any) => {
-      if (typeof ev?.s3_url === "string" && ev.s3_url) urls.push(ev.s3_url);
-      if (typeof ev?.evidence_url === "string" && ev.evidence_url) urls.push(ev.evidence_url);
-    });
-  }
-  return Array.from(new Set(urls));
-};
-
 const collectSourceRows = (payload: any, source: SourceKey, isLabelMerged: boolean): any[] => {
   if (!Array.isArray(payload)) return [];
 
@@ -468,13 +418,10 @@ export default function ManualMergeV2Page() {
   const [referenceByTypeModalOpen, setReferenceByTypeModalOpen] = useState(false);
   const [referenceByTypeItem, setReferenceByTypeItem] = useState<any>(null);
   const [referenceByTypeEvidenceList, setReferenceByTypeEvidenceList] = useState<any[]>([]);
-  const [referenceScheduleModalOpen, setReferenceScheduleModalOpen] = useState(false);
-  const [referenceScheduleImageUrl, setReferenceScheduleImageUrl] = useState("");
-  const [referenceScheduleItems, setReferenceScheduleItems] = useState<any[]>([]);
-  const [referenceSchedulePreviewImageUrl, setReferenceSchedulePreviewImageUrl] = useState("");
-  const [referenceSchedulePreviewPageNumber, setReferenceSchedulePreviewPageNumber] = useState(1);
-  const [referenceSchedulePreviewFileName, setReferenceSchedulePreviewFileName] = useState("Unnamed file");
-  const [referenceSchedulePreviewPageEvidences, setReferenceSchedulePreviewPageEvidences] = useState<EvidenceRecord[]>([]);
+  const [referenceByTypeInitialType, setReferenceByTypeInitialType] = useState<ReferenceType | undefined>(undefined);
+  const [referenceByTypeInitialEvidenceId, setReferenceByTypeInitialEvidenceId] = useState<string | undefined>(undefined);
+  const [imageReferenceModalOpen, setImageReferenceModalOpen] = useState(false);
+  const [imageReferenceEvidenceList, setImageReferenceEvidenceList] = useState<any[]>([]);
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
   const selectedLabelMeta = useMemo(
@@ -495,61 +442,6 @@ export default function ManualMergeV2Page() {
   const scheduleEvidences = classifiedEvidenceUrls.schedule;
   const floorPlanEvidences = classifiedEvidenceUrls.floorPlan;
   const elevationEvidences = classifiedEvidenceUrls.elevation;
-  const allClassifiedEvidences = useMemo(
-    () => [...scheduleEvidences, ...floorPlanEvidences, ...elevationEvidences],
-    [elevationEvidences, floorPlanEvidences, scheduleEvidences],
-  );
-
-  const handleOpenEvidencePreview = useCallback(
-    (urls: string[]) => {
-      if (!urls.length) {
-        return;
-      }
-
-      const firstUrl = urls[0];
-      const firstMatchedEvidence = allClassifiedEvidences.find((evidence) => evidence?.url === firstUrl);
-
-      if (!firstMatchedEvidence) {
-        setPreviewPayload({
-          fileName: "Unnamed file",
-          pageNumber: 1,
-          imageUrl: firstUrl,
-          pageEvidences: [],
-        });
-        setPreviewOpen(true);
-        return;
-      }
-
-      const fileId = Number(firstMatchedEvidence?.project_file_id || 0);
-      const pageNumber = Number(firstMatchedEvidence?.project_file_page_number || 1) || 1;
-      const matchedFile = files.find((item) => Number(item?.id) === fileId);
-      const pageInfos = matchedFile?.parse_detail?.image_page_infos || [];
-      const matchedPageInfo =
-        pageInfos.find(
-          (pageInfo: any, pageIndex: number) =>
-            Number(pageInfo?.project_file_page_number || pageInfo?.page_number || pageIndex + 1) ===
-            pageNumber,
-        ) || null;
-      const imageUrl = matchedPageInfo?.s3_url || firstUrl;
-      const pageEvidences = allClassifiedEvidences
-        .filter(
-          (evidence) =>
-            Number(evidence?.project_file_id || 0) === fileId &&
-            Number(evidence?.project_file_page_number || 1) === pageNumber,
-        )
-        .map((evidence) => toEvidenceRecord(evidence))
-        .filter((evidence) => Boolean(getEvidenceBounds(evidence)));
-
-      setPreviewPayload({
-        fileName: matchedFile?.file_name || "Unnamed file",
-        pageNumber,
-        imageUrl,
-        pageEvidences,
-      });
-      setPreviewOpen(true);
-    },
-    [allClassifiedEvidences, files],
-  );
 
   const hasCoordinatesData = useCallback((evidence: any) => {
     if (!evidence) return false;
@@ -629,85 +521,129 @@ export default function ManualMergeV2Page() {
       const mappedEvidences = toArray(evidenceByResultItemId[resultItemId]);
       mappedEvidences.forEach((evidence) => {
         if (!evidence) return;
-        evidenceList.push(evidence);
+        evidenceList.push({
+          ...(evidence || {}),
+          source_item_id: Number(resultItemId),
+        });
       });
     });
     return evidenceList;
   }, [evidenceByResultItemId]);
 
-  const handleOpenReferenceByTypeModal = useCallback((record: any) => {
-    const evidenceList = getEvidencesByResultItemIds(record);
-
-    setReferenceByTypeItem(record);
+  const openReferenceModal = useCallback((
+    item: any,
+    evidenceList: any[],
+    options?: {
+      preferredType?: ReferenceType;
+      selectedEvidenceId?: string;
+      emptyTip?: string;
+    },
+  ) => {
+    if (!Array.isArray(evidenceList) || evidenceList.length === 0) {
+      notify.info({
+        title: "No Evidence",
+        description: options?.emptyTip || "No evidence image found for this row.",
+      });
+      return;
+    }
+    setReferenceByTypeItem(item || null);
     setReferenceByTypeEvidenceList(evidenceList);
+    setReferenceByTypeInitialType(options?.preferredType);
+    setReferenceByTypeInitialEvidenceId(options?.selectedEvidenceId);
     setReferenceByTypeModalOpen(true);
-  }, [getEvidencesByResultItemIds]);
+  }, []);
 
-  const openScheduleReferenceModalByEvidenceList = useCallback((evidenceList: any[], emptyTip: string) => {
-    if (evidenceList.length === 0) {
+  const openImageReferenceModal = useCallback((
+    evidenceList: any[],
+    emptyTip: string = "No evidence image found for this row.",
+  ) => {
+    if (!Array.isArray(evidenceList) || evidenceList.length === 0) {
       notify.info({
         title: "No Evidence",
         description: emptyTip,
       });
       return;
     }
+    setImageReferenceEvidenceList(evidenceList);
+    setImageReferenceModalOpen(true);
+  }, []);
 
-    const firstEvidence = evidenceList[0];
-    const firstEvidenceImageUrl = getEvidenceUrlFromItem(firstEvidence);
-    const firstPageNumber = Number(firstEvidence?.project_file_page_number || 1) || 1;
-    const firstProjectFileId = Number(firstEvidence?.project_file_id || 0);
-    const matchedFile = files.find((item) => Number(item?.id) === firstProjectFileId);
+  const handleOpenReferenceModalByRecord = useCallback((
+    record: any,
+    preferredType?: ReferenceType,
+  ) => {
+    const evidenceList = getOverlayEvidencesByResultItemIds(record).map((evidence) => ({
+      ...(evidence || {}),
+      // 透传当前 item id，供 Schedule 图层按 coordinates 渲染小框。
+      source_item_id: Number(record?.id || 0),
+    }));
+    openReferenceModal(record, evidenceList, {
+      preferredType,
+      emptyTip: "No evidence image found for this row.",
+    });
+  }, [getOverlayEvidencesByResultItemIds, openReferenceModal]);
+
+  const handleOpenImageReferenceModalByRecord = useCallback((record: any) => {
+    const evidenceList = getOverlayEvidencesByResultItemIds(record);
+    openImageReferenceModal(evidenceList, "No evidence image found for this row.");
+  }, [getOverlayEvidencesByResultItemIds, openImageReferenceModal]);
+
+  const handleOpenReferenceModalByEvidence = useCallback((evidence: any) => {
+    const overlayItems = Array.isArray(evidence?.overlayItems) ? evidence.overlayItems : [];
+    const evidenceList = overlayItems.length > 0
+      ? overlayItems.map((overlayItem: any) => ({
+        ...(evidence || {}),
+        source_item_id: overlayItem?.id,
+        coordinates: overlayItem?.coordinates,
+      }))
+      : [evidence];
+    openReferenceModal(evidence, evidenceList, {
+      preferredType: "schedule",
+      selectedEvidenceId: String(evidence?.id || ""),
+      emptyTip: "No evidence image found for this source image.",
+    });
+  }, [openReferenceModal]);
+
+  const handleOpenPdfPreviewFromReference = useCallback((evidence: any, _type: ReferenceType) => {
+    const fileId = Number(evidence?.project_file_id || 0);
+    const pageNumber = Number(evidence?.project_file_page_number || 1) || 1;
+    const matchedFile = files.find((item) => Number(item?.id) === fileId);
     const pageInfos = matchedFile?.parse_detail?.image_page_infos || [];
     const matchedPageInfo =
       pageInfos.find(
         (pageInfo: any, pageIndex: number) =>
           Number(pageInfo?.project_file_page_number || pageInfo?.page_number || pageIndex + 1) ===
-          firstPageNumber,
+          pageNumber,
       ) || null;
-    const previewImageUrl = matchedPageInfo?.s3_url || firstEvidenceImageUrl;
-    const pageEvidenceSeen = new Set<string>();
-    const pageEvidences = evidenceList.map((evidence, index) => {
-      const rawId = evidence?.id ?? evidence?.evidence_id ?? index + 1;
-      const numericId = Number(rawId);
-      return {
-        ...(evidence || {}),
-        id: Number.isFinite(numericId) ? numericId : index + 1,
-      } as EvidenceRecord;
-    }).filter((evidence) => {
-      const uniqueKey = getEvidenceUniqueId(evidence, getEvidenceUrlFromItem(evidence));
-      if (!uniqueKey || pageEvidenceSeen.has(uniqueKey)) return false;
-      pageEvidenceSeen.add(uniqueKey);
-      return true;
+    const imageUrl = matchedPageInfo?.s3_url || getEvidenceUrlFromItem(evidence);
+    if (!imageUrl) {
+      notify.info({
+        title: "No Evidence",
+        description: "No preview image found for this evidence.",
+      });
+      return;
+    }
+
+    const previewEvidence = {
+      ...(evidence || {}),
+      id: Number(evidence?.evidence_id || evidence?.evidenceId || evidence?.id || 0),
+    } as EvidenceRecord;
+    setPreviewPayload({
+      fileName: matchedFile?.file_name || "Unnamed file",
+      pageNumber,
+      imageUrl,
+      /**
+       * 为了避免出现多个红框，这里只传当前选中的 evidence。
+       */
+      pageEvidences: [previewEvidence],
     });
+    setPreviewOpen(true);
+  }, [files]);
 
-    setReferenceScheduleImageUrl(firstEvidenceImageUrl);
-    setReferenceScheduleItems(evidenceList.filter((evidence) => hasCoordinatesData(evidence)));
-    setReferenceSchedulePreviewImageUrl(previewImageUrl);
-    setReferenceSchedulePreviewPageNumber(firstPageNumber);
-    setReferenceSchedulePreviewFileName(matchedFile?.file_name || "Unnamed file");
-    setReferenceSchedulePreviewPageEvidences(pageEvidences);
-    setReferenceScheduleModalOpen(true);
-  }, [files, hasCoordinatesData]);
-
-  const handleOpenScheduleReferenceModal = useCallback((record: any) => {
-    const evidenceList = getOverlayEvidencesByResultItemIds(record);
-    openScheduleReferenceModalByEvidenceList(evidenceList, "No evidence image found for this row.");
-  }, [getOverlayEvidencesByResultItemIds, openScheduleReferenceModalByEvidenceList]);
-
-  const handleOpenScheduleReferenceModalByEvidence = useCallback((evidence: any) => {
-    const overlayItems = Array.isArray(evidence?.overlayItems) ? evidence.overlayItems : [];
-    const evidenceList = overlayItems.length > 0
-      ? overlayItems.map((overlayItem: any) => ({
-        ...(evidence || {}),
-        id: overlayItem?.id,
-        coordinates: overlayItem?.coordinates,
-      }))
-      : [evidence];
-    openScheduleReferenceModalByEvidenceList(
-      evidenceList,
-      "No evidence image found for this source image.",
-    );
-  }, [openScheduleReferenceModalByEvidenceList]);
+  const handleOpenScheduleSourcePdfPreview = useCallback((evidence: any) => {
+    // Source 面板中 Schedule 图片点击后直接打开 PDF 定位预览。
+    handleOpenPdfPreviewFromReference(evidence, "schedule");
+  }, [handleOpenPdfPreviewFromReference]);
 
   const groupedFloorPlanRows = useMemo(() => {
     const groupedMap = new Map<
@@ -1946,25 +1882,25 @@ export default function ManualMergeV2Page() {
                 onClick={() => {
                   if (title === "Final Items") {
                     if (isSelectedLabelMerged) {
-                      handleOpenReferenceByTypeModal(record);
+                      // 已合并 label 保持当前 reference 方式不变
+                      handleOpenReferenceModalByRecord(record);
                     } else {
-                      handleOpenScheduleReferenceModal(record);
+                      // 未合并 label 使用两列图片弹窗
+                      handleOpenImageReferenceModalByRecord(record);
                     }
                     return;
                   }
                   if (title === "Schedule") {
-                    handleOpenScheduleReferenceModal(record);
+                    handleOpenImageReferenceModalByRecord(record);
                     return;
                   }
-                  const urls = extractEvidenceUrls(record, evidenceByResultItemId);
-                  if (urls.length === 0) {
-                    notify.info({
-                      title: "No Evidence",
-                      description: "No evidence image found for this row.",
-                    });
+                  if (title === "Floor Plan") {
+                    handleOpenImageReferenceModalByRecord(record);
                     return;
                   }
-                  handleOpenEvidencePreview(urls);
+                  if (title === "Elevation") {
+                    handleOpenImageReferenceModalByRecord(record);
+                  }
                 }}
               >
                 <Image
@@ -2152,7 +2088,7 @@ export default function ManualMergeV2Page() {
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
-                      onOpenScheduleReferenceModal={handleOpenScheduleReferenceModalByEvidence}
+                      onOpenScheduleReferenceModal={handleOpenScheduleSourcePdfPreview}
                     />
                     <EvidenceSection
                       title="Floor Plan"
@@ -2188,52 +2124,29 @@ export default function ManualMergeV2Page() {
         pageEvidences={previewPayload.pageEvidences}
         onCancel={() => setPreviewOpen(false)}
       />
-      <Modal
-        open={referenceScheduleModalOpen}
-        onCancel={() => setReferenceScheduleModalOpen(false)}
-        footer={null}
-        width={"80vw"}
-        title={"Source And Preview PDF Context"}
-        destroyOnClose
-      >
-        <div className="h-[75vh] min-h-[520px] flex flex-col overflow-hidden">
-          <div>Label: {selectedLabel}</div>
-          <div className="mb-2 mr-6 flex items-center justify-end">
-            <Tooltip title="Preview PDF Context">
-              <div className="px-1 bg-forumBlue-normal rounded-full">
-                <EyeOutlined
-                  onClick={() => {
-                    if (!referenceSchedulePreviewImageUrl) return;
-                    setPreviewPayload({
-                      fileName: referenceSchedulePreviewFileName,
-                      pageNumber: referenceSchedulePreviewPageNumber,
-                      imageUrl: referenceSchedulePreviewImageUrl,
-                      pageEvidences: referenceSchedulePreviewPageEvidences,
-                    });
-                    setPreviewOpen(true);
-                  }}
-                  disabled={!referenceSchedulePreviewImageUrl}
-                  className="cursor-pointer text-white"
-                />
-              </div>
-            </Tooltip>
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto flex items-center justify-center relative group">
-            <ScheduleEvidenceImage
-              imageUrl={referenceScheduleImageUrl}
-              items={referenceScheduleItems}
-            />
-          </div>
-        </div>
-      </Modal>
       <TakeoffReferenceByTypeModal
         open={referenceByTypeModalOpen}
         item={referenceByTypeItem}
         evidenceList={referenceByTypeEvidenceList}
+        currentLabel={selectedLabel}
+        initialType={referenceByTypeInitialType}
+        initialEvidenceId={referenceByTypeInitialEvidenceId}
+        onOpenPdfContext={handleOpenPdfPreviewFromReference}
         onClose={() => {
           setReferenceByTypeModalOpen(false);
           setReferenceByTypeItem(null);
           setReferenceByTypeEvidenceList([]);
+          setReferenceByTypeInitialType(undefined);
+          setReferenceByTypeInitialEvidenceId(undefined);
+        }}
+      />
+      <ImageReferenceModal
+        open={imageReferenceModalOpen}
+        evidenceList={imageReferenceEvidenceList}
+        onOpenPdfContext={(evidence) => handleOpenPdfPreviewFromReference(evidence, "schedule")}
+        onClose={() => {
+          setImageReferenceModalOpen(false);
+          setImageReferenceEvidenceList([]);
         }}
       />
 

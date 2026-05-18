@@ -25,6 +25,7 @@ interface ScheduleEvidenceImageProps {
   activeItemId?: number | null;
   onSelectItem?: (itemId: number) => void;
   renderAtNaturalSize?: boolean;
+  disableContainerScroll?: boolean;
   onConfirmSubItemBox?: (
     coordinates: NormalizedCoordinates,
     boxId: string,
@@ -73,6 +74,7 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     activeItemId = null,
     onSelectItem,
     renderAtNaturalSize = false,
+    disableContainerScroll = false,
     onConfirmSubItemBox,
   }: ScheduleEvidenceImageProps, ref) {
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -416,43 +418,55 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
   }
 
   return (
-    <div className="h-full w-full overflow-auto p-3">
-      <div className="mx-auto w-fit">
-        <div
-          ref={overlayContainerRef}
-          className="relative inline-block"
-          onMouseDown={() => setSelectedDraftBoxId(null)}
-        >
-          <img
-            key={imageUrl}
-            ref={imageRef}
-            src={imageUrl}
-            alt="Schedule Evidence"
-            className={`block h-auto w-auto ${renderAtNaturalSize ? "max-w-none" : "max-w-full"}`}
-            onLoad={() => {
-              const element = imageRef.current;
-              if (!element) return;
-              const rect = element.getBoundingClientRect();
-              setImageMetrics({
-                renderedWidth: rect.width,
-                renderedHeight: rect.height,
-                naturalWidth: element.naturalWidth || 0,
-                naturalHeight: element.naturalHeight || 0,
-              });
-              setImageReady(true);
-              setShowBoxes(true);
-            }}
-            style={
-              renderAtNaturalSize && imageMetrics.naturalWidth && imageMetrics.naturalHeight
-                ? {
-                  width: `${imageMetrics.naturalWidth}px`,
-                  height: `${imageMetrics.naturalHeight}px`,
-                }
-                : undefined
-            }
-          />
+    <div className={`h-full min-h-0 w-full ${disableContainerScroll ? "overflow-hidden p-0" : "overflow-auto p-3"}`}>
+      <div
+        className={
+          disableContainerScroll
+            ? "flex h-full min-h-0 w-full items-center justify-center"
+            : "mx-auto w-fit"
+        }
+      >
+        <div className={disableContainerScroll ? "max-h-full max-w-full" : ""}>
+          <div
+            ref={overlayContainerRef}
+            className={disableContainerScroll ? "relative inline-block max-h-full max-w-full" : "relative inline-block"}
+            onMouseDown={() => setSelectedDraftBoxId(null)}
+          >
+            <img
+              key={imageUrl}
+              ref={imageRef}
+              src={imageUrl}
+              alt="Schedule Evidence"
+              className={`block h-auto w-auto object-contain ${renderAtNaturalSize ? "max-w-none" : "max-w-full"} ${disableContainerScroll ? "max-h-full" : ""}`}
+              onLoad={() => {
+                const element = imageRef.current;
+                if (!element) return;
+                const rect = element.getBoundingClientRect();
+                setImageMetrics({
+                  renderedWidth: rect.width,
+                  renderedHeight: rect.height,
+                  naturalWidth: element.naturalWidth || 0,
+                  naturalHeight: element.naturalHeight || 0,
+                });
+                setImageReady(true);
+                setShowBoxes(true);
+              }}
+              style={
+                renderAtNaturalSize && imageMetrics.naturalWidth && imageMetrics.naturalHeight
+                  ? {
+                    width: `${imageMetrics.naturalWidth}px`,
+                    height: `${imageMetrics.naturalHeight}px`,
+                  }
+                  : disableContainerScroll
+                    ? {
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                    }
+                    : undefined
+              }
+            />
 
-          {showBoxes && orderedOverlayRects.map((rect) => {
+            {showBoxes && orderedOverlayRects.map((rect) => {
             const isActive = rect.id === activeItemId;
             return (
               <div
@@ -469,9 +483,9 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
                 onClick={() => onSelectItem?.(rect.id)}
               />
             );
-          })}
+            })}
 
-          {showBoxes && draftBoxes.map((box) => {
+            {showBoxes && draftBoxes.map((box) => {
             const isSelected = box.id === selectedDraftBoxId;
             const handleSize = 10;
             /**
@@ -577,7 +591,8 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
                 />
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
       </div>
     </div>
