@@ -4,18 +4,32 @@ import { Empty, Modal, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
 import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
+import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+
+type ReferenceType = "schedule" | "floorPlan" | "elevation";
 
 interface ReferenceEvidenceItem {
-  id: number;
+  id: number | string;
   type?: string;
   evidence_url?: string;
+  url?: string;
+  evidence_id?: number | string;
+  evidenceId?: number | string;
+  source_item_id?: number;
+  coordinates?: any;
   project_file_page_number?: number;
+  overlayItems?: Array<{ id: number; coordinates: any }>;
+  [key: string]: any;
 }
 
 interface TakeoffReferenceByTypeModalProps {
   open: boolean;
   item: any;
   evidenceList?: ReferenceEvidenceItem[];
+  currentLabel?: string;
+  initialType?: ReferenceType;
+  initialEvidenceId?: string;
+  onOpenPdfContext?: (evidence: ReferenceEvidenceItem, type: ReferenceType) => void;
   onClose: () => void;
 }
 
@@ -24,12 +38,38 @@ const typeContains = (value: string, keywords: string[]) => {
   return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
 };
 
+const getEvidenceUrl = (evidence: any) => {
+  if (typeof evidence?.evidence_url === "string" && evidence.evidence_url) return evidence.evidence_url;
+  if (typeof evidence?.url === "string" && evidence.url) return evidence.url;
+  if (typeof evidence?.s3_url === "string" && evidence.s3_url) return evidence.s3_url;
+  return "";
+};
+
+const getEvidenceId = (evidence: any) => {
+  const rawId = evidence?.evidence_id ?? evidence?.evidenceId ?? evidence?.id;
+  if (rawId !== null && rawId !== undefined && String(rawId).trim()) {
+    return String(rawId);
+  }
+  return "";
+};
+
+const hasCoordinatesData = (evidence: any) => {
+  const coordinates = evidence?.coordinates;
+  if (!coordinates) return false;
+  if (typeof coordinates === "string") return coordinates.trim().length > 0;
+  return typeof coordinates === "object";
+};
+
 const dedupeByEvidenceId = (list: ReferenceEvidenceItem[]) => {
-  const map = new Map<number, ReferenceEvidenceItem>();
+  const map = new Map<string, ReferenceEvidenceItem>();
   list.forEach((item) => {
-    if (typeof item?.id === "number" && !map.has(item.id)) {
-      map.set(item.id, item);
-    }
+    const evidenceId = getEvidenceId(item) || getEvidenceUrl(item);
+    if (!evidenceId || map.has(evidenceId)) return;
+    map.set(evidenceId, {
+      ...(item || {}),
+      id: evidenceId,
+      url: getEvidenceUrl(item),
+    });
   });
   return Array.from(map.values());
 };
@@ -71,14 +111,14 @@ function EvidenceCard({
               className="overflow-hidden rounded-lg border border-primaryN30 bg-[#FBFBFC]"
             >
               <div className="bg-white p-2">
-                {evidence.evidence_url ? (
+                {evidence.evidence_url || evidence.url ? (
                   <img
-                    src={evidence.evidence_url}
+                    src={evidence.url || evidence.evidence_url || ""}
                     alt={evidence.type || "Evidence"}
-                    className="h-[220px] w-full rounded-md object-contain"
+                    className="h-auto w-full rounded-md object-contain"
                   />
                 ) : (
-                  <div className="flex h-[220px] items-center justify-center rounded-md border border-dashed border-primaryN30 text-xs text-grey-normal">
+                  <div className="flex min-h-[140px] items-center justify-center rounded-md border border-dashed border-primaryN30 text-xs text-grey-normal">
                     No evidence image
                   </div>
                 )}
@@ -87,7 +127,46 @@ function EvidenceCard({
           ))}
         </div>
       ) : (
-        <div className="flex h-[220px] items-center justify-center rounded-lg border border-dashed border-primaryN30 bg-primaryN20">
+        <div className="flex min-h-[140px] items-center justify-center rounded-lg border border-dashed border-primaryN30 bg-primaryN20">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={<span className="text-xs text-grey-normal">No matched evidence</span>}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScheduleEvidenceCard({
+  evidences,
+}: {
+  evidences: ReferenceEvidenceItem[];
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
+        <span className="text-xs text-grey-normal">{evidences.length} items</span>
+      </div>
+      {evidences.length > 0 ? (
+        <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
+          {evidences.map((evidence, index) => (
+            <div
+              key={`${evidence.id}-${index}`}
+              className="overflow-hidden rounded-lg border border-primaryN30 bg-[#FBFBFC]"
+            >
+              <div className="bg-white p-2">
+                <ScheduleEvidenceImage
+                  imageUrl={evidence.url || evidence.evidence_url || ""}
+                  items={Array.isArray(evidence?.overlayItems) ? evidence.overlayItems : []}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex min-h-[140px] items-center justify-center rounded-lg border border-dashed border-primaryN30 bg-primaryN20">
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={<span className="text-xs text-grey-normal">No matched evidence</span>}
@@ -150,20 +229,59 @@ export default function TakeoffReferenceByTypeModal({
     fetchEvidences();
   }, [evidenceList, item, open, useProvidedEvidenceList]);
 
-  const scheduleEvidences = useMemo(
-    () =>
-      dedupeByEvidenceId(
-      evidences.filter((evidence) =>
-        typeContains(String(evidence?.type || ""), ["table", "window door unit"]),
-        ),
-      ),
-    [evidences],
-  );
+  const scheduleEvidences = useMemo(() => {
+    const scheduleList = evidences.filter((evidence) =>
+      typeContains(String(evidence?.type || ""), ["table", "window door unit"]),
+    );
+    const map = new Map<string, ReferenceEvidenceItem>();
+    const overlayMap = new Map<string, Array<{ id: number; coordinates: any }>>();
+
+    scheduleList.forEach((evidence) => {
+      const evidenceId = getEvidenceId(evidence) || getEvidenceUrl(evidence);
+      if (!evidenceId) return;
+
+      if (hasCoordinatesData(evidence)) {
+        const itemId = Number(evidence?.source_item_id ?? evidence?.id);
+        if (Number.isFinite(itemId)) {
+          if (!overlayMap.has(evidenceId)) {
+            overlayMap.set(evidenceId, []);
+          }
+          overlayMap.get(evidenceId)?.push({
+            id: itemId,
+            coordinates: evidence?.coordinates,
+          });
+        }
+      }
+
+      if (!map.has(evidenceId)) {
+        map.set(evidenceId, {
+          ...(evidence || {}),
+          id: evidenceId,
+          url: getEvidenceUrl(evidence),
+        });
+      }
+    });
+
+    return Array.from(map.values()).map((evidence) => {
+      const overlayItems = overlayMap.get(String(evidence?.id || "")) || [];
+      const uniqueOverlayMap = new Map<number, { id: number; coordinates: any }>();
+      overlayItems.forEach((item) => {
+        if (!uniqueOverlayMap.has(item.id)) {
+          uniqueOverlayMap.set(item.id, item);
+        }
+      });
+      return {
+        ...evidence,
+        overlayItems: Array.from(uniqueOverlayMap.values()),
+      };
+    });
+  }, [evidences]);
+
   const floorPlanEvidences = useMemo(
     () =>
       dedupeByEvidenceId(
-      evidences.filter((evidence) =>
-        typeContains(String(evidence?.type || ""), ["floor plan"]),
+        evidences.filter((evidence) =>
+          typeContains(String(evidence?.type || ""), ["floor plan"]),
         ),
       ),
     [evidences],
@@ -171,8 +289,8 @@ export default function TakeoffReferenceByTypeModal({
   const elevationEvidences = useMemo(
     () =>
       dedupeByEvidenceId(
-      evidences.filter((evidence) =>
-        typeContains(String(evidence?.type || ""), ["elevation"]),
+        evidences.filter((evidence) =>
+          typeContains(String(evidence?.type || ""), ["elevation"]),
         ),
       ),
     [evidences],
@@ -202,7 +320,7 @@ export default function TakeoffReferenceByTypeModal({
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-3 gap-4 overflow-hidden">
-            <EvidenceCard title="Schedule" evidences={scheduleEvidences} />
+            <ScheduleEvidenceCard evidences={scheduleEvidences} />
             <EvidenceCard title="Floor Plan" evidences={floorPlanEvidences} />
             <EvidenceCard title="Elevation" evidences={elevationEvidences} />
           </div>
