@@ -19,12 +19,15 @@ export interface NormalizedCoordinates {
   y2: number;
 }
 
+type ScheduleEvidenceImageDisplayMode = "width" | "contain";
+
 interface ScheduleEvidenceImageProps {
   imageUrl: string;
   items: any[];
   activeItemId?: number | null;
   onSelectItem?: (itemId: number) => void;
   renderAtNaturalSize?: boolean;
+  displayMode?: ScheduleEvidenceImageDisplayMode;
   disableContainerScroll?: boolean;
   onConfirmSubItemBox?: (
     coordinates: NormalizedCoordinates,
@@ -74,10 +77,12 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     activeItemId = null,
     onSelectItem,
     renderAtNaturalSize = false,
+    displayMode,
     disableContainerScroll = false,
     onConfirmSubItemBox,
   }: ScheduleEvidenceImageProps, ref) {
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const displayAreaRef = useRef<HTMLDivElement | null>(null);
   const overlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [imageReady, setImageReady] = useState(false);
   const [showBoxes, setShowBoxes] = useState(false);
@@ -90,6 +95,13 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     naturalWidth: 0,
     naturalHeight: 0,
   });
+  const [displayAreaSize, setDisplayAreaSize] = useState({
+    width: 0,
+    height: 0,
+  });
+  const resolvedDisplayMode: ScheduleEvidenceImageDisplayMode =
+    displayMode || (disableContainerScroll ? "contain" : "width");
+  const isContainMode = resolvedDisplayMode === "contain";
   const dragSessionRef = useRef<{
     boxId: string;
     action: DragAction;
@@ -101,6 +113,26 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     initialWidth: number;
     initialHeight: number;
   } | null>(null);
+
+  useEffect(() => {
+    const displayArea = displayAreaRef.current;
+    if (!displayArea) return;
+
+    const syncDisplayAreaSize = () => {
+      const rect = displayArea.getBoundingClientRect();
+      setDisplayAreaSize({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    syncDisplayAreaSize();
+    const observer = new ResizeObserver(syncDisplayAreaSize);
+    observer.observe(displayArea);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const imageElement = imageRef.current;
@@ -406,6 +438,36 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     });
   }, [overlayRects]);
 
+  const containImageSize = useMemo(() => {
+    if (
+      !isContainMode ||
+      !imageMetrics.naturalWidth ||
+      !imageMetrics.naturalHeight ||
+      !displayAreaSize.width ||
+      !displayAreaSize.height
+    ) {
+      return null;
+    }
+    /**
+     * contain 模式只允许图片缩小到父容器内部，不能放大或拉伸。
+     */
+    const scale = Math.min(
+      displayAreaSize.width / imageMetrics.naturalWidth,
+      displayAreaSize.height / imageMetrics.naturalHeight,
+      1,
+    );
+    return {
+      width: imageMetrics.naturalWidth * scale,
+      height: imageMetrics.naturalHeight * scale,
+    };
+  }, [
+    displayAreaSize.height,
+    displayAreaSize.width,
+    imageMetrics.naturalHeight,
+    imageMetrics.naturalWidth,
+    isContainMode,
+  ]);
+
   if (!hasImage) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-lg border border-primaryN30 bg-white">
@@ -418,18 +480,21 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
   }
 
   return (
-    <div className={`h-full min-h-0 w-full ${disableContainerScroll ? "overflow-hidden p-0" : "overflow-auto p-3"}`}>
+    <div
+      ref={displayAreaRef}
+      className={`h-full min-h-0 w-full ${isContainMode ? "overflow-hidden p-0" : "overflow-auto p-3"}`}
+    >
       <div
         className={
-          disableContainerScroll
+          isContainMode
             ? "flex h-full min-h-0 w-full items-center justify-center"
             : "mx-auto w-fit"
         }
       >
-        <div className={disableContainerScroll ? "max-h-full max-w-full" : ""}>
+        <div className={isContainMode ? "max-h-full max-w-full" : ""}>
           <div
             ref={overlayContainerRef}
-            className={disableContainerScroll ? "relative inline-block max-h-full max-w-full" : "relative inline-block"}
+            className={isContainMode ? "relative inline-block max-h-full max-w-full" : "relative inline-block"}
             onMouseDown={() => setSelectedDraftBoxId(null)}
           >
             <img
@@ -437,7 +502,9 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
               ref={imageRef}
               src={imageUrl}
               alt="Schedule Evidence"
-              className={`block h-auto w-auto object-contain ${renderAtNaturalSize ? "max-w-none" : "max-w-full"} ${disableContainerScroll ? "max-h-full" : ""}`}
+              className={`block object-contain ${
+                renderAtNaturalSize ? "max-w-none" : "max-w-full"
+              } ${isContainMode ? "max-h-full" : "h-auto w-auto"}`}
               onLoad={() => {
                 const element = imageRef.current;
                 if (!element) return;
@@ -457,10 +524,10 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
                     width: `${imageMetrics.naturalWidth}px`,
                     height: `${imageMetrics.naturalHeight}px`,
                   }
-                  : disableContainerScroll
+                  : isContainMode && containImageSize
                     ? {
-                      maxWidth: "100%",
-                      maxHeight: "100%",
+                      width: `${containImageSize.width}px`,
+                      height: `${containImageSize.height}px`,
                     }
                     : undefined
               }

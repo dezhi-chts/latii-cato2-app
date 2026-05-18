@@ -110,12 +110,12 @@ function EvidenceCard({
               key={`${evidence.id}-${index}`}
               className="overflow-hidden rounded-lg border border-primaryN30 bg-[#FBFBFC]"
             >
-              <div className="bg-white p-2">
+              <div className="h-[300px] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-white p-2">
                 {evidence.evidence_url || evidence.url ? (
                   <img
                     src={evidence.url || evidence.evidence_url || ""}
                     alt={evidence.type || "Evidence"}
-                    className="h-auto w-full rounded-md object-contain"
+                    className="h-auto w-auto max-w-full max-h-full rounded-md object-contain"
                   />
                 ) : (
                   <div className="flex min-h-[140px] items-center justify-center rounded-md border border-dashed border-primaryN30 text-xs text-grey-normal">
@@ -147,7 +147,7 @@ function ScheduleEvidenceCard({
     <div className="flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-forumBlue-normal">Schedule</span>
-        <span className="text-xs text-grey-normal">{evidences.length} items</span>
+        <span className="text-xs text-grey-normal">{evidences.length} source</span>
       </div>
       {evidences.length > 0 ? (
         <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
@@ -156,8 +156,9 @@ function ScheduleEvidenceCard({
               key={`${evidence.id}-${index}`}
               className="overflow-hidden rounded-lg border border-primaryN30 bg-[#FBFBFC]"
             >
-              <div className="bg-white p-2">
+              <div className="h-[300px] overflow-y-auto overflow-x-hidden bg-white p-2 ">
                 <ScheduleEvidenceImage
+                  displayMode="contain"
                   imageUrl={evidence.url || evidence.evidence_url || ""}
                   items={Array.isArray(evidence?.overlayItems) ? evidence.overlayItems : []}
                 />
