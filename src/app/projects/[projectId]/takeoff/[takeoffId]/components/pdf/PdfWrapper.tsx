@@ -741,7 +741,7 @@ const PdfWrapper = forwardRef(
 							Unsubmitted boxes have been detected. <br></br>Please confirm.
 						</p>,
 						okText: "",
-						cancelText: "cancel",
+						cancelText: "Cancel",
 						okButtonProps: {
 							loading: false,
 							className: "!hidden",

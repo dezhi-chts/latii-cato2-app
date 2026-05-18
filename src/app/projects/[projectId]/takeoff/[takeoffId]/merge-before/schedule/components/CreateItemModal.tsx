@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Form, Input, Modal } from "antd";
 
-import { addTakeOffResultItemByEvidenceId } from "@/services/takeOffService";
+import { addTakeOffResultItemManual } from "@/services/takeOffService";
 import { notify } from "@/utils/notify";
+import ScheduleEvidenceImage, {
+  type NormalizedCoordinates,
+} from "./ScheduleEvidenceImage";
 
 interface CreateItemModalProps {
   open: boolean;
@@ -13,6 +16,8 @@ interface CreateItemModalProps {
   selectedFileId: number | null;
   pageEvidenceId: number;
   defaultLabel: string;
+  previewImageUrl: string;
+  previewCoordinates: NormalizedCoordinates | null;
   onCancel: () => void;
   onSuccess: () => Promise<void> | void;
 }
@@ -24,19 +29,40 @@ export default function CreateItemModal({
   selectedFileId,
   pageEvidenceId,
   defaultLabel,
+  previewImageUrl,
+  previewCoordinates,
   onCancel,
   onSuccess,
 }: CreateItemModalProps) {
   const [form] = Form.useForm<Record<string, string>>();
   const [submitLoading, setSubmitLoading] = useState(false);
 
+  const formColumns = useMemo(() => {
+    if (columns.includes("Label")) return columns;
+    // Label 是创建 item 的必填字段，确保表单里始终可编辑。
+    return ["Label", ...columns];
+  }, [columns]);
+
   const initialValues = useMemo(() => {
     const nextValues: Record<string, string> = {};
-    columns.forEach((fieldName) => {
+    formColumns.forEach((fieldName) => {
       nextValues[fieldName] = fieldName === "Label" ? defaultLabel : "";
     });
     return nextValues;
-  }, [columns, defaultLabel]);
+  }, [defaultLabel, formColumns]);
+
+  const previewItems = useMemo(() => {
+    if (!previewCoordinates) return [];
+    /**
+     * 这里只传当前正在创建的框，避免弹窗里出现其他可干扰的框。
+     */
+    return [
+      {
+        id: 1,
+        coordinates: previewCoordinates,
+      },
+    ];
+  }, [previewCoordinates]);
 
   useEffect(() => {
     if (!open) return;
@@ -58,18 +84,21 @@ export default function CreateItemModal({
       }
 
       const normalizedResult: Record<string, string> = {};
-      columns.forEach((fieldName) => {
+      formColumns.forEach((fieldName) => {
         normalizedResult[fieldName] = String(values?.[fieldName] || "").trim();
       });
       normalizedResult.Label = normalizedLabel;
 
       setSubmitLoading(true);
-      const response = await addTakeOffResultItemByEvidenceId(
-        takeOffId,
-        String(selectedFileId || ""),
-        String(pageEvidenceId),
-        normalizedResult,
-      );
+      let body: any = {
+        take_off_id: takeOffId,
+        project_file_id: selectedFileId,
+        evidence_id: pageEvidenceId,
+        result: normalizedResult,
+        // 复用用户刚刚确认的框坐标，确保创建结果与预览一致。
+        coordinates: previewCoordinates || null,
+      };
+      const response = await addTakeOffResultItemManual(body);
       setSubmitLoading(false);
       if (response.status !== "success") {
         notify.error({
@@ -103,7 +132,7 @@ export default function CreateItemModal({
       onCancel={onCancel}
       footer={null}
       centered
-      width={720}
+      width="80%"
       destroyOnClose
     >
       <div className="bg-white p-5">
@@ -111,38 +140,61 @@ export default function CreateItemModal({
         <div className="mb-4 text-xs text-grey-normal">
           Fill the fields below to manually create a new item.
         </div>
-        <div className="rounded-xl border border-primaryN30 px-4 py-3">
-          <Form form={form} layout="vertical" requiredMark={false}>
-            <div className="max-h-[52vh] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                {columns.map((fieldName) => (
-                  <Form.Item
-                    key={fieldName}
-                    name={fieldName}
-                    label={<span className="text-xs text-grey-dark">{fieldName}</span>}
-                    rules={
-                      fieldName === "Label"
-                        ? [
-                          {
-                            validator: async (_, value) => {
-                              if (String(value || "").trim()) return;
-                              throw new Error("Label is required.");
-                            },
-                          },
-                        ]
-                        : undefined
-                    }
-                  >
-                    <Input
-                      size="middle"
-                      placeholder={`Enter ${fieldName}`}
-                      className="!rounded-md !border-primaryN30 !text-xs"
-                    />
-                  </Form.Item>
-                ))}
-              </div>
+        {/* 左侧只读图片预览，右侧可编辑表单。 */}
+        <div className="mb-4 flex min-h-0 flex-row gap-4">
+          <div className="h-[58vh] w-[48%] min-w-0 rounded-xl border border-primaryN30 bg-grey-light">
+            <ScheduleEvidenceImage
+              imageUrl={previewImageUrl}
+              items={previewItems}
+            />
+          </div>
+          <div className="min-h-0 flex-1 rounded-xl border border-primaryN30 px-4 py-3">
+            <div className="mb-3 text-xs text-forumBlue-normal">
+              Please fill in the selected box details
             </div>
-          </Form>
+            <Form form={form} requiredMark={false}>
+              <div className="max-h-[54vh] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  {formColumns.map((fieldName) => (
+                    <Form.Item
+                      key={fieldName}
+                      className="mb-2"
+                      rules={
+                        fieldName === "Label"
+                          ? [
+                            {
+                              validator: async (_, value) => {
+                                if (String(value || "").trim()) return;
+                                throw new Error("Label is required.");
+                              },
+                            },
+                          ]
+                          : undefined
+                      }
+                    >
+                      {/* 表单项采用左右结构：左边字段名，右边输入值；每行两列字段。 */}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-[98px] shrink-0 truncate text-xs text-grey-dark"
+                          title={fieldName}
+                        >
+                          {fieldName}
+                        </span>
+                        {/* 使用 noStyle 让 Input 成为真正的受控字段，确保默认值能正确回填。 */}
+                        <Form.Item name={fieldName} noStyle>
+                          <Input
+                            size="middle"
+                            placeholder={`Enter ${fieldName}`}
+                            className="!rounded-md !border-primaryN30 !text-xs"
+                          />
+                        </Form.Item>
+                      </div>
+                    </Form.Item>
+                  ))}
+                </div>
+              </div>
+            </Form>
+          </div>
         </div>
         <div className="mt-4 flex items-center justify-end gap-2">
           <Button onClick={onCancel} className="custom-default-btn">

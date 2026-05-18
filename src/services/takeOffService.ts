@@ -936,5 +936,21 @@ export const copyMultipleFilesMergeResultByIds = async (
   }
 }
 
+/**
+ * 手动补充gemini schedule流程没识别到的item及对应区域坐标框位置
+ * @param data 
+ * @returns 
+ */
+export const addTakeOffResultItemManual = async (data: any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/add_take_off_result_item_manual`;
+    const response = await http.post(url,data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error adding take off result item manual:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
 
 
