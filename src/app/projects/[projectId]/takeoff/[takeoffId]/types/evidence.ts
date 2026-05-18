@@ -350,7 +350,7 @@ export interface PdfWrapperRefMethods {
   removeCropSectionByIds: (ids: string[]) => void; //根据id删除裁剪区域
   handleBatchSubmit: () => void; //批量提交
   handleBatchDelete: () => void; //批量删除
-  checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域
+  checkAndHandleUnsavedCrops?: () => Promise<boolean>; //检查并处理未保存的裁剪区域,返回是否有未保存的裁剪区域
   getRevertCropSectionsData: () => any[]; // 获取转换成API body结构的裁剪区域数据
   clearAreaSelection: () => void; // 清理区域框选相关状态
 }

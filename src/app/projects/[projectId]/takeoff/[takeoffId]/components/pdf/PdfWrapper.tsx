@@ -723,47 +723,31 @@ const PdfWrapper = forwardRef(
 		};
 
 		const checkAndHandleUnsavedCrops = useCallback(
-			async (proceedWithoutConfirmation?: boolean) => {
+			async () => {
 				const filteredCropSections = cropSections.filter(
 					(section) =>
 						section.bounds.width !== 0 && section.bounds.height !== 0,
 				);
 				if (filteredCropSections.length === 0) {
+					// 没有未保存的group，直接返回true
 					return Promise.resolve(true);
 				}
 
 				return new Promise<boolean>((resolve) => {
-					if (proceedWithoutConfirmation) {
-						batchSubmit({ showAlert: false })
-							.then(() => resolve(true))
-							.catch(() => resolve(false));
-						return;
-					}
-
 					confirm({
-						title: (
-							<p className="text-forumBlue-normal font-normal text-base">
-								Finish with this page?
-							</p>
-						),
-						content: (
-							<p className="text-black font-light text-xs">
-								Confirm to save your selected items.
-							</p>
-						),
-						okText: "Save",
-						cancelText: "Skip",
+						type: "warning",
+						title: "Warning",
+						content: <p className="text-grey-normal font-normal text-sm">
+							Unsubmitted boxes have been detected. <br></br>Please confirm.
+						</p>,
+						okText: "",
+						cancelText: "cancel",
 						okButtonProps: {
 							loading: false,
-						},
-						icon: null,
-						onOk() {
-							batchSubmit({ showAlert: true })
-								.then(() => resolve(true))
-								.catch(() => resolve(false));
+							className: "!hidden",
 						},
 						onCancel() {
-							resolve(true);
+							resolve(false);
 						},
 					});
 				});
