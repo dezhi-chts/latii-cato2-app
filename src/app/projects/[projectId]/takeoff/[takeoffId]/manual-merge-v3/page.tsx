@@ -561,6 +561,50 @@ export default function ManualMergeV2Page() {
     return typeof coordinates === "object";
   }, []);
 
+  const scheduleEvidencesWithOverlay = useMemo(() => {
+    const scheduleEvidenceIdSet = new Set(
+      scheduleEvidences
+        .map((evidence) => getEvidenceUniqueId(evidence, getEvidenceUrlFromItem(evidence)))
+        .filter(Boolean),
+    );
+    const overlayMap: Record<string, Array<{ id: number; coordinates: any }>> = {};
+
+    Object.entries(evidenceByResultItemId).forEach(([resultItemId, evidenceList]) => {
+      toArray(evidenceList).forEach((evidence) => {
+        const evidenceKey = getEvidenceUniqueId(evidence, getEvidenceUrlFromItem(evidence));
+        if (!evidenceKey || !scheduleEvidenceIdSet.has(evidenceKey)) return;
+        if (!hasCoordinatesData(evidence)) return;
+        const itemId = Number(resultItemId);
+        if (!Number.isFinite(itemId)) return;
+        if (!overlayMap[evidenceKey]) {
+          overlayMap[evidenceKey] = [];
+        }
+        overlayMap[evidenceKey].push({
+          id: itemId,
+          coordinates: evidence?.coordinates,
+        });
+      });
+    });
+
+    return scheduleEvidences.map((evidence) => {
+      const evidenceKey = getEvidenceUniqueId(evidence, getEvidenceUrlFromItem(evidence));
+      const overlayItems = overlayMap[evidenceKey] || [];
+      /**
+       * 同一 evidence 下按 result item id 去重，避免重复叠框。
+       */
+      const uniqueOverlayMap = new Map<number, { id: number; coordinates: any }>();
+      overlayItems.forEach((item) => {
+        if (!uniqueOverlayMap.has(item.id)) {
+          uniqueOverlayMap.set(item.id, item);
+        }
+      });
+      return {
+        ...evidence,
+        overlayItems: Array.from(uniqueOverlayMap.values()),
+      };
+    });
+  }, [evidenceByResultItemId, hasCoordinatesData, scheduleEvidences]);
+
   const getEvidencesByResultItemIds = useCallback((record: any) => {
     const resultItemIds = getTakeOffResultItemIds(record);
     const seen = new Set<string>();
@@ -599,12 +643,11 @@ export default function ManualMergeV2Page() {
     setReferenceByTypeModalOpen(true);
   }, [getEvidencesByResultItemIds]);
 
-  const handleOpenScheduleReferenceModal = useCallback((record: any) => {
-    const evidenceList = getOverlayEvidencesByResultItemIds(record);
+  const openScheduleReferenceModalByEvidenceList = useCallback((evidenceList: any[], emptyTip: string) => {
     if (evidenceList.length === 0) {
       notify.info({
         title: "No Evidence",
-        description: "No evidence image found for this row.",
+        description: emptyTip,
       });
       return;
     }
@@ -644,7 +687,27 @@ export default function ManualMergeV2Page() {
     setReferenceSchedulePreviewFileName(matchedFile?.file_name || "Unnamed file");
     setReferenceSchedulePreviewPageEvidences(pageEvidences);
     setReferenceScheduleModalOpen(true);
-  }, [files, getOverlayEvidencesByResultItemIds, hasCoordinatesData]);
+  }, [files, hasCoordinatesData]);
+
+  const handleOpenScheduleReferenceModal = useCallback((record: any) => {
+    const evidenceList = getOverlayEvidencesByResultItemIds(record);
+    openScheduleReferenceModalByEvidenceList(evidenceList, "No evidence image found for this row.");
+  }, [getOverlayEvidencesByResultItemIds, openScheduleReferenceModalByEvidenceList]);
+
+  const handleOpenScheduleReferenceModalByEvidence = useCallback((evidence: any) => {
+    const overlayItems = Array.isArray(evidence?.overlayItems) ? evidence.overlayItems : [];
+    const evidenceList = overlayItems.length > 0
+      ? overlayItems.map((overlayItem: any) => ({
+        ...(evidence || {}),
+        id: overlayItem?.id,
+        coordinates: overlayItem?.coordinates,
+      }))
+      : [evidence];
+    openScheduleReferenceModalByEvidenceList(
+      evidenceList,
+      "No evidence image found for this source image.",
+    );
+  }, [openScheduleReferenceModalByEvidenceList]);
 
   const groupedFloorPlanRows = useMemo(() => {
     const groupedMap = new Map<
@@ -2083,12 +2146,13 @@ export default function ManualMergeV2Page() {
                   <div className="grid h-full min-h-0 grid-cols-3 gap-3">
                     <EvidenceSection
                       title="Schedule"
-                      evidences={scheduleEvidences}
+                      evidences={scheduleEvidencesWithOverlay}
                       files={files}
                       currentLabel={selectedLabel}
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
+                      onOpenScheduleReferenceModal={handleOpenScheduleReferenceModalByEvidence}
                     />
                     <EvidenceSection
                       title="Floor Plan"

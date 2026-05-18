@@ -13,6 +13,7 @@ import { notify } from "@/utils/notify";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { EvidenceRecord } from "../../analyze-new/types";
 import EvidencePdfPreviewModal from "./EvidencePdfPreviewModal";
+import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
 
 
 interface EvidenceSectionProps {
@@ -32,6 +33,7 @@ interface EvidenceSectionProps {
   allLabels: any[];
   isLabelMerged: boolean;
   onRefreshItemsAndEvidence: () => Promise<void>;
+  onOpenScheduleReferenceModal?: (evidence: any) => void;
 }
 
 type PreviewEvidenceMode = "single" | "samePage";
@@ -62,6 +64,7 @@ export default function EvidenceSection({
   allLabels,
   isLabelMerged,
   onRefreshItemsAndEvidence,
+  onOpenScheduleReferenceModal,
 }: EvidenceSectionProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvidenceUrl, setEditingEvidenceUrl] = useState("");
@@ -171,6 +174,14 @@ export default function EvidenceSection({
     page_height_pdf?: number;
     polygon?: any;
   }) => {
+    if (title === "Schedule" && onOpenScheduleReferenceModal) {
+      /**
+       * Schedule Source 的点击放大逻辑与 Final Items(未合并) Reference 保持一致：
+       * 先看 evidence 图上的框，再通过右上角按钮查看 PDF 上下文。
+       */
+      onOpenScheduleReferenceModal(evidence);
+      return;
+    }
     const fileId = Number(evidence?.project_file_id || 0);
     const pageNumber = Number(evidence?.project_file_page_number || 1) || 1;
     const matchedFile = (files || []).find((item) => Number(item?.id) === fileId);
@@ -335,18 +346,25 @@ export default function EvidenceSection({
                       handleOpenEnvironmentPreview(evidence);
                     }}
                   >
-                    {/* <ImagePreviewWithExpand
-                      src={evidence.url}
-                      alt={`${title} Evidence`}
-                      className="h-full w-full"
-                      imageClassName="max-h-full max-w-full object-contain"
-                    /> */}
-                    <img
-                      src={evidence.url}
-                      alt={`${title} Evidence`}
-                      className="block max-h-full max-w-full cursor-zoom-in object-contain"
-                      loading="lazy"
-                    />
+                    {title === "Schedule" ? (
+                      /**
+                       * Schedule 面板改为复用带坐标叠框的组件，
+                       * floor plan / elevation 继续使用原有图片渲染。
+                       */
+                      <div className="h-full w-full cursor-zoom-in">
+                        <ScheduleEvidenceImage
+                          imageUrl={evidence.url}
+                          items={Array.isArray((evidence as any)?.overlayItems) ? (evidence as any).overlayItems : []}
+                        />
+                      </div>
+                    ) : (
+                      <img
+                        src={evidence.url}
+                        alt={`${title} Evidence`}
+                        className="block max-h-full max-w-full cursor-zoom-in object-contain"
+                        loading="lazy"
+                      />
+                    )}
                   </div>
                 </div>
               ))}
