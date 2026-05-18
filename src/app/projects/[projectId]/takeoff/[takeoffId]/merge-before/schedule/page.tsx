@@ -37,6 +37,7 @@ import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
   type ScheduleEvidenceImageRef,
 } from "./components/ScheduleEvidenceImage";
+import CreateItemModal from "./components/CreateItemModal";
 import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
@@ -76,6 +77,9 @@ export default function SchedulePage() {
   });
   const [focusedItemId, setFocusedItemId] = useState<number | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [createItemModalOpen, setCreateItemModalOpen] = useState(false);
+  const [pendingSubItemCoordinates, setPendingSubItemCoordinates] =
+    useState<NormalizedCoordinates | null>(null);
   const isSingleLabelUpdatingRef = useRef(false);
   const isBatchLabelUpdatingRef = useRef(false);
 
@@ -613,30 +617,22 @@ export default function SchedulePage() {
     await getItemsByPageEvidences(pageEvidenceId);
   }, [getItemsByPageEvidences, itemBoxList, pageEvidenceId, selectedFileId, takeOffId]);
 
-  const resolveCurrentLabel = useCallback(() => {
-    const focusedItem = itemBoxList.find((item: any) => Number(item?.id) === focusedItemId);
-    const fallbackItem = itemBoxList[0];
-    const targetItem = focusedItem || fallbackItem;
-    if (!targetItem) return "";
-    const label = String(getDisplayValueByField((targetItem as any)?.result || {}, "Label") || "")
+  const resolveCurrentLabelForCreateItem = useCallback(() => {
+    const firstItem = itemBoxList?.[0] as any;
+    if (!firstItem) return "Label";
+    /**
+     * 创建子项时默认值只预填 Label。
+     * 这里按需求从列表第一条读取，优先 Label，兼容后端返回 Lane 的场景。
+     */
+    const firstLabel = String(
+      getDisplayValueByField(firstItem?.result || {}, "Label")
+      || getDisplayValueByField(firstItem?.result || {}, "Lane")
+      || "",
+    )
       .replace(/^-$/, "")
       .trim();
-    return label;
-  }, [focusedItemId, itemBoxList]);
-
-  const resolveCurrentLabelForCreateItem = useCallback(() => {
-    const currentLabel = resolveCurrentLabel();
-    return currentLabel || "Label";
-  }, [resolveCurrentLabel]);
-
-  const extractLabelFromCreateResponse = useCallback((payload: any) => {
-    if (!payload) return "";
-    return String(payload?.result?.Label || "").trim();
-  }, []);
-
-  const isCurrentEvidenceTable = useMemo(() => {
-    return String(currentScheduleEvidence?.type || "").trim() === GroupType.Table;
-  }, [currentScheduleEvidence]);
+    return firstLabel || "Label";
+  }, [itemBoxList]);
 
   const handleConfirmSubItemBox = useCallback(
     async (coordinates: NormalizedCoordinates) => {
@@ -647,74 +643,16 @@ export default function SchedulePage() {
         });
         return false;
       }
-      if (isCurrentEvidenceTable) {
-        setFullLoading(true);
-        const ocrResponse = await addTakeOffResultItemByEvidenceId(
-          String(takeOffId),
-          String(selectedFileId),
-          String(pageEvidenceId),
-          {},
-          coordinates,
-        );
-        setFullLoading(false);
-        if (ocrResponse.status !== "success") {
-          notify.error({
-            title: "Error",
-            description: ocrResponse?.data?.detail || "Failed to OCR and create sub item.",
-          });
-          return false;
-        }
-        const currentLabel = resolveCurrentLabel();
-        const recognizedLabel = extractLabelFromCreateResponse(ocrResponse?.data);
-        notify.success({
-          title: "Success",
-          description: "OCR recognition completed.",
-        });
-        if (
-          currentLabel &&
-          recognizedLabel &&
-          recognizedLabel.toLowerCase() === currentLabel.toLowerCase()
-        ) {
-          await getItemsByPageEvidences(pageEvidenceId);
-          return true;
-        }
-        await fetchScheduleEvidenceList(selectedFileId);
-        return true;
-      }
-
-      // Non-Table: keep +Item behavior, but persist coordinates for replay.
-      const nextLabel = resolveCurrentLabelForCreateItem();
-      setFullLoading(true);
-      const createResponse = await addTakeOffResultItemByEvidenceId(
-        String(takeOffId),
-        String(selectedFileId),
-        String(pageEvidenceId),
-        { Label: nextLabel },
-        coordinates,
-      );
-      setFullLoading(false);
-      if (createResponse.status !== "success") {
-        notify.error({
-          title: "Error",
-          description: createResponse?.data?.detail || "Failed to create sub item.",
-        });
-        return false;
-      }
-      notify.success({
-        title: "Success",
-        description: "Sub item created successfully.",
-      });
-      await getItemsByPageEvidences(pageEvidenceId);
+      /**
+       * 在主图点击框右上角确认后，仅记录当前框坐标并打开创建弹窗。
+       * 真正创建 item 的动作在 CreateItemModal 内执行。
+       */
+      setPendingSubItemCoordinates(coordinates);
+      setCreateItemModalOpen(true);
       return true;
     },
     [
-      extractLabelFromCreateResponse,
-      fetchScheduleEvidenceList,
-      getItemsByPageEvidences,
-      isCurrentEvidenceTable,
       pageEvidenceId,
-      resolveCurrentLabel,
-      resolveCurrentLabelForCreateItem,
       selectedFileId,
       takeOffId,
     ],
@@ -888,14 +826,14 @@ export default function SchedulePage() {
           className={`min-w-0 flex-1 flex flex-col overflow-hidden`}
         >
           <div className="mr-2 mb-1 flex items-center justify-end">
-            {/* <Tooltip title="Add Sub Items">
+            <Tooltip title="Add Sub Items">
               <div className="mr-2 px-1 bg-forumBlue-normal rounded-full">
                 <PlusOutlined
                   onClick={handleAddSubItems}
                   className="cursor-pointer text-white"
                 />
               </div>
-            </Tooltip> */}
+            </Tooltip>
             <Tooltip title="Preview PDF Context">
               <div className="px-1 bg-forumBlue-normal rounded-full">
                 <EyeOutlined
@@ -954,6 +892,25 @@ export default function SchedulePage() {
         imageUrl={previewImageUrl}
         pageEvidences={previewPageEvidences}
         onCancel={() => setPreviewOpen(false)}
+      />
+      <CreateItemModal
+        open={createItemModalOpen}
+        columns={templateColumns.length > 0 ? templateColumns : columns}
+        takeOffId={String(takeOffId || "")}
+        selectedFileId={selectedFileId}
+        pageEvidenceId={pageEvidenceId}
+        defaultLabel={resolveCurrentLabelForCreateItem()}
+        previewImageUrl={imageUrl}
+        previewCoordinates={pendingSubItemCoordinates}
+        onCancel={() => {
+          setCreateItemModalOpen(false);
+          setPendingSubItemCoordinates(null);
+        }}
+        onSuccess={async () => {
+          setCreateItemModalOpen(false);
+          setPendingSubItemCoordinates(null);
+          await getItemsByPageEvidences(pageEvidenceId);
+        }}
       />
     </div>
   );

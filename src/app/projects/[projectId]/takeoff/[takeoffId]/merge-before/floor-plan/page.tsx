@@ -655,6 +655,12 @@ export default function FloorPlanPage() {
       });
       return;
     }
+    // 检测是否有未保存的group
+    let isUnsaved = await pdfWrapperRef?.current?.checkAndHandleUnsavedCrops();
+    if (!pdfWrapperRef?.current || !isUnsaved) {
+      return;
+    }
+
     // 检测所有的空标签是否已经处理完
     let pageList = [...thumbnailData].map((item, index) => {
       return {

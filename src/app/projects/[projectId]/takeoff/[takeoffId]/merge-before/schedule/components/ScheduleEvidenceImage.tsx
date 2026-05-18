@@ -474,6 +474,13 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
           {showBoxes && draftBoxes.map((box) => {
             const isSelected = box.id === selectedDraftBoxId;
             const handleSize = 10;
+            /**
+             * 默认把操作按钮放在框外右上角；
+             * 若会超出图片顶部边界，则改为放在框内右上角，避免按钮被裁切。
+             */
+            const actionToolbarHeight = 24;
+            const actionToolbarMargin = 4;
+            const shouldPlaceToolbarInside = box.top < actionToolbarHeight + actionToolbarMargin;
             return (
               <div
                 key={box.id}
@@ -494,7 +501,13 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
                   setSelectedDraftBoxId(box.id);
                 }}
               >
-                <div className="absolute -right-1 -top-6 flex items-center gap-1 rounded-md bg-white px-1 py-[1px] shadow-sm">
+                <div
+                  className="absolute flex items-center gap-1 rounded-md bg-white px-1 py-[1px] shadow-sm"
+                  style={{
+                    right: shouldPlaceToolbarInside ? "0px" : "-4px",
+                    top: shouldPlaceToolbarInside ? "0px" : "-24px",
+                  }}
+                >
                   <button
                     type="button"
                     className="flex h-5 w-5 items-center justify-center rounded border border-primaryN30 bg-forumBlue-normal"
