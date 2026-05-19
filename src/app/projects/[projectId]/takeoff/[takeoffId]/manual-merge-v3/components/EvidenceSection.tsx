@@ -1,6 +1,6 @@
 "use client";
 
-import { DeleteOutlined, EditOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Empty, Modal, Select, Spin } from "antd";
 import { useMemo, useState } from "react";
 
@@ -33,7 +33,8 @@ interface EvidenceSectionProps {
   allLabels: any[];
   isLabelMerged: boolean;
   onRefreshItemsAndEvidence: () => Promise<void>;
-  onOpenScheduleReferenceModal?: (evidence: any) => void;
+  /** 仅 Schedule 卡片使用：点击 Add Box 图标后打开单图画框弹窗。 */
+  onOpenScheduleAddBoxModal?: (evidence: any) => void;
 }
 
 type PreviewEvidenceMode = "single" | "samePage";
@@ -64,7 +65,7 @@ export default function EvidenceSection({
   allLabels,
   isLabelMerged,
   onRefreshItemsAndEvidence,
-  onOpenScheduleReferenceModal,
+  onOpenScheduleAddBoxModal,
 }: EvidenceSectionProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEvidenceUrl, setEditingEvidenceUrl] = useState("");
@@ -104,6 +105,7 @@ export default function EvidenceSection({
   const showPanelPreviewButton =
     !isLabelMerged &&
     (title === "Schedule" || title === "Floor Plan" || title === "Elevation");
+  /** PDF 侧边缩略图的警告页来源于当前面板 evidence 所在页。 */
   const warningPages = useMemo(() => {
     return Array.from(
       new Set(
@@ -174,14 +176,6 @@ export default function EvidenceSection({
     page_height_pdf?: number;
     polygon?: any;
   }) => {
-    if (title === "Schedule" && onOpenScheduleReferenceModal) {
-      /**
-       * Schedule Source 的点击放大逻辑与 Final Items(未合并) Reference 保持一致：
-       * 先看 evidence 图上的框，再通过右上角按钮查看 PDF 上下文。
-       */
-      onOpenScheduleReferenceModal(evidence);
-      return;
-    }
     const fileId = Number(evidence?.project_file_id || 0);
     const pageNumber = Number(evidence?.project_file_page_number || 1) || 1;
     const matchedFile = (files || []).find((item) => Number(item?.id) === fileId);
@@ -242,14 +236,8 @@ export default function EvidenceSection({
   };
 
   const handleOpenPanelPdfPreview = () => {
+    /** Open PDF 统一走原有 PDF 预览弹窗逻辑。 */
     const firstEvidence = (evidences || [])[0];
-    // if (!firstEvidence) {
-    //   notify.info({
-    //     title: "No Evidence",
-    //     description: `No ${title} evidence found.`,
-    //   });
-    //   return;
-    // }
     handleOpenPdfPreview(firstEvidence);
   };
 
@@ -321,6 +309,18 @@ export default function EvidenceSection({
                   <div className="absolute right-1 top-1 z-10 items-center gap-1 hidden group-hover:flex">
                     {!isLabelMerged && (
                       <>
+                        {title === "Schedule" && onOpenScheduleAddBoxModal && (
+                          <div
+                            className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
+                            onClick={(event) => {
+                              /** 避免触发卡片点击放大，仅打开 Add Box 弹窗。 */
+                              event.stopPropagation();
+                              onOpenScheduleAddBoxModal(evidence);
+                            }}
+                          >
+                            <PlusOutlined className="text-[12px]" />
+                          </div>
+                        )}
                         <div
                           className="w-[20px] h-[20px] flex justify-center items-center bg-forumBlue-normal rounded-full cursor-pointer shadow-md text-white"
                           onClick={() => {

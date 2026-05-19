@@ -80,6 +80,7 @@ export default function SchedulePage() {
   const [createItemModalOpen, setCreateItemModalOpen] = useState(false);
   const [pendingSubItemCoordinates, setPendingSubItemCoordinates] =
     useState<NormalizedCoordinates | null>(null);
+  const [pendingSubItemBoxId, setPendingSubItemBoxId] = useState<string | null>(null);
   const isSingleLabelUpdatingRef = useRef(false);
   const isBatchLabelUpdatingRef = useRef(false);
 
@@ -635,7 +636,7 @@ export default function SchedulePage() {
   }, [itemBoxList]);
 
   const handleConfirmSubItemBox = useCallback(
-    async (coordinates: NormalizedCoordinates) => {
+    async (coordinates: NormalizedCoordinates, boxId: string) => {
       if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
         notify.error({
           title: "Error",
@@ -645,11 +646,13 @@ export default function SchedulePage() {
       }
       /**
        * 在主图点击框右上角确认后，仅记录当前框坐标并打开创建弹窗。
-       * 真正创建 item 的动作在 CreateItemModal 内执行。
+       * 这里返回 false，避免 ScheduleEvidenceImage 在弹窗打开时提前删除框；
+       * 真正创建 item 成功后，再通过 ref 删除当前 draft box。
        */
       setPendingSubItemCoordinates(coordinates);
+      setPendingSubItemBoxId(boxId);
       setCreateItemModalOpen(true);
-      return true;
+      return false;
     },
     [
       pageEvidenceId,
@@ -905,10 +908,15 @@ export default function SchedulePage() {
         onCancel={() => {
           setCreateItemModalOpen(false);
           setPendingSubItemCoordinates(null);
+          setPendingSubItemBoxId(null);
         }}
         onSuccess={async () => {
           setCreateItemModalOpen(false);
+          if (pendingSubItemBoxId) {
+            scheduleEvidenceImageRef.current?.removeSubItemBox(pendingSubItemBoxId);
+          }
           setPendingSubItemCoordinates(null);
+          setPendingSubItemBoxId(null);
           await getItemsByPageEvidences(pageEvidenceId);
         }}
       />
