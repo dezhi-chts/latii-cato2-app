@@ -11,7 +11,7 @@ import {
   GroupType,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
-import EvidenceThumbailList from "../floor-plan/components/EvidenceThumbailList";
+import EvidenceThumbailList from "../../components/evidence/EvidenceThumbailList";
 import LoadingScreen from "@/components/loading-screen";
 import {
   getTakeOffById,
@@ -36,9 +36,9 @@ import DisplayColumnsModal from "./components/DisplayColumnsModal";
 import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
   type ScheduleEvidenceImageRef,
-} from "./components/ScheduleEvidenceImage";
-import CreateItemModal from "./components/CreateItemModal";
-import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
+} from "../../components/evidence/ScheduleEvidenceImage";
+import CreateItemModal from "../../components/schedule/CreateItemModal";
+import EvidenceImagePreviewModal from "../../components/evidence/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";

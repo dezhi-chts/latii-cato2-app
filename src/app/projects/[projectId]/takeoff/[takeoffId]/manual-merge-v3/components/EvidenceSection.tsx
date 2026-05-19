@@ -10,10 +10,10 @@ import {
 } from "@/services/takeOffService";
 import ImagePreviewWithExpand from "../../components/ImagePreviewWithExpand";
 import { notify } from "@/utils/notify";
-import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
+import EvidenceImagePreviewModal from "../../components/evidence/EvidenceImagePreviewModal";
 import { EvidenceRecord } from "../../analyze-new/types";
 import EvidencePdfPreviewModal from "./EvidencePdfPreviewModal";
-import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+import ScheduleEvidenceImage from "../../components/evidence/ScheduleEvidenceImage";
 
 
 interface EvidenceSectionProps {

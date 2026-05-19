@@ -36,7 +36,7 @@ import LabelTable from "./components/LabelTable";
 import ImageList from "./components/ImageList";
 import BatchEditEvidenceModal from "./components/BatchEditEvidenceModal";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
-import EvidenceThumbailList from "./components/EvidenceThumbailList";
+import EvidenceThumbailList from "../../components/evidence/EvidenceThumbailList";
 import LabelConfirmModal from "./components/LabelConfirmModal";
 import { evidenceBatchDelete, evidenceBatchSubmit } from "@/services/evidenceService";
 import LoadingScreen from "@/components/loading-screen";

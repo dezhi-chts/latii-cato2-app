@@ -5,7 +5,7 @@ import { Button, Empty } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { getEvidenceBounds } from "../takeoffUtils";
 import { EvidenceRecord, ProjectFileRecord } from "../types";
-import EvidenceImagePreviewModal from "./EvidenceImagePreviewModal";
+import EvidenceImagePreviewModal from "../../components/evidence/EvidenceImagePreviewModal";
 
 export interface PageThumbnailEntry {
   key: string;

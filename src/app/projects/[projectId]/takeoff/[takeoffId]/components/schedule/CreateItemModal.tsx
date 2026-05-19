@@ -7,7 +7,7 @@ import { addTakeOffResultItemManual } from "@/services/takeOffService";
 import { notify } from "@/utils/notify";
 import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
-} from "./ScheduleEvidenceImage";
+} from "../evidence/ScheduleEvidenceImage";
 
 interface CreateItemModalProps {
   open: boolean;

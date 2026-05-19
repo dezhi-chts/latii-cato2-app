@@ -6,7 +6,7 @@ import { useRef } from "react";
 import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
   type ScheduleEvidenceImageRef,
-} from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+} from "../../components/evidence/ScheduleEvidenceImage";
 import { AddRectBoxControls } from "../../components/pdf/Pdf-Controls";
 
 interface ScheduleSourceModalProps {

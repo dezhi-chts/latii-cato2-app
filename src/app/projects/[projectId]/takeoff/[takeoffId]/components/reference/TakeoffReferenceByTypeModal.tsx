@@ -4,7 +4,7 @@ import { Empty, Modal, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
 import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
-import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+import ScheduleEvidenceImage from "../evidence/ScheduleEvidenceImage";
 
 type ReferenceType = "schedule" | "floorPlan" | "elevation";
 
