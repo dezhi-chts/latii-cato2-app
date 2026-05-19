@@ -7,7 +7,7 @@ import { addTakeOffResultItemManual } from "@/services/takeOffService";
 import { notify } from "@/utils/notify";
 import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
-} from "./ScheduleEvidenceImage";
+} from "../evidence/ScheduleEvidenceImage";
 
 interface CreateItemModalProps {
   open: boolean;
@@ -18,8 +18,11 @@ interface CreateItemModalProps {
   defaultLabel: string;
   previewImageUrl: string;
   previewCoordinates: NormalizedCoordinates | null;
+  /** 不同页面可以传入不同创建接口；未传时默认使用 schedule 阶段的新增接口。 */
+  onSubmitCreateItem?: (body: any) => Promise<{ data: any; status: string }>;
   onCancel: () => void;
-  onSuccess: () => Promise<void> | void;
+  /** 创建成功后把本次提交 body 回传给父组件，便于父组件按 Label 决定刷新范围。 */
+  onSuccess: (createdBody?: any) => Promise<void> | void;
 }
 
 export default function CreateItemModal({
@@ -31,6 +34,7 @@ export default function CreateItemModal({
   defaultLabel,
   previewImageUrl,
   previewCoordinates,
+  onSubmitCreateItem,
   onCancel,
   onSuccess,
 }: CreateItemModalProps) {
@@ -98,7 +102,13 @@ export default function CreateItemModal({
         // 复用用户刚刚确认的框坐标，确保创建结果与预览一致。
         coordinates: previewCoordinates || null,
       };
-      const response = await addTakeOffResultItemManual(body);
+      /**
+       * 创建接口由父组件按页面阶段决定：
+       * schedule 页面默认调用 addTakeOffResultItemManual，
+       * manual merge 页面可传入 addTakeOffResultItemManualMerge。
+       */
+      const submitCreateItem = onSubmitCreateItem || addTakeOffResultItemManual;
+      const response = await submitCreateItem(body);
       setSubmitLoading(false);
       if (response.status !== "success") {
         notify.error({
@@ -114,7 +124,7 @@ export default function CreateItemModal({
       });
       form.resetFields();
       onCancel();
-      await onSuccess();
+      await onSuccess(body);
     } catch (error: any) {
       setSubmitLoading(false);
       if (error?.errorFields?.length) return;

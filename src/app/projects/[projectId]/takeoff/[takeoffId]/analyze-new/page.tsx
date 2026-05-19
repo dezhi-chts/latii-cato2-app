@@ -19,7 +19,7 @@ import AddBoxModal from "./components/AddBoxModal";
 import EvidenceSidebar from "./components/EvidenceSidebar";
 import TakeoffListHeader from "./components/TakeoffListHeader";
 import TakeoffItemsTable from "./components/TakeoffItemsTable";
-import TakeoffReferenceByTypeModal from "./components/TakeoffReferenceByTypeModal";
+import TakeoffReferenceByTypeModal from "../components/reference/TakeoffReferenceByTypeModal";
 import {
 	getFallbackDynamicFields,
 	getDisplayValueByField,

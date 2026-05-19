@@ -953,4 +953,21 @@ export const addTakeOffResultItemManual = async (data: any)=>{
 }
 
 
+/**
+ * 手动补画schedule source未合并阶段并新增item。
+ * @param data 
+ * @returns 
+ */
+export const addTakeOffResultItemManualMerge = async (data: any)=>{
+  try{
+    const url = `/drawing-ai/drawing_ai/add_take_off_result_item_manual_merge`;
+    const response = await http.post(url,data);
+    return { data: response as any, status: "success" };
+  }catch(error: any){
+    console.error("Error adding take off result item manual merge:", error);
+    return { data: error?.response?.data, status: "error" };
+  }
+}
+
+
 

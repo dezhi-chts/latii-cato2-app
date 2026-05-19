@@ -1,10 +1,10 @@
 "use client";
 
 import { Empty, Modal } from "antd";
-import { ZoomControls } from "../../components/pdf/Pdf-Controls";
+import { ZoomControls } from "../pdf/Pdf-Controls";
 import { useEffect, useRef, useState } from "react";
-import { getEvidenceBounds } from "../takeoffUtils";
-import { EvidenceRecord } from "../types";
+import { getEvidenceBounds } from "../../analyze-new/takeoffUtils";
+import { EvidenceRecord } from "../../analyze-new/types";
 
 interface EvidenceImagePreviewModalProps {
   open: boolean;

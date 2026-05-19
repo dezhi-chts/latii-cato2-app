@@ -37,6 +37,7 @@ interface ScheduleEvidenceImageProps {
 
 export interface ScheduleEvidenceImageRef {
   addSubItemBox: () => void;
+  removeSubItemBox: (boxId: string) => void;
 }
 
 interface DraftSubItemBox {
@@ -205,10 +206,6 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     setSelectedDraftBoxId(nextBox.id);
   };
 
-  useImperativeHandle(ref, () => ({
-    addSubItemBox,
-  }));
-
   const removeDraftBox = (boxId: string) => {
     setDraftBoxes((prev) => prev.filter((box) => box.id !== boxId));
     setConfirmingIds((prev) => {
@@ -219,6 +216,15 @@ const ScheduleEvidenceImage = forwardRef<ScheduleEvidenceImageRef, ScheduleEvide
     });
     setSelectedDraftBoxId((prev) => (prev === boxId ? null : prev));
   };
+
+  useImperativeHandle(ref, () => ({
+    addSubItemBox,
+    /**
+     * 外层创建 item 成功后再删除 draft box，
+     * 避免打开 CreateItemModal 时提前移除当前选中的框。
+     */
+    removeSubItemBox: removeDraftBox,
+  }));
 
   const beginDrag = (
     event: ReactMouseEvent<HTMLDivElement>,

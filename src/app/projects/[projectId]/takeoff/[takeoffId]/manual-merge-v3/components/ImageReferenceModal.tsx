@@ -4,7 +4,7 @@ import { EyeOutlined } from "@ant-design/icons";
 import { Empty, Modal, Tooltip } from "antd";
 import { useMemo } from "react";
 
-import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+import ScheduleEvidenceImage from "../../components/evidence/ScheduleEvidenceImage";
 
 interface ImageReferenceModalProps {
   open: boolean;

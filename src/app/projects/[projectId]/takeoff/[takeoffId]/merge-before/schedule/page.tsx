@@ -11,7 +11,7 @@ import {
   GroupType,
 } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
 import { ArchDrawingSummaryPageTypes } from "@/app/projects/[projectId]/takeoff/[takeoffId]/types/evidence";
-import EvidenceThumbailList from "../floor-plan/components/EvidenceThumbailList";
+import EvidenceThumbailList from "../../components/evidence/EvidenceThumbailList";
 import LoadingScreen from "@/components/loading-screen";
 import {
   getTakeOffById,
@@ -36,9 +36,9 @@ import DisplayColumnsModal from "./components/DisplayColumnsModal";
 import ScheduleEvidenceImage, {
   type NormalizedCoordinates,
   type ScheduleEvidenceImageRef,
-} from "./components/ScheduleEvidenceImage";
-import CreateItemModal from "./components/CreateItemModal";
-import EvidenceImagePreviewModal from "../../analyze-new/components/EvidenceImagePreviewModal";
+} from "../../components/evidence/ScheduleEvidenceImage";
+import CreateItemModal from "../../components/schedule/CreateItemModal";
+import EvidenceImagePreviewModal from "../../components/evidence/EvidenceImagePreviewModal";
 import { notify } from "@/utils/notify";
 import ScheduleTable from "./components/ScheduleTable";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
@@ -80,6 +80,7 @@ export default function SchedulePage() {
   const [createItemModalOpen, setCreateItemModalOpen] = useState(false);
   const [pendingSubItemCoordinates, setPendingSubItemCoordinates] =
     useState<NormalizedCoordinates | null>(null);
+  const [pendingSubItemBoxId, setPendingSubItemBoxId] = useState<string | null>(null);
   const isSingleLabelUpdatingRef = useRef(false);
   const isBatchLabelUpdatingRef = useRef(false);
 
@@ -635,7 +636,7 @@ export default function SchedulePage() {
   }, [itemBoxList]);
 
   const handleConfirmSubItemBox = useCallback(
-    async (coordinates: NormalizedCoordinates) => {
+    async (coordinates: NormalizedCoordinates, boxId: string) => {
       if (!takeOffId || !selectedFileId || pageEvidenceId === -1) {
         notify.error({
           title: "Error",
@@ -645,11 +646,13 @@ export default function SchedulePage() {
       }
       /**
        * 在主图点击框右上角确认后，仅记录当前框坐标并打开创建弹窗。
-       * 真正创建 item 的动作在 CreateItemModal 内执行。
+       * 这里返回 false，避免 ScheduleEvidenceImage 在弹窗打开时提前删除框；
+       * 真正创建 item 成功后，再通过 ref 删除当前 draft box。
        */
       setPendingSubItemCoordinates(coordinates);
+      setPendingSubItemBoxId(boxId);
       setCreateItemModalOpen(true);
-      return true;
+      return false;
     },
     [
       pageEvidenceId,
@@ -905,10 +908,15 @@ export default function SchedulePage() {
         onCancel={() => {
           setCreateItemModalOpen(false);
           setPendingSubItemCoordinates(null);
+          setPendingSubItemBoxId(null);
         }}
         onSuccess={async () => {
           setCreateItemModalOpen(false);
+          if (pendingSubItemBoxId) {
+            scheduleEvidenceImageRef.current?.removeSubItemBox(pendingSubItemBoxId);
+          }
           setPendingSubItemCoordinates(null);
+          setPendingSubItemBoxId(null);
           await getItemsByPageEvidences(pageEvidenceId);
         }}
       />

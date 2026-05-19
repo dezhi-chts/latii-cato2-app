@@ -4,7 +4,7 @@ import { Empty, Modal, Spin } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
 import { getTakeOffEvidenceUrlsByIds } from "@/services/takeOffService";
-import ScheduleEvidenceImage from "../../merge-before/schedule/components/ScheduleEvidenceImage";
+import ScheduleEvidenceImage from "../evidence/ScheduleEvidenceImage";
 
 type ReferenceType = "schedule" | "floorPlan" | "elevation";
 
@@ -101,7 +101,7 @@ function EvidenceCard({
     <div className="flex h-full min-h-0 flex-col rounded-xl border border-primaryN30 bg-white p-3">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-forumBlue-normal">{title}</span>
-        <span className="text-xs text-grey-normal">{evidences.length} items</span>
+        <span className="text-xs text-grey-normal">{evidences.length} source</span>
       </div>
       {evidences.length > 0 ? (
         <div className="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">

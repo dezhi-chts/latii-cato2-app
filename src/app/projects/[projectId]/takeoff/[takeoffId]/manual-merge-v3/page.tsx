@@ -19,6 +19,7 @@ import {
   splitFileSourceMergeResultsByIdList,
   updateFileSourceMergeResultsByIdList,
   updateSingleFileMergeResultsByIdList,
+  addTakeOffResultItemManualMerge,
 } from "@/services/takeOffService";
 import { getTemplateById } from "@/services/templateService";
 import {
@@ -31,12 +32,15 @@ import { EvidenceRecord } from "../analyze-new/types";
 import BuildingBackground from "../identification/components/BuildingBackground";
 import FileHeader from "./components/FileHeader";
 import LabelSidebar from "./components/LabelSidebar";
-import EvidenceImagePreviewModal from "../analyze-new/components/EvidenceImagePreviewModal";
-import TakeoffReferenceByTypeModal from "../analyze-new/components/TakeoffReferenceByTypeModal";
+import EvidenceImagePreviewModal from "../components/evidence/EvidenceImagePreviewModal";
+import TakeoffReferenceByTypeModal from "../components/reference/TakeoffReferenceByTypeModal";
 import TableSection from "./components/TableSection";
 import EvidenceSection from "./components/EvidenceSection";
 import SplitItemsModal from "./components/SplitItemsModal";
 import ImageReferenceModal from "./components/ImageReferenceModal";
+import ScheduleSourceModal from "./components/ScheduleSourceModal";
+import CreateItemModal from "../components/schedule/CreateItemModal";
+import { type NormalizedCoordinates } from "../components/evidence/ScheduleEvidenceImage";
 import { notify } from "@/utils/notify";
 import { useBrowserBackToHome } from "@/app/projects/[projectId]/takeoff/[takeoffId]/hooks/useBrowserBackToHome";
 import TakeoffFileWorkflowNav from "@/app/projects/[projectId]/takeoff/[takeoffId]/components/workflow/TakeoffFileWorkflowNav";
@@ -422,6 +426,10 @@ export default function ManualMergeV2Page() {
   const [referenceByTypeInitialEvidenceId, setReferenceByTypeInitialEvidenceId] = useState<string | undefined>(undefined);
   const [imageReferenceModalOpen, setImageReferenceModalOpen] = useState(false);
   const [imageReferenceEvidenceList, setImageReferenceEvidenceList] = useState<any[]>([]);
+  const [scheduleSourceModalOpen, setScheduleSourceModalOpen] = useState(false);
+  const [scheduleSourceTargetEvidence, setScheduleSourceTargetEvidence] = useState<any | null>(null);
+  const [scheduleCreateItemModalOpen, setScheduleCreateItemModalOpen] = useState(false);
+  const [schedulePendingCoordinates, setSchedulePendingCoordinates] = useState<NormalizedCoordinates | null>(null);
 
   const modifiedCount = useMemo(() => Object.keys(scheduleChanges).length, [scheduleChanges]);
   const selectedLabelMeta = useMemo(
@@ -496,7 +504,6 @@ export default function ManualMergeV2Page() {
       };
     });
   }, [evidenceByResultItemId, hasCoordinatesData, scheduleEvidences]);
-
   const getEvidencesByResultItemIds = useCallback((record: any) => {
     const resultItemIds = getTakeOffResultItemIds(record);
     const seen = new Set<string>();
@@ -640,10 +647,39 @@ export default function ManualMergeV2Page() {
     setPreviewOpen(true);
   }, [files]);
 
-  const handleOpenScheduleSourcePdfPreview = useCallback((evidence: any) => {
-    // Source 面板中 Schedule 图片点击后直接打开 PDF 定位预览。
-    handleOpenPdfPreviewFromReference(evidence, "schedule");
-  }, [handleOpenPdfPreviewFromReference]);
+  const handleOpenScheduleSourceAddBoxModal = useCallback((evidence: any) => {
+    /**
+     * 从 Schedule Source 卡片进入 Add Box 时，锁定当前 evidence，
+     * 弹窗内只对这张图进行画框与提交。
+     */
+    setScheduleSourceTargetEvidence(evidence || null);
+    setScheduleSourceModalOpen(true);
+  }, []);
+  const handleOpenCreateItemFromScheduleSource = useCallback(async (coordinates: NormalizedCoordinates) => {
+    const selectedEvidence = scheduleSourceTargetEvidence;
+    const evidenceId = Number(
+      selectedEvidence?.evidence_id ??
+      selectedEvidence?.evidenceId ??
+      selectedEvidence?.id ??
+      0,
+    );
+    if (!Number.isFinite(evidenceId) || evidenceId <= 0) {
+      notify.error({
+        title: "Error",
+        description: "Unable to resolve evidence id for creating item.",
+      });
+      return false;
+    }
+    /**
+     * 先缓存用户在 Add Box 弹窗里确认的坐标，
+     * 后续由 CreateItemModal 复用该坐标完成新增 item。
+     * 这里返回 false，避免打开 CreateItemModal 时提前删除当前 draft box；
+     * 新增成功后会关闭 ScheduleSourceModal，组件销毁时再清理框。
+     */
+    setSchedulePendingCoordinates(coordinates);
+    setScheduleCreateItemModalOpen(true);
+    return false;
+  }, [scheduleSourceTargetEvidence]);
 
   const groupedFloorPlanRows = useMemo(() => {
     const groupedMap = new Map<
@@ -2088,7 +2124,7 @@ export default function ManualMergeV2Page() {
                       allLabels={labels}
                       isLabelMerged={isSelectedLabelMerged}
                       onRefreshItemsAndEvidence={refreshItemsAndEvidence}
-                      onOpenScheduleReferenceModal={handleOpenScheduleSourcePdfPreview}
+                      onOpenScheduleAddBoxModal={handleOpenScheduleSourceAddBoxModal}
                     />
                     <EvidenceSection
                       title="Floor Plan"
@@ -2147,6 +2183,57 @@ export default function ManualMergeV2Page() {
         onClose={() => {
           setImageReferenceModalOpen(false);
           setImageReferenceEvidenceList([]);
+        }}
+      />
+      <ScheduleSourceModal
+        open={scheduleSourceModalOpen}
+        evidence={scheduleSourceTargetEvidence}
+        onConfirmSubItemBox={handleOpenCreateItemFromScheduleSource}
+        onClose={() => {
+          setScheduleSourceModalOpen(false);
+          setScheduleSourceTargetEvidence(null);
+        }}
+      />
+      <CreateItemModal
+        open={scheduleCreateItemModalOpen}
+        columns={columns}
+        takeOffId={takeoffId}
+        selectedFileId={fileId}
+        pageEvidenceId={Number(
+          scheduleSourceTargetEvidence?.evidence_id ??
+          scheduleSourceTargetEvidence?.evidenceId ??
+          scheduleSourceTargetEvidence?.id ??
+          0,
+        )}
+        defaultLabel={selectedLabel || "Label"}
+        previewImageUrl={getEvidenceUrlFromItem(scheduleSourceTargetEvidence)}
+        previewCoordinates={schedulePendingCoordinates}
+        /** manual merge 阶段新增 item 需要同步 file source merge result，因此使用专用接口。 */
+        onSubmitCreateItem={addTakeOffResultItemManualMerge}
+        onCancel={() => {
+          setScheduleCreateItemModalOpen(false);
+          setSchedulePendingCoordinates(null);
+        }}
+        onSuccess={async (createdBody) => {
+          /**
+           * 创建成功后需要关闭 Add Box 弹窗和 CreateItemModal，
+           * 再根据新增 item 的 Label 决定刷新左侧列表还是只刷新右侧内容。
+           */
+          setScheduleCreateItemModalOpen(false);
+          setScheduleSourceModalOpen(false);
+          setSchedulePendingCoordinates(null);
+          setScheduleSourceTargetEvidence(null);
+
+          const createdLabel = String(createdBody?.result?.Label);
+          const currentLabel = String(selectedLabel);
+          if (createdLabel === currentLabel) {
+            await refreshItemsAndEvidence();
+            return;
+          }
+
+          if (fileId) {
+            await fetchLabelsAndMaybeLoadData(Number(fileId), createdLabel || selectedLabel);
+          }
         }}
       />
 
