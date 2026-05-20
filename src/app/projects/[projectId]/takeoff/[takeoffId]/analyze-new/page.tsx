@@ -287,7 +287,7 @@ export default function TakeoffListPage() {
 			const response = await getTemplateById(templateId);
 			if (response.status === "success" && response.data) {
 				const templateData = response.data;
-				// Extract field names from template, similar to manual-merge-new
+				// Extract field names from template
 				const fields: string[] = [];
 
 				// Add Label and Sub Label first
@@ -653,10 +653,6 @@ export default function TakeoffListPage() {
 			});
 			return;
 		}
-
-		router.push(
-			`/projects/${projectId}/takeoff/${takeoffId}/items-merge?_fId=${selectedFileId}`,
-		);
 	};
 
 	const handleOpenReferencePanel = (item: TakeoffItemRecord) => {

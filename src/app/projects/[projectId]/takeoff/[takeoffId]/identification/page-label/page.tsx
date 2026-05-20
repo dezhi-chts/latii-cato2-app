@@ -668,45 +668,6 @@ const IdentLabel = forwardRef<IdentLabelRef, {}>((any, ref) => {
 		handleAddRectBox(type);
 	};
 
-	const handleAnaylize = async () => {
-		setBuildLoading(true);
-		setAnalyzeMessage("Connecting...");
-
-		// Close existing SSE connection if any
-		if (eventSourceRef.current) {
-			eventSourceRef.current.close();
-			eventSourceRef.current = null;
-		}
-
-		const sseConnection = AnalyzeItemBySourceTypeSSE(takeOffId as string, 1, {
-			onConnected: () => {
-				console.log("[SSE] Connected to analyze service");
-			},
-			onHeartbeat: (data) => {
-				console.log("[SSE] Heartbeat received:", data);
-			},
-			onCompleted: (result: any) => {
-				console.log("[SSE] Analysis completed:", result);
-				eventSourceRef.current = null;
-				router.replace(
-					`/projects/${projectId}/takeoff/${takeOffId}/manual-merge-new`,
-				);
-			},
-			onError: (error: string) => {
-				console.error("[SSE] Analysis error:", error);
-				setBuildLoading(false);
-				setAnalyzeMessage("");
-				eventSourceRef.current = null;
-				notify.error({
-					title: "Error",
-					description: error || "Failed to analyze the file",
-				});
-			},
-		});
-
-		eventSourceRef.current = sseConnection;
-	};
-
 	const fetchPromptTemplates = useCallback(async () => {
 		console.log('####### label company_id', company_id, username)
 		if (!company_id) return false;
