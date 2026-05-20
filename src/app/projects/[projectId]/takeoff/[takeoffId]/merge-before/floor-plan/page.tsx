@@ -325,6 +325,15 @@ export default function FloorPlanPage() {
   }, [pageEvidenceId]);
 
   useEffect(() => {
+    if (!pageEvidenceId) return;
+    const matchedPage = thumbnailData.find((item) => item.id === pageEvidenceId);
+    const nextPage = matchedPage?.project_file_page_number || 0;
+    if (nextPage > 0 && nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    }
+  }, [currentPage, pageEvidenceId, thumbnailData]);
+
+  useEffect(() => {
     if (thumbnailData.length > 0 && pageEvidenceId === -1) {
       setPageEvidenceId(thumbnailData[0].id);
     }
@@ -678,7 +687,7 @@ export default function FloorPlanPage() {
         title: 'Warning',
         icon: <WarningOutlined />,
         content: `Some empty labels in pages ${numbers} are not processed. right now process them first?`,
-        okText: 'Yes',
+        okText: 'OK',
         cancelText: 'No',
         okType: 'primary',
         onOk: () => {
