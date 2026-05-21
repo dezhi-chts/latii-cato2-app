@@ -4,22 +4,55 @@ import Image from "next/image";
 import { JSX, useMemo } from "react";
 import { Button } from "antd";
 import { FileOperationType, FileStatus } from "../types/evidence";
-import { FileItem } from "../identification-index/components/FileList";
 import { StepName } from "../page";
 
-import {
-  PageAnalysisStepInActive,
-  PageIndexStepActive,
-  PageIndexStepCompleted,
-  PageIndexStepInActive,
-  PageLabelingStepActive,
-  PageLabelingStepCompleted,
-  PageLabelingStepInActive,
-  PagePreAnalysisStepActive,
-  PagePreAnalysisStepCompleted,
-} from "../identification-index/components/HeaderStepProgress";
-
 type StepState = "active" | "inactive" | "completed";
+
+const FileItem = () => {
+  return <div></div>
+};
+
+const PageIndexStepActive = () => {
+  return <div>Identification Index</div>
+}
+
+const PageIndexStepInActive = () => {
+  return <div>Identification Index</div>
+}
+
+const PageIndexStepCompleted = () => {
+  return <div>Identification Index</div>
+}
+
+const PageLabelingStepActive = () => {
+  return <div> Page Labeling</div>
+}
+
+const PageLabelingStepInActive = () => {
+  return <div> Page Labeling</div>
+}
+
+const PageLabelingStepCompleted = () => {
+  return <div> Page Labeling</div>
+}
+
+const PagePreAnalysisStepActive = () => {
+  return <div>Pre-Analysis</div>
+}
+
+const PagePreAnalysisStepInActive = () => {
+  return <div>Pre-Analysis</div>
+}
+
+const PagePreAnalysisStepCompleted = () => {
+  return <div>Pre-Analysis</div>
+}
+
+const PageAnalysisStepInActive = () => {
+  return <div>Analysis</div>
+}
+
+
 
 const stepComponents: Record<
   StepName,
