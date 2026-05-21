@@ -579,56 +579,25 @@ export default function ManualMergeV2Page() {
     record: any,
     preferredType?: ReferenceType,
   ) => {
+    // 未合并 label，保持原有逻辑
+    let evidenceList = getOverlayEvidencesByResultItemIds(record).map((evidence) => ({
+      ...(evidence || {}),
+      source_item_id: Number(record?.id || 0),
+    }));
     // 检查是否有 matched_primary_coordinate 字段（仅用于已合并 label）
-    const matchedPrimaryCoordinate = record?.matched_primary_coordinate;
-    
-    let evidenceList: any[];
-    
-    if (isSelectedLabelMerged && Array.isArray(matchedPrimaryCoordinate) && matchedPrimaryCoordinate.length > 0) {
-      // 已合并 label，从 matched_primary_coordinate 中构建 evidenceList
-      evidenceList = matchedPrimaryCoordinate.map((coord: any, index: number) => {
-        // 先查找是否有对应的 evidence 数据
-        const resultItemIds = getTakeOffResultItemIds(record);
-        let matchingEvidence: any = null;
-        
-        for (const itemId of resultItemIds) {
-          const evList = toArray(evidenceByResultItemId[itemId]);
-          const found = evList.find((ev: any) => {
-            const evId = getRawEvidenceId(ev);
-            return evId && coord.evidence_id && String(evId) === String(coord.evidence_id);
-          });
-          if (found) {
-            matchingEvidence = found;
-            break;
-          }
+    const matchedCoordinate = record?.matched_primary_coordinate;
+
+    if (isSelectedLabelMerged && Array.isArray(matchedCoordinate) && matchedCoordinate.length > 0) {
+      evidenceList.forEach((evidence) => {
+        const matchedPrimaryCoordinate = matchedCoordinate?.find((coord: any) => {
+          return coord.evidence_id === evidence.id;
+        });
+        if (matchedPrimaryCoordinate) {
+          evidence.coordinates = matchedPrimaryCoordinate.coordinates;
         }
-        
-        const url = matchingEvidence 
-          ? getEvidenceUrlFromItem(matchingEvidence) 
-          : "";
-        
-        return {
-          // 优先使用匹配到的 evidence 数据，否则使用坐标信息
-          ...(matchingEvidence || {}),
-          id: coord.evidence_id || index,
-          evidence_id: coord.evidence_id,
-          url: url,
-          evidence_url: url,
-          // 强制设置 coordinates 为 matched_primary_coordinate 中的值
-          coordinates: coord.coordinates,
-          source_item_id: Number(record?.id || 0),
-          // 确保有正确的 type，默认为 "table" 类型（Schedule）
-          type: matchingEvidence?.type || "table",
-        };
       });
-    } else {
-      // 未合并 label，保持原有逻辑
-      evidenceList = getOverlayEvidencesByResultItemIds(record).map((evidence) => ({
-        ...(evidence || {}),
-        source_item_id: Number(record?.id || 0),
-      }));
     }
-    
+
     openReferenceModal(record, evidenceList, {
       preferredType,
       emptyTip: "No evidence image found for this row.",
