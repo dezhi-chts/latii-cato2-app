@@ -579,16 +579,30 @@ export default function ManualMergeV2Page() {
     record: any,
     preferredType?: ReferenceType,
   ) => {
-    const evidenceList = getOverlayEvidencesByResultItemIds(record).map((evidence) => ({
+    // 未合并 label，保持原有逻辑
+    let evidenceList = getOverlayEvidencesByResultItemIds(record).map((evidence) => ({
       ...(evidence || {}),
-      // 透传当前 item id，供 Schedule 图层按 coordinates 渲染小框。
       source_item_id: Number(record?.id || 0),
     }));
+    // 检查是否有 matched_primary_coordinate 字段（仅用于已合并 label）
+    const matchedCoordinate = record?.matched_primary_coordinate;
+
+    if (isSelectedLabelMerged && Array.isArray(matchedCoordinate) && matchedCoordinate.length > 0) {
+      evidenceList.forEach((evidence) => {
+        const matchedPrimaryCoordinate = matchedCoordinate?.find((coord: any) => {
+          return coord.evidence_id === evidence.id;
+        });
+        if (matchedPrimaryCoordinate) {
+          evidence.coordinates = matchedPrimaryCoordinate.coordinates;
+        }
+      });
+    }
+
     openReferenceModal(record, evidenceList, {
       preferredType,
       emptyTip: "No evidence image found for this row.",
     });
-  }, [getOverlayEvidencesByResultItemIds, openReferenceModal]);
+  }, [getOverlayEvidencesByResultItemIds, openReferenceModal, isSelectedLabelMerged, evidenceByResultItemId]);
 
   const handleOpenImageReferenceModalByRecord = useCallback((record: any) => {
     const evidenceList = getOverlayEvidencesByResultItemIds(record);

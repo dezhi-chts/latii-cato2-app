@@ -221,6 +221,19 @@ export default function TakeoffReferenceByTypeModal({
         const next = Object.values(payload || {}).flatMap((value: any) =>
           Array.isArray(value) ? value : [value],
         ) as ReferenceEvidenceItem[];
+        // 匹配matchedPrimaryCoordinate中的evidence_id
+        if (item?.matched_primary_coordinate?.length > 0) {
+          next.forEach((evidence) => {
+            const matchedPrimaryCoordinate = item?.matched_primary_coordinate?.find((coord: any) => {
+              return coord.evidence_id === evidence.id;
+            });
+            if (matchedPrimaryCoordinate) {
+              evidence.coordinates = matchedPrimaryCoordinate.coordinates;
+            }
+          });
+          setEvidences(next);
+          return;
+        }
         setEvidences(next);
       } finally {
         setLoading(false);
